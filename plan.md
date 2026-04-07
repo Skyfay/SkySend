@@ -17,7 +17,7 @@ SkySend is a minimalist, self-hostable, end-to-end encrypted file sharing servic
 | **Database** | SQLite (via better-sqlite3) | Zero Config, no DB-Server, Backup = 1 File |
 | **Crypto** | Web Crypto API (native) | No dependencies needed |
 | **Validation** | Zod | Strictly typed inputs and environment variables |
-| **Languages** | react-i18next | Multi-language auto-detection and fallback |
+| **i18n** | react-i18next | Multi-language auto-detection and fallback |
 | **Password KDF** | Argon2id (WASM) | State-of-the-art, GPU-resistant |
 | **Storage** | Local Filesystem | Self-hosted, simple, reliable |
 | **Build** | Vite | Fast, modern, HMR |
@@ -241,6 +241,7 @@ CREATE INDEX idx_uploads_expires_at ON uploads(expires_at);
 | POST | `/api/password/:id` | Verify password | Auth Token |
 | DELETE | `/api/upload/:id` | Manually delete upload | Owner Token |
 | GET | `/api/exists/:id` | Check if upload exists | - |
+| GET | `/api/health` | Health check (for Docker, monitoring) | - |
 
 ### Upload Flow
 
@@ -250,7 +251,7 @@ Client                                          Server
 1. POST /api/upload
    Headers:
      X-Max-Downloads: 10
-     X-Expire-Hours: 24
+     X-Expire-Sec: 86400
      Content-Length: 1048576
    Body: <encrypted stream>
                                          2. Generates Upload-ID
@@ -304,7 +305,6 @@ Client                                          Server
 - [x] Create Copilot Instructions
 - [ ] Configure TypeScript
 - [ ] Configure ESLint + Prettier
-- [ ] Basic CI/CD Pipeline (.github/workflows)
 
 ### Phase 1 - Crypto Library (`packages/crypto`)
 
@@ -392,10 +392,9 @@ Client                                          Server
 
 **Priority: HIGH**
 
-- [ ] Multi-Stage Dockerfile (Build + Runtime)
-- [ ] `docker-compose.yml` with Volume Mounts
-- [ ] Health Check Endpoint (`GET /api/health`)
-- [ ] Graceful Shutdown
+- [ ] Finalize Multi-Stage Dockerfile (optimize layers, .dockerignore)
+- [ ] Docker Compose Health Check (`healthcheck:` block)
+- [ ] Graceful Shutdown (handle SIGTERM)
 - [ ] Test Data Persistence (Volumes)
 - [ ] Production Optimizations (Compression, Caching Headers)
 
@@ -462,7 +461,7 @@ Phase 1 (Crypto) ──────> Phase 2 (Backend)
                         Phase 8 (CI/CD)
 ```
 
-Crypto is the foundaton for everything. Backend and Frontend build upon it. Docker is built in parallel with the CLI, as soon as Backend + Frontend are ready.
+Crypto is the foundation for everything. Backend and Frontend build upon it. Docker is built in parallel with the CLI, as soon as Backend + Frontend are ready.
 
 ---
 
