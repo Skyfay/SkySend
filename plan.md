@@ -104,7 +104,7 @@ skysend/
 ├── pnpm-workspace.yaml
 ├── tsconfig.json                # Shared TypeScript Config
 │
-├── packages/
+├── apps/
 │   ├── server/                  # Hono Backend
 │   │   ├── package.json
 │   │   ├── tsconfig.json
@@ -155,17 +155,6 @@ skysend/
 │   │           ├── useUpload.ts
 │   │           └── useDownload.ts
 │   │
-│   ├── crypto/                  # Shared Encryption Library
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── src/
-│   │       ├── index.ts         # Public API
-│   │       ├── keychain.ts      # Key Generation + Derivation
-│   │       ├── ece.ts           # Encrypted Content Encoding (Streaming)
-│   │       ├── metadata.ts      # Metadata Encryption/Decryption
-│   │       ├── password.ts      # Argon2id / PBKDF2 Password KDF
-│   │       └── util.ts          # Base64url, Encoding Helpers
-│   │
 │   └── cli/                     # Admin CLI Tool
 │       ├── package.json
 │       ├── tsconfig.json
@@ -175,10 +164,22 @@ skysend/
 │           │   ├── list.ts      # Show active uploads
 │           │   ├── delete.ts    # Delete upload manually
 │           │   ├── stats.ts     # Storage overview
-│           │   ├── cleanup.ts   # Tigger manual cleanup
+│           │   ├── cleanup.ts   # Trigger manual cleanup
 │           │   └── config.ts    # Show/edit limits
 │           └── lib/
 │               └── format.ts    # Output Formatting
+│
+├── packages/
+│   └── crypto/                  # Shared Encryption Library
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── src/
+│           ├── index.ts         # Public API
+│           ├── keychain.ts      # Key Generation + Derivation
+│           ├── ece.ts           # Encrypted Content Encoding (Streaming)
+│           ├── metadata.ts      # Metadata Encryption/Decryption
+│           ├── password.ts      # Argon2id / PBKDF2 Password KDF
+│           └── util.ts          # Base64url, Encoding Helpers
 │
 └── docs/                        # VitePress Documentation
     ├── package.json
@@ -307,6 +308,8 @@ Client                                          Server
 
 ### Phase 1 - Crypto Library (`packages/crypto`)
 
+> Located in `packages/crypto` - shared library used by both apps/server and apps/web
+
 **Priority: HIGH - Core of the project**
 
 - [ ] `keychain.ts` - Key Generation (256-bit Secret)
@@ -321,7 +324,7 @@ Client                                          Server
 - [ ] Unit Tests for all Crypto Functions
 - [ ] Integration Test: Encrypt -> Decrypt Roundtrip
 
-### Phase 2 - Backend (`packages/server`)
+### Phase 2 - Backend (`apps/server`)
 
 **Priority: HIGH**
 
@@ -336,6 +339,7 @@ Client                                          Server
 - [ ] `POST /api/password/:id` - Password Verification
 - [ ] `DELETE /api/upload/:id` - Delete Upload
 - [ ] `GET /api/exists/:id` - Check Existence
+- [ ] `GET /api/health` - Health Check Endpoint
 - [ ] Auth Middleware (Token Validation)
 - [ ] Cleanup Job (delete expired uploads, interval)
 - [ ] Rate Limiting
@@ -343,7 +347,7 @@ Client                                          Server
 - [ ] Static SPA Serving (Vite Build)
 - [ ] Unit and Integration Tests
 
-### Phase 3 - Frontend (`packages/web`)
+### Phase 3 - Frontend (`apps/web`)
 
 **Priority: HIGH**
 
@@ -373,7 +377,7 @@ Client                                          Server
 - [ ] Accessibility (a11y)
 - [ ] E2E Tests (Playwright)
 
-### Phase 4 - Admin CLI (`packages/cli`)
+### Phase 4 - Admin CLI (`apps/cli`)
 
 **Priority: MEDIUM**
 

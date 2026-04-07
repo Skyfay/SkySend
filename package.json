@@ -1,7 +1,7 @@
 {
   "name": "skysend",
   "private": true,
-  "description": "Minimalistischer, End-to-End-verschlüsselter File-Sharing-Service",
+  "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
   "license": "AGPL-3.0",
   "scripts": {
     "dev": "pnpm --parallel dev",

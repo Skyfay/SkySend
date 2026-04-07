@@ -2,6 +2,8 @@
 
 **Minimalist, end-to-end encrypted, self-hostable file sharing service.**
 
+Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send), SkySend aims to be a modern alternative built from scratch with higher security standards and a minimal, maintainable codebase.
+
 SkySend encrypts files completely in the browser before they reach the server. The server never sees the plaintext data at any time. No accounts, no telemetry, no external dependencies.
 
 ## Features
@@ -35,16 +37,16 @@ See [Documentation](docs/) for all configuration options.
 
 ```bash
 # Show active uploads
-docker exec skysend send-admin list
+docker exec skysend skysend-cli list
 
 # Manually delete an upload
-docker exec skysend send-admin delete <id>
+docker exec skysend skysend-cli delete <id>
 
 # Storage overview
-docker exec skysend send-admin stats
+docker exec skysend skysend-cli stats
 
 # Cleanup expired uploads
-docker exec skysend send-admin cleanup
+docker exec skysend skysend-cli cleanup
 ```
 
 ## Development
