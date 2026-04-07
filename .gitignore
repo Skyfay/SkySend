@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.output/
+.vitepress/dist/
+
+# Data (runtime)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test & Coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# OS
+Thumbs.db
+ehthumbs.db
+
+# Temp
+*.tmp
+*.temp
+.cache/

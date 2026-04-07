@@ -1,0 +1,15 @@
+{
+  "name": "skysend",
+  "private": true,
+  "description": "Minimalistischer, End-to-End-verschlüsselter File-Sharing-Service",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev": "pnpm --parallel dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test"
+  },
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=9"
+  }
+}

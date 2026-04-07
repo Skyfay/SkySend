@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  skysend:
+    build: .
+    container_name: skysend
+    restart: always
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ${DATA_DIR:-./data}:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATA_DIR=/app/data
