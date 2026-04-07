@@ -343,6 +343,7 @@ Client                                          Server
 - [ ] Auth Middleware (Token Validation)
 - [ ] Cleanup Job (delete expired uploads, interval)
 - [ ] Rate Limiting
+- [ ] Upload Quota (per-user volume limit, privacy-preserving hashed IP)
 - [ ] Request Validation (Zod) + Error Handling
 - [ ] Static SPA Serving (Vite Build)
 - [ ] Unit and Integration Tests
@@ -482,6 +483,8 @@ Crypto is the foundation for everything. Backend and Frontend build upon it. Doc
 | `SITE_TITLE` | `SkySend` | Displayed Site Title |
 | `RATE_LIMIT_WINDOW` | `60000` | Rate Limit Window (in milliseconds) |
 | `RATE_LIMIT_MAX` | `60` | Max Requests per Window |
+| `UPLOAD_QUOTA_BYTES` | `0` | Max upload volume per user per window (0 = disabled) |
+| `UPLOAD_QUOTA_WINDOW` | `86400` | Quota time window in seconds (default 24h) |
 
 ---
 
@@ -494,6 +497,7 @@ Crypto is the foundation for everything. Backend and Frontend build upon it. Doc
 - [ ] Counter-based Nonces for File Chunks (no reuse)
 - [ ] Auth Token is cryptographically derived, not guessable
 - [ ] Rate Limiting on all endpoints
+- [ ] Upload Quota uses hashed IPs only (HMAC-SHA256 with daily rotating key, no plaintext IPs stored)
 - [ ] Content-Security-Policy Header
 - [ ] No eval(), no innerHTML with User Input
 - [ ] Dependencies regularly checked for security vulnerabilities
