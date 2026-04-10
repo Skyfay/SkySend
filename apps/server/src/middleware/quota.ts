@@ -2,6 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { createHmac, randomBytes } from "node:crypto";
 import type { Config } from "../lib/config.js";
 import { getClientIp } from "./rate-limit.js";
+import type { QuotaVariables } from "../types.js";
 
 interface QuotaEntry {
   bytesUsed: number;
@@ -52,14 +53,14 @@ export function createUploadQuota(config: Config) {
     return entry;
   }
 
-  const middleware = createMiddleware(async (c, next) => {
+  const middleware = createMiddleware<{ Variables: QuotaVariables }>(async (c, next) => {
     // Quota disabled
     if (config.UPLOAD_QUOTA_BYTES <= 0) {
       await next();
       return;
     }
 
-    const ip = getClientIp(c.req.raw);
+    const ip = getClientIp(c.req.raw, config.TRUST_PROXY);
     const hashedIp = hashIp(ip);
     const entry = getOrCreateEntry(hashedIp);
 
@@ -72,7 +73,7 @@ export function createUploadQuota(config: Config) {
     }
 
     // Store hashed IP in context for post-upload tracking
-    c.set("quotaHashedIp" as never, hashedIp);
+    c.set("quotaHashedIp", hashedIp);
     await next();
   });
 

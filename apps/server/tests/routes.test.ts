@@ -45,6 +45,7 @@ const DEFAULT_CONFIG = {
   UPLOAD_QUOTA_BYTES: 0,
   UPLOAD_QUOTA_WINDOW: 86400,
   MAX_FILES_PER_UPLOAD: 32,
+  TRUST_PROXY: false,
 };
 
 describe("routes", () => {

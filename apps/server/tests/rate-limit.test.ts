@@ -21,6 +21,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     UPLOAD_QUOTA_BYTES: 0,
     UPLOAD_QUOTA_WINDOW: 86400,
     MAX_FILES_PER_UPLOAD: 32,
+    TRUST_PROXY: false,
     ...overrides,
   };
 }
@@ -68,7 +69,7 @@ describe("rate limiter", () => {
   });
 
   it("should track different IPs separately", async () => {
-    const config = makeConfig({ RATE_LIMIT_MAX: 2 });
+    const config = makeConfig({ RATE_LIMIT_MAX: 2, TRUST_PROXY: true });
     const app = new Hono();
     app.use("*", createRateLimiter(config));
     app.get("/test", (c) => c.json({ ok: true }));
@@ -96,32 +97,39 @@ describe("rate limiter", () => {
 });
 
 describe("getClientIp", () => {
-  it("should extract IP from X-Forwarded-For", () => {
+  it("should extract IP from X-Forwarded-For when trusted", () => {
     const req = new Request("http://localhost/", {
       headers: { "X-Forwarded-For": "1.2.3.4, 10.0.0.1" },
     });
-    expect(getClientIp(req)).toBe("1.2.3.4");
+    expect(getClientIp(req, true)).toBe("1.2.3.4");
   });
 
-  it("should extract IP from X-Real-IP", () => {
+  it("should extract IP from X-Real-IP when trusted", () => {
     const req = new Request("http://localhost/", {
       headers: { "X-Real-IP": "5.6.7.8" },
     });
-    expect(getClientIp(req)).toBe("5.6.7.8");
+    expect(getClientIp(req, true)).toBe("5.6.7.8");
   });
 
-  it("should prefer X-Forwarded-For over X-Real-IP", () => {
+  it("should prefer X-Forwarded-For over X-Real-IP when trusted", () => {
     const req = new Request("http://localhost/", {
       headers: {
         "X-Forwarded-For": "1.2.3.4",
         "X-Real-IP": "5.6.7.8",
       },
     });
-    expect(getClientIp(req)).toBe("1.2.3.4");
+    expect(getClientIp(req, true)).toBe("1.2.3.4");
+  });
+
+  it("should ignore proxy headers when not trusted", () => {
+    const req = new Request("http://localhost/", {
+      headers: { "X-Forwarded-For": "1.2.3.4" },
+    });
+    expect(getClientIp(req, false)).toBe("unknown");
   });
 
   it("should return 'unknown' when no headers present", () => {
     const req = new Request("http://localhost/");
-    expect(getClientIp(req)).toBe("unknown");
+    expect(getClientIp(req, true)).toBe("unknown");
   });
 });

@@ -44,11 +44,27 @@ metaRoute.post("/:id", ownerMiddleware, async (c) => {
 
   const { encryptedMeta, nonce } = result.data;
 
+  // Validate base64 encoding
+  let metaBuffer: Buffer;
+  let nonceBuffer: Buffer;
+  try {
+    metaBuffer = Buffer.from(encryptedMeta, "base64");
+    if (metaBuffer.length === 0) throw new Error("empty");
+  } catch {
+    return c.json({ error: "Invalid encryptedMeta encoding" }, 400);
+  }
+  try {
+    nonceBuffer = Buffer.from(nonce, "base64");
+    if (nonceBuffer.length === 0) throw new Error("empty");
+  } catch {
+    return c.json({ error: "Invalid nonce encoding" }, 400);
+  }
+
   const db = getDb();
   db.update(uploads)
     .set({
-      encryptedMeta: Buffer.from(encryptedMeta, "base64"),
-      nonce: Buffer.from(nonce, "base64"),
+      encryptedMeta: metaBuffer,
+      nonce: nonceBuffer,
     })
     .where(eq(uploads.id, upload.id))
     .run();

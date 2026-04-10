@@ -6,6 +6,7 @@ import { uploads } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
 import { fromBase64url, SALT_LENGTH } from "@skysend/crypto";
 import type { FileStorage } from "../storage/filesystem.js";
+import type { QuotaVariables } from "../types.js";
 
 const base64urlPattern = /^[A-Za-z0-9_-]+$/;
 
@@ -39,7 +40,7 @@ const uploadHeadersSchema = z.object({
 });
 
 export function createUploadRoute(storage: FileStorage) {
-  const route = new Hono();
+  const route = new Hono<{ Variables: QuotaVariables }>();
 
   /**
    * POST /api/upload
@@ -119,6 +120,16 @@ export function createUploadRoute(storage: FileStorage) {
           400,
         );
       }
+
+      // Validate password salt length
+      try {
+        const pwSaltBytes = fromBase64url(headers.passwordSalt);
+        if (pwSaltBytes.length !== SALT_LENGTH) {
+          return c.json({ error: `Password salt must be exactly ${SALT_LENGTH} bytes` }, 400);
+        }
+      } catch {
+        return c.json({ error: "Invalid password salt encoding" }, 400);
+      }
     }
 
     // Ensure we have a request body
@@ -160,29 +171,32 @@ export function createUploadRoute(storage: FileStorage) {
     const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
 
     const db = getDb();
-    db.insert(uploads).values({
-      id,
-      ownerToken: headers.ownerToken,
-      authToken: headers.authToken,
-      salt: Buffer.from(fromBase64url(headers.salt)),
-      size: bytesWritten,
-      fileCount: headers.fileCount,
-      hasPassword: headers.hasPassword,
-      passwordSalt: passwordSaltBuffer,
-      passwordAlgo: headers.hasPassword ? (headers.passwordAlgo ?? null) : null,
-      maxDownloads: headers.maxDownloads,
-      downloadCount: 0,
-      expiresAt,
-      createdAt: now,
-      storagePath,
-    }).run();
+    try {
+      db.insert(uploads).values({
+        id,
+        ownerToken: headers.ownerToken,
+        authToken: headers.authToken,
+        salt: Buffer.from(fromBase64url(headers.salt)),
+        size: bytesWritten,
+        fileCount: headers.fileCount,
+        hasPassword: headers.hasPassword,
+        passwordSalt: passwordSaltBuffer,
+        passwordAlgo: headers.hasPassword ? (headers.passwordAlgo ?? null) : null,
+        maxDownloads: headers.maxDownloads,
+        downloadCount: 0,
+        expiresAt,
+        createdAt: now,
+        storagePath,
+      }).run();
+    } catch (err) {
+      await storage.delete(id).catch(() => {});
+      throw err;
+    }
 
     // Record quota usage if applicable
-    const quotaHashedIp = c.get("quotaHashedIp" as never) as string | undefined;
+    const quotaHashedIp = c.get("quotaHashedIp");
     if (quotaHashedIp) {
-      const quotaRecorder = c.get("quotaRecorder" as never) as
-        | ((ip: string, bytes: number) => void)
-        | undefined;
+      const quotaRecorder = c.get("quotaRecorder");
       if (quotaRecorder) {
         quotaRecorder(quotaHashedIp, bytesWritten);
       }

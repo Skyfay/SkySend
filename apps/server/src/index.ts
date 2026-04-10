@@ -12,6 +12,7 @@ import { FileStorage } from "./storage/filesystem.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
+import type { QuotaVariables } from "./types.js";
 
 // Routes
 import { configRoute } from "./routes/config.js";
@@ -32,9 +33,12 @@ const storage = new FileStorage(config.DATA_DIR);
 await storage.init();
 
 // Run cleanup once at startup to clear any stale uploads
-await runCleanup(storage).catch((err) =>
-  console.error("[startup] Initial cleanup failed:", err),
-);
+try {
+  await runCleanup(storage);
+} catch (err) {
+  console.error("[startup] Initial cleanup failed:", err);
+  process.exit(1);
+}
 
 const stopCleanup = startCleanupJob(storage, config.CLEANUP_INTERVAL);
 
@@ -45,7 +49,32 @@ const app = new Hono();
 // Global middleware
 app.use("*", logger());
 app.use("*", secureHeaders());
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: config.BASE_URL,
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Content-Length",
+      "X-Auth-Token",
+      "X-Owner-Token",
+      "X-Salt",
+      "X-Max-Downloads",
+      "X-Expire-Sec",
+      "X-File-Count",
+      "X-Has-Password",
+      "X-Password-Salt",
+      "X-Password-Algo",
+    ],
+    exposeHeaders: [
+      "X-RateLimit-Limit",
+      "X-RateLimit-Remaining",
+      "X-RateLimit-Reset",
+      "X-File-Count",
+    ],
+  }),
+);
 app.use("*", createRateLimiter(config));
 
 // Upload quota middleware (only on upload endpoint)
@@ -71,11 +100,11 @@ api.route("/download", createDownloadRoute(storage));
 
 // Upload route with quota middleware
 const uploadRoute = createUploadRoute(storage);
-const uploadWithQuota = new Hono();
+const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
 uploadWithQuota.use("*", quota.middleware);
 uploadWithQuota.post("/", async (c, next) => {
   // Inject quota recorder into context
-  c.set("quotaRecorder" as never, quota.recordUsage as never);
+  c.set("quotaRecorder", quota.recordUsage);
   await next();
 });
 uploadWithQuota.route("/", uploadRoute);

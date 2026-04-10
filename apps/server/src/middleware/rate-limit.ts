@@ -27,7 +27,7 @@ export function createRateLimiter(config: Config) {
   cleanupInterval.unref();
 
   return createMiddleware(async (c, next) => {
-    const ip = getClientIp(c.req.raw);
+    const ip = getClientIp(c.req.raw, config.TRUST_PROXY);
     const now = Date.now();
 
     let entry = store.get(ip);
@@ -56,20 +56,22 @@ export function createRateLimiter(config: Config) {
 
 /**
  * Extract the client IP from the request.
- * Supports common reverse proxy headers (X-Forwarded-For, X-Real-IP).
+ * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled.
  */
-function getClientIp(request: Request): string {
-  // Check X-Forwarded-For first (most common with reverse proxies)
-  const forwarded = request.headers.get("X-Forwarded-For");
-  if (forwarded) {
-    // Take the first (leftmost) IP - the original client
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
+function getClientIp(request: Request, trustProxy = false): string {
+  if (trustProxy) {
+    // Check X-Forwarded-For first (most common with reverse proxies)
+    const forwarded = request.headers.get("X-Forwarded-For");
+    if (forwarded) {
+      // Take the first (leftmost) IP - the original client
+      const first = forwarded.split(",")[0]?.trim();
+      if (first) return first;
+    }
 
-  // Check X-Real-IP (used by Nginx)
-  const realIp = request.headers.get("X-Real-IP");
-  if (realIp) return realIp.trim();
+    // Check X-Real-IP (used by Nginx)
+    const realIp = request.headers.get("X-Real-IP");
+    if (realIp) return realIp.trim();
+  }
 
   // Fallback: use a default since Hono doesn't expose socket info directly
   return "unknown";

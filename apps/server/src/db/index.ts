@@ -24,6 +24,10 @@ export function initDatabase(dataDir: string): ReturnType<typeof drizzle<typeof 
 
   // Apply SQLite performance and safety pragmas
   sqlite.pragma("journal_mode = WAL");
+  const walMode = sqlite.pragma("journal_mode", { simple: true });
+  if (walMode !== "wal") {
+    throw new Error(`Failed to enable WAL mode (got: ${walMode})`);
+  }
   sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("foreign_keys = ON");

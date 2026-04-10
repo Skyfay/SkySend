@@ -106,6 +106,11 @@ const configSchema = z.object({
     .default("32")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
+
+  TRUST_PROXY: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -124,6 +129,19 @@ export function loadConfig(): Config {
     env[key] = value === "" ? undefined : value;
   }
   _config = configSchema.parse(env);
+
+  // Cross-field validation
+  if (!_config.EXPIRE_OPTIONS_SEC.includes(_config.DEFAULT_EXPIRE_SEC)) {
+    throw new Error(
+      `DEFAULT_EXPIRE_SEC (${_config.DEFAULT_EXPIRE_SEC}) must be one of EXPIRE_OPTIONS_SEC (${_config.EXPIRE_OPTIONS_SEC.join(", ")})`
+    );
+  }
+  if (!_config.DOWNLOAD_OPTIONS.includes(_config.DEFAULT_DOWNLOAD)) {
+    throw new Error(
+      `DEFAULT_DOWNLOAD (${_config.DEFAULT_DOWNLOAD}) must be one of DOWNLOAD_OPTIONS (${_config.DOWNLOAD_OPTIONS.join(", ")})`
+    );
+  }
+
   return _config;
 }
 

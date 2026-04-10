@@ -71,9 +71,9 @@ describe("config", () => {
     });
 
     it("should parse comma-separated EXPIRE_OPTIONS_SEC", async () => {
-      process.env.EXPIRE_OPTIONS_SEC = "60,3600";
+      process.env.EXPIRE_OPTIONS_SEC = "60,3600,86400";
       const config = await loadFreshConfig();
-      expect(config.EXPIRE_OPTIONS_SEC).toEqual([60, 3600]);
+      expect(config.EXPIRE_OPTIONS_SEC).toEqual([60, 3600, 86400]);
     });
 
     it("should parse comma-separated DOWNLOAD_OPTIONS", async () => {
@@ -135,6 +135,18 @@ describe("config", () => {
     it("should reject negative DEFAULT_EXPIRE_SEC", async () => {
       process.env.DEFAULT_EXPIRE_SEC = "-1";
       await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should reject DEFAULT_EXPIRE_SEC not in EXPIRE_OPTIONS_SEC", async () => {
+      process.env.EXPIRE_OPTIONS_SEC = "300,3600";
+      process.env.DEFAULT_EXPIRE_SEC = "86400";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of EXPIRE_OPTIONS_SEC");
+    });
+
+    it("should reject DEFAULT_DOWNLOAD not in DOWNLOAD_OPTIONS", async () => {
+      process.env.DOWNLOAD_OPTIONS = "5,10";
+      process.env.DEFAULT_DOWNLOAD = "1";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of DOWNLOAD_OPTIONS");
     });
   });
 

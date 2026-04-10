@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { Readable } from "node:stream";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
@@ -36,18 +36,20 @@ export function createDownloadRoute(storage: FileStorage) {
       return c.json({ error: "File not found on disk" }, 500);
     }
 
-    // Atomically increment download count
+    // Atomically increment download count and verify the record still qualifies
     const db = getDb();
     const result = db
       .update(uploads)
       .set({
         downloadCount: sql`${uploads.downloadCount} + 1`,
       })
-      .where(eq(uploads.id, upload.id))
+      .where(
+        sql`${uploads.id} = ${upload.id} AND ${uploads.downloadCount} < ${uploads.maxDownloads}`,
+      )
       .run();
 
     if (result.changes === 0) {
-      return c.json({ error: "Failed to update download count" }, 500);
+      return c.json({ error: "Upload no longer available" }, 410);
     }
 
     // Stream the file
