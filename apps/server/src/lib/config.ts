@@ -118,7 +118,12 @@ let _config: Config | undefined;
  */
 export function loadConfig(): Config {
   if (_config) return _config;
-  _config = configSchema.parse(process.env);
+  // Strip empty strings from env - treat them as unset so defaults apply
+  const env: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    env[key] = value === "" ? undefined : value;
+  }
+  _config = configSchema.parse(env);
   return _config;
 }
 

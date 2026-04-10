@@ -424,25 +424,25 @@ Client                                          Server
 
 **Priority: HIGH**
 
-- [ ] Hono Server Setup + Config Loading
-- [ ] Drizzle ORM + SQLite Schema + Migrations
-- [ ] Filesystem Storage Layer
-- [ ] `GET /api/config` - Provide Server Limits for Client
-- [ ] `POST /api/upload` - Streaming Upload to Disk (supports single file and multi-file/folder archives)
-- [ ] `POST /api/meta/:id` - Save Metadata
-- [ ] `GET /api/info/:id` - Fetch Upload Info
-- [ ] `GET /api/download/:id` - Streaming Download
-- [ ] `POST /api/password/:id` - Password Verification
-- [ ] `DELETE /api/upload/:id` - Delete Upload
-- [ ] `GET /api/exists/:id` - Check Existence
-- [ ] `GET /api/health` - Health Check Endpoint
-- [ ] Auth Middleware (Token Validation)
-- [ ] Cleanup Job (delete expired uploads, interval)
-- [ ] Rate Limiting
-- [ ] Upload Quota (per-user volume limit, privacy-preserving hashed IP)
-- [ ] Request Validation (Zod) + Error Handling
-- [ ] Static SPA Serving (Vite Build)
-- [ ] Unit and Integration Tests
+- [x] Hono Server Setup + Config Loading
+- [x] Drizzle ORM + SQLite Schema + Migrations
+- [x] Filesystem Storage Layer
+- [x] `GET /api/config` - Provide Server Limits for Client
+- [x] `POST /api/upload` - Streaming Upload to Disk (supports single file and multi-file/folder archives)
+- [x] `POST /api/meta/:id` - Save Metadata
+- [x] `GET /api/info/:id` - Fetch Upload Info
+- [x] `GET /api/download/:id` - Streaming Download
+- [x] `POST /api/password/:id` - Password Verification
+- [x] `DELETE /api/upload/:id` - Delete Upload
+- [x] `GET /api/exists/:id` - Check Existence
+- [x] `GET /api/health` - Health Check Endpoint
+- [x] Auth Middleware (Token Validation)
+- [x] Cleanup Job (delete expired uploads, interval)
+- [x] Rate Limiting
+- [x] Upload Quota (per-user volume limit, privacy-preserving hashed IP)
+- [x] Request Validation (Zod) + Error Handling
+- [x] Static SPA Serving (Vite Build)
+- [x] Unit and Integration Tests
 
 ### Phase 3 - Frontend (`apps/web`)
 
