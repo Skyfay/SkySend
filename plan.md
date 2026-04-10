@@ -513,16 +513,16 @@ Client                                          Server
 
 **Priority: MEDIUM**
 
-- [ ] VitePress Setup + Theme Configuration
-- [ ] Landing Page (index.md)
-- [ ] Getting Started Guide
-- [ ] Self-Hosting Instructions (Docker, Reverse Proxy)
-- [ ] Configuration Reference (all Env Variables)
-- [ ] Admin CLI Documentation
-- [ ] Crypto Design Documentation (public audit material)
-- [ ] Threat Model
-- [ ] API Documentation
-- [ ] Architecture Overview
+- [x] VitePress Setup + Theme Configuration
+- [x] Landing Page (index.md)
+- [x] Getting Started Guide
+- [x] Self-Hosting Instructions (Docker, Reverse Proxy)
+- [x] Configuration Reference (all Env Variables)
+- [x] Admin CLI Documentation
+- [x] Crypto Design Documentation (public audit material)
+- [x] Threat Model
+- [x] API Documentation
+- [x] Architecture Overview
 - [ ] GitHub Pages Deployment for Docs
 
 ### Phase 7 - Hardening & Polish
