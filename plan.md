@@ -280,11 +280,14 @@ CREATE TABLE uploads (
     id              TEXT PRIMARY KEY,         -- UUID v4
     owner_token     TEXT NOT NULL,            -- HMAC-based, for deletion
     auth_token      TEXT NOT NULL,            -- Derived from Secret
+    salt            BLOB NOT NULL,            -- HKDF salt (16 Bytes), needed by downloader
     encrypted_meta  BLOB,                     -- AES-256-GCM encrypted Metadata
     nonce           BLOB,                     -- IV for Metadata
     size            INTEGER NOT NULL,         -- Total payload size in Bytes
     file_count      INTEGER DEFAULT 1,        -- Number of files (1 = single, >1 = zip archive)
     has_password    BOOLEAN DEFAULT FALSE,    -- Is password protection active?
+    password_salt   BLOB,                     -- Salt for password KDF (16 Bytes)
+    password_algo   TEXT,                      -- 'argon2id' or 'pbkdf2'
 
     max_downloads   INTEGER NOT NULL,         -- Max. number of downloads
     download_count  INTEGER DEFAULT 0,        -- Current download count
@@ -335,9 +338,15 @@ Client                                          Server
 ──────                                          ──────
 1. POST /api/upload
    Headers:
+     X-Auth-Token: <base64url authToken>
+     X-Owner-Token: <base64url ownerToken>
+     X-Salt: <base64url salt>
      X-Max-Downloads: 10
      X-Expire-Sec: 86400
      X-File-Count: 3
+     X-Has-Password: true|false
+     X-Password-Salt: <base64url passwordSalt>  (if password)
+     X-Password-Algo: argon2id|pbkdf2           (if password)
      Content-Length: 1048576
    Body: <encrypted stream>
    (If multi-file/folder: client zips first, then encrypts)
@@ -399,17 +408,17 @@ Client                                          Server
 
 **Priority: HIGH - Core of the project**
 
-- [ ] `keychain.ts` - Key Generation (256-bit Secret)
-- [ ] `keychain.ts` - HKDF Key Derivation (fileKey, metaKey, authKey)
-- [ ] `ece.ts` - Streaming AES-256-GCM Encryption (64KB Chunks)
-- [ ] `ece.ts` - Streaming AES-256-GCM Decryption
-- [ ] `metadata.ts` - Metadata Encryption with Random IV
-- [ ] `metadata.ts` - Metadata Decryption
-- [ ] `password.ts` - Argon2id via WASM
-- [ ] `password.ts` - PBKDF2-SHA256 Fallback (600,000 Iterations)
-- [ ] `util.ts` - Base64url, ArrayBuffer Helpers
-- [ ] Unit Tests for all Crypto Functions
-- [ ] Integration Test: Encrypt -> Decrypt Roundtrip
+- [x] `keychain.ts` - Key Generation (256-bit Secret)
+- [x] `keychain.ts` - HKDF Key Derivation (fileKey, metaKey, authKey)
+- [x] `ece.ts` - Streaming AES-256-GCM Encryption (64KB Chunks)
+- [x] `ece.ts` - Streaming AES-256-GCM Decryption
+- [x] `metadata.ts` - Metadata Encryption with Random IV
+- [x] `metadata.ts` - Metadata Decryption
+- [x] `password.ts` - Argon2id via WASM
+- [x] `password.ts` - PBKDF2-SHA256 Fallback (600,000 Iterations)
+- [x] `util.ts` - Base64url, ArrayBuffer Helpers
+- [x] Unit Tests for all Crypto Functions
+- [x] Integration Test: Encrypt -> Decrypt Roundtrip
 
 ### Phase 2 - Backend (`apps/server`)
 

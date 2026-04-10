@@ -11,8 +11,7 @@
  * - authKey is used with HMAC-SHA256 to produce an auth token
  */
 
-import { randomBytes } from "./util.js";
-import { asBytes } from "./util.js";
+import { asBytes, randomBytes } from "./util.js";
 
 /** Length of the master secret in bytes (256 bits). */
 export const SECRET_LENGTH = 32;
