@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/index.ts",
+    "dev": "tsc --watch",
     "test": "vitest run"
   },
   "dependencies": {
