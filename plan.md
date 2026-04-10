@@ -448,44 +448,44 @@ Client                                          Server
 
 **Priority: HIGH**
 
-- [ ] Vite + React + TailwindCSS Setup
-- [ ] Initialize Shadcn UI + Theme
-- [ ] Initialize react-i18next (Auto-detect + EN fallback)
-- [ ] React Router Setup (/, /d/:id, /uploads, 404)
-- [ ] Upload Page
-  - [ ] Drag & Drop Zone (UploadZone) - supports files and folders
-  - [ ] Single File Selection
-  - [ ] Multi-File Selection (up to `MAX_FILES_PER_UPLOAD`)
-  - [ ] Folder Selection (via directory picker)
-  - [ ] File List Preview (FileList component - add/remove files before upload)
-  - [ ] Client-Side Zip (fflate) for multi-file/folder uploads
-  - [ ] Expiry Configuration (Time + Max Downloads)
-  - [ ] Optional Password Field
-  - [ ] Upload Progress Indicator
-  - [ ] Share Link Display with Copy Button
-- [ ] Upload Management Page (My Uploads)
-  - [ ] IndexedDB Store for upload history (id, ownerToken, secret, fileNames, createdAt)
-  - [ ] List of user's uploads (UploadList + UploadCard components)
-  - [ ] Fetch live status per upload via `GET /api/info/:id`
-  - [ ] Show download count, remaining downloads, expiry countdown
-  - [ ] Re-copy share link
-  - [ ] Delete upload (via `DELETE /api/upload/:id` with owner token)
-  - [ ] Auto-cleanup of expired/deleted entries from IndexedDB
-- [ ] Download Page
-  - [ ] Load Upload Info (Size, Downloads, Expiry)
-  - [ ] Password Input (if needed)
-  - [ ] Download Button + Progress
-  - [ ] Error Handling (expired, limit reached, not found)
-- [ ] Crypto Integration
-  - [ ] Read Secret from URL Fragment (#...)
-  - [ ] Chunked Encryption in Browser (Upload)
-  - [ ] Chunked Decryption in Browser (Download)
+- [x] Vite + React + TailwindCSS Setup
+- [x] Initialize Shadcn UI + Theme
+- [x] Initialize react-i18next (Auto-detect + EN fallback)
+- [x] React Router Setup (/, /d/:id, /uploads, 404)
+- [x] Upload Page
+  - [x] Drag & Drop Zone (UploadZone) - supports files and folders
+  - [x] Single File Selection
+  - [x] Multi-File Selection (up to `MAX_FILES_PER_UPLOAD`)
+  - [x] Folder Selection (via directory picker)
+  - [x] File List Preview (FileList component - add/remove files before upload)
+  - [x] Client-Side Zip (fflate) for multi-file/folder uploads
+  - [x] Expiry Configuration (Time + Max Downloads)
+  - [x] Optional Password Field
+  - [x] Upload Progress Indicator
+  - [x] Share Link Display with Copy Button
+- [x] Upload Management Page (My Uploads)
+  - [x] IndexedDB Store for upload history (id, ownerToken, secret, fileNames, createdAt)
+  - [x] List of user's uploads (UploadList + UploadCard components)
+  - [x] Fetch live status per upload via `GET /api/info/:id`
+  - [x] Show download count, remaining downloads, expiry countdown
+  - [x] Re-copy share link
+  - [x] Delete upload (via `DELETE /api/upload/:id` with owner token)
+  - [x] Auto-cleanup of expired/deleted entries from IndexedDB
+- [x] Download Page
+  - [x] Load Upload Info (Size, Downloads, Expiry)
+  - [x] Password Input (if needed)
+  - [x] Download Button + Progress
+  - [x] Error Handling (expired, limit reached, not found)
+- [x] Crypto Integration
+  - [x] Read Secret from URL Fragment (#...)
+  - [x] Chunked Encryption in Browser (Upload)
+  - [x] Chunked Decryption in Browser (Download)
   - [ ] Load Argon2id WASM
-  - [ ] Zip before encrypt (multi-file/folder upload)
-  - [ ] Decrypt then unzip (multi-file download - serve as .zip)
-- [ ] Responsive Design (Mobile + Desktop)
-- [ ] Dark Mode
-- [ ] Accessibility (a11y)
+  - [x] Zip before encrypt (multi-file/folder upload)
+  - [x] Decrypt then unzip (multi-file download - serve as .zip)
+- [x] Responsive Design (Mobile + Desktop)
+- [x] Dark Mode
+- [x] Accessibility (a11y)
 - [ ] E2E Tests (Playwright)
 
 ### Phase 4 - Admin CLI (`apps/cli`)
