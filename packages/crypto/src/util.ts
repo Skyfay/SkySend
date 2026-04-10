@@ -44,8 +44,10 @@ export function toBase64url(data: Uint8Array): string {
  * RFC 4648 Section 5.
  */
 export function fromBase64url(str: string): Uint8Array {
-  // Remove any padding
-  const input = str.replace(/=+$/, "");
+  // Remove any trailing padding without regex to avoid ReDoS
+  let end = str.length;
+  while (end > 0 && str[end - 1] === "=") end--;
+  const input = str.slice(0, end);
 
   const byteLength = Math.floor((input.length * 3) / 4);
   const bytes = new Uint8Array(byteLength);
