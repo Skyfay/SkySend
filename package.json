@@ -1,5 +1,6 @@
 {
   "name": "skysend",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
@@ -12,14 +13,19 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "pnpm --recursive typecheck"
+    "typecheck": "pnpm --recursive typecheck",
+    "version:sync": "bash scripts/sync-version.sh --sync-only",
+    "version:bump": "bash scripts/sync-version.sh"
   },
   "engines": {
     "node": ">=24",
     "pnpm": ">=9"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
