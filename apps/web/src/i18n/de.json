@@ -1,0 +1,98 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tagline": "Ende-zu-Ende verschluesselte Dateifreigabe",
+    "loading": "Laden...",
+    "error": "Etwas ist schiefgelaufen",
+    "retry": "Erneut versuchen",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "delete": "Loeschen",
+    "cancel": "Abbrechen",
+    "confirm": "Bestaetigen",
+    "close": "Schliessen",
+    "back": "Zurueck"
+  },
+  "nav": {
+    "upload": "Hochladen",
+    "myUploads": "Meine Uploads"
+  },
+  "upload": {
+    "title": "Dateien hochladen",
+    "dropzone": "Dateien hier ablegen oder klicken zum Auswaehlen",
+    "dropzoneActive": "Dateien hier ablegen...",
+    "browseFiles": "Dateien auswaehlen",
+    "browseFolder": "Ordner auswaehlen",
+    "or": "oder",
+    "selectedFiles": "{{count}} Datei(en) ausgewaehlt",
+    "totalSize": "Gesamtgroesse: {{size}}",
+    "maxFiles": "Maximal {{count}} Dateien pro Upload",
+    "maxSize": "Maximale Dateigroesse: {{size}}",
+    "expiry": "Laeuft ab nach",
+    "downloads": "Max. Downloads",
+    "password": "Passwortschutz",
+    "passwordPlaceholder": "Passwort eingeben (optional)",
+    "uploading": "Verschluesseln und hochladen...",
+    "processing": "Verarbeitung...",
+    "uploadComplete": "Upload abgeschlossen!",
+    "shareLink": "Diesen Link teilen",
+    "shareLinkHint": "Der Schluessel befindet sich im URL-Fragment - er erreicht niemals den Server.",
+    "newUpload": "Neuer Upload",
+    "fileTooLarge": "Datei ueberschreitet maximale Groesse von {{size}}",
+    "tooManyFiles": "Maximal {{count}} Dateien pro Upload"
+  },
+  "download": {
+    "title": "Datei herunterladen",
+    "fileInfo": "Datei-Informationen",
+    "size": "Groesse",
+    "downloads": "Downloads",
+    "expires": "Laeuft ab",
+    "expired": "Dieser Upload ist abgelaufen",
+    "limitReached": "Download-Limit erreicht",
+    "notFound": "Upload nicht gefunden",
+    "passwordRequired": "Diese Datei ist passwortgeschuetzt",
+    "passwordPlaceholder": "Passwort eingeben",
+    "unlock": "Entsperren",
+    "wrongPassword": "Falsches Passwort",
+    "download": "Herunterladen",
+    "downloading": "Entschluesseln und herunterladen...",
+    "decrypting": "Entschluesseln...",
+    "complete": "Download abgeschlossen!",
+    "failed": "Download fehlgeschlagen"
+  },
+  "myUploads": {
+    "title": "Meine Uploads",
+    "empty": "Noch keine Uploads",
+    "emptyHint": "Uploads, die Sie auf diesem Geraet machen, erscheinen hier.",
+    "copyLink": "Link kopieren",
+    "deleteConfirm": "Moechten Sie diesen Upload wirklich loeschen?",
+    "deleteSuccess": "Upload geloescht",
+    "deleteFailed": "Upload konnte nicht geloescht werden",
+    "remaining": "{{count}} Downloads verbleibend",
+    "expired": "Abgelaufen",
+    "unavailable": "Nicht verfuegbar",
+    "files": "{{count}} Datei(en)"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Die gesuchte Seite existiert nicht.",
+    "goHome": "Zur Upload-Seite"
+  },
+  "time": {
+    "seconds_one": "{{count}} Sekunde",
+    "seconds_other": "{{count}} Sekunden",
+    "minutes_one": "{{count}} Minute",
+    "minutes_other": "{{count}} Minuten",
+    "hours_one": "{{count}} Stunde",
+    "hours_other": "{{count}} Stunden",
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "weeks_one": "{{count}} Woche",
+    "weeks_other": "{{count}} Wochen"
+  },
+  "theme": {
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  }
+}
