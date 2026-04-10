@@ -4,7 +4,8 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "lib": ["ES2024", "DOM"],
+    "types": []
   },
   "include": ["src"]
 }
