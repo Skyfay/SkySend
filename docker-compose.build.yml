@@ -8,6 +8,14 @@ services:
     environment:
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
+      - MAX_FILE_SIZE=10GB
+      - MAX_FILES_PER_UPLOAD=10
+      - EXPIRE_OPTIONS_SEC=300,3600,3434
+      - DEFAULT_EXPIRE_SEC=3600
+      - DOWNLOAD_OPTIONS=10,50,1000
+      - DEFAULT_DOWNLOAD=50
+      - UPLOAD_QUOTA_BYTES=300MB
+      - SITE_TITLE=SkySend Test
     #  - PUID=${PUID:-1001}
     #  - PGID=${PGID:-1001}
     volumes:
