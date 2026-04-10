@@ -19,5 +19,12 @@
     "exactOptionalPropertyTypes": false,
     "noFallthroughCasesInSwitch": true
   },
+  "files": [],
+  "references": [
+    { "path": "packages/crypto" },
+    { "path": "apps/server" },
+    { "path": "apps/web" },
+    { "path": "apps/cli" }
+  ],
   "exclude": ["node_modules", "dist", "build", "coverage"]
 }
