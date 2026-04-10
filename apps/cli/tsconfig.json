@@ -6,5 +6,8 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    { "path": "../server" }
+  ]
 }

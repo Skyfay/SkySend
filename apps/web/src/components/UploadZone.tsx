@@ -69,7 +69,7 @@ export function UploadZone({
         tabIndex={0}
         aria-label={t("upload.dropzone")}
         className={cn(
-          "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
+          "relative flex min-h-50 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
           isDragging
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-muted-foreground/50",

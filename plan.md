@@ -492,12 +492,12 @@ Client                                          Server
 
 **Priority: MEDIUM**
 
-- [ ] CLI Framework (e.g., Commander.js or cac)
-- [ ] `send-admin list` - Show active uploads
-- [ ] `send-admin delete <id>` - Delete upload
-- [ ] `send-admin stats` - Storage overview
-- [ ] `send-admin cleanup` - Manual cleanup
-- [ ] `send-admin config` - Show limits
+- [x] CLI Framework (e.g., Commander.js or cac)
+- [x] `skysend-cli list` - Show active uploads
+- [x] `skysend-cli delete <id>` - Delete upload
+- [x] `skysend-cli stats` - Storage overview
+- [x] `skysend-cli cleanup` - Manual cleanup
+- [x] `skysend-cli config` - Show limits
 
 ### Phase 5 - Docker & Deployment
 
