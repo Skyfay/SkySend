@@ -1,7 +1,9 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { join } from "node:path";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { join, dirname } from "node:path";
 import { mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as schema from "./schema.js";
 
 let _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
@@ -10,6 +12,7 @@ let _sqlite: Database.Database | undefined;
 /**
  * Initialize the SQLite database connection with optimal settings.
  * Creates the data directory and database file if they do not exist.
+ * Automatically runs pending migrations on startup.
  */
 export function initDatabase(dataDir: string): ReturnType<typeof drizzle<typeof schema>> {
   if (_db) return _db;
@@ -25,32 +28,14 @@ export function initDatabase(dataDir: string): ReturnType<typeof drizzle<typeof 
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("foreign_keys = ON");
 
-  // Create tables if they do not exist
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS uploads (
-      id              TEXT PRIMARY KEY,
-      owner_token     TEXT NOT NULL,
-      auth_token      TEXT NOT NULL,
-      salt            BLOB NOT NULL,
-      encrypted_meta  BLOB,
-      nonce           BLOB,
-      size            INTEGER NOT NULL,
-      file_count      INTEGER NOT NULL DEFAULT 1,
-      has_password    INTEGER NOT NULL DEFAULT 0,
-      password_salt   BLOB,
-      password_algo   TEXT,
-      max_downloads   INTEGER NOT NULL,
-      download_count  INTEGER NOT NULL DEFAULT 0,
-      expires_at      INTEGER NOT NULL,
-      created_at      INTEGER NOT NULL DEFAULT (unixepoch()),
-      storage_path    TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_uploads_expires_at ON uploads(expires_at);
-  `);
-
   _sqlite = sqlite;
   _db = drizzle(sqlite, { schema });
+
+  // Run pending migrations automatically
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const migrationsFolder = join(currentDir, "migrations");
+  migrate(_db, { migrationsFolder });
+
   return _db;
 }
 
