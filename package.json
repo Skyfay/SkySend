@@ -1,15 +1,31 @@
 {
   "name": "skysend",
   "private": true,
+  "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
   "license": "AGPL-3.0",
   "scripts": {
     "dev": "pnpm --parallel dev",
     "build": "pnpm --recursive build",
-    "test": "pnpm --recursive test"
+    "test": "pnpm --recursive test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm --recursive typecheck"
   },
   "engines": {
     "node": ">=24",
     "pnpm": ">=9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.2",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1"
   }
 }

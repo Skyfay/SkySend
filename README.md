@@ -59,14 +59,14 @@ pnpm dev
 
 ## Tech Stack
 
-| Area | Technology |
-| --------- | ------------------------- |
-| Frontend | Vite + React + Shadcn UI |
-| Backend | Hono (Node.js) |
-| Database | SQLite (Drizzle ORM) |
-| Crypto | Web Crypto API + Argon2id |
-| Build | Vite |
-| Docs | VitePress |
+| Area     | Technology                |
+| -------- | ------------------------- |
+| Frontend | Vite + React + Shadcn UI  |
+| Backend  | Hono (Node.js)            |
+| Database | SQLite (Drizzle ORM)      |
+| Crypto   | Web Crypto API + Argon2id |
+| Build    | Vite                      |
+| Docs     | VitePress                 |
 
 ## Security
 

@@ -8,23 +8,23 @@ SkySend is a minimalist, self-hostable, end-to-end encrypted file sharing servic
 
 ## Tech Stack
 
-| Area | Technology | Reasoning |
-| ---------------- | ------------------------------- | --------------------------------------------- |
-| **Runtime** | Node.js 24 LTS | Stable, current LTS, native Streams |
-| **Backend** | Hono | Minimal, Web-Standard APIs, Streaming-first |
-| **Frontend** | Vite + React 19 + Shadcn UI | Fast build, no SSR overhead, pure SPA |
-| **ORM** | Drizzle ORM | Lightweight, type-safe, SQLite-optimized |
-| **Database** | SQLite (via better-sqlite3) | Zero Config, no DB-Server, Backup = 1 File |
-| **Crypto** | Web Crypto API (native) | No dependencies needed |
-| **Validation** | Zod | Strictly typed inputs and environment variables |
-| **i18n** | react-i18next | Multi-language auto-detection and fallback |
-| **Password KDF** | Argon2id (WASM) | State-of-the-art, GPU-resistant |
-| **Zip** | fflate | Fast, lightweight, streaming zip/unzip in browser |
-| **Storage** | Local Filesystem | Self-hosted, simple, reliable |
-| **Build** | Vite | Fast, modern, HMR |
-| **Docs** | VitePress | Markdown-based, beautiful, simple |
-| **Monorepo** | pnpm Workspaces | Fast, disk-efficient, native Workspaces |
-| **License** | AGPLv3 | Protects users from closed-source instances |
+| Area             | Technology                  | Reasoning                                         |
+| ---------------- | --------------------------- | ------------------------------------------------- |
+| **Runtime**      | Node.js 24 LTS              | Stable, current LTS, native Streams               |
+| **Backend**      | Hono                        | Minimal, Web-Standard APIs, Streaming-first       |
+| **Frontend**     | Vite + React 19 + Shadcn UI | Fast build, no SSR overhead, pure SPA             |
+| **ORM**          | Drizzle ORM                 | Lightweight, type-safe, SQLite-optimized          |
+| **Database**     | SQLite (via better-sqlite3) | Zero Config, no DB-Server, Backup = 1 File        |
+| **Crypto**       | Web Crypto API (native)     | No dependencies needed                            |
+| **Validation**   | Zod                         | Strictly typed inputs and environment variables   |
+| **i18n**         | react-i18next               | Multi-language auto-detection and fallback        |
+| **Password KDF** | Argon2id (WASM)             | State-of-the-art, GPU-resistant                   |
+| **Zip**          | fflate                      | Fast, lightweight, streaming zip/unzip in browser |
+| **Storage**      | Local Filesystem            | Self-hosted, simple, reliable                     |
+| **Build**        | Vite                        | Fast, modern, HMR                                 |
+| **Docs**         | VitePress                   | Markdown-based, beautiful, simple                 |
+| **Monorepo**     | pnpm Workspaces             | Fast, disk-efficient, native Workspaces           |
+| **License**      | AGPLv3                      | Protects users from closed-source instances       |
 
 ---
 
@@ -52,15 +52,15 @@ Browser (Client)                              Server
 
 ### Crypto Specification
 
-| Component | Algorithm / Value |
-| ------------------- | -------------------------------- |
-| Secret Key | 256-bit Random (32 Bytes) |
-| Key Derivation | HKDF-SHA256 |
-| File Encryption | AES-256-GCM, 64KB Record Size |
-| Metadata Encryption | AES-256-GCM + Random IV (12 B) |
-| Nonce Handling | Counter-based (XOR) |
-| Auth Token | HMAC-SHA256 |
-| Password KDF | Argon2id (WASM) or fallback PBKDF2-SHA256 with 600,000 Iterations |
+| Component           | Algorithm / Value                                                 |
+| ------------------- | ----------------------------------------------------------------- |
+| Secret Key          | 256-bit Random (32 Bytes)                                         |
+| Key Derivation      | HKDF-SHA256                                                       |
+| File Encryption     | AES-256-GCM, 64KB Record Size                                     |
+| Metadata Encryption | AES-256-GCM + Random IV (12 B)                                    |
+| Nonce Handling      | Counter-based (XOR)                                               |
+| Auth Token          | HMAC-SHA256                                                       |
+| Password KDF        | Argon2id (WASM) or fallback PBKDF2-SHA256 with 600,000 Iterations |
 
 ### Key Derivation Schema
 
@@ -316,17 +316,17 @@ PRAGMA foreign_keys = ON;         -- Enforce referential integrity
 
 ## API Endpoints
 
-| Method | Path | Description | Auth |
-| ------- | ---------------------- | ------------------------------------- | -------------- |
-| GET | `/api/config` | Fetch server configuration (Limits) | - |
-| POST | `/api/upload` | Upload encrypted file/archive stream | - |
-| POST | `/api/meta/:id` | Save encrypted metadata | Owner Token |
-| GET | `/api/info/:id` | Upload Info (Size, Expiry, DLs) | - |
-| GET | `/api/download/:id` | Fetch encrypted file stream | Auth Token |
-| POST | `/api/password/:id` | Verify password | Auth Token |
-| DELETE | `/api/upload/:id` | Manually delete upload | Owner Token |
-| GET | `/api/exists/:id` | Check if upload exists | - |
-| GET | `/api/health` | Health check (for Docker, monitoring) | - |
+| Method | Path                | Description                           | Auth        |
+| ------ | ------------------- | ------------------------------------- | ----------- |
+| GET    | `/api/config`       | Fetch server configuration (Limits)   | -           |
+| POST   | `/api/upload`       | Upload encrypted file/archive stream  | -           |
+| POST   | `/api/meta/:id`     | Save encrypted metadata               | Owner Token |
+| GET    | `/api/info/:id`     | Upload Info (Size, Expiry, DLs)       | -           |
+| GET    | `/api/download/:id` | Fetch encrypted file stream           | Auth Token  |
+| POST   | `/api/password/:id` | Verify password                       | Auth Token  |
+| DELETE | `/api/upload/:id`   | Manually delete upload                | Owner Token |
+| GET    | `/api/exists/:id`   | Check if upload exists                | -           |
+| GET    | `/api/health`       | Health check (for Docker, monitoring) | -           |
 
 ### Upload Flow
 
@@ -380,7 +380,7 @@ Client                                          Server
 
 ## Phase Plan
 
-### Phase 0 - Project Setup (Current)
+### Phase 0 - Project Setup (Done)
 
 - [x] Initialize Git Repository
 - [x] Plan Project Structure
@@ -390,8 +390,8 @@ Client                                          Server
 - [x] Project Configuration files (.gitignore, .env.example, LICENSE)
 - [x] Create Dockerfile and docker-compose.yml
 - [x] Create Copilot Instructions
-- [ ] Configure TypeScript
-- [ ] Configure ESLint + Prettier
+- [x] Configure TypeScript
+- [x] Configure ESLint + Prettier
 
 ### Phase 1 - Crypto Library (`packages/crypto`)
 
@@ -569,24 +569,24 @@ Crypto is the foundation for everything. Backend and Frontend build upon it. Doc
 
 ## Environment Variables
 
-| Variable | Default | Description |
-| --------------------- | ------------------------------------- | ---------------------------------------- |
-| `PORT` | `3000` | Server Port |
-| `HOST` | `0.0.0.0` | Server Host |
-| `BASE_URL` | `http://localhost:3000` | Public URL of the instance |
-| `DATA_DIR` | `./data` | Directory for DB + Uploads |
-| `MAX_FILE_SIZE` | `2GB` | Maximum file size |
-| `EXPIRE_OPTIONS_SEC` | `300,3600,86400,604800` | Selectable expiry times (array) |
-| `DEFAULT_EXPIRE_SEC` | `86400` | Default expiry time (1 day) |
-| `DOWNLOAD_OPTIONS` | `1,2,3,4,5,10,20,50,100` | Selectable download limits |
-| `DEFAULT_DOWNLOAD` | `1` | Default download limit |
-| `CLEANUP_INTERVAL` | `60` | Interval for Cleanup Job (in seconds) |
-| `SITE_TITLE` | `SkySend` | Displayed Site Title |
-| `RATE_LIMIT_WINDOW` | `60000` | Rate Limit Window (in milliseconds) |
-| `RATE_LIMIT_MAX` | `60` | Max Requests per Window |
-| `UPLOAD_QUOTA_BYTES` | `0` | Max upload volume per user per window (0 = disabled) |
-| `UPLOAD_QUOTA_WINDOW` | `86400` | Quota time window in seconds (default 24h) |
-| `MAX_FILES_PER_UPLOAD`| `32` | Max number of files per upload (multi-file) |
+| Variable               | Default                  | Description                                          |
+| ---------------------- | ------------------------ | ---------------------------------------------------- |
+| `PORT`                 | `3000`                   | Server Port                                          |
+| `HOST`                 | `0.0.0.0`                | Server Host                                          |
+| `BASE_URL`             | `http://localhost:3000`  | Public URL of the instance                           |
+| `DATA_DIR`             | `./data`                 | Directory for DB + Uploads                           |
+| `MAX_FILE_SIZE`        | `2GB`                    | Maximum file size                                    |
+| `EXPIRE_OPTIONS_SEC`   | `300,3600,86400,604800`  | Selectable expiry times (array)                      |
+| `DEFAULT_EXPIRE_SEC`   | `86400`                  | Default expiry time (1 day)                          |
+| `DOWNLOAD_OPTIONS`     | `1,2,3,4,5,10,20,50,100` | Selectable download limits                           |
+| `DEFAULT_DOWNLOAD`     | `1`                      | Default download limit                               |
+| `CLEANUP_INTERVAL`     | `60`                     | Interval for Cleanup Job (in seconds)                |
+| `SITE_TITLE`           | `SkySend`                | Displayed Site Title                                 |
+| `RATE_LIMIT_WINDOW`    | `60000`                  | Rate Limit Window (in milliseconds)                  |
+| `RATE_LIMIT_MAX`       | `60`                     | Max Requests per Window                              |
+| `UPLOAD_QUOTA_BYTES`   | `0`                      | Max upload volume per user per window (0 = disabled) |
+| `UPLOAD_QUOTA_WINDOW`  | `86400`                  | Quota time window in seconds (default 24h)           |
+| `MAX_FILES_PER_UPLOAD` | `32`                     | Max number of files per upload (multi-file)          |
 
 ---
 
