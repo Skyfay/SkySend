@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm --recursive typecheck",
+    "validate": "bash scripts/validate.sh",
     "version:sync": "bash scripts/sync-version.sh --sync-only",
     "version:bump": "bash scripts/sync-version.sh"
   },
