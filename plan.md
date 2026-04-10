@@ -19,6 +19,7 @@ SkySend is a minimalist, self-hostable, end-to-end encrypted file sharing servic
 | **Validation** | Zod | Strictly typed inputs and environment variables |
 | **i18n** | react-i18next | Multi-language auto-detection and fallback |
 | **Password KDF** | Argon2id (WASM) | State-of-the-art, GPU-resistant |
+| **Zip** | fflate | Fast, lightweight, streaming zip/unzip in browser |
 | **Storage** | Local Filesystem | Self-hosted, simple, reliable |
 | **Build** | Vite | Fast, modern, HMR |
 | **Docs** | VitePress | Markdown-based, beautiful, simple |
@@ -39,12 +40,13 @@ Browser (Client)                              Server
    - fileKey   (AES-256-GCM)
    - metaKey   (AES-256-GCM)
    - authKey   (HMAC-SHA256)
-3. Chunked file encryption (64KB Records)
-4. Encrypt Metadata (Random IV)
-5. Optional: Password via Argon2id
-6. Send Encrypted Blob + Auth ────────> Saves only Ciphertext
+3. If multi-file/folder: Zip via fflate in browser
+4. Chunked encryption of payload (64KB Records)
+5. Encrypt Metadata (file names, sizes, type) with Random IV
+6. Optional: Password via Argon2id
+7. Send Encrypted Blob + Auth ────────> Saves only Ciphertext
                                         Does NOT know the Secret
-7. Share-Link: https://host/#secret_base64url
+8. Share-Link: https://host/#secret_base64url
    (Secret stays in the URL fragment, never sent to the server)
 ```
 
@@ -80,6 +82,68 @@ Plaintext:  [  Chunk 1 (64KB)  ][  Chunk 2 (64KB)  ]...[  Chunk N (<=64KB)  ]
                   |                    |                        |
 Ciphertext: [  Encrypted + Tag  ][  Encrypted + Tag  ]...[  Encrypted + Tag  ]
 ```
+
+---
+
+## Multi-File & Folder Upload Design
+
+### Architecture
+
+Multi-file and folder uploads are handled entirely client-side. The server always receives a single encrypted blob - it does not know whether the payload is a single file or an archive.
+
+```text
+Single File:   File ─────────────────────> Encrypt ──> Upload
+Multi-File:    Files ──> Zip (fflate) ──> Encrypt ──> Upload
+Folder:        Folder ─> Zip (fflate) ──> Encrypt ──> Upload
+```
+
+### Client-Side Flow
+
+1. User selects file(s) via file picker, drag & drop, or folder picker
+2. If `fileCount > 1` or folder: zip all files into a single archive using `fflate` (streaming)
+3. Encrypted metadata includes: `type: 'single' | 'archive'`, file names, individual sizes
+4. The (possibly zipped) payload is chunked-encrypted and streamed to the server
+5. `X-File-Count` header tells the server how many files are in the upload
+
+### Download Behavior
+
+- Single file: download the decrypted file directly
+- Archive: download as `.zip` file (the decrypted payload is already a valid zip)
+
+### Limits
+
+- `MAX_FILES_PER_UPLOAD` (default 32) - configurable by server owner
+- `MAX_FILE_SIZE` still applies to the total payload (after zip, before encryption)
+
+---
+
+## Upload Management Design (Owner Dashboard)
+
+### Architecture
+
+Upload management is fully client-side - no accounts needed. After each upload, the browser stores metadata in IndexedDB:
+
+```text
+IndexedDB Store: "skysend-uploads"
+┌──────────────────────────────────────────────────────────┐
+│ { id, ownerToken, secret, fileNames, createdAt }         │
+│ { id, ownerToken, secret, fileNames, createdAt }         │
+│ ...                                                      │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **ownerToken**: used for `DELETE /api/upload/:id` (delete own uploads)
+- **secret**: stored locally so the share link can be re-copied at any time
+- The secret never leaves the browser - it is only used to reconstruct the `#fragment`
+
+### My Uploads Page (`/uploads`)
+
+- Lists all uploads stored in IndexedDB
+- For each upload, fetches live status via `GET /api/info/:id`
+- Shows: file name(s), download count / max downloads, expiry countdown, upload date
+- Actions: copy share link, delete upload
+- Expired or deleted uploads are automatically cleaned from IndexedDB
+- Data is browser-local only - switching browsers loses the list
 
 ---
 
@@ -139,21 +203,28 @@ skysend/
 │   │       ├── pages/
 │   │       │   ├── Upload.tsx   # Upload Page (Main)
 │   │       │   ├── Download.tsx # Download Page (/d/:id)
+│   │       │   ├── MyUploads.tsx # Upload Management (Owner Dashboard)
 │   │       │   └── NotFound.tsx # 404
 │   │       ├── components/
 │   │       │   ├── ui/          # Shadcn UI Components
 │   │       │   ├── UploadZone.tsx
+│   │       │   ├── FileList.tsx      # Multi-file selection list
 │   │       │   ├── UploadProgress.tsx
 │   │       │   ├── ShareLink.tsx
+│   │       │   ├── UploadList.tsx    # Owner's upload history list
+│   │       │   ├── UploadCard.tsx    # Single upload status card
 │   │       │   ├── DownloadCard.tsx
 │   │       │   ├── PasswordPrompt.tsx
 │   │       │   └── ExpirySelector.tsx
 │   │       ├── lib/
 │   │       │   ├── api.ts       # API Client
+│   │       │   ├── zip.ts       # Client-side zip/unzip (fflate)
+│   │       │   ├── upload-store.ts # IndexedDB store for upload history
 │   │       │   └── utils.ts     # Shadcn cn() etc.
 │   │       └── hooks/
 │   │           ├── useUpload.ts
-│   │           └── useDownload.ts
+│   │           ├── useDownload.ts
+│   │           └── useUploadHistory.ts # Read/manage stored uploads
 │   │
 │   └── cli/                     # Admin CLI Tool
 │       ├── package.json
@@ -211,7 +282,8 @@ CREATE TABLE uploads (
     auth_token      TEXT NOT NULL,            -- Derived from Secret
     encrypted_meta  BLOB,                     -- AES-256-GCM encrypted Metadata
     nonce           BLOB,                     -- IV for Metadata
-    size            INTEGER NOT NULL,         -- File size in Bytes
+    size            INTEGER NOT NULL,         -- Total payload size in Bytes
+    file_count      INTEGER DEFAULT 1,        -- Number of files (1 = single, >1 = zip archive)
     has_password    BOOLEAN DEFAULT FALSE,    -- Is password protection active?
 
     max_downloads   INTEGER NOT NULL,         -- Max. number of downloads
@@ -227,6 +299,19 @@ CREATE TABLE uploads (
 CREATE INDEX idx_uploads_expires_at ON uploads(expires_at);
 ```
 
+### SQLite Configuration
+
+SQLite in WAL mode is more than sufficient for a self-hosted single-instance service. No Redis or external database needed.
+
+```sql
+PRAGMA journal_mode = WAL;        -- Concurrent reads + serialized writes
+PRAGMA busy_timeout = 5000;       -- Wait up to 5s on lock contention instead of failing
+PRAGMA synchronous = NORMAL;      -- Safe with WAL, better write performance
+PRAGMA foreign_keys = ON;         -- Enforce referential integrity
+```
+
+**Concurrency rationale**: Download count updates (`download_count = download_count + 1`) are atomic and hold the write lock for microseconds. WAL mode allows thousands of such writes per second while reads are never blocked. Even 50+ concurrent downloads of the same file will not cause contention.
+
 ---
 
 ## API Endpoints
@@ -234,7 +319,7 @@ CREATE INDEX idx_uploads_expires_at ON uploads(expires_at);
 | Method | Path | Description | Auth |
 | ------- | ---------------------- | ------------------------------------- | -------------- |
 | GET | `/api/config` | Fetch server configuration (Limits) | - |
-| POST | `/api/upload` | Upload encrypted file stream | - |
+| POST | `/api/upload` | Upload encrypted file/archive stream | - |
 | POST | `/api/meta/:id` | Save encrypted metadata | Owner Token |
 | GET | `/api/info/:id` | Upload Info (Size, Expiry, DLs) | - |
 | GET | `/api/download/:id` | Fetch encrypted file stream | Auth Token |
@@ -252,8 +337,10 @@ Client                                          Server
    Headers:
      X-Max-Downloads: 10
      X-Expire-Sec: 86400
+     X-File-Count: 3
      Content-Length: 1048576
    Body: <encrypted stream>
+   (If multi-file/folder: client zips first, then encrypts)
                                          2. Generates Upload-ID
                                          3. Streams Body to Disk
                                          4. Creates DB Entry
@@ -274,7 +361,7 @@ Client                                          Server
 Client                                          Server
 ──────                                          ──────
 1. GET /api/info/:id
-                                     <── 2. { size, hasPassword, downloadCount, maxDownloads }
+                                     <── 2. { size, fileCount, hasPassword, downloadCount, maxDownloads }
 
    (If password is set:)
 3. POST /api/password/:id
@@ -332,7 +419,7 @@ Client                                          Server
 - [ ] Drizzle ORM + SQLite Schema + Migrations
 - [ ] Filesystem Storage Layer
 - [ ] `GET /api/config` - Provide Server Limits for Client
-- [ ] `POST /api/upload` - Streaming Upload to Disk
+- [ ] `POST /api/upload` - Streaming Upload to Disk (supports single file and multi-file/folder archives)
 - [ ] `POST /api/meta/:id` - Save Metadata
 - [ ] `GET /api/info/:id` - Fetch Upload Info
 - [ ] `GET /api/download/:id` - Streaming Download
@@ -355,14 +442,26 @@ Client                                          Server
 - [ ] Vite + React + TailwindCSS Setup
 - [ ] Initialize Shadcn UI + Theme
 - [ ] Initialize react-i18next (Auto-detect + EN fallback)
-- [ ] React Router Setup (/, /d/:id, 404)
+- [ ] React Router Setup (/, /d/:id, /uploads, 404)
 - [ ] Upload Page
-  - [ ] Drag & Drop Zone (UploadZone)
-  - [ ] File Selection
+  - [ ] Drag & Drop Zone (UploadZone) - supports files and folders
+  - [ ] Single File Selection
+  - [ ] Multi-File Selection (up to `MAX_FILES_PER_UPLOAD`)
+  - [ ] Folder Selection (via directory picker)
+  - [ ] File List Preview (FileList component - add/remove files before upload)
+  - [ ] Client-Side Zip (fflate) for multi-file/folder uploads
   - [ ] Expiry Configuration (Time + Max Downloads)
   - [ ] Optional Password Field
   - [ ] Upload Progress Indicator
   - [ ] Share Link Display with Copy Button
+- [ ] Upload Management Page (My Uploads)
+  - [ ] IndexedDB Store for upload history (id, ownerToken, secret, fileNames, createdAt)
+  - [ ] List of user's uploads (UploadList + UploadCard components)
+  - [ ] Fetch live status per upload via `GET /api/info/:id`
+  - [ ] Show download count, remaining downloads, expiry countdown
+  - [ ] Re-copy share link
+  - [ ] Delete upload (via `DELETE /api/upload/:id` with owner token)
+  - [ ] Auto-cleanup of expired/deleted entries from IndexedDB
 - [ ] Download Page
   - [ ] Load Upload Info (Size, Downloads, Expiry)
   - [ ] Password Input (if needed)
@@ -373,6 +472,8 @@ Client                                          Server
   - [ ] Chunked Encryption in Browser (Upload)
   - [ ] Chunked Decryption in Browser (Download)
   - [ ] Load Argon2id WASM
+  - [ ] Zip before encrypt (multi-file/folder upload)
+  - [ ] Decrypt then unzip (multi-file download - serve as .zip)
 - [ ] Responsive Design (Mobile + Desktop)
 - [ ] Dark Mode
 - [ ] Accessibility (a11y)
@@ -485,6 +586,7 @@ Crypto is the foundation for everything. Backend and Frontend build upon it. Doc
 | `RATE_LIMIT_MAX` | `60` | Max Requests per Window |
 | `UPLOAD_QUOTA_BYTES` | `0` | Max upload volume per user per window (0 = disabled) |
 | `UPLOAD_QUOTA_WINDOW` | `86400` | Quota time window in seconds (default 24h) |
+| `MAX_FILES_PER_UPLOAD`| `32` | Max number of files per upload (multi-file) |
 
 ---
 
