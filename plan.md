@@ -492,12 +492,12 @@ Client                                          Server
 
 **Priority: MEDIUM**
 
-- [ ] CLI Framework (e.g., Commander.js or cac)
-- [ ] `send-admin list` - Show active uploads
-- [ ] `send-admin delete <id>` - Delete upload
-- [ ] `send-admin stats` - Storage overview
-- [ ] `send-admin cleanup` - Manual cleanup
-- [ ] `send-admin config` - Show limits
+- [x] CLI Framework (e.g., Commander.js or cac)
+- [x] `skysend-cli list` - Show active uploads
+- [x] `skysend-cli delete <id>` - Delete upload
+- [x] `skysend-cli stats` - Storage overview
+- [x] `skysend-cli cleanup` - Manual cleanup
+- [x] `skysend-cli config` - Show limits
 
 ### Phase 5 - Docker & Deployment
 
@@ -513,16 +513,16 @@ Client                                          Server
 
 **Priority: MEDIUM**
 
-- [ ] VitePress Setup + Theme Configuration
-- [ ] Landing Page (index.md)
-- [ ] Getting Started Guide
-- [ ] Self-Hosting Instructions (Docker, Reverse Proxy)
-- [ ] Configuration Reference (all Env Variables)
-- [ ] Admin CLI Documentation
-- [ ] Crypto Design Documentation (public audit material)
-- [ ] Threat Model
-- [ ] API Documentation
-- [ ] Architecture Overview
+- [x] VitePress Setup + Theme Configuration
+- [x] Landing Page (index.md)
+- [x] Getting Started Guide
+- [x] Self-Hosting Instructions (Docker, Reverse Proxy)
+- [x] Configuration Reference (all Env Variables)
+- [x] Admin CLI Documentation
+- [x] Crypto Design Documentation (public audit material)
+- [x] Threat Model
+- [x] API Documentation
+- [x] Architecture Overview
 - [ ] GitHub Pages Deployment for Docs
 
 ### Phase 7 - Hardening & Polish

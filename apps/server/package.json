@@ -3,6 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./db/schema": {
+      "types": "./dist/db/schema.d.ts",
+      "import": "./dist/db/schema.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "import": "./dist/db/index.js"
+    },
+    "./lib/config": {
+      "types": "./dist/lib/config.d.ts",
+      "import": "./dist/lib/config.js"
+    },
+    "./lib/cleanup": {
+      "types": "./dist/lib/cleanup.d.ts",
+      "import": "./dist/lib/cleanup.js"
+    },
+    "./storage/filesystem": {
+      "types": "./dist/storage/filesystem.d.ts",
+      "import": "./dist/storage/filesystem.js"
+    }
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp -r src/db/migrations dist/db/migrations",

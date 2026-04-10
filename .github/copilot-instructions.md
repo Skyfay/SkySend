@@ -1,3 +1,6 @@
+# General Guidelines
+- Please write the code carefully, check it to make sure everything is secure and doesn't cause any security issues.
+
 # Language & Commands
 
 - Always use English
