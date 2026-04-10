@@ -1,0 +1,98 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tagline": "End-to-end encrypted file sharing",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back"
+  },
+  "nav": {
+    "upload": "Upload",
+    "myUploads": "My Uploads"
+  },
+  "upload": {
+    "title": "Upload Files",
+    "dropzone": "Drop files here or click to browse",
+    "dropzoneActive": "Drop files here...",
+    "browseFiles": "Browse files",
+    "browseFolder": "Browse folder",
+    "or": "or",
+    "selectedFiles": "{{count}} file(s) selected",
+    "totalSize": "Total size: {{size}}",
+    "maxFiles": "Maximum {{count}} files per upload",
+    "maxSize": "Maximum file size: {{size}}",
+    "expiry": "Expires after",
+    "downloads": "Max downloads",
+    "password": "Password protection",
+    "passwordPlaceholder": "Enter password (optional)",
+    "uploading": "Encrypting and uploading...",
+    "processing": "Processing...",
+    "uploadComplete": "Upload complete!",
+    "shareLink": "Share this link",
+    "shareLinkHint": "The encryption key is in the URL fragment - it never reaches the server.",
+    "newUpload": "New upload",
+    "fileTooLarge": "File exceeds maximum size of {{size}}",
+    "tooManyFiles": "Maximum {{count}} files per upload"
+  },
+  "download": {
+    "title": "Download File",
+    "fileInfo": "File Information",
+    "size": "Size",
+    "downloads": "Downloads",
+    "expires": "Expires",
+    "expired": "This upload has expired",
+    "limitReached": "Download limit reached",
+    "notFound": "Upload not found",
+    "passwordRequired": "This file is password-protected",
+    "passwordPlaceholder": "Enter password",
+    "unlock": "Unlock",
+    "wrongPassword": "Incorrect password",
+    "download": "Download",
+    "downloading": "Decrypting and downloading...",
+    "decrypting": "Decrypting...",
+    "complete": "Download complete!",
+    "failed": "Download failed"
+  },
+  "myUploads": {
+    "title": "My Uploads",
+    "empty": "No uploads yet",
+    "emptyHint": "Uploads you make on this device will appear here.",
+    "copyLink": "Copy link",
+    "deleteConfirm": "Are you sure you want to delete this upload?",
+    "deleteSuccess": "Upload deleted",
+    "deleteFailed": "Failed to delete upload",
+    "remaining": "{{count}} downloads remaining",
+    "expired": "Expired",
+    "unavailable": "Unavailable",
+    "files": "{{count}} file(s)"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist.",
+    "goHome": "Go to upload page"
+  },
+  "time": {
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "weeks_one": "{{count}} week",
+    "weeks_other": "{{count}} weeks"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}

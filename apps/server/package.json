@@ -1,0 +1,51 @@
+{
+  "name": "@skysend/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./db/schema": {
+      "types": "./dist/db/schema.d.ts",
+      "import": "./dist/db/schema.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "import": "./dist/db/index.js"
+    },
+    "./lib/config": {
+      "types": "./dist/lib/config.d.ts",
+      "import": "./dist/lib/config.js"
+    },
+    "./lib/cleanup": {
+      "types": "./dist/lib/cleanup.d.ts",
+      "import": "./dist/lib/cleanup.js"
+    },
+    "./storage/filesystem": {
+      "types": "./dist/storage/filesystem.d.ts",
+      "import": "./dist/storage/filesystem.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && cp -r src/db/migrations dist/db/migrations",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.13",
+    "@skysend/crypto": "workspace:*",
+    "better-sqlite3": "^12.8.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.12",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0"
+  }
+}

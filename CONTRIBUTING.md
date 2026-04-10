@@ -12,7 +12,7 @@ Thank you for your interest in contributing!
 ### Getting Started
 
 ```bash
-git clone https://github.com/your-username/skysend.git
+git clone https://github.com/skyfay/skysend.git
 cd skysend
 pnpm install
 pnpm dev
@@ -23,11 +23,12 @@ This starts both the backend (Hono) and frontend (Vite) in development mode.
 ### Project Structure
 
 ```
-packages/
+apps/
   server/    # Hono backend (API + static file serving)
   web/       # React SPA (Vite + Shadcn UI)
-  crypto/    # Shared encryption library (Web Crypto API)
   cli/       # Admin CLI tool
+packages/
+  crypto/    # Shared encryption library (Web Crypto API)
 docs/        # VitePress documentation
 ```
 
@@ -37,8 +38,6 @@ docs/        # VitePress documentation
 pnpm dev          # Start development servers
 pnpm build        # Build all packages
 pnpm test         # Run all tests
-pnpm lint         # Lint all packages
-pnpm format       # Format all files
 ```
 
 ## Guidelines
