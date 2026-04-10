@@ -17,9 +17,10 @@ let _sqlite: Database.Database | undefined;
 export function initDatabase(dataDir: string): ReturnType<typeof drizzle<typeof schema>> {
   if (_db) return _db;
 
-  mkdirSync(dataDir, { recursive: true });
+  const dbDir = join(dataDir, "db");
+  mkdirSync(dbDir, { recursive: true });
 
-  const dbPath = join(dataDir, "skysend.db");
+  const dbPath = join(dbDir, "skysend.db");
   const sqlite = new Database(dbPath);
 
   // Apply SQLite performance and safety pragmas

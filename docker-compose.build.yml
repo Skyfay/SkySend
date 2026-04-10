@@ -1,7 +1,7 @@
 services:
   skysend:
-    image: skyfay/skysend:latest
-    container_name: skysend
+    build: .
+    container_name: skysend-test
     restart: always
     ports:
       - "3000:3000"
@@ -11,5 +11,5 @@ services:
     #  - PUID=${PUID:-1001}
     #  - PGID=${PGID:-1001}
     volumes:
-      - ./data:/data
-      - ./uploads:/uploads
+      - ./test/data:/data
+      - ./test/uploads:/uploads

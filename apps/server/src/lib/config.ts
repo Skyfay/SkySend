@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { z } from "zod";
 
 /**
@@ -107,13 +108,16 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
+  UPLOADS_DIR: z.string().optional(),
+
   TRUST_PROXY: z
     .string()
     .default("false")
     .transform((v) => v === "true"),
 });
 
-export type Config = z.infer<typeof configSchema>;
+type RawConfig = z.infer<typeof configSchema>;
+export type Config = Omit<RawConfig, "UPLOADS_DIR"> & { UPLOADS_DIR: string };
 
 let _config: Config | undefined;
 
@@ -128,7 +132,11 @@ export function loadConfig(): Config {
   for (const [key, value] of Object.entries(process.env)) {
     env[key] = value === "" ? undefined : value;
   }
-  _config = configSchema.parse(env);
+  const parsed = configSchema.parse(env);
+  _config = {
+    ...parsed,
+    UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
+  } as Config;
 
   // Cross-field validation
   if (!_config.EXPIRE_OPTIONS_SEC.includes(_config.DEFAULT_EXPIRE_SEC)) {

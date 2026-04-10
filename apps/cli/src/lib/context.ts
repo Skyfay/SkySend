@@ -12,7 +12,7 @@ export interface CliContext {
 export function createContext(): CliContext {
   const config = loadConfig();
   const db = initDatabase(config.DATA_DIR);
-  const storage = new FileStorage(config.DATA_DIR);
+  const storage = new FileStorage(config.UPLOADS_DIR);
   return { config, db, storage };
 }
 

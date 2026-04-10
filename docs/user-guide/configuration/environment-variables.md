@@ -4,27 +4,28 @@ Complete reference of all environment variables supported by SkySend.
 
 ## Server
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `PORT` | `3000` | Server port (1-65535) |
-| `HOST` | `0.0.0.0` | Server bind address |
-| `BASE_URL` | `http://localhost:3000` | Public URL of the instance (used for generated links) |
-| `DATA_DIR` | `./data` | Directory for database and uploaded files |
-| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `PORT` | No | `3000` | Server port (1-65535) |
+| `HOST` | No | `0.0.0.0` | Server bind address |
+| `BASE_URL` | No | `http://localhost:3000` | Public URL of the instance (used for generated links) |
+| `DATA_DIR` | No | `./data` | Directory for the database (`DATA_DIR/db/skysend.db`) |
+| `UPLOADS_DIR` | No | `DATA_DIR/uploads` | Directory for encrypted upload files. In Docker, defaults to `/uploads`. |
+| `TRUST_PROXY` | No | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
 
 ## Upload Limits
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `MAX_FILE_SIZE` | `2GB` | Maximum upload size. Supports units: `B`, `KB`, `MB`, `GB` |
-| `MAX_FILES_PER_UPLOAD` | `32` | Maximum number of files per multi-file upload |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `MAX_FILE_SIZE` | No | `2GB` | Maximum upload size. Supports units: `B`, `KB`, `MB`, `GB` |
+| `MAX_FILES_PER_UPLOAD` | No | `32` | Maximum number of files per multi-file upload |
 
 ## Expiry Options
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `EXPIRE_OPTIONS_SEC` | `300,3600,86400,604800` | Comma-separated list of selectable expiry times in seconds |
-| `DEFAULT_EXPIRE_SEC` | `86400` | Default expiry time (must be one of `EXPIRE_OPTIONS_SEC`) |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `EXPIRE_OPTIONS_SEC` | No | `300,3600,86400,604800` | Comma-separated list of selectable expiry times in seconds |
+| `DEFAULT_EXPIRE_SEC` | No | `86400` | Default expiry time (must be one of `EXPIRE_OPTIONS_SEC`) |
 
 The default options translate to:
 - 5 minutes (`300`)
@@ -34,30 +35,30 @@ The default options translate to:
 
 ## Download Limits
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `DOWNLOAD_OPTIONS` | `1,2,3,4,5,10,20,50,100` | Comma-separated list of selectable download limits |
-| `DEFAULT_DOWNLOAD` | `1` | Default download limit (must be one of `DOWNLOAD_OPTIONS`) |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `DOWNLOAD_OPTIONS` | No | `1,2,3,4,5,10,20,50,100` | Comma-separated list of selectable download limits |
+| `DEFAULT_DOWNLOAD` | No | `1` | Default download limit (must be one of `DOWNLOAD_OPTIONS`) |
 
 ## Cleanup
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `CLEANUP_INTERVAL` | `60` | Interval for the automatic cleanup job in seconds |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `CLEANUP_INTERVAL` | No | `60` | Interval for the automatic cleanup job in seconds |
 
 ## Rate Limiting
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `RATE_LIMIT_WINDOW` | `60000` | Rate limit window in milliseconds |
-| `RATE_LIMIT_MAX` | `60` | Maximum requests per window per IP |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `RATE_LIMIT_WINDOW` | No | `60000` | Rate limit window in milliseconds |
+| `RATE_LIMIT_MAX` | No | `60` | Maximum requests per window per IP |
 
 ## Upload Quota
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `UPLOAD_QUOTA_BYTES` | `0` | Maximum upload volume per user per window in bytes. `0` disables the quota. |
-| `UPLOAD_QUOTA_WINDOW` | `86400` | Quota time window in seconds (default: 24 hours) |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `UPLOAD_QUOTA_BYTES` | No | `0` | Maximum upload volume per user per window in bytes. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB` |
+| `UPLOAD_QUOTA_WINDOW` | No | `86400` | Quota time window in seconds (default: 24 hours) |
 
 ::: info Privacy-Preserving Quotas
 Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
@@ -65,9 +66,16 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 
 ## Branding
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `SITE_TITLE` | `SkySend` | Displayed site title in the UI |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `SITE_TITLE` | No | `SkySend` | Displayed site title in the UI |
+
+## Docker
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `PUID` | No | `1001` | User ID the container runs as |
+| `PGID` | No | `1001` | Group ID the container runs as |
 
 ## Validation
 

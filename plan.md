@@ -503,9 +503,9 @@ Client                                          Server
 
 **Priority: HIGH**
 
-- [ ] Finalize Multi-Stage Dockerfile (optimize layers, .dockerignore)
-- [ ] Docker Compose Health Check (`healthcheck:` block)
-- [ ] Graceful Shutdown (handle SIGTERM)
+- [x] Finalize Multi-Stage Dockerfile (optimize layers, .dockerignore)
+- [x] Docker Compose Health Check (`healthcheck:` block)
+- [x] Graceful Shutdown (handle SIGTERM)
 - [ ] Test Data Persistence (Volumes)
 - [ ] Production Optimizations (Compression, Caching Headers)
 
@@ -583,7 +583,8 @@ Crypto is the foundation for everything. Backend and Frontend build upon it. Doc
 | `PORT`                 | `3000`                   | Server Port                                          |
 | `HOST`                 | `0.0.0.0`                | Server Host                                          |
 | `BASE_URL`             | `http://localhost:3000`  | Public URL of the instance                           |
-| `DATA_DIR`             | `./data`                 | Directory for DB + Uploads                           |
+| `DATA_DIR`             | `./data`                 | Directory for DB (`DATA_DIR/db/skysend.db`)          |
+| `UPLOADS_DIR`          | `DATA_DIR/uploads`       | Directory for encrypted upload files                 |
 | `MAX_FILE_SIZE`        | `2GB`                    | Maximum file size                                    |
 | `EXPIRE_OPTIONS_SEC`   | `300,3600,86400,604800`  | Selectable expiry times (array)                      |
 | `DEFAULT_EXPIRE_SEC`   | `86400`                  | Default expiry time (1 day)                          |

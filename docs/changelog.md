@@ -3,7 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## v0.1.0 - Initial Release
-*Unreleased*
+*Release: In Progress*
 
 ### Features
 
@@ -54,3 +54,9 @@ All notable changes to SkySend are documented here.
   - ESLint + Prettier configuration
   - TypeScript strict mode
   - Vitest test suite
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v0.1.0`
+- **Also tagged as**: `latest`, `v0`
+- **Platforms**: linux/amd64, linux/arm64

@@ -13,8 +13,8 @@ import { pipeline } from "node:stream/promises";
 export class FileStorage {
   private readonly uploadsDir: string;
 
-  constructor(dataDir: string) {
-    this.uploadsDir = join(dataDir, "uploads");
+  constructor(uploadsDir: string) {
+    this.uploadsDir = uploadsDir;
   }
 
   /** Ensure the uploads directory exists. Call once at startup. */

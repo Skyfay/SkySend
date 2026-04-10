@@ -29,7 +29,7 @@ import { healthRoute } from "./routes/health.js";
 
 const config = loadConfig();
 initDatabase(config.DATA_DIR);
-const storage = new FileStorage(config.DATA_DIR);
+const storage = new FileStorage(config.UPLOADS_DIR);
 await storage.init();
 
 // Run cleanup once at startup to clear any stale uploads

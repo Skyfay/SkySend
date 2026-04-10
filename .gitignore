@@ -50,3 +50,6 @@ ehthumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Image Test
+test/

@@ -14,11 +14,15 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     volumes:
-      - "${DATA_DIR:-./data}:/app/data"
+      - ./data:/data
+      - ./uploads:/uploads
     env_file:
       - .env
     environment:
-      - DATA_DIR=/app/data
+      - DATA_DIR=/data
+      - UPLOADS_DIR=/uploads
+      - PUID=${PUID:-1001}
+      - PGID=${PGID:-1001}
 ```
 
 Start with:
@@ -43,16 +47,23 @@ See [Environment Variables](/user-guide/configuration/environment-variables) for
 
 ## Data Persistence
 
-SkySend stores all data in a single directory (default: `./data`):
+SkySend uses two separate volumes:
+
+| Volume | Container Path | Content |
+| --- | --- | --- |
+| Database | `/data` | SQLite database at `/data/db/skysend.db` |
+| Uploads | `/uploads` | Encrypted upload files |
 
 ```
-data/
-  skysend.db        # SQLite database
-  uploads/          # Encrypted upload files
+./data/                  # Mount to /data
+  db/
+    skysend.db           # SQLite database + WAL files
+./uploads/               # Mount to /uploads
+  <uuid>.bin             # Encrypted upload files
 ```
 
 ::: warning Backups
-To back up SkySend, simply copy the entire `data/` directory. The SQLite database uses WAL mode, so it is safe to copy while the server is running.
+To back up SkySend, copy both the `data/` and `uploads/` directories. The SQLite database uses WAL mode, so it is safe to copy while the server is running.
 :::
 
 ## Building the Image
@@ -71,6 +82,8 @@ The final image contains:
 - Built server (`apps/server/dist`)
 - Built frontend (`apps/web/dist`)
 - Production dependencies only
+- Non-root user (`skysend`, UID 1001)
+- Health check on `/api/health`
 
 ## Custom Port
 
