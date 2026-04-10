@@ -1,0 +1,145 @@
+import { Hono } from "hono";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { serve } from "@hono/node-server";
+import { logger } from "hono/logger";
+import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
+import { resolve } from "node:path";
+
+import { loadConfig } from "./lib/config.js";
+import { initDatabase, closeDatabase } from "./db/index.js";
+import { FileStorage } from "./storage/filesystem.js";
+import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
+import { createRateLimiter } from "./middleware/rate-limit.js";
+import { createUploadQuota } from "./middleware/quota.js";
+
+// Routes
+import { configRoute } from "./routes/config.js";
+import { createUploadRoute } from "./routes/upload.js";
+import { metaRoute } from "./routes/meta.js";
+import { infoRoute } from "./routes/info.js";
+import { createDownloadRoute } from "./routes/download.js";
+import { passwordRoute } from "./routes/password.js";
+import { createDeleteRoute } from "./routes/delete.js";
+import { existsRoute } from "./routes/exists.js";
+import { healthRoute } from "./routes/health.js";
+
+// ── Initialize ─────────────────────────────────────────
+
+const config = loadConfig();
+initDatabase(config.DATA_DIR);
+const storage = new FileStorage(config.DATA_DIR);
+await storage.init();
+
+// Run cleanup once at startup to clear any stale uploads
+await runCleanup(storage).catch((err) =>
+  console.error("[startup] Initial cleanup failed:", err),
+);
+
+const stopCleanup = startCleanupJob(storage, config.CLEANUP_INTERVAL);
+
+// ── App Setup ──────────────────────────────────────────
+
+const app = new Hono();
+
+// Global middleware
+app.use("*", logger());
+app.use("*", secureHeaders());
+app.use("*", cors());
+app.use("*", createRateLimiter(config));
+
+// Upload quota middleware (only on upload endpoint)
+const quota = createUploadQuota(config);
+
+// Global error handler
+app.onError((err, c) => {
+  console.error("[error]", err);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+// ── API Routes ─────────────────────────────────────────
+
+const api = new Hono();
+
+api.route("/config", configRoute);
+api.route("/health", healthRoute);
+api.route("/info", infoRoute);
+api.route("/exists", existsRoute);
+api.route("/password", passwordRoute);
+api.route("/meta", metaRoute);
+api.route("/download", createDownloadRoute(storage));
+
+// Upload route with quota middleware
+const uploadRoute = createUploadRoute(storage);
+const uploadWithQuota = new Hono();
+uploadWithQuota.use("*", quota.middleware);
+uploadWithQuota.post("/", async (c, next) => {
+  // Inject quota recorder into context
+  c.set("quotaRecorder" as never, quota.recordUsage as never);
+  await next();
+});
+uploadWithQuota.route("/", uploadRoute);
+api.route("/upload", uploadWithQuota);
+
+// Delete uses the upload path with DELETE method
+api.route("/upload", createDeleteRoute(storage));
+
+app.route("/api", api);
+
+// ── Static SPA Serving ─────────────────────────────────
+
+// Serve the Vite-built SPA from apps/web/dist
+// In production (Docker), the built files are at the expected path
+const webDistPath = resolve(import.meta.dirname, "../../web/dist");
+
+app.use(
+  "/assets/*",
+  serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
+);
+
+app.use(
+  "/favicon.ico",
+  serveStatic({ root: webDistPath, path: "/favicon.ico" }),
+);
+
+// SPA fallback - serve index.html for all non-API routes
+app.get("*", serveStatic({ root: webDistPath, path: "/index.html" }));
+
+// ── Start Server ───────────────────────────────────────
+
+const server = serve(
+  {
+    fetch: app.fetch,
+    port: config.PORT,
+    hostname: config.HOST,
+  },
+  (info) => {
+    console.log(`[skysend] Server running at http://${config.HOST}:${info.port}`);
+    console.log(`[skysend] Data directory: ${resolve(config.DATA_DIR)}`);
+    console.log(`[skysend] Max file size: ${(config.MAX_FILE_SIZE / (1024 ** 2)).toFixed(0)} MB`);
+    if (config.UPLOAD_QUOTA_BYTES > 0) {
+      console.log(`[skysend] Upload quota: ${(config.UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.UPLOAD_QUOTA_WINDOW}s`);
+    }
+  },
+);
+
+// ── Graceful Shutdown ──────────────────────────────────
+
+function shutdown() {
+  console.log("\n[skysend] Shutting down gracefully...");
+  stopCleanup();
+  server.close(() => {
+    closeDatabase();
+    console.log("[skysend] Server stopped.");
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds
+  setTimeout(() => {
+    console.error("[skysend] Forced shutdown after timeout.");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

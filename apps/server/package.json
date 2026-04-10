@@ -8,5 +8,19 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.13",
+    "@skysend/crypto": "workspace:*",
+    "better-sqlite3": "^12.8.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.12",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0"
   }
 }
