@@ -52,7 +52,10 @@ app.use("*", secureHeaders());
 app.use(
   "*",
   cors({
-    origin: config.BASE_URL,
+    origin: (origin) => {
+      const allowed = [config.BASE_URL, ...config.CORS_ORIGINS];
+      return allowed.includes(origin) ? origin : config.BASE_URL;
+    },
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: [
       "Content-Type",
@@ -109,8 +112,8 @@ api.get("/quota", (c) => {
 const uploadRoute = createUploadRoute(storage);
 const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
 uploadWithQuota.use("*", quota.middleware);
-uploadWithQuota.post("/", async (c, next) => {
-  // Inject quota recorder into context
+uploadWithQuota.use("*", async (c, next) => {
+  // Inject quota recorder into context for all upload sub-routes
   c.set("quotaRecorder", quota.recordUsage);
   await next();
 });
@@ -158,6 +161,12 @@ const server = serve(
     }
   },
 );
+
+// Disable Node.js default timeouts - large file uploads can take a long time
+const nodeServer = server as unknown as import("node:http").Server;
+nodeServer.timeout = 0;
+nodeServer.requestTimeout = 0;
+nodeServer.headersTimeout = 0;
 
 // ── Graceful Shutdown ──────────────────────────────────
 

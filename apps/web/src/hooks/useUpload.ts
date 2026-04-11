@@ -2,16 +2,17 @@ import { useState, useCallback, useRef } from "react";
 import {
   generateSecret,
   generateSalt,
+  calculateEncryptedSize,
   type FileMetadata,
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
 import { zipFilesAsync } from "@/lib/zip";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
+import { formatBytes } from "@/lib/utils";
 
 export type UploadPhase =
   | "idle"
   | "zipping"
-  | "encrypting"
   | "uploading"
   | "saving-meta"
   | "done"
@@ -20,6 +21,7 @@ export type UploadPhase =
 interface UploadState {
   phase: UploadPhase;
   progress: number;
+  speed: string | null;
   shareLink: string | null;
   error: string | null;
   uploadId: string | null;
@@ -32,10 +34,24 @@ interface UploadOptions {
   password: string;
 }
 
+/**
+ * Determine the API base URL.
+ * In dev mode (Vite), upload requests go directly to the server
+ * to bypass the Vite proxy which doesn't support streaming request bodies.
+ * In production, same-origin requests are used (empty string).
+ */
+function getApiBase(): string {
+  if (import.meta.env.DEV) {
+    return import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+  }
+  return "";
+}
+
 export function useUpload() {
   const [state, setState] = useState<UploadState>({
     phase: "idle",
     progress: 0,
+    speed: null,
     shareLink: null,
     error: null,
     uploadId: null,
@@ -48,6 +64,7 @@ export function useUpload() {
     setState({
       phase: "idle",
       progress: 0,
+      speed: null,
       shareLink: null,
       error: null,
       uploadId: null,
@@ -112,7 +129,7 @@ export function useUpload() {
       }
 
       // Spawn upload worker - encryption + upload run off the main thread
-      setState((s) => ({ ...s, phase: "uploading", progress: 0 }));
+      setState((s) => ({ ...s, phase: "uploading", progress: 0, speed: null }));
 
       const worker = new Worker(
         new URL("../lib/upload-worker.ts", import.meta.url),
@@ -129,6 +146,15 @@ export function useUpload() {
         transferable.push(zipData);
       }
 
+      // Speed calculation state
+      let lastLoaded = 0;
+      let lastTime = performance.now();
+
+      const plaintextSize = zipData
+        ? zipData.byteLength
+        : files[0]!.size;
+      const encryptedSize = calculateEncryptedSize(plaintextSize);
+
       const result = await new Promise<{
         id: string;
         ownerToken: string;
@@ -140,15 +166,27 @@ export function useUpload() {
             case "phase":
               setState((s) => ({ ...s, phase: msg.phase as UploadPhase }));
               break;
-            case "progress":
+            case "progress": {
+              const now = performance.now();
+              const elapsed = (now - lastTime) / 1000;
+              let speed: string | null = null;
+              // Update speed every 500ms to avoid flickering
+              if (elapsed >= 0.5) {
+                const bytesPerSec = (msg.loaded - lastLoaded) / elapsed;
+                speed = `${formatBytes(bytesPerSec)}/s`;
+                lastLoaded = msg.loaded;
+                lastTime = now;
+              }
               setState((s) => ({
                 ...s,
                 progress: Math.min(
                   99,
-                  Math.round((msg.loaded / msg.total) * 100),
+                  Math.round((msg.loaded / encryptedSize) * 100),
                 ),
+                ...(speed ? { speed } : {}),
               }));
               break;
+            }
             case "done":
               resolve(msg);
               break;
@@ -172,6 +210,7 @@ export function useUpload() {
             password,
             metadata,
             fileCount: files.length,
+            apiBase: getApiBase(),
           },
           transferable,
         );
@@ -196,6 +235,7 @@ export function useUpload() {
       setState({
         phase: "done",
         progress: 100,
+        speed: null,
         shareLink,
         error: null,
         uploadId: result.id,

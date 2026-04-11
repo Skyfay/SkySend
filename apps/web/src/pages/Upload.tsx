@@ -192,6 +192,7 @@ export function UploadPage() {
             <UploadProgress
               phase={uploadHook.phase}
               progress={uploadHook.progress}
+              speed={uploadHook.speed}
             />
           )}
 

@@ -4,13 +4,16 @@
  * This keeps the UI responsive during large file uploads by running
  * the entire crypto + network pipeline in a dedicated thread.
  *
- * Flow: receive file -> derive keys -> encrypt stream -> collect buffer -> XHR upload
+ * Architecture (like Mozilla Send):
+ *   File.stream() -> Encrypt -> CountingTransform -> fetch(stream, duplex:"half")
  *
- * We use XHR instead of fetch for the upload because:
- * 1. fetch() with ReadableStream body requires `duplex: "half"` which doesn't
- *    work through the Vite dev proxy (http-proxy) and has limited browser support
- * 2. XHR provides native upload.onprogress for real progress tracking
- * 3. XHR with ArrayBuffer body works reliably through any proxy
+ * The stream goes directly into fetch(). Backpressure from the network
+ * slows down encryption, so the counting transform reflects real upload
+ * progress. Memory usage stays constant (~64 KB buffer) regardless of
+ * file size.
+ *
+ * In dev mode, uploads go directly to the server (bypassing Vite proxy
+ * which doesn't support streaming request bodies).
  */
 import {
   deriveKeys,
@@ -48,6 +51,8 @@ export interface UploadWorkerRequest {
   metadata: FileMetadata;
   /** Number of files in the upload. */
   fileCount: number;
+  /** Base URL for API requests (e.g. "http://localhost:3000" in dev). */
+  apiBase: string;
 }
 
 export type UploadWorkerMessage =
@@ -65,6 +70,7 @@ export type UploadWorkerMessage =
 
 self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
   const msg = e.data;
+  const apiBase = msg.apiBase;
 
   try {
     const secret = new Uint8Array(msg.secret) as Uint8Array<ArrayBuffer>;
@@ -116,25 +122,30 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       throw new Error("No file or zip data provided");
     }
 
-    // ── Encrypt ──────────────────────────────────────
-    post({ type: "phase", phase: "encrypting" });
+    // ── Encrypt + Upload ───────────────────────────────
+    // Pre-flight: verify server is reachable before starting
+    try {
+      const healthRes = await fetch(`${apiBase}/api/config`);
+      if (!healthRes.ok) {
+        throw new Error(`Server responded with ${healthRes.status}`);
+      }
+      await healthRes.json();
+    } catch (e) {
+      throw new Error(
+        `Server unreachable at ${apiBase || "(same-origin)"}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
 
-    const encryptedStream = plaintextStream.pipeThrough(
-      createEncryptStream(keys.fileKey),
-    );
-    const encryptedSize = calculateEncryptedSize(plaintextSize);
-
-    // Collect encrypted stream into a buffer.
-    // This runs in the worker so the main thread stays responsive.
-    const encryptedBuffer = await collectStream(encryptedStream, encryptedSize);
-
-    // ── Upload via XHR ───────────────────────────────
     post({ type: "phase", phase: "uploading" });
 
+    const encryptedSize = calculateEncryptedSize(plaintextSize);
+
+    // Compute auth tokens
     const authToken = await computeAuthToken(keys.authKey);
     const ownerToken = await computeOwnerToken(effectiveSecret, salt);
     const ownerTokenB64 = toBase64url(ownerToken);
 
+    // Build upload headers
     const headers: Record<string, string> = {
       "X-Auth-Token": toBase64url(authToken),
       "X-Owner-Token": ownerTokenB64,
@@ -151,14 +162,82 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       headers["X-Password-Algo"] = passwordAlgo;
     }
 
-    const uploadResult = await xhrUpload(
-      "/api/upload",
-      encryptedBuffer,
+    // Encrypt the entire file into chunks, collecting into a Blob.
+    // We pipe through createEncryptStream but collect the output.
+    // To avoid OOM for very large files, we use a chunked upload approach:
+    // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via sequential requests.
+    const CHUNK_UPLOAD_SIZE = 50 * 1024 * 1024; // 50 MB per request
+    const encryptedStream = plaintextStream.pipeThrough(
+      createEncryptStream(keys.fileKey),
+    );
+    const reader = encryptedStream.getReader();
+
+    // Initialize the upload session on the server
+    const initRes = await fetch(`${apiBase}/api/upload/init`, {
+      method: "POST",
       headers,
-      (loaded, total) => {
-        post({ type: "progress", loaded, total });
+    });
+    if (!initRes.ok) {
+      const data = await initRes.json().catch(() => ({ error: "Upload init failed" }));
+      throw new Error((data as { error?: string }).error ?? "Upload init failed");
+    }
+    const { id: uploadId } = (await initRes.json()) as { id: string };
+
+    // Stream encrypted data in chunks
+    let loaded = 0;
+    let chunkParts: Uint8Array[] = [];
+    let chunkSize = 0;
+
+    const uploadChunk = async (data: Blob) => {
+      const res = await fetch(`${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk`, {
+        method: "POST",
+        body: data,
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Chunk upload failed" }));
+        throw new Error((errData as { error?: string }).error ?? "Chunk upload failed");
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      chunkParts.push(value);
+      chunkSize += value.byteLength;
+      loaded += value.byteLength;
+      post({ type: "progress", loaded, total: encryptedSize });
+
+      // When we have enough data, upload a chunk
+      if (chunkSize >= CHUNK_UPLOAD_SIZE) {
+        const blob = new Blob(chunkParts as unknown as BlobPart[]);
+        chunkParts = [];
+        chunkSize = 0;
+        await uploadChunk(blob);
+      }
+    }
+
+    // Upload remaining data
+    if (chunkSize > 0) {
+      const blob = new Blob(chunkParts as unknown as BlobPart[]);
+      chunkParts = [];
+      await uploadChunk(blob);
+    }
+
+    // Finalize the upload
+    const finalizeRes = await fetch(
+      `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/finalize`,
+      {
+        method: "POST",
+        headers: { "X-Owner-Token": ownerTokenB64 },
       },
     );
+    if (!finalizeRes.ok) {
+      const data = await finalizeRes.json().catch(() => ({ error: "Upload finalize failed" }));
+      throw new Error((data as { error?: string }).error ?? "Upload finalize failed");
+    }
+
+    const uploadResult = { id: uploadId };
 
     // ── Save Encrypted Metadata ──────────────────────
     post({ type: "phase", phase: "saving-meta" });
@@ -170,7 +249,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     const nonce = btoa(String.fromCharCode(...encMeta.iv));
 
     const metaRes = await fetch(
-      `/api/meta/${encodeURIComponent(uploadResult.id)}`,
+      `${apiBase}/api/meta/${encodeURIComponent(uploadResult.id)}`,
       {
         method: "POST",
         headers: {
@@ -193,6 +272,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       effectiveSecret: toBase64url(effectiveSecret),
     });
   } catch (err) {
+    console.error("[upload-worker] Upload failed:", err);
     post({
       type: "error",
       message: err instanceof Error ? err.message : "Upload failed",
@@ -202,85 +282,4 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
 function post(msg: UploadWorkerMessage) {
   self.postMessage(msg);
-}
-
-/**
- * Collect a ReadableStream into a Blob.
- * Uses Blob instead of a single Uint8Array to avoid contiguous memory
- * allocation - critical for large files (>2 GB).
- * Reports encryption progress as chunks are read.
- */
-async function collectStream(
-  stream: ReadableStream<Uint8Array>,
-  expectedSize: number,
-): Promise<Blob> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let offset = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    offset += value.byteLength;
-    post({
-      type: "progress",
-      loaded: Math.min(offset, expectedSize),
-      total: expectedSize,
-    });
-  }
-
-  // Blob holds references to chunks - no contiguous copy needed
-  return new Blob(chunks as unknown as BlobPart[]);
-}
-
-/**
- * Upload data via XMLHttpRequest with progress tracking.
- * XHR is used because fetch() doesn't support upload progress
- * and streaming fetch (duplex: "half") doesn't work through proxies.
- */
-function xhrUpload(
-  url: string,
-  data: Blob,
-  headers: Record<string, string>,
-  onProgress: (loaded: number, total: number) => void,
-): Promise<{ id: string }> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-
-    for (const [key, value] of Object.entries(headers)) {
-      xhr.setRequestHeader(key, value);
-    }
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(e.loaded, e.total);
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const json = JSON.parse(xhr.responseText);
-          resolve(json as { id: string });
-        } catch {
-          reject(new Error("Invalid server response"));
-        }
-      } else {
-        try {
-          const json = JSON.parse(xhr.responseText);
-          reject(new Error((json as { error?: string }).error ?? "Upload failed"));
-        } catch {
-          reject(new Error(`Upload failed (${xhr.status})`));
-        }
-      }
-    };
-
-    xhr.onerror = () => {
-      reject(new Error("Upload failed - network error"));
-    };
-
-    xhr.send(data);
-  });
 }

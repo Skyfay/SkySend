@@ -42,6 +42,11 @@ const configSchema = z.object({
     .default("http://localhost:3000")
     .transform((v) => v.replace(/\/+$/, "")),
 
+  CORS_ORIGINS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()) : [])),
+
   DATA_DIR: z.string().default("./data"),
 
   MAX_FILE_SIZE: z

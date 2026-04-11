@@ -7,6 +7,7 @@ import { getConfig } from "../lib/config.js";
 import { fromBase64url, SALT_LENGTH } from "@skysend/crypto";
 import type { FileStorage } from "../storage/filesystem.js";
 import type { QuotaVariables } from "../types.js";
+import type { Config } from "../lib/config.js";
 
 const base64urlPattern = /^[A-Za-z0-9_-]+$/;
 
@@ -39,13 +40,243 @@ const uploadHeadersSchema = z.object({
   passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
 });
 
+type UploadHeaders = z.infer<typeof uploadHeadersSchema>;
+
+/** Validate parsed upload headers against server config. Returns null if valid. */
+function validateUploadHeaders(
+  headers: UploadHeaders,
+  config: Config,
+): { message: string; status: 400 | 413 } | null {
+  // Validate salt length
+  try {
+    const saltBytes = fromBase64url(headers.salt);
+    if (saltBytes.length !== SALT_LENGTH) {
+      return { message: `Salt must be exactly ${SALT_LENGTH} bytes`, status: 400 };
+    }
+  } catch {
+    return { message: "Invalid salt encoding", status: 400 };
+  }
+
+  if (headers.contentLength > config.MAX_FILE_SIZE) {
+    return { message: `File size exceeds maximum of ${config.MAX_FILE_SIZE} bytes`, status: 413 };
+  }
+
+  if (headers.fileCount > config.MAX_FILES_PER_UPLOAD) {
+    return { message: `Maximum ${config.MAX_FILES_PER_UPLOAD} files per upload`, status: 400 };
+  }
+
+  if (!config.EXPIRE_OPTIONS_SEC.includes(headers.expireSec)) {
+    return { message: "Invalid expiry time. Must be one of the allowed options.", status: 400 };
+  }
+
+  if (!config.DOWNLOAD_OPTIONS.includes(headers.maxDownloads)) {
+    return { message: "Invalid download limit. Must be one of the allowed options.", status: 400 };
+  }
+
+  if (headers.hasPassword) {
+    if (!headers.passwordSalt || !headers.passwordAlgo) {
+      return {
+        message: "Password-protected uploads require X-Password-Salt and X-Password-Algo",
+        status: 400,
+      };
+    }
+    try {
+      const pwSaltBytes = fromBase64url(headers.passwordSalt);
+      if (pwSaltBytes.length !== SALT_LENGTH) {
+        return { message: `Password salt must be exactly ${SALT_LENGTH} bytes`, status: 400 };
+      }
+    } catch {
+      return { message: "Invalid password salt encoding", status: 400 };
+    }
+  }
+
+  return null;
+}
+
 export function createUploadRoute(storage: FileStorage) {
   const route = new Hono<{ Variables: QuotaVariables }>();
 
+  // ── In-memory tracker for chunked uploads ────────
+  // Maps upload ID -> session data. Cleaned up on finalize or timeout.
+  interface UploadSession {
+    headers: z.infer<typeof uploadHeadersSchema>;
+    bytesWritten: number;
+    createdAt: number;
+  }
+  const pendingSessions = new Map<string, UploadSession>();
+
+  // Clean up stale sessions every 10 minutes (sessions older than 1 hour)
+  const SESSION_TTL_MS = 60 * 60 * 1000;
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of pendingSessions) {
+      if (now - session.createdAt > SESSION_TTL_MS) {
+        pendingSessions.delete(id);
+        storage.delete(id).catch(() => {});
+      }
+    }
+  }, 10 * 60 * 1000).unref();
+
+  /**
+   * POST /api/upload/init
+   * Initialize a chunked upload session. Validates headers and creates
+   * an empty file. Returns the upload ID for subsequent chunk uploads.
+   */
+  route.post("/init", async (c) => {
+    const config = getConfig();
+
+    const headerResult = uploadHeadersSchema.safeParse({
+      authToken: c.req.header("X-Auth-Token"),
+      ownerToken: c.req.header("X-Owner-Token"),
+      salt: c.req.header("X-Salt"),
+      maxDownloads: c.req.header("X-Max-Downloads"),
+      expireSec: c.req.header("X-Expire-Sec"),
+      fileCount: c.req.header("X-File-Count"),
+      contentLength: c.req.header("X-Content-Length") ?? c.req.header("Content-Length"),
+      hasPassword: c.req.header("X-Has-Password"),
+      passwordSalt: c.req.header("X-Password-Salt") || undefined,
+      passwordAlgo: c.req.header("X-Password-Algo") || undefined,
+    });
+
+    if (!headerResult.success) {
+      return c.json(
+        { error: "Invalid request headers", details: headerResult.error.flatten().fieldErrors },
+        400,
+      );
+    }
+
+    const headers = headerResult.data;
+
+    // Validate salt, limits, password - same as single-request upload
+    const validationError = validateUploadHeaders(headers, config);
+    if (validationError) {
+      return c.json({ error: validationError.message }, validationError.status);
+    }
+
+    const id = randomUUID();
+
+    // Create empty file on disk
+    await storage.createEmpty(id);
+
+    // Track session
+    pendingSessions.set(id, {
+      headers,
+      bytesWritten: 0,
+      createdAt: Date.now(),
+    });
+
+    return c.json({ id }, 201);
+  });
+
+  /**
+   * POST /api/upload/:id/chunk
+   * Append a chunk of encrypted data to a pending upload.
+   * Body is the raw chunk bytes (no headers needed except the id in URL).
+   */
+  route.post("/:id/chunk", async (c) => {
+    const id = c.req.param("id");
+    const session = pendingSessions.get(id);
+    if (!session) {
+      return c.json({ error: "Upload session not found or expired" }, 404);
+    }
+
+    const body = c.req.raw.body;
+    if (!body) {
+      return c.json({ error: "Missing chunk body" }, 400);
+    }
+
+    try {
+      const bytesAppended = await storage.appendChunk(id, body);
+      session.bytesWritten += bytesAppended;
+
+      // Safety check: don't exceed declared content length
+      if (session.bytesWritten > session.headers.contentLength) {
+        pendingSessions.delete(id);
+        await storage.delete(id).catch(() => {});
+        return c.json({ error: "Total bytes exceed declared content length" }, 400);
+      }
+
+      return c.json({ bytesWritten: session.bytesWritten }, 200);
+    } catch (err) {
+      pendingSessions.delete(id);
+      await storage.delete(id).catch(() => {});
+      throw err;
+    }
+  });
+
+  /**
+   * POST /api/upload/:id/finalize
+   * Finalize a chunked upload: verify total bytes match and create DB record.
+   */
+  route.post("/:id/finalize", async (c) => {
+    const id = c.req.param("id");
+    const session = pendingSessions.get(id);
+    if (!session) {
+      return c.json({ error: "Upload session not found or expired" }, 404);
+    }
+
+    pendingSessions.delete(id);
+    const { headers } = session;
+
+    // Verify total bytes
+    if (session.bytesWritten !== headers.contentLength) {
+      await storage.delete(id).catch(() => {});
+      return c.json(
+        { error: "Body size does not match declared content length" },
+        400,
+      );
+    }
+
+    // Decode password salt if present
+    let passwordSaltBuffer: Buffer | null = null;
+    if (headers.hasPassword && headers.passwordSalt) {
+      passwordSaltBuffer = Buffer.from(fromBase64url(headers.passwordSalt));
+    }
+
+    // Create database record
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
+    const storagePath = `${id}.bin`;
+
+    const db = getDb();
+    try {
+      db.insert(uploads).values({
+        id,
+        ownerToken: headers.ownerToken,
+        authToken: headers.authToken,
+        salt: Buffer.from(fromBase64url(headers.salt)),
+        size: session.bytesWritten,
+        fileCount: headers.fileCount,
+        hasPassword: headers.hasPassword,
+        passwordSalt: passwordSaltBuffer,
+        passwordAlgo: headers.hasPassword ? (headers.passwordAlgo ?? null) : null,
+        maxDownloads: headers.maxDownloads,
+        downloadCount: 0,
+        expiresAt,
+        createdAt: now,
+        storagePath,
+      }).run();
+    } catch (err) {
+      await storage.delete(id).catch(() => {});
+      throw err;
+    }
+
+    // Record quota usage if applicable
+    const quotaHashedIp = c.get("quotaHashedIp");
+    if (quotaHashedIp) {
+      const quotaRecorder = c.get("quotaRecorder");
+      if (quotaRecorder) {
+        quotaRecorder(quotaHashedIp, session.bytesWritten);
+      }
+    }
+
+    return c.json({ id }, 200);
+  });
+
   /**
    * POST /api/upload
-   * Streams the encrypted file body to disk and creates a database record.
-   * All metadata is passed via headers - the body is the raw encrypted stream.
+   * Single-request upload (legacy). Streams the entire encrypted file body
+   * to disk in one request. Still used as a simple fallback.
    */
   route.post("/", async (c) => {
     const config = getConfig();
@@ -73,63 +304,9 @@ export function createUploadRoute(storage: FileStorage) {
 
     const headers = headerResult.data;
 
-    // Validate salt length
-    try {
-      const saltBytes = fromBase64url(headers.salt);
-      if (saltBytes.length !== SALT_LENGTH) {
-        return c.json({ error: `Salt must be exactly ${SALT_LENGTH} bytes` }, 400);
-      }
-    } catch {
-      return c.json({ error: "Invalid salt encoding" }, 400);
-    }
-
-    // Validate against server limits
-    if (headers.contentLength > config.MAX_FILE_SIZE) {
-      return c.json(
-        { error: `File size exceeds maximum of ${config.MAX_FILE_SIZE} bytes` },
-        413,
-      );
-    }
-
-    if (headers.fileCount > config.MAX_FILES_PER_UPLOAD) {
-      return c.json(
-        { error: `Maximum ${config.MAX_FILES_PER_UPLOAD} files per upload` },
-        400,
-      );
-    }
-
-    if (!config.EXPIRE_OPTIONS_SEC.includes(headers.expireSec)) {
-      return c.json(
-        { error: "Invalid expiry time. Must be one of the allowed options." },
-        400,
-      );
-    }
-
-    if (!config.DOWNLOAD_OPTIONS.includes(headers.maxDownloads)) {
-      return c.json(
-        { error: "Invalid download limit. Must be one of the allowed options." },
-        400,
-      );
-    }
-
-    // Validate password fields
-    if (headers.hasPassword) {
-      if (!headers.passwordSalt || !headers.passwordAlgo) {
-        return c.json(
-          { error: "Password-protected uploads require X-Password-Salt and X-Password-Algo" },
-          400,
-        );
-      }
-
-      // Validate password salt length
-      try {
-        const pwSaltBytes = fromBase64url(headers.passwordSalt);
-        if (pwSaltBytes.length !== SALT_LENGTH) {
-          return c.json({ error: `Password salt must be exactly ${SALT_LENGTH} bytes` }, 400);
-        }
-      } catch {
-        return c.json({ error: "Invalid password salt encoding" }, 400);
-      }
+    const validationError = validateUploadHeaders(headers, config);
+    if (validationError) {
+      return c.json({ error: validationError.message }, validationError.status);
     }
 
     // Ensure we have a request body
