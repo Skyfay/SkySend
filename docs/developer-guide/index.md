@@ -34,6 +34,7 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 ## Quick Links
 
 - [Architecture](/developer-guide/architecture) - System architecture and data flow
+- [Download Modes](/developer-guide/download-modes) - Browser-specific download strategies
 - [Project Setup](/developer-guide/setup) - Set up a local development environment
 - [API Reference](/developer-guide/api/) - REST API documentation
 - [Cryptography](/developer-guide/crypto/) - Encryption library details

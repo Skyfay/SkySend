@@ -51,14 +51,25 @@ Client                                          Server
    c. Recover secret = protectedSecret XOR passwordKey
    d. POST /api/password/:id --------->  Verify auth token
                                      <----  200 OK
-5. GET /api/download/:id -------------->  Stream encrypted blob
+5. Decrypt metadata (name, type, etc.)
+6. Select download strategy (see below)
+7. GET /api/download/:id -------------->  Stream encrypted blob
    (X-Auth-Token header)                   Increment download count
                                      <----  Encrypted stream
-6. Decrypt stream (AES-256-GCM)
-7. Decrypt metadata
-8. If archive: serve as .zip
-   If single: trigger file download
+8. Decrypt stream (AES-256-GCM ECE)
+9. Save to disk via browser mechanism
 ```
+
+### Download Strategy Selection
+
+SkySend uses a tiered approach to handle large file downloads without exhausting RAM. See [Download Modes](./download-modes.md) for full details.
+
+| Tier | Browsers | Method | RAM Usage |
+| --- | --- | --- | --- |
+| 1 | Chrome, Edge | `showSaveFilePicker` API | Zero |
+| 2a | Brave, OPFS-capable | OPFS Worker + Service Worker | Zero |
+| 2b | Firefox, Safari | Service Worker streaming decryption | Low (buffer only) |
+| 3 | Legacy fallback | Blob in memory | Full file size |
 
 ## Package Dependencies
 
@@ -127,16 +138,20 @@ apps/web/src/
     ui/                 # Shadcn UI components
   hooks/
     useUpload.ts        # Upload logic (encrypt + stream)
-    useDownload.ts      # Download logic (stream + decrypt)
+    useDownload.ts      # Download logic (tier selection + decrypt)
     useUploadHistory.ts # IndexedDB upload history
     useServerConfig.tsx # Fetch server config
     useTheme.tsx        # Dark/light mode
     useToast.ts         # Toast notifications
   lib/
     api.ts              # API client
+    opfs-download.ts    # OPFS probe, SW stream, download triggers
+    opfs-worker.ts      # Web Worker: fetch + decrypt + OPFS write
     upload-store.ts     # IndexedDB operations
     zip.ts              # Client-side zip/unzip (fflate)
     utils.ts            # Utility functions
+  public/
+    download-sw.js      # Service Worker: streaming ECE decryption
   i18n/
     index.ts            # i18next setup with auto-detection
     en.json             # English translations
