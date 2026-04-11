@@ -188,7 +188,8 @@ export async function triggerBlobDownload(
 
 /**
  * Waits for a Service Worker to be controlling this page.
- * On first registration, waits up to 3s for skipWaiting+claim.
+ * Has a hard timeout - navigator.serviceWorker.ready never resolves
+ * if no SW was registered (e.g. file not found at origin).
  */
 export async function ensureSwController(): Promise<ServiceWorker | null> {
   if (!("serviceWorker" in navigator)) return null;
@@ -197,27 +198,44 @@ export async function ensureSwController(): Promise<ServiceWorker | null> {
     return navigator.serviceWorker.controller;
   }
 
-  try {
-    await navigator.serviceWorker.ready;
-    if (navigator.serviceWorker.controller) {
-      return navigator.serviceWorker.controller;
-    }
+  // Hard timeout: .ready never resolves if SW registration failed
+  const result = await Promise.race([
+    (async () => {
+      try {
+        // Try to register (might already be registered from main.tsx)
+        await navigator.serviceWorker.register("/download-sw.js");
+        await navigator.serviceWorker.ready;
 
-    // Wait for clients.claim() from the SW
-    return new Promise<ServiceWorker | null>((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 3000);
-      navigator.serviceWorker.addEventListener(
-        "controllerchange",
-        () => {
-          clearTimeout(timeout);
-          resolve(navigator.serviceWorker.controller);
-        },
-        { once: true },
-      );
-    });
-  } catch {
-    return null;
+        if (navigator.serviceWorker.controller) {
+          return navigator.serviceWorker.controller;
+        }
+
+        // Wait for clients.claim() from the SW
+        return new Promise<ServiceWorker | null>((resolve) => {
+          const t = setTimeout(() => resolve(null), 2000);
+          navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            () => {
+              clearTimeout(t);
+              resolve(navigator.serviceWorker.controller);
+            },
+            { once: true },
+          );
+        });
+      } catch (err) {
+        console.warn("[SkySend] SW registration failed:", err);
+        return null;
+      }
+    })(),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+  ]);
+
+  if (result) {
+    console.info("[SkySend] Service Worker ready");
+  } else {
+    console.warn("[SkySend] Service Worker not available (timeout or failed)");
   }
+  return result;
 }
 
 /**

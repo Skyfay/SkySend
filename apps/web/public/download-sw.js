@@ -24,11 +24,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   const msg = event.data || {};
   if (msg.type === "config" && msg.id) {
+    // Transferred MessagePorts end up in event.ports, NOT in event.data
+    const port = (event.ports && event.ports[0]) || null;
     pending.set(msg.id, {
       filename: msg.filename,
       mimeType: msg.mimeType,
       tempName: msg.tempName || null,
-      port: msg.port || null,
+      port: port,
     });
     // ACK so main thread knows config is stored
     event.source.postMessage({ type: "config-ok", id: msg.id });

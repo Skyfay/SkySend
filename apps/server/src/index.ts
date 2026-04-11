@@ -141,6 +141,12 @@ app.use(
   serveStatic({ root: webDistPath, path: "/favicon.ico" }),
 );
 
+// Service Worker must be served with correct MIME type (not as index.html)
+app.use(
+  "/download-sw.js",
+  serveStatic({ root: webDistPath, path: "/download-sw.js" }),
+);
+
 // SPA fallback - serve index.html for all non-API routes
 app.get("*", serveStatic({ root: webDistPath, path: "/index.html" }));
 
