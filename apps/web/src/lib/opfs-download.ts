@@ -1,7 +1,14 @@
 /**
- * Manages the OPFS download Worker that handles the COMPLETE pipeline:
- *   fetch() → decrypt → OPFS write
- * All inside a Web Worker - zero bytes touch the main thread.
+ * OPFS download pipeline with Service Worker streaming.
+ *
+ * Architecture (zero RAM in ALL browsers):
+ *   1. OPFS Worker: fetch → decrypt → write to OPFS (no data on main thread)
+ *   2. Service Worker: streams from OPFS to browser download manager
+ *   3. Browser saves to Downloads folder natively
+ *
+ * The key insight: createObjectURL(file) copies to RAM in Firefox/Safari.
+ * A Service Worker returning file.stream() as a Response does NOT - the
+ * browser's download manager reads chunks on demand and writes to disk.
  */
 
 // Lightweight inline JS for probing OPFS support.
@@ -22,9 +29,8 @@ const PROBE_JS = [
 let _opfsSupported: boolean | null = null;
 
 /**
- * Pre-flight: tests OPFS + createSyncAccessHandle inside a lightweight
- * inline Worker (blob URL). No module imports needed - works reliably
- * in Firefox, Safari, and Chromium.
+ * Pre-flight: tests OPFS + createSyncAccessHandle in a lightweight
+ * inline Worker (blob URL). No module imports - works reliably everywhere.
  */
 export async function checkOpfsSupport(): Promise<boolean> {
   if (_opfsSupported !== null) return _opfsSupported;
@@ -67,17 +73,13 @@ export async function checkOpfsSupport(): Promise<boolean> {
 }
 
 export interface OpfsDownloadResult {
-  file: File;
+  tempName: string;
   cleanup: () => void;
 }
 
 /**
- * Starts a complete download+decrypt+write pipeline in a Worker.
- * Returns a disk-backed File when done. Call cleanup() after use.
- *
- * The File is opened on the MAIN THREAD from OPFS - NOT transferred
- * via postMessage. This avoids Safari/Firefox copying the file into RAM
- * during structured cloning.
+ * Runs the OPFS Worker pipeline: fetch → decrypt → OPFS write.
+ * Returns the tempName of the written file. Call cleanup() when done.
  */
 export function startOpfsDownload(
   url: string,
@@ -95,31 +97,19 @@ export function startOpfsDownload(
 
   return new Promise<OpfsDownloadResult>((resolve, reject) => {
     const cleanup = () => {
-      worker.postMessage({ type: "cleanup", tempName });
-      setTimeout(() => worker.terminate(), 2000);
+      worker.terminate();
+      // Delete OPFS temp file on main thread (Worker may already be dead)
+      navigator.storage.getDirectory()
+        .then((root) => root.removeEntry(tempName))
+        .catch(() => {});
     };
 
-    worker.onmessage = async (event) => {
+    worker.onmessage = (event) => {
       const msg = event.data;
       if (msg.type === "progress") {
         onProgress(msg.progress);
       } else if (msg.type === "done") {
-        try {
-          // Open OPFS on the main thread - avoids Worker→Main File transfer
-          // which can cause Safari/Firefox to copy the entire file into RAM
-          const root = await navigator.storage.getDirectory();
-          const handle = await root.getFileHandle(tempName);
-          const file = await handle.getFile();
-          resolve({ file, cleanup });
-        } catch {
-          // Fallback: use the file sent by the Worker (if available)
-          if (msg.file) {
-            resolve({ file: msg.file, cleanup });
-          } else {
-            cleanup();
-            reject(new Error("Failed to open OPFS file on main thread"));
-          }
-        }
+        resolve({ tempName, cleanup });
       } else if (msg.type === "error") {
         cleanup();
         reject(new Error(msg.message));
@@ -141,4 +131,86 @@ export function startOpfsDownload(
       encryptedSize,
     }, [secret, salt]);
   });
+}
+
+/**
+ * Triggers the actual browser download via Service Worker.
+ * The SW reads from OPFS using file.stream() and returns a streaming
+ * Response - the browser download manager writes to disk with zero RAM.
+ */
+export async function triggerSwDownload(
+  tempName: string,
+  filename: string,
+  mimeType: string,
+): Promise<void> {
+  // Ensure SW is active and controlling this page
+  await navigator.serviceWorker.ready;
+  let sw = navigator.serviceWorker.controller;
+
+  if (!sw) {
+    // First registration - wait for claim()
+    await new Promise<void>((resolve) => {
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => resolve(),
+        { once: true },
+      );
+    });
+    sw = navigator.serviceWorker.controller;
+  }
+
+  if (!sw) {
+    throw new Error("Service Worker not available");
+  }
+
+  const downloadId = crypto.randomUUID();
+
+  // Send config to SW and wait for ACK
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+      reject(new Error("SW config timeout"));
+    }, 5000);
+
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
+        clearTimeout(timeout);
+        navigator.serviceWorker.removeEventListener("message", handler);
+        resolve();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+    sw!.postMessage({ type: "config", id: downloadId, tempName, filename, mimeType });
+  });
+
+  // Navigate to SW-intercepted URL - browser downloads natively
+  const a = document.createElement("a");
+  a.href = `/__skysend_download__/${downloadId}`;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/**
+ * Fallback: trigger download via Blob URL from OPFS.
+ * Uses RAM (Firefox/Safari getFile() may snapshot) but works without SW.
+ */
+export async function triggerBlobDownload(
+  tempName: string,
+  filename: string,
+  _mimeType: string,
+): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  const handle = await root.getFileHandle(tempName);
+  const file = await handle.getFile();
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }

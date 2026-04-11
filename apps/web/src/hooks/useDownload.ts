@@ -12,7 +12,7 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
-import { checkOpfsSupport, startOpfsDownload } from "@/lib/opfs-download";
+import { checkOpfsSupport, startOpfsDownload, triggerSwDownload, triggerBlobDownload } from "@/lib/opfs-download";
 
 export type DownloadPhase =
   | "idle"
@@ -180,9 +180,9 @@ export function useDownload() {
             .pipeThrough(createDecryptStream(keys.fileKey))
             .pipeTo(writable);
         } else if (useOpfs) {
-          // Tier 2: ALL-IN-WORKER - fetch + decrypt + OPFS write inside Worker.
-          // Zero bytes touch the main thread renderer process.
-          // Works in Firefox 111+, Safari 16.4+, Brave, Chrome 102+.
+          // Tier 2: ALL-IN-WORKER + Service Worker streaming.
+          // Step 1: Worker does fetch → decrypt → OPFS write (zero main thread data)
+          // Step 2: Service Worker streams from OPFS to native download manager (zero RAM)
           try {
             const apiBase = import.meta.env.DEV
               ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
@@ -200,7 +200,7 @@ export function useDownload() {
             ) as ArrayBuffer;
             const tempName = `skysend-${crypto.randomUUID()}`;
 
-            const { file, cleanup } = await startOpfsDownload(
+            const { cleanup } = await startOpfsDownload(
               downloadUrl,
               authTokenB64,
               secretBuf,
@@ -210,19 +210,21 @@ export function useDownload() {
               (progress) => setState((s) => ({ ...s, progress })),
             );
 
-            // Trigger browser download from disk-backed File
-            const url = URL.createObjectURL(file);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            // Step 2: Trigger download via Service Worker (zero RAM) or Blob URL (fallback)
+            try {
+              if (navigator.serviceWorker?.controller) {
+                console.info("[SkySend] Triggering download via Service Worker");
+                await triggerSwDownload(tempName, filename, mimeType);
+              } else {
+                console.info("[SkySend] SW not ready, using OPFS blob fallback");
+                await triggerBlobDownload(tempName, filename, mimeType);
+              }
+            } catch (triggerErr) {
+              console.warn("[SkySend] SW trigger failed, using blob fallback:", triggerErr);
+              await triggerBlobDownload(tempName, filename, mimeType);
+            }
 
-            setTimeout(() => {
-              URL.revokeObjectURL(url);
-              cleanup();
-            }, 120_000);
+            setTimeout(cleanup, 120_000);
           } catch (opfsErr) {
             console.warn("[SkySend] OPFS tier failed, falling back to Blob:", opfsErr);
             useOpfs = false; // fall through to Blob below
