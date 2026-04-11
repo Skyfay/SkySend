@@ -290,32 +290,41 @@ export async function streamDownloadViaSw(
     });
   });
 
-  // Navigate to SW-intercepted URL - triggers browser download
-  const a = document.createElement("a");
-  a.href = `/__skysend_download__/${downloadId}`;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // Trigger download via hidden iframe instead of <a download>.
+  // Chrome/Edge/Safari/Brave do NOT fire the SW fetch event for <a download> clicks.
+  // An iframe navigation IS always intercepted by the SW in all browsers.
+  // The SW responds with Content-Disposition: attachment, so the browser
+  // starts a download without affecting the parent page.
+  const iframe = document.createElement("iframe");
+  iframe.hidden = true;
+  iframe.style.display = "none";
+  iframe.src = `/__skysend_download__/${downloadId}`;
+  document.body.appendChild(iframe);
 
-  // Wait for SW to signal completion (dl-done or dl-error)
+  // Wait for SW to signal completion (dl-done or dl-error).
+  // Messages are filtered by downloadId (not clientId, which is empty for navigations).
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       navigator.serviceWorker.removeEventListener("message", handler);
+      iframe.remove();
       resolve(); // Don't error on timeout - download may have completed
     }, 86_400_000);
 
     const handler = (e: MessageEvent) => {
       const msg = e.data;
-      if (msg?.type === "dl-progress") {
+      if (msg?.downloadId !== downloadId) return;
+
+      if (msg.type === "dl-progress") {
         onProgress(msg.progress);
-      } else if (msg?.type === "dl-done") {
+      } else if (msg.type === "dl-done") {
         clearTimeout(timeout);
         navigator.serviceWorker.removeEventListener("message", handler);
+        iframe.remove();
         resolve();
-      } else if (msg?.type === "dl-error") {
+      } else if (msg.type === "dl-error") {
         clearTimeout(timeout);
         navigator.serviceWorker.removeEventListener("message", handler);
+        iframe.remove();
         reject(new Error(msg.error || "Download failed in SW"));
       }
     };

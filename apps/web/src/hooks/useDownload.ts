@@ -12,7 +12,7 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
-import { checkOpfsSupport, startOpfsDownload, triggerSwDownload, triggerBlobDownload, ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
+import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
 
 export type DownloadPhase =
   | "idle"
@@ -125,26 +125,6 @@ export function useDownload() {
           mimeType = "application/zip";
         }
 
-        const supportsFilePicker = typeof window.showSaveFilePicker === "function";
-
-        // Detect download strategy BEFORE starting the download.
-        let writable: FileSystemWritableFileStream | null = null;
-        let useOpfs = false;
-
-        if (supportsFilePicker) {
-          // Tier 1: showSaveFilePicker - zero RAM (Chrome, Edge)
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: filename,
-            types: mimeType !== "application/octet-stream"
-              ? [{ accept: { [mimeType]: [] } }]
-              : undefined,
-          });
-          writable = await fileHandle.createWritable();
-        } else {
-          // Tier 2 probe: test OPFS + createSyncAccessHandle in Worker (cached)
-          useOpfs = await checkOpfsSupport();
-        }
-
         setState((s) => ({
           ...s,
           phase: "downloading",
@@ -153,43 +133,23 @@ export function useDownload() {
           error: null,
         }));
 
-        // Log which download strategy is being used
-        const tier = writable ? "1 (showSaveFilePicker)" : useOpfs ? "2 (OPFS Worker)" : "2/3 (SW stream or Blob)";
-        console.info(`[SkySend] Download tier: ${tier}`);
+        // ── Download Strategy (ordered by preference) ──────────
+        // Tier 1: SW stream - fastest, works in all modern browsers
+        // Tier 2: showSaveFilePicker - zero RAM fallback (Chrome, Edge)
+        // Tier 3: Blob - last resort (uses full file size in RAM)
+        let downloaded = false;
 
-        if (writable) {
-          // Tier 1: showSaveFilePicker - zero RAM (Chrome, Edge)
-          // fetch + decrypt on main thread, pipe directly to file
-          const { stream, size } = await api.downloadFile(id, authTokenB64);
+        // Tier 1: Service Worker streaming decryption (primary for ALL browsers)
+        try {
+          const sw = await ensureSwController();
+          if (sw) {
+            console.info("[SkySend] Download tier: 1 (SW stream)");
 
-          let loaded = 0;
-          const progressStream = stream.pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(chunk, controller) {
-                loaded += chunk.byteLength;
-                setState((s) => ({
-                  ...s,
-                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-                }));
-                controller.enqueue(chunk);
-              },
-            }),
-          );
-
-          await progressStream
-            .pipeThrough(createDecryptStream(keys.fileKey))
-            .pipeTo(writable);
-        } else if (useOpfs) {
-          // Tier 2: ALL-IN-WORKER + Service Worker streaming.
-          // Step 1: Worker does fetch → decrypt → OPFS write (zero main thread data)
-          // Step 2: Service Worker streams from OPFS to native download manager (zero RAM)
-          try {
             const apiBase = import.meta.env.DEV
               ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
               : window.location.origin;
             const downloadUrl = `${apiBase}/api/download/${id}`;
 
-            // Pass raw secret + salt to Worker (it derives keys internally)
             const secretBuf = secret.buffer.slice(
               secret.byteOffset,
               secret.byteOffset + secret.byteLength,
@@ -198,81 +158,35 @@ export function useDownload() {
               salt.byteOffset,
               salt.byteOffset + salt.byteLength,
             ) as ArrayBuffer;
-            const tempName = `skysend-${crypto.randomUUID()}`;
 
-            const { cleanup } = await startOpfsDownload(
+            await streamDownloadViaSw(
               downloadUrl,
               authTokenB64,
               secretBuf,
               saltBuf,
-              tempName,
+              filename,
+              mimeType,
               info.size,
               (progress) => setState((s) => ({ ...s, progress })),
             );
-
-            // Step 2: Trigger download via Service Worker (zero RAM) or Blob URL (fallback)
-            try {
-              if (navigator.serviceWorker?.controller) {
-                console.info("[SkySend] Triggering download via Service Worker");
-                await triggerSwDownload(tempName, filename, mimeType);
-              } else {
-                console.info("[SkySend] SW not ready, using OPFS blob fallback");
-                await triggerBlobDownload(tempName, filename, mimeType);
-              }
-            } catch (triggerErr) {
-              console.warn("[SkySend] SW trigger failed, using blob fallback:", triggerErr);
-              await triggerBlobDownload(tempName, filename, mimeType);
-            }
-
-            setTimeout(cleanup, 120_000);
-          } catch (opfsErr) {
-            console.warn("[SkySend] OPFS tier failed, falling back to Blob:", opfsErr);
-            useOpfs = false; // fall through to Blob below
+            downloaded = true;
           }
+        } catch (swErr) {
+          console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
         }
 
-        if (!writable && !useOpfs) {
-          // Tier 2b: SW stream (Firefox/Safari) - no OPFS needed
-          // Falls back to Tier 3 (Blob) if SW is not available
-          let streamed = false;
+        // Tier 2: showSaveFilePicker fallback (Chrome, Edge - if SW failed)
+        if (!downloaded && typeof window.showSaveFilePicker === "function") {
           try {
-            const sw = await ensureSwController();
-            if (sw) {
-              console.info("[SkySend] Download tier: 2 (SW stream)");
+            console.info("[SkySend] Download tier: 2 (showSaveFilePicker)");
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: mimeType !== "application/octet-stream"
+                ? [{ accept: { [mimeType]: [] } }]
+                : undefined,
+            });
+            const writable = await fileHandle.createWritable();
 
-              const apiBase = import.meta.env.DEV
-                ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
-                : window.location.origin;
-              const downloadUrl = `${apiBase}/api/download/${id}`;
-
-              const secretBuf = secret.buffer.slice(
-                secret.byteOffset,
-                secret.byteOffset + secret.byteLength,
-              ) as ArrayBuffer;
-              const saltBuf = salt.buffer.slice(
-                salt.byteOffset,
-                salt.byteOffset + salt.byteLength,
-              ) as ArrayBuffer;
-
-              await streamDownloadViaSw(
-                downloadUrl,
-                authTokenB64,
-                secretBuf,
-                saltBuf,
-                filename,
-                mimeType,
-                info.size,
-                (progress) => setState((s) => ({ ...s, progress })),
-              );
-              streamed = true;
-            }
-          } catch (swErr) {
-            console.warn("[SkySend] SW stream failed, falling back to Blob:", swErr);
-          }
-
-          if (!streamed) {
-            // Tier 3: Blob fallback - uses RAM
-            console.warn("[SkySend] Using Blob fallback - large files will use RAM");
             const { stream, size } = await api.downloadFile(id, authTokenB64);
 
             let loaded = 0;
@@ -289,27 +203,58 @@ export function useDownload() {
               }),
             );
 
-            const decryptedStream = progressStream.pipeThrough(
-              createDecryptStream(keys.fileKey),
-            );
-
-            const reader = decryptedStream.getReader();
-            const chunks: Uint8Array[] = [];
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
+            await progressStream
+              .pipeThrough(createDecryptStream(keys.fileKey))
+              .pipeTo(writable);
+            downloaded = true;
+          } catch (pickerErr) {
+            // User cancelled = AbortError, rethrow to be caught by outer handler
+            if (pickerErr instanceof DOMException && pickerErr.name === "AbortError") {
+              throw pickerErr;
             }
-            const blob = new Blob(chunks as BlobPart[], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
+            console.warn("[SkySend] showSaveFilePicker failed:", pickerErr);
           }
+        }
+
+        // Tier 3: Blob fallback (uses RAM - last resort)
+        if (!downloaded) {
+          console.warn("[SkySend] Download tier: 3 (Blob fallback - large files will use RAM)");
+          const { stream, size } = await api.downloadFile(id, authTokenB64);
+
+          let loaded = 0;
+          const progressStream = stream.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(chunk, controller) {
+                loaded += chunk.byteLength;
+                setState((s) => ({
+                  ...s,
+                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                }));
+                controller.enqueue(chunk);
+              },
+            }),
+          );
+
+          const decryptedStream = progressStream.pipeThrough(
+            createDecryptStream(keys.fileKey),
+          );
+
+          const reader = decryptedStream.getReader();
+          const chunks: Uint8Array[] = [];
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
         }
 
         setState((s) => ({ ...s, phase: "done", progress: 100 }));

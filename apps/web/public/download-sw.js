@@ -19,6 +19,21 @@ const TAG_LENGTH = 16;
 const NONCE_LENGTH = 12;
 const ENCRYPTED_RECORD_SIZE = RECORD_SIZE + TAG_LENGTH;
 
+// ── Size Calculation ───────────────────────────────────
+
+/**
+ * Compute exact plaintext size from encrypted size.
+ * Safari needs Content-Length to stream to disk instead of buffering.
+ */
+function computeDecryptedSize(encryptedSize) {
+  if (!encryptedSize || encryptedSize <= NONCE_LENGTH) return 0;
+  const payload = encryptedSize - NONCE_LENGTH;
+  const fullRecords = Math.floor(payload / ENCRYPTED_RECORD_SIZE);
+  const remainder = payload % ENCRYPTED_RECORD_SIZE;
+  if (remainder === 0) return fullRecords * RECORD_SIZE;
+  return fullRecords * RECORD_SIZE + (remainder - TAG_LENGTH);
+}
+
 // ── Crypto Helpers ─────────────────────────────────────
 
 function nonceXorCounter(baseNonce, counter) {
@@ -91,8 +106,15 @@ self.addEventListener("fetch", (event) => {
   if (!config) return;
   pending.delete(id);
 
-  // Pass clientId so SW can send progress/done messages back
-  event.respondWith(handleDownload(config, event.clientId));
+  // Wrap handleDownload so we can track when the stream finishes.
+  // respondWith() resolves once the Response object is returned (headers only),
+  // but the body stream may still be consumed. waitUntil() keeps the SW alive
+  // until the stream is fully read - critical for Safari which terminates SWs aggressively.
+  let streamDone;
+  const donePromise = new Promise((resolve) => { streamDone = resolve; });
+
+  event.respondWith(handleDownload(config, id, streamDone));
+  event.waitUntil(donePromise);
 });
 
 /**
@@ -105,7 +127,7 @@ self.addEventListener("fetch", (event) => {
  * - highWaterMark: 0 prevents ReadableStream from buffering ahead
  * - Report progress and completion back to main thread
  */
-async function handleDownload(config, clientId) {
+async function handleDownload(config, downloadId, streamDone) {
   const { url, authToken, secret, salt, filename, mimeType, size } = config;
 
   const fileKey = await deriveFileKey(secret, salt);
@@ -115,7 +137,8 @@ async function handleDownload(config, clientId) {
   });
 
   if (!response.ok) {
-    notifyClient(clientId, { type: "dl-error", error: `HTTP ${response.status}` });
+    broadcast({ type: "dl-error", downloadId, error: `HTTP ${response.status}` });
+    streamDone();
     return new Response(`Download failed: ${response.status}`, { status: 502 });
   }
 
@@ -124,6 +147,15 @@ async function handleDownload(config, clientId) {
   const headers = new Headers({
     "Content-Type": mimeType || "application/octet-stream",
   });
+
+  // Content-Length of the DECRYPTED output. Critical for Safari:
+  // without it Safari buffers the entire ReadableStream in RAM
+  // instead of streaming to disk.
+  const decryptedSize = computeDecryptedSize(totalSize);
+  if (decryptedSize > 0) {
+    headers.set("Content-Length", String(decryptedSize));
+  }
+
   const encoded = encodeURIComponent(filename).replace(
     /[!'()*]/g,
     (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
@@ -187,7 +219,7 @@ async function handleDownload(config, clientId) {
       if (now - lastProgressTime > 300 && totalSize > 0) {
         lastProgressTime = now;
         const pct = Math.min(99, Math.round((loaded / totalSize) * 100));
-        notifyClient(clientId, { type: "dl-progress", progress: pct });
+        broadcast({ type: "dl-progress", downloadId, progress: pct });
       }
     }
   }
@@ -202,8 +234,9 @@ async function handleDownload(config, clientId) {
       // Extract nonce header on first call
       if (baseNonce === null) {
         if (bufLen() < NONCE_LENGTH) {
-          notifyClient(clientId, { type: "dl-done" });
+          broadcast({ type: "dl-done", downloadId });
           controller.close();
+          streamDone();
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
@@ -237,34 +270,38 @@ async function handleDownload(config, clientId) {
           remaining,
         );
         controller.enqueue(new Uint8Array(plain));
-        notifyClient(clientId, { type: "dl-progress", progress: 100 });
-        notifyClient(clientId, { type: "dl-done" });
+        broadcast({ type: "dl-progress", downloadId, progress: 100 });
+        broadcast({ type: "dl-done", downloadId });
         controller.close();
+        streamDone();
         return;
       }
 
       if (readerDone && bufLen() <= TAG_LENGTH) {
-        notifyClient(clientId, { type: "dl-done" });
+        broadcast({ type: "dl-done", downloadId });
         controller.close();
+        streamDone();
       }
     },
 
     cancel() {
       reader.cancel();
-      notifyClient(clientId, { type: "dl-error", error: "cancelled" });
+      broadcast({ type: "dl-error", downloadId, error: "cancelled" });
+      streamDone();
     },
   }, { highWaterMark: 0 }); // No internal buffering - pure pull
 
   return new Response(decryptStream, { headers });
 }
 
-async function notifyClient(clientId, msg) {
+/** Broadcast message to ALL window clients (not filtered by clientId).
+ *  Navigation requests (iframe, location.href) have empty clientId in most browsers,
+ *  so we use downloadId-based filtering on the receiver side instead. */
+async function broadcast(msg) {
   try {
     const clients = await self.clients.matchAll({ type: "window" });
     for (const client of clients) {
-      if (!clientId || client.id === clientId) {
-        client.postMessage(msg);
-      }
+      client.postMessage(msg);
     }
   } catch { /* ignore */ }
 }

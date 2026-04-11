@@ -6,16 +6,17 @@ SkySend uses a tiered download strategy to handle large encrypted files (multi-G
 
 | Tier | Name | Browsers | RAM Usage | Progress | Speed |
 | --- | --- | --- | --- | --- | --- |
-| 1 | File System Access | Chrome, Edge | ~0 | Yes | Fast |
-| 2a | OPFS Worker + SW | Brave, OPFS-capable | ~0 | Yes | Fast |
-| 2b | SW Streaming Decrypt | Firefox, Safari | Low (buffers only) | Yes | Very fast |
+| 1 | SW Streaming Decrypt | All modern browsers | Low (buffers only) | Yes | Very fast (~270 MB/s) |
+| 2 | File System Access | Chrome, Edge (fallback) | ~0 | Yes | Fast (~110 MB/s) |
 | 3 | Blob Fallback | All (last resort) | Full file size | Yes | Moderate |
 
-## Tier 1: File System Access API
+Tier 1 (SW stream) is always attempted first because it is the fastest method. It runs decryption in the Service Worker thread, keeping the main thread free and achieving higher throughput than main-thread decryption. If the Service Worker is not available, Tier 2 (`showSaveFilePicker`) is used as a fallback in Chrome/Edge. Tier 3 (Blob) is the last resort.
 
-**Browsers**: Chrome 86+, Edge 86+
+## Tier 1: Service Worker Streaming Decryption
 
-Uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) (`showSaveFilePicker`) to stream decrypted data directly to a user-chosen file on disk.
+**Browsers**: All modern browsers (Chrome, Edge, Firefox, Safari, Brave)
+
+The primary download method. The Service Worker performs the entire pipeline: fetch, HKDF key derivation, ECE decryption, and streaming the plaintext as a `Response` to the browser's download manager. This is the fastest method because decryption runs on the SW thread (not the main thread).
 
 ```
 Main Thread: fetch() --> decrypt (TransformStream) --> pipeTo(FileSystemWritableFileStream)
@@ -44,77 +45,11 @@ Near zero. Only the current record (64 KB plaintext + 16 bytes GCM tag) is in me
 
 ---
 
-## Tier 2a: OPFS Worker + Service Worker
+## Tier 2: File System Access API (Fallback)
 
-**Browsers**: Brave, and any browser where both OPFS (`navigator.storage.getDirectory()`) and Service Workers are available.
+**Browsers**: Chrome 86+, Edge 86+ (only used if SW stream fails)
 
-Uses a Web Worker to fetch and decrypt into the [Origin Private File System](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system) (OPFS), then a Service Worker streams the completed file to the browser's native download manager.
-
-```
-Web Worker: fetch() --> decrypt --> OPFS (createSyncAccessHandle)
-Service Worker: OPFS file.stream() --> Response --> Download Manager
-```
-
-### How it works
-
-1. Probe OPFS support on the main thread (`getDirectory()` + `getFileHandle()`)
-2. Start a module Web Worker (`opfs-worker.ts`)
-3. Worker derives keys via HKDF, fetches encrypted data, decrypts with manual backpressure, writes to OPFS via `createSyncAccessHandle()`
-4. Worker signals completion to main thread
-5. Main thread sends config to Service Worker (filename, MIME type, OPFS temp name)
-6. Main thread navigates to `/__skysend_download__/{id}` - SW intercepts
-7. SW opens the OPFS file via `getFile().stream()` and returns it as a streaming `Response`
-8. Browser download manager saves to disk
-
-### Manual backpressure in the Worker
-
-Standard `pipeThrough()` does not propagate backpressure to the HTTP network layer in all browsers. The Worker uses a `Promise.all` producer/consumer pattern instead:
-
-```typescript
-await Promise.all([
-  // Producer: network --> decrypt input
-  (async () => {
-    for (;;) {
-      const { done, value } = await netReader.read();
-      if (done) { await encWriter.close(); break; }
-      await encWriter.write(value); // BLOCKS until consumer reads
-    }
-  })(),
-  // Consumer: decrypt output --> OPFS
-  (async () => {
-    for (;;) {
-      const { done, value } = await decReader.read();
-      if (done) break;
-      syncHandle.write(new Uint8Array(value.buffer), { at: offset });
-      offset += value.byteLength;
-    }
-  })(),
-]);
-```
-
-The `await encWriter.write(value)` is the key - it only resolves once the decrypt `TransformStream` has consumed the chunk, which only happens when the OPFS consumer has read the output. This is true end-to-end backpressure.
-
-### Why not use OPFS directly in Firefox/Safari?
-
-Firefox blocks `navigator.storage.getDirectory()` due to Enhanced Tracking Protection / privacy restrictions. Safari may also block it in certain contexts. The OPFS probe detects this and falls through to Tier 2b.
-
-### RAM impact
-
-Near zero. Data flows: network buffer (browser-managed) -> decrypt buffer (64 KB) -> OPFS disk write. The OPFS file is streamed to the download manager without loading into RAM.
-
-### Key files
-
-- [opfs-worker.ts](https://github.com/nicokempe/SkySend/blob/main/apps/web/src/lib/opfs-worker.ts) - Worker: fetch + decrypt + OPFS write
-- [opfs-download.ts](https://github.com/nicokempe/SkySend/blob/main/apps/web/src/lib/opfs-download.ts) - Orchestration: probe, worker lifecycle, SW trigger
-- [download-sw.js](https://github.com/nicokempe/SkySend/blob/main/apps/web/public/download-sw.js) - Service Worker
-
----
-
-## Tier 2b: Service Worker Streaming Decryption
-
-**Browsers**: Firefox, Safari (and any browser where OPFS is unavailable but Service Workers work)
-
-The Service Worker itself performs the entire pipeline: fetch, key derivation, ECE decryption, and streaming the plaintext as a `Response` to the browser's download manager. No Web Workers or OPFS involved.
+Uses the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API) (`showSaveFilePicker`) to stream decrypted data directly to a user-chosen file on disk. This was the original primary method but is now a fallback because SW stream is faster.
 
 ```
 Service Worker (inside respondWith):
@@ -191,25 +126,21 @@ The entire decrypted file is held in RAM. For large files this will cause the br
 The selection happens in `useDownload.ts`:
 
 ```typescript
-// Tier 1: showSaveFilePicker (Chrome, Edge)
-if (typeof window.showSaveFilePicker === "function") {
-  // Open file picker, get writable stream
-}
-
-// Tier 2a: OPFS probe (Brave, etc.)
-const useOpfs = await checkOpfsSupport();
-if (useOpfs) {
-  // Start OPFS Worker pipeline + SW trigger
-}
-
-// Tier 2b: Service Worker stream (Firefox, Safari)
+// Tier 1: SW stream (primary for ALL browsers)
 const sw = await ensureSwController();
 if (sw) {
-  // Send config to SW, navigate to intercepted URL
+  // Send config to SW, navigate to intercepted URL, wait for completion
+}
+
+// Tier 2: showSaveFilePicker fallback (Chrome, Edge)
+if (!downloaded && typeof window.showSaveFilePicker === "function") {
+  // Open file picker, stream decrypt to file
 }
 
 // Tier 3: Blob fallback
-// Collect chunks, create Blob, trigger download
+if (!downloaded) {
+  // Collect chunks, create Blob, trigger download
+}
 ```
 
 ## Service Worker Registration
@@ -233,4 +164,4 @@ The SW uses `skipWaiting()` and `clients.claim()` to activate immediately. The s
 | Service Worker | Yes | Yes | Yes | Yes | Yes |
 | `crypto.subtle` in SW | Yes | Yes | Yes | Yes | Yes |
 | `ReadableStream` in SW | Yes | Yes | Yes | Yes | Yes |
-| Download tier used | 1 | 1 | 2b | 2b | 2a |
+| Download tier used | 1 (SW) | 1 (SW) | 1 (SW) | 1 (SW) | 1 (SW) |
