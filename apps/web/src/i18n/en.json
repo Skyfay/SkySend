@@ -60,7 +60,12 @@
     "downloading": "Decrypting and downloading...",
     "decrypting": "Decrypting...",
     "complete": "Download complete!",
-    "failed": "Download failed"
+    "failed": "Download failed",
+    "safariWarning": "This browser may not be able to download a file this large.",
+    "safariWarningDesc": "Safari downloads the entire file into memory before saving. For large files this can cause the download to fail.",
+    "safariCopyLink": "Copy link for another browser",
+    "safariContinue": "Download anyway",
+    "safariLinkCopied": "Link copied!"
   },
   "myUploads": {
     "title": "My Uploads",

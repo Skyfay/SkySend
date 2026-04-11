@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
+import { SafariWarning } from "@/components/SafariWarning";
 import { useDownload } from "@/hooks/useDownload";
 
 export function DownloadPage() {
@@ -114,9 +115,19 @@ export function DownloadPage() {
             />
           )}
 
+          {/* Safari large-file warning */}
+          {downloadHook.phase === "safari-warning" && downloadHook.info && (
+            <SafariWarning
+              fileSize={downloadHook.info.size}
+              onContinue={downloadHook.confirmSafariDownload}
+              onDismiss={downloadHook.dismissSafariWarning}
+            />
+          )}
+
           {/* Download card when info is available and no password needed (or already unlocked) */}
           {downloadHook.info &&
-            downloadHook.phase !== "needs-password" && (
+            downloadHook.phase !== "needs-password" &&
+            downloadHook.phase !== "safari-warning" && (
               <DownloadCard
                 info={downloadHook.info}
                 metadata={downloadHook.metadata}

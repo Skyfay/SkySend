@@ -13,12 +13,14 @@ import {
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
+import { isSafari, SAFARI_BIG_SIZE } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
   | "loading-info"
   | "needs-password"
   | "verifying-password"
+  | "safari-warning"
   | "downloading"
   | "done"
   | "error";
@@ -29,6 +31,8 @@ interface DownloadState {
   error: string | null;
   info: api.UploadInfo | null;
   metadata: FileMetadata | null;
+  /** Stashed args so Safari warning can resume the download */
+  pendingDownloadArgs: { id: string; secretB64: string; password?: string; argon2id?: Argon2idHashFn } | null;
 }
 
 export function useDownload() {
@@ -38,6 +42,7 @@ export function useDownload() {
     error: null,
     info: null,
     metadata: null,
+    pendingDownloadArgs: null,
   });
 
   const loadInfo = useCallback(async (id: string) => {
@@ -62,10 +67,24 @@ export function useDownload() {
       secretB64: string,
       password?: string,
       argon2id?: Argon2idHashFn,
+      /** Skip the Safari large-file warning (user chose "continue anyway") */
+      forceSafari = false,
     ) => {
       try {
         const info = state.info ?? (await api.fetchInfo(id));
         if (!info) throw new Error("Upload not found");
+
+        // Safari large-file warning (like Mozilla Send's noStreams warning).
+        // Show before doing any crypto work.
+        if (!forceSafari && isSafari() && info.size > SAFARI_BIG_SIZE) {
+          setState((s) => ({
+            ...s,
+            phase: "safari-warning",
+            info,
+            pendingDownloadArgs: { id, secretB64, password, argon2id },
+          }));
+          return;
+        }
 
         let secret = fromBase64url(secretB64);
         const salt = fromBase64url(info.salt);
@@ -133,15 +152,21 @@ export function useDownload() {
           error: null,
         }));
 
+        // ── Safari: skip SW streaming (like Mozilla Send) ──────
+        // Safari terminates Service Workers aggressively and buffers
+        // ReadableStream responses in RAM instead of streaming to disk.
+        // For files > 256 MB we show a warning first (handled by caller).
+        const safari = isSafari();
+
         // ── Download Strategy (ordered by preference) ──────────
-        // Tier 1: SW stream - fastest, works in all modern browsers
+        // Tier 1: SW stream - fastest (Chrome, Edge, Brave, Firefox)
         // Tier 2: showSaveFilePicker - zero RAM fallback (Chrome, Edge)
-        // Tier 3: Blob - last resort (uses full file size in RAM)
+        // Tier 3: Blob - last resort / Safari default (uses full file size in RAM)
         let downloaded = false;
 
-        // Tier 1: Service Worker streaming decryption (primary for ALL browsers)
+        // Tier 1: Service Worker streaming decryption (non-Safari browsers)
         try {
-          const sw = await ensureSwController();
+          const sw = !safari ? await ensureSwController() : null;
           if (sw) {
             console.info("[SkySend] Download tier: 1 (SW stream)");
 
@@ -216,9 +241,9 @@ export function useDownload() {
           }
         }
 
-        // Tier 3: Blob fallback (uses RAM - last resort)
+        // Tier 3: Blob fallback (uses RAM - last resort / Safari default)
         if (!downloaded) {
-          console.warn("[SkySend] Download tier: 3 (Blob fallback - large files will use RAM)");
+          console.warn(`[SkySend] Download tier: 3 (Blob fallback${safari ? " - Safari" : ""})`);
           const { stream, size } = await api.downloadFile(id, authTokenB64);
 
           let loaded = 0;
@@ -282,8 +307,22 @@ export function useDownload() {
       error: null,
       info: null,
       metadata: null,
+      pendingDownloadArgs: null,
     });
   }, []);
 
-  return { ...state, loadInfo, download, reset };
+  /** User chose "Continue anyway" on the Safari large-file warning */
+  const confirmSafariDownload = useCallback(() => {
+    const args = state.pendingDownloadArgs;
+    if (!args) return;
+    setState((s) => ({ ...s, pendingDownloadArgs: null }));
+    download(args.id, args.secretB64, args.password, args.argon2id, true);
+  }, [state.pendingDownloadArgs, download]);
+
+  /** User dismissed the Safari warning */
+  const dismissSafariWarning = useCallback(() => {
+    setState((s) => ({ ...s, phase: "idle", pendingDownloadArgs: null }));
+  }, []);
+
+  return { ...state, loadInfo, download, reset, confirmSafariDownload, dismissSafariWarning };
 }
