@@ -1,4 +1,6 @@
 import { createMiddleware } from "hono/factory";
+import { getConnInfo } from "@hono/node-server/conninfo";
+import type { Context } from "hono";
 import type { Config } from "../lib/config.js";
 
 interface RateLimitEntry {
@@ -27,7 +29,7 @@ export function createRateLimiter(config: Config) {
   cleanupInterval.unref();
 
   return createMiddleware(async (c, next) => {
-    const ip = getClientIp(c.req.raw, config.TRUST_PROXY);
+    const ip = getClientIp(c, config.TRUST_PROXY);
     const now = Date.now();
 
     let entry = store.get(ip);
@@ -57,23 +59,28 @@ export function createRateLimiter(config: Config) {
 /**
  * Extract the client IP from the request.
  * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled.
+ * Falls back to Node.js socket info via getConnInfo.
  */
-function getClientIp(request: Request, trustProxy = false): string {
+function getClientIp(c: Context, trustProxy = false): string {
   if (trustProxy) {
-    // Check X-Forwarded-For first (most common with reverse proxies)
-    const forwarded = request.headers.get("X-Forwarded-For");
+    const forwarded = c.req.header("X-Forwarded-For");
     if (forwarded) {
-      // Take the first (leftmost) IP - the original client
       const first = forwarded.split(",")[0]?.trim();
       if (first) return first;
     }
 
-    // Check X-Real-IP (used by Nginx)
-    const realIp = request.headers.get("X-Real-IP");
+    const realIp = c.req.header("X-Real-IP");
     if (realIp) return realIp.trim();
   }
 
-  // Fallback: use a default since Hono doesn't expose socket info directly
+  // Use Node.js socket info for the actual remote address
+  try {
+    const info = getConnInfo(c);
+    if (info.remote.address) return info.remote.address;
+  } catch {
+    // getConnInfo may fail in test environments
+  }
+
   return "unknown";
 }
 

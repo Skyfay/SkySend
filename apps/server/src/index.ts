@@ -57,6 +57,7 @@ app.use(
     allowHeaders: [
       "Content-Type",
       "Content-Length",
+      "X-Content-Length",
       "X-Auth-Token",
       "X-Owner-Token",
       "X-Salt",
@@ -75,8 +76,6 @@ app.use(
     ],
   }),
 );
-app.use("*", createRateLimiter(config));
-
 // Upload quota middleware (only on upload endpoint)
 const quota = createUploadQuota(config);
 
@@ -90,6 +89,9 @@ app.onError((err, c) => {
 
 const api = new Hono();
 
+// Rate limiter only on API routes (not static assets)
+api.use("*", createRateLimiter(config));
+
 api.route("/config", configRoute);
 api.route("/health", healthRoute);
 api.route("/info", infoRoute);
@@ -97,6 +99,11 @@ api.route("/exists", existsRoute);
 api.route("/password", passwordRoute);
 api.route("/meta", metaRoute);
 api.route("/download", createDownloadRoute(storage));
+
+// Quota status endpoint
+api.get("/quota", (c) => {
+  return c.json(quota.getStatus(c));
+});
 
 // Upload route with quota middleware
 const uploadRoute = createUploadRoute(storage);

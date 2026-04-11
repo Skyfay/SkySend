@@ -567,7 +567,7 @@ describe("routes", () => {
         "X-Max-Downloads": "1",
         "X-Expire-Sec": "86400",
         "X-File-Count": "1",
-        "Content-Length": "5",
+        "X-Content-Length": "5",
         ...overrides,
       };
     }
@@ -653,7 +653,7 @@ describe("routes", () => {
 
       const res = await app.request("/api/upload", {
         method: "POST",
-        headers: makeUploadHeaders({ "Content-Length": "5" }),
+        headers: makeUploadHeaders({ "X-Content-Length": "5" }),
         body: new Uint8Array([1, 2, 3, 4, 5]),
       });
 

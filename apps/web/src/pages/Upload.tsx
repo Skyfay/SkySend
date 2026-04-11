@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Shield, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,11 @@ import { UploadZone } from "@/components/UploadZone";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
+import { QuotaBar } from "@/components/QuotaBar";
 import { useUpload } from "@/hooks/useUpload";
+import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
+import { fetchQuota, type QuotaStatus } from "@/lib/api";
 import { formatBytes } from "@/lib/utils";
 
 export function UploadPage() {
@@ -25,6 +28,24 @@ export function UploadPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(false);
+  const [quotaRefreshKey, setQuotaRefreshKey] = useState(0);
+  const [quota, setQuota] = useState<QuotaStatus | null>(null);
+
+  const quotaEnabled = config ? config.uploadQuotaBytes > 0 : false;
+
+  useEffect(() => {
+    if (!quotaEnabled) return;
+    fetchQuota()
+      .then(setQuota)
+      .catch(() => {});
+  }, [quotaEnabled, quotaRefreshKey]);
+
+  // Favicon progress during upload
+  const isUploading =
+    uploadHook.phase !== "idle" &&
+    uploadHook.phase !== "done" &&
+    uploadHook.phase !== "error";
+  useFaviconProgress(isUploading ? uploadHook.progress : null);
 
   // Initialize defaults when config loads
   if (config && expireSec === 0) {
@@ -40,16 +61,12 @@ export function UploadPage() {
     );
   }
 
-  const isUploading =
-    uploadHook.phase !== "idle" &&
-    uploadHook.phase !== "done" &&
-    uploadHook.phase !== "error";
-
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
   const sizeExceeded = totalSize > config.maxFileSize;
   const tooManyFiles = files.length > config.maxFilesPerUpload;
+  const quotaExceeded = quota?.enabled && totalSize > quota.remaining;
   const canUpload =
-    files.length > 0 && !sizeExceeded && !tooManyFiles && !isUploading;
+    files.length > 0 && !sizeExceeded && !tooManyFiles && !quotaExceeded && !isUploading;
 
   const handleUpload = () => {
     uploadHook.upload({
@@ -65,6 +82,7 @@ export function UploadPage() {
     setFiles([]);
     setPassword("");
     setPasswordEnabled(false);
+    setQuotaRefreshKey((k) => k + 1);
   };
 
   // Show share link when done
@@ -84,6 +102,9 @@ export function UploadPage() {
 
       <Card>
         <CardContent className="space-y-6 pt-6">
+          {/* Quota bar */}
+          <QuotaBar quota={quota} />
+
           {/* Drop zone / file selection */}
           <UploadZone
             files={files}
@@ -104,6 +125,11 @@ export function UploadPage() {
           {tooManyFiles && (
             <p className="text-sm text-destructive-foreground" role="alert">
               {t("upload.tooManyFiles", { count: config.maxFilesPerUpload })}
+            </p>
+          )}
+          {quotaExceeded && (
+            <p className="text-sm text-destructive-foreground" role="alert">
+              {t("quota.fileTooLarge", { remaining: formatBytes(quota?.remaining ?? 0) })}
             </p>
           )}
 
@@ -172,7 +198,7 @@ export function UploadPage() {
           {/* Error */}
           {uploadHook.phase === "error" && uploadHook.error && (
             <p className="text-sm text-destructive-foreground" role="alert">
-              {uploadHook.error}
+              {t(`upload.${uploadHook.error}`, { defaultValue: uploadHook.error })}
             </p>
           )}
 

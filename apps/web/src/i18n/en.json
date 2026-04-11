@@ -32,14 +32,16 @@
     "downloads": "Max downloads",
     "password": "Password protection",
     "passwordPlaceholder": "Enter password (optional)",
-    "uploading": "Encrypting and uploading...",
+    "uploading": "Uploading...",
+    "encryptingProgress": "Encrypting...",
     "processing": "Processing...",
     "uploadComplete": "Upload complete!",
     "shareLink": "Share this link",
     "shareLinkHint": "The encryption key is in the URL fragment - it never reaches the server.",
     "newUpload": "New upload",
     "fileTooLarge": "File exceeds maximum size of {{size}}",
-    "tooManyFiles": "Maximum {{count}} files per upload"
+    "tooManyFiles": "Maximum {{count}} files per upload",
+    "fileNotReadable": "The selected file could not be read. Please re-select it and try again."
   },
   "download": {
     "title": "Download File",
@@ -89,6 +91,13 @@
     "days_other": "{{count}} days",
     "weeks_one": "{{count}} week",
     "weeks_other": "{{count}} weeks"
+  },
+  "quota": {
+    "title": "Upload Quota",
+    "remaining": "{{size}} remaining",
+    "exceeded": "Upload quota exceeded",
+    "fileTooLarge": "File exceeds remaining quota ({{remaining}} left)",
+    "resetsIn": "Resets in {{time}}"
   },
   "theme": {
     "light": "Light",

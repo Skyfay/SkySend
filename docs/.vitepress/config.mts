@@ -167,6 +167,8 @@ export default defineConfig({
   },
 
   vite: {
+    // Override esbuild target so it doesn't inherit ES2024 from root tsconfig
+    esbuild: { target: 'es2022' },
     build: {
       chunkSizeWarningLimit: 1200,
       rollupOptions: {

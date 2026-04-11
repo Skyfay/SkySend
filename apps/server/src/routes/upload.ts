@@ -58,7 +58,7 @@ export function createUploadRoute(storage: FileStorage) {
       maxDownloads: c.req.header("X-Max-Downloads"),
       expireSec: c.req.header("X-Expire-Sec"),
       fileCount: c.req.header("X-File-Count"),
-      contentLength: c.req.header("Content-Length"),
+      contentLength: c.req.header("X-Content-Length") ?? c.req.header("Content-Length"),
       hasPassword: c.req.header("X-Has-Password"),
       passwordSalt: c.req.header("X-Password-Salt") || undefined,
       passwordAlgo: c.req.header("X-Password-Algo") || undefined,
@@ -151,11 +151,11 @@ export function createUploadRoute(storage: FileStorage) {
       throw err;
     }
 
-    // Verify the actual bytes match Content-Length
+    // Verify the actual bytes match declared content length
     if (bytesWritten !== headers.contentLength) {
       await storage.delete(id).catch(() => {});
       return c.json(
-        { error: "Body size does not match Content-Length header" },
+        { error: "Body size does not match declared content length" },
         400,
       );
     }

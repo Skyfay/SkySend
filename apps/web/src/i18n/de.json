@@ -32,14 +32,16 @@
     "downloads": "Max. Downloads",
     "password": "Passwortschutz",
     "passwordPlaceholder": "Passwort eingeben (optional)",
-    "uploading": "Verschlüsseln und hochladen...",
+    "uploading": "Hochladen...",
+    "encryptingProgress": "Verschlüsseln...",
     "processing": "Verarbeitung...",
     "uploadComplete": "Upload abgeschlossen!",
     "shareLink": "Diesen Link teilen",
     "shareLinkHint": "Der Schlüssel befindet sich im URL-Fragment - er erreicht niemals den Server.",
     "newUpload": "Neuer Upload",
     "fileTooLarge": "Datei überschreitet maximale Größe von {{size}}",
-    "tooManyFiles": "Maximal {{count}} Dateien pro Upload"
+    "tooManyFiles": "Maximal {{count}} Dateien pro Upload",
+    "fileNotReadable": "Die ausgewählte Datei konnte nicht gelesen werden. Bitte wähle sie erneut aus und versuche es nochmal."
   },
   "download": {
     "title": "Datei herunterladen",
@@ -89,6 +91,13 @@
     "days_other": "{{count}} Tage",
     "weeks_one": "{{count}} Woche",
     "weeks_other": "{{count}} Wochen"
+  },
+  "quota": {
+    "title": "Upload-Kontingent",
+    "remaining": "{{size}} verbleibend",
+    "exceeded": "Upload-Kontingent erschöpft",
+    "fileTooLarge": "Datei überschreitet das verbleibende Kontingent ({{remaining}} übrig)",
+    "resetsIn": "Wird zurückgesetzt in {{time}}"
   },
   "theme": {
     "light": "Hell",

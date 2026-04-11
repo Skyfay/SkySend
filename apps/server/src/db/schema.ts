@@ -28,3 +28,14 @@ export const uploads = sqliteTable(
 
 export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;
+
+export const quotaUsage = sqliteTable("quota_usage", {
+  hashedIp: text("hashed_ip").primaryKey(),
+  bytesUsed: integer("bytes_used").default(0).notNull(),
+  resetAt: integer("reset_at").notNull(),
+});
+
+export const quotaState = sqliteTable("quota_state", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});

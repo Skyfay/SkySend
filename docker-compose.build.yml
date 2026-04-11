@@ -14,8 +14,9 @@ services:
       - DEFAULT_EXPIRE_SEC=3600
       - DOWNLOAD_OPTIONS=10,50,1000
       - DEFAULT_DOWNLOAD=50
-      - UPLOAD_QUOTA_BYTES=300MB
+      - UPLOAD_QUOTA_BYTES=10GB
       - SITE_TITLE=SkySend Test
+      - RATE_LIMIT_MAX=600
     #  - PUID=${PUID:-1001}
     #  - PGID=${PGID:-1001}
     volumes:

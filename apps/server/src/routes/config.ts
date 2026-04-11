@@ -18,6 +18,8 @@ configRoute.get("/", (c) => {
     downloadOptions: config.DOWNLOAD_OPTIONS,
     defaultDownload: config.DEFAULT_DOWNLOAD,
     siteTitle: config.SITE_TITLE,
+    uploadQuotaBytes: config.UPLOAD_QUOTA_BYTES,
+    uploadQuotaWindow: config.UPLOAD_QUOTA_WINDOW,
   });
 });
 

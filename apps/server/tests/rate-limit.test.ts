@@ -97,39 +97,53 @@ describe("rate limiter", () => {
 });
 
 describe("getClientIp", () => {
-  it("should extract IP from X-Forwarded-For when trusted", () => {
-    const req = new Request("http://localhost/", {
+  function createApp(trustProxy: boolean) {
+    const app = new Hono();
+    app.get("/", (c) => {
+      return c.text(getClientIp(c, trustProxy));
+    });
+    return app;
+  }
+
+  it("should extract IP from X-Forwarded-For when trusted", async () => {
+    const app = createApp(true);
+    const res = await app.request("/", {
       headers: { "X-Forwarded-For": "1.2.3.4, 10.0.0.1" },
     });
-    expect(getClientIp(req, true)).toBe("1.2.3.4");
+    expect(await res.text()).toBe("1.2.3.4");
   });
 
-  it("should extract IP from X-Real-IP when trusted", () => {
-    const req = new Request("http://localhost/", {
+  it("should extract IP from X-Real-IP when trusted", async () => {
+    const app = createApp(true);
+    const res = await app.request("/", {
       headers: { "X-Real-IP": "5.6.7.8" },
     });
-    expect(getClientIp(req, true)).toBe("5.6.7.8");
+    expect(await res.text()).toBe("5.6.7.8");
   });
 
-  it("should prefer X-Forwarded-For over X-Real-IP when trusted", () => {
-    const req = new Request("http://localhost/", {
+  it("should prefer X-Forwarded-For over X-Real-IP when trusted", async () => {
+    const app = createApp(true);
+    const res = await app.request("/", {
       headers: {
         "X-Forwarded-For": "1.2.3.4",
         "X-Real-IP": "5.6.7.8",
       },
     });
-    expect(getClientIp(req, true)).toBe("1.2.3.4");
+    expect(await res.text()).toBe("1.2.3.4");
   });
 
-  it("should ignore proxy headers when not trusted", () => {
-    const req = new Request("http://localhost/", {
+  it("should ignore proxy headers when not trusted", async () => {
+    const app = createApp(false);
+    const res = await app.request("/", {
       headers: { "X-Forwarded-For": "1.2.3.4" },
     });
-    expect(getClientIp(req, false)).toBe("unknown");
+    // Without a real Node.js socket, getConnInfo falls back to "unknown"
+    expect(await res.text()).toBe("unknown");
   });
 
-  it("should return 'unknown' when no headers present", () => {
-    const req = new Request("http://localhost/");
-    expect(getClientIp(req, true)).toBe("unknown");
+  it("should return 'unknown' when no headers present", async () => {
+    const app = createApp(true);
+    const res = await app.request("/");
+    expect(await res.text()).toBe("unknown");
   });
 });
