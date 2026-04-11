@@ -239,13 +239,13 @@ export async function ensureSwController(): Promise<ServiceWorker | null> {
 }
 
 /**
- * Stream download via Service Worker + MessageChannel (no OPFS needed).
+ * Stream download via Service Worker (no Worker, no OPFS needed).
  *
- * Flow: Worker (fetch→decrypt) → MessagePort → SW (ReadableStream) → download manager → disk
+ * Flow: SW fetches encrypted file → decrypts with ECE → streams to download manager.
+ * All inside respondWith() - Firefox propagates backpressure correctly there.
  *
- * This is the same architecture Mozilla Send used. The SW's pull() function
- * provides natural backpressure - we only request the next chunk when the
- * browser's download manager is ready for more data. Zero RAM usage.
+ * We pass the raw secret + salt to the SW, which derives keys and decrypts.
+ * Progress is not available in this mode (SW has no direct way to report it).
  */
 export async function streamDownloadViaSw(
   url: string,
@@ -254,88 +254,45 @@ export async function streamDownloadViaSw(
   salt: ArrayBuffer,
   filename: string,
   mimeType: string,
-  encryptedSize: number,
-  onProgress: (progress: number) => void,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
 
-  const worker = new Worker(
-    new URL("./opfs-worker.ts", import.meta.url),
-    { type: "module" },
-  );
+  const downloadId = crypto.randomUUID();
 
-  const channel = new MessageChannel();
-  const cleanup = () => worker.terminate();
+  // Send config to SW and wait for ACK
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+      reject(new Error("SW config timeout"));
+    }, 5000);
 
-  try {
-    // Track Worker completion
-    const workerDone = new Promise<void>((resolve, reject) => {
-      worker.onmessage = (event) => {
-        const msg = event.data;
-        if (msg.type === "progress") onProgress(msg.progress);
-        else if (msg.type === "done") resolve();
-        else if (msg.type === "error") reject(new Error(msg.message));
-      };
-      worker.onerror = (err) =>
-        reject(new Error(err.message || "Worker error"));
-    });
-
-    // Start Worker with port1 (Worker <-> SW communication)
-    worker.postMessage(
-      {
-        type: "download-stream",
-        url,
-        authToken,
-        secret,
-        salt,
-        encryptedSize,
-        port: channel.port1,
-      },
-      [secret, salt, channel.port1],
-    );
-
-    // Send config + port2 to SW and wait for ACK
-    const downloadId = crypto.randomUUID();
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
+        clearTimeout(timeout);
         navigator.serviceWorker.removeEventListener("message", handler);
-        reject(new Error("SW config timeout"));
-      }, 5000);
+        resolve();
+      }
+    };
 
-      const handler = (e: MessageEvent) => {
-        if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
-          clearTimeout(timeout);
-          navigator.serviceWorker.removeEventListener("message", handler);
-          resolve();
-        }
-      };
-
-      navigator.serviceWorker.addEventListener("message", handler);
-      sw.postMessage(
-        {
-          type: "config",
-          id: downloadId,
-          filename,
-          mimeType,
-          port: channel.port2,
-        },
-        [channel.port2],
-      );
+    navigator.serviceWorker.addEventListener("message", handler);
+    sw.postMessage({
+      type: "config",
+      id: downloadId,
+      url,
+      authToken,
+      secret,
+      salt,
+      filename,
+      mimeType,
     });
+  });
 
-    // Navigate to SW-intercepted URL - triggers browser download
-    const a = document.createElement("a");
-    a.href = `/__skysend_download__/${downloadId}`;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    // Wait for all data to be streamed through
-    await workerDone;
-  } finally {
-    // Give browser time to finish writing (port messages may still be in flight)
-    setTimeout(cleanup, 120_000);
-  }
+  // Navigate to SW-intercepted URL - triggers browser download
+  const a = document.createElement("a");
+  a.href = `/__skysend_download__/${downloadId}`;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

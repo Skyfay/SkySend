@@ -1,17 +1,59 @@
 /**
- * Service Worker for streaming downloads - zero RAM in ALL browsers.
+ * Download Service Worker - zero RAM streaming decryption.
  *
- * Two modes:
- *   1. OPFS mode (config has tempName): reads completed file from OPFS via file.stream()
- *   2. Stream mode (config has port): pulls decrypted chunks from Worker via MessagePort
+ * Like Mozilla Send: ALL work happens inside respondWith().
+ * The SW fetches the encrypted file, decrypts it with ECE (AES-256-GCM),
+ * and returns a streaming Response to the browser's download manager.
  *
- * Stream mode is the key for Firefox/Safari where OPFS may be blocked.
- * Like Mozilla Send: Worker decrypts -> MessagePort -> SW ReadableStream -> download manager -> disk.
- * Backpressure: pull() only requests next chunk when browser is ready for more.
+ * This is the ONLY approach that gives true backpressure in Firefox:
+ * fetch() inside respondWith() is part of the browser's download pipeline,
+ * so Firefox naturally controls the read rate and doesn't buffer everything.
+ *
+ * crypto.subtle is fully available in Service Workers.
  */
 
-/** @type {Map<string, {filename:string, mimeType:string, tempName?:string|null, port?:MessagePort|null}>} */
+// ── ECE Constants (must match @skysend/crypto) ─────────
+
+const RECORD_SIZE = 65536;
+const TAG_LENGTH = 16;
+const NONCE_LENGTH = 12;
+const ENCRYPTED_RECORD_SIZE = RECORD_SIZE + TAG_LENGTH;
+
+// ── Crypto Helpers ─────────────────────────────────────
+
+function nonceXorCounter(baseNonce, counter) {
+  const nonce = new Uint8Array(baseNonce);
+  nonce[8] ^= (counter >>> 24) & 0xff;
+  nonce[9] ^= (counter >>> 16) & 0xff;
+  nonce[10] ^= (counter >>> 8) & 0xff;
+  nonce[11] ^= counter & 0xff;
+  return nonce;
+}
+
+async function deriveFileKey(secret, salt) {
+  const baseKey = await crypto.subtle.importKey(
+    "raw", secret, "HKDF", false, ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: salt,
+      info: new TextEncoder().encode("skysend-file-encryption"),
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["decrypt"],
+  );
+}
+
+// ── Pending Downloads ──────────────────────────────────
+
+/** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number}>} */
 const pending = new Map();
+
+// ── SW Lifecycle ───────────────────────────────────────
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -24,18 +66,20 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   const msg = event.data || {};
   if (msg.type === "config" && msg.id) {
-    // Transferred MessagePorts end up in event.ports, NOT in event.data
-    const port = (event.ports && event.ports[0]) || null;
     pending.set(msg.id, {
+      url: msg.url,
+      authToken: msg.authToken,
+      secret: msg.secret,
+      salt: msg.salt,
       filename: msg.filename,
       mimeType: msg.mimeType,
-      tempName: msg.tempName || null,
-      port: port,
+      size: msg.size || 0,
     });
-    // ACK so main thread knows config is stored
     event.source.postMessage({ type: "config-ok", id: msg.id });
   }
 });
+
+// ── Fetch Interception ─────────────────────────────────
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -51,73 +95,124 @@ self.addEventListener("fetch", (event) => {
 });
 
 /**
- * @param {{filename:string, mimeType:string, tempName?:string|null, port?:MessagePort|null}} config
+ * Fetch encrypted file, decrypt with ECE, return streaming Response.
+ * Everything inside respondWith() - Firefox propagates backpressure here.
  */
 async function handleDownload(config) {
-  const { filename, mimeType, tempName, port } = config;
+  const { url, authToken, secret, salt, filename, mimeType } = config;
 
+  // Derive file key (HKDF)
+  const fileKey = await deriveFileKey(secret, salt);
+
+  // Fetch encrypted data from server
+  const response = await fetch(url, {
+    headers: { "X-Auth-Token": authToken },
+  });
+
+  if (!response.ok) {
+    return new Response(`Download failed: ${response.status}`, { status: 502 });
+  }
+
+  // Build response headers
   const headers = new Headers({
     "Content-Type": mimeType || "application/octet-stream",
   });
-
-  // RFC 6266 Content-Disposition with UTF-8 filename
   const encoded = encodeURIComponent(filename).replace(
     /[!'()*]/g,
     (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
   );
-  headers.set(
-    "Content-Disposition",
-    "attachment; filename*=UTF-8''" + encoded,
-  );
+  headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
-  try {
-    if (port) {
-      // Stream mode: pull decrypted chunks from Worker via MessagePort.
-      // Each pull() sends a "pull" request and waits for the chunk.
-      // This gives natural backpressure - the browser download manager
-      // controls the read speed, and we only ask for more when ready.
-      const stream = new ReadableStream({
-        pull(controller) {
-          return new Promise((resolve, reject) => {
-            port.onmessage = (e) => {
-              const data = e.data;
-              if (data && data.done) {
-                controller.close();
-                port.close();
-                resolve();
-              } else if (data && data.error) {
-                const err = new Error(data.error);
-                controller.error(err);
-                port.close();
-                reject(err);
-              } else {
-                // data is a transferred ArrayBuffer from the Worker
-                controller.enqueue(new Uint8Array(data));
-                resolve();
-              }
-            };
-            port.postMessage({ type: "pull" });
-          });
-        },
-        cancel() {
-          port.postMessage({ type: "cancel" });
-          port.close();
-        },
-      });
+  // Create a streaming decrypt pipeline via ReadableStream.
+  // This is pull-based: the browser download manager controls the pace.
+  const reader = response.body.getReader();
 
-      return new Response(stream, { headers });
-    }
+  let baseNonce = null;
+  let buffer = new Uint8Array(0);
+  let counter = 0;
+  let readerDone = false;
 
-    // OPFS mode: stream completed file from disk
-    const root = await navigator.storage.getDirectory();
-    const handle = await root.getFileHandle(tempName);
-    const file = await handle.getFile();
-    headers.set("Content-Length", String(file.size));
-    return new Response(file.stream(), { headers });
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
-  }
+  const decryptStream = new ReadableStream({
+    async pull(controller) {
+      // Fill buffer until we have a complete record or stream ends
+      while (!readerDone && (baseNonce === null ? buffer.length < NONCE_LENGTH : buffer.length <= ENCRYPTED_RECORD_SIZE)) {
+        const { done, value } = await reader.read();
+        if (done) {
+          readerDone = true;
+          break;
+        }
+        buffer = appendBuf(buffer, value);
+      }
+
+      // Phase 1: Extract nonce header
+      if (baseNonce === null) {
+        if (buffer.length < NONCE_LENGTH) {
+          controller.close();
+          return;
+        }
+        baseNonce = buffer.slice(0, NONCE_LENGTH);
+        buffer = buffer.slice(NONCE_LENGTH);
+
+        // May need more data for first record
+        if (!readerDone && buffer.length <= ENCRYPTED_RECORD_SIZE) {
+          const { done, value } = await reader.read();
+          if (done) {
+            readerDone = true;
+          } else {
+            buffer = appendBuf(buffer, value);
+          }
+        }
+      }
+
+      // Phase 2: Process complete records
+      // Keep processing while we have more than one full record in buffer
+      // (we only process when we know more data follows, to handle final record correctly)
+      while (buffer.length > ENCRYPTED_RECORD_SIZE) {
+        const record = buffer.slice(0, ENCRYPTED_RECORD_SIZE);
+        buffer = buffer.slice(ENCRYPTED_RECORD_SIZE);
+
+        const nonce = nonceXorCounter(baseNonce, counter++);
+        const plain = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+          fileKey,
+          record,
+        );
+        controller.enqueue(new Uint8Array(plain));
+        return; // Let pull() be called again - gives backpressure
+      }
+
+      // Final record: stream is done and buffer has remaining data
+      if (readerDone && buffer.length > TAG_LENGTH) {
+        const nonce = nonceXorCounter(baseNonce, counter++);
+        const plain = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+          fileKey,
+          buffer,
+        );
+        buffer = new Uint8Array(0);
+        controller.enqueue(new Uint8Array(plain));
+        controller.close();
+        return;
+      }
+
+      // Stream ended with no remaining data
+      if (readerDone) {
+        controller.close();
+      }
+    },
+
+    cancel() {
+      reader.cancel();
+    },
+  });
+
+  return new Response(decryptStream, { headers });
+}
+
+function appendBuf(a, b) {
+  if (a.length === 0) return b;
+  const c = new Uint8Array(a.length + b.length);
+  c.set(a, 0);
+  c.set(b, a.length);
+  return c;
 }

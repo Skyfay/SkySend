@@ -261,8 +261,6 @@ export function useDownload() {
                 saltBuf,
                 filename,
                 mimeType,
-                info.size,
-                (progress) => setState((s) => ({ ...s, progress })),
               );
               streamed = true;
             }
