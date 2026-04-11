@@ -12,6 +12,7 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
+import { checkOpfsSupport, startOpfsDownload } from "@/lib/opfs-download";
 
 export type DownloadPhase =
   | "idle"
@@ -126,10 +127,12 @@ export function useDownload() {
 
         const supportsFilePicker = typeof window.showSaveFilePicker === "function";
 
-        // If File System Access API is available, prompt user first
-        // so we can stream directly to disk with zero RAM usage.
+        // Detect download strategy BEFORE starting the download.
         let writable: FileSystemWritableFileStream | null = null;
+        let useOpfs = false;
+
         if (supportsFilePicker) {
+          // Tier 1: showSaveFilePicker - zero RAM (Chrome, Edge)
           const fileHandle = await window.showSaveFilePicker({
             suggestedName: filename,
             types: mimeType !== "application/octet-stream"
@@ -137,6 +140,9 @@ export function useDownload() {
               : undefined,
           });
           writable = await fileHandle.createWritable();
+        } else {
+          // Tier 2 probe: test OPFS + createSyncAccessHandle in Worker (cached)
+          useOpfs = await checkOpfsSupport();
         }
 
         setState((s) => ({
@@ -147,89 +153,121 @@ export function useDownload() {
           error: null,
         }));
 
-        // Download the encrypted stream
-        const { stream, size } = await api.downloadFile(id, authTokenB64);
-
-        // Pipeline: network -> progress tracking -> decrypt
-        let loaded = 0;
-        const progressStream = stream.pipeThrough(
-          new TransformStream<Uint8Array, Uint8Array>({
-            transform(chunk, controller) {
-              loaded += chunk.byteLength;
-              setState((s) => ({
-                ...s,
-                progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-              }));
-              controller.enqueue(chunk);
-            },
-          }),
-        );
-
-        const decryptedStream = progressStream.pipeThrough(
-          createDecryptStream(keys.fileKey),
-        );
+        // Log which download strategy is being used
+        const tier = writable ? "1 (showSaveFilePicker)" : useOpfs ? "2 (OPFS Worker)" : "3 (Blob fallback)";
+        console.info(`[SkySend] Download tier: ${tier}`);
 
         if (writable) {
           // Tier 1: showSaveFilePicker - zero RAM (Chrome, Edge)
-          await decryptedStream.pipeTo(writable);
-        } else {
-          // Tier 2: Try OPFS - stream to temp file on disk, then trigger download.
-          // Zero RAM during decrypt. Falls back to Blob if OPFS is unavailable
-          // (e.g. Firefox SecurityError, older browsers).
-          let usedOpfs = false;
+          // fetch + decrypt on main thread, pipe directly to file
+          const { stream, size } = await api.downloadFile(id, authTokenB64);
 
-          if (typeof navigator?.storage?.getDirectory === "function") {
-            try {
-              const opfsRoot = await navigator.storage.getDirectory();
-              const tempName = `skysend-${crypto.randomUUID()}`;
-              const tempHandle = await opfsRoot.getFileHandle(tempName, { create: true });
-              const opfsWritable = await tempHandle.createWritable();
+          let loaded = 0;
+          const progressStream = stream.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(chunk, controller) {
+                loaded += chunk.byteLength;
+                setState((s) => ({
+                  ...s,
+                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                }));
+                controller.enqueue(chunk);
+              },
+            }),
+          );
 
-              await decryptedStream.pipeTo(opfsWritable);
+          await progressStream
+            .pipeThrough(createDecryptStream(keys.fileKey))
+            .pipeTo(writable);
+        } else if (useOpfs) {
+          // Tier 2: ALL-IN-WORKER - fetch + decrypt + OPFS write inside Worker.
+          // Zero bytes touch the main thread renderer process.
+          // Works in Firefox 111+, Safari 16.4+, Brave, Chrome 102+.
+          try {
+            const apiBase = import.meta.env.DEV
+              ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
+              : window.location.origin;
+            const downloadUrl = `${apiBase}/api/download/${id}`;
 
-              // getFile() returns a disk-backed File reference (no RAM copy)
-              const file = await tempHandle.getFile();
-              const url = URL.createObjectURL(file);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
+            // Pass raw secret + salt to Worker (it derives keys internally)
+            const secretBuf = secret.buffer.slice(
+              secret.byteOffset,
+              secret.byteOffset + secret.byteLength,
+            ) as ArrayBuffer;
+            const saltBuf = salt.buffer.slice(
+              salt.byteOffset,
+              salt.byteOffset + salt.byteLength,
+            ) as ArrayBuffer;
+            const tempName = `skysend-${crypto.randomUUID()}`;
 
-              // Clean up after the browser has read the file.
-              // The File object stays valid as long as the objectURL exists,
-              // so we must revoke the URL first, then delete the OPFS entry.
-              setTimeout(async () => {
-                URL.revokeObjectURL(url);
-                await opfsRoot.removeEntry(tempName).catch(() => {});
-              }, 120_000);
+            const { file, cleanup } = await startOpfsDownload(
+              downloadUrl,
+              authTokenB64,
+              secretBuf,
+              saltBuf,
+              tempName,
+              info.size,
+              (progress) => setState((s) => ({ ...s, progress })),
+            );
 
-              usedOpfs = true;
-            } catch {
-              // OPFS failed (SecurityError in Firefox, etc.) - fall through to Blob
-            }
-          }
-
-          if (!usedOpfs) {
-            // Tier 3: Blob fallback - uses RAM (Firefox, ancient browsers)
-            const reader = decryptedStream.getReader();
-            const chunks: Uint8Array[] = [];
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
-            }
-            const blob = new Blob(chunks as BlobPart[], { type: mimeType });
-            const url = URL.createObjectURL(blob);
+            // Trigger browser download from disk-backed File
+            const url = URL.createObjectURL(file);
             const a = document.createElement("a");
             a.href = url;
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            URL.revokeObjectURL(url);
+
+            setTimeout(() => {
+              URL.revokeObjectURL(url);
+              cleanup();
+            }, 120_000);
+          } catch (opfsErr) {
+            console.warn("[SkySend] OPFS tier failed, falling back to Blob:", opfsErr);
+            useOpfs = false; // fall through to Blob below
           }
+        }
+
+        if (!writable && !useOpfs) {
+          // Tier 3: Blob fallback - uses RAM (ancient browsers only)
+          console.warn("[SkySend] Using Blob fallback - large files will use RAM");
+          const { stream, size } = await api.downloadFile(id, authTokenB64);
+
+          let loaded = 0;
+          const progressStream = stream.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(chunk, controller) {
+                loaded += chunk.byteLength;
+                setState((s) => ({
+                  ...s,
+                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                }));
+                controller.enqueue(chunk);
+              },
+            }),
+          );
+
+          const decryptedStream = progressStream.pipeThrough(
+            createDecryptStream(keys.fileKey),
+          );
+
+          const reader = decryptedStream.getReader();
+          const chunks: Uint8Array[] = [];
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
         }
 
         setState((s) => ({ ...s, phase: "done", progress: 100 }));
