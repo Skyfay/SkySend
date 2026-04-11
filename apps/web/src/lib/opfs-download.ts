@@ -241,11 +241,10 @@ export async function ensureSwController(): Promise<ServiceWorker | null> {
 /**
  * Stream download via Service Worker (no Worker, no OPFS needed).
  *
- * Flow: SW fetches encrypted file → decrypts with ECE → streams to download manager.
+ * Flow: SW fetches encrypted file, decrypts with ECE, streams to download manager.
  * All inside respondWith() - Firefox propagates backpressure correctly there.
  *
- * We pass the raw secret + salt to the SW, which derives keys and decrypts.
- * Progress is not available in this mode (SW has no direct way to report it).
+ * The SW reports progress and completion back via postMessage (dl-progress, dl-done).
  */
 export async function streamDownloadViaSw(
   url: string,
@@ -254,6 +253,8 @@ export async function streamDownloadViaSw(
   salt: ArrayBuffer,
   filename: string,
   mimeType: string,
+  encryptedSize: number,
+  onProgress: (progress: number) => void,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -285,6 +286,7 @@ export async function streamDownloadViaSw(
       salt,
       filename,
       mimeType,
+      size: encryptedSize,
     });
   });
 
@@ -295,4 +297,29 @@ export async function streamDownloadViaSw(
   document.body.appendChild(a);
   a.click();
   a.remove();
+
+  // Wait for SW to signal completion (dl-done or dl-error)
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+      resolve(); // Don't error on timeout - download may have completed
+    }, 86_400_000);
+
+    const handler = (e: MessageEvent) => {
+      const msg = e.data;
+      if (msg?.type === "dl-progress") {
+        onProgress(msg.progress);
+      } else if (msg?.type === "dl-done") {
+        clearTimeout(timeout);
+        navigator.serviceWorker.removeEventListener("message", handler);
+        resolve();
+      } else if (msg?.type === "dl-error") {
+        clearTimeout(timeout);
+        navigator.serviceWorker.removeEventListener("message", handler);
+        reject(new Error(msg.error || "Download failed in SW"));
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+  });
 }

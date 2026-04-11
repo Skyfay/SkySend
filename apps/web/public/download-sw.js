@@ -91,29 +91,36 @@ self.addEventListener("fetch", (event) => {
   if (!config) return;
   pending.delete(id);
 
-  event.respondWith(handleDownload(config));
+  // Pass clientId so SW can send progress/done messages back
+  event.respondWith(handleDownload(config, event.clientId));
 });
 
 /**
  * Fetch encrypted file, decrypt with ECE, return streaming Response.
  * Everything inside respondWith() - Firefox propagates backpressure here.
+ *
+ * Optimizations for low RAM:
+ * - Process ALL complete records per pull() call (don't leave data in buffer)
+ * - Use offset-based buffer reads instead of slice+copy
+ * - highWaterMark: 0 prevents ReadableStream from buffering ahead
+ * - Report progress and completion back to main thread
  */
-async function handleDownload(config) {
-  const { url, authToken, secret, salt, filename, mimeType } = config;
+async function handleDownload(config, clientId) {
+  const { url, authToken, secret, salt, filename, mimeType, size } = config;
 
-  // Derive file key (HKDF)
   const fileKey = await deriveFileKey(secret, salt);
 
-  // Fetch encrypted data from server
   const response = await fetch(url, {
     headers: { "X-Auth-Token": authToken },
   });
 
   if (!response.ok) {
+    notifyClient(clientId, { type: "dl-error", error: `HTTP ${response.status}` });
     return new Response(`Download failed: ${response.status}`, { status: 502 });
   }
 
-  // Build response headers
+  const totalSize = size || parseInt(response.headers.get("Content-Length") || "0", 10);
+
   const headers = new Headers({
     "Content-Type": mimeType || "application/octet-stream",
   });
@@ -123,54 +130,94 @@ async function handleDownload(config) {
   );
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
-  // Create a streaming decrypt pipeline via ReadableStream.
-  // This is pull-based: the browser download manager controls the pace.
   const reader = response.body.getReader();
 
   let baseNonce = null;
   let buffer = new Uint8Array(0);
+  let bufOffset = 0; // read position in buffer (avoid copying on slice)
   let counter = 0;
   let readerDone = false;
+  let loaded = 0;
+  let lastProgressTime = 0;
+
+  // Compact buffer: shift unread data to front when waste exceeds 512KB
+  function compactBuffer() {
+    if (bufOffset > 524288) {
+      buffer = buffer.slice(bufOffset);
+      bufOffset = 0;
+    }
+  }
+
+  function bufLen() {
+    return buffer.length - bufOffset;
+  }
+
+  function readFromBuf(len) {
+    const result = buffer.slice(bufOffset, bufOffset + len);
+    bufOffset += len;
+    compactBuffer();
+    return result;
+  }
+
+  function appendToBuf(data) {
+    if (bufLen() === 0) {
+      buffer = data;
+      bufOffset = 0;
+    } else {
+      const remaining = buffer.slice(bufOffset);
+      const combined = new Uint8Array(remaining.length + data.length);
+      combined.set(remaining, 0);
+      combined.set(data, remaining.length);
+      buffer = combined;
+      bufOffset = 0;
+    }
+  }
+
+  async function readMore() {
+    if (readerDone) return;
+    const { done, value } = await reader.read();
+    if (done) {
+      readerDone = true;
+    } else {
+      loaded += value.byteLength;
+      appendToBuf(value);
+
+      // Report progress (throttled)
+      const now = Date.now();
+      if (now - lastProgressTime > 300 && totalSize > 0) {
+        lastProgressTime = now;
+        const pct = Math.min(99, Math.round((loaded / totalSize) * 100));
+        notifyClient(clientId, { type: "dl-progress", progress: pct });
+      }
+    }
+  }
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
-      // Fill buffer until we have a complete record or stream ends
-      while (!readerDone && (baseNonce === null ? buffer.length < NONCE_LENGTH : buffer.length <= ENCRYPTED_RECORD_SIZE)) {
-        const { done, value } = await reader.read();
-        if (done) {
-          readerDone = true;
-          break;
-        }
-        buffer = appendBuf(buffer, value);
+      // Ensure buffer has enough data
+      while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
+        await readMore();
       }
 
-      // Phase 1: Extract nonce header
+      // Extract nonce header on first call
       if (baseNonce === null) {
-        if (buffer.length < NONCE_LENGTH) {
+        if (bufLen() < NONCE_LENGTH) {
+          notifyClient(clientId, { type: "dl-done" });
           controller.close();
           return;
         }
-        baseNonce = buffer.slice(0, NONCE_LENGTH);
-        buffer = buffer.slice(NONCE_LENGTH);
+        baseNonce = readFromBuf(NONCE_LENGTH);
 
-        // May need more data for first record
-        if (!readerDone && buffer.length <= ENCRYPTED_RECORD_SIZE) {
-          const { done, value } = await reader.read();
-          if (done) {
-            readerDone = true;
-          } else {
-            buffer = appendBuf(buffer, value);
-          }
+        // Read more if needed for first record
+        while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
+          await readMore();
         }
       }
 
-      // Phase 2: Process complete records
-      // Keep processing while we have more than one full record in buffer
-      // (we only process when we know more data follows, to handle final record correctly)
-      while (buffer.length > ENCRYPTED_RECORD_SIZE) {
-        const record = buffer.slice(0, ENCRYPTED_RECORD_SIZE);
-        buffer = buffer.slice(ENCRYPTED_RECORD_SIZE);
-
+      // Process ALL complete records in buffer (not just one)
+      // This keeps the buffer small instead of accumulating data
+      while (bufLen() > ENCRYPTED_RECORD_SIZE) {
+        const record = readFromBuf(ENCRYPTED_RECORD_SIZE);
         const nonce = nonceXorCounter(baseNonce, counter++);
         const plain = await crypto.subtle.decrypt(
           { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
@@ -178,35 +225,48 @@ async function handleDownload(config) {
           record,
         );
         controller.enqueue(new Uint8Array(plain));
-        return; // Let pull() be called again - gives backpressure
       }
 
-      // Final record: stream is done and buffer has remaining data
-      if (readerDone && buffer.length > TAG_LENGTH) {
+      // Final record: stream ended, process remaining data
+      if (readerDone && bufLen() > TAG_LENGTH) {
+        const remaining = readFromBuf(bufLen());
         const nonce = nonceXorCounter(baseNonce, counter++);
         const plain = await crypto.subtle.decrypt(
           { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
           fileKey,
-          buffer,
+          remaining,
         );
-        buffer = new Uint8Array(0);
         controller.enqueue(new Uint8Array(plain));
+        notifyClient(clientId, { type: "dl-progress", progress: 100 });
+        notifyClient(clientId, { type: "dl-done" });
         controller.close();
         return;
       }
 
-      // Stream ended with no remaining data
-      if (readerDone) {
+      if (readerDone && bufLen() <= TAG_LENGTH) {
+        notifyClient(clientId, { type: "dl-done" });
         controller.close();
       }
     },
 
     cancel() {
       reader.cancel();
+      notifyClient(clientId, { type: "dl-error", error: "cancelled" });
     },
-  });
+  }, { highWaterMark: 0 }); // No internal buffering - pure pull
 
   return new Response(decryptStream, { headers });
+}
+
+async function notifyClient(clientId, msg) {
+  try {
+    const clients = await self.clients.matchAll({ type: "window" });
+    for (const client of clients) {
+      if (!clientId || client.id === clientId) {
+        client.postMessage(msg);
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 function appendBuf(a, b) {
