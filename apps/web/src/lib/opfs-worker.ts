@@ -126,6 +126,90 @@ self.onmessage = async (event: MessageEvent) => {
       // Send final progress + done (no File transfer - SW will read from OPFS)
       self.postMessage({ type: "progress", progress: 100 });
       self.postMessage({ type: "done" });
+    } else if (msg.type === "download-stream") {
+      // Stream mode: fetch → decrypt → send via MessagePort (no OPFS needed).
+      // Used when OPFS is unavailable (Firefox/Safari).
+      // The SW pulls chunks from us via the port - natural backpressure.
+      const { url, authToken, secret, salt, encryptedSize, port } = msg;
+
+      const keys = await deriveKeys(
+        new Uint8Array(secret),
+        new Uint8Array(salt),
+      );
+      const fileKey = keys.fileKey;
+
+      const response = await fetch(url, {
+        headers: { "X-Auth-Token": authToken },
+      });
+      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+      if (!response.body) throw new Error("No response body");
+
+      const totalSize = encryptedSize || parseInt(response.headers.get("Content-Length") || "0", 10);
+
+      const decryptTransform = createDecryptStream(fileKey);
+      const encWriter = decryptTransform.writable.getWriter();
+      const decReader = decryptTransform.readable.getReader();
+
+      let loaded = 0;
+      let lastProgressUpdate = 0;
+
+      await Promise.all([
+        // Producer: network → decrypt input (backpressure via await)
+        (async () => {
+          const netReader = response.body!.getReader();
+          try {
+            for (;;) {
+              const { done, value } = await netReader.read();
+              if (done) {
+                await encWriter.close();
+                break;
+              }
+              loaded += value.byteLength;
+              const now = Date.now();
+              if (now - lastProgressUpdate > 200) {
+                lastProgressUpdate = now;
+                const progress = totalSize > 0 ? Math.round((loaded / totalSize) * 100) : 0;
+                self.postMessage({ type: "progress", progress });
+              }
+              await encWriter.write(value);
+            }
+          } catch (err) {
+            encWriter.abort(err instanceof Error ? err : new Error(String(err))).catch(() => {});
+            throw err;
+          }
+        })(),
+
+        // Consumer: respond to pull requests from SW via MessagePort
+        new Promise<void>((resolve, reject) => {
+          let cancelled = false;
+          port.onmessage = async (e: MessageEvent) => {
+            if (cancelled) return;
+            if (e.data?.type === "pull") {
+              try {
+                const { done, value } = await decReader.read();
+                if (done) {
+                  port.postMessage({ done: true });
+                  resolve();
+                } else {
+                  // Transfer the ArrayBuffer (zero-copy)
+                  port.postMessage(value.buffer, [value.buffer as ArrayBuffer]);
+                }
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                port.postMessage({ error: message });
+                reject(err);
+              }
+            } else if (e.data?.type === "cancel") {
+              cancelled = true;
+              decReader.cancel().catch(() => {});
+              resolve();
+            }
+          };
+        }),
+      ]);
+
+      self.postMessage({ type: "progress", progress: 100 });
+      self.postMessage({ type: "done" });
     } else if (msg.type === "cleanup") {
       try {
         if (!opfsRoot) {

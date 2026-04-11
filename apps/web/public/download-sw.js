@@ -1,15 +1,16 @@
 /**
- * Lightweight Service Worker that streams files from OPFS to the browser's
- * native download manager. No module imports - works in all browsers.
+ * Service Worker for streaming downloads - zero RAM in ALL browsers.
  *
- * Flow:
- *   1. Main thread sends { type: "config", id, tempName, filename, mimeType }
- *   2. Main thread navigates to /__skysend_download__/{id}
- *   3. SW intercepts, reads from OPFS via file.stream(), browser saves to disk
- *   4. Zero RAM - data flows in chunks from OPFS to download manager
+ * Two modes:
+ *   1. OPFS mode (config has tempName): reads completed file from OPFS via file.stream()
+ *   2. Stream mode (config has port): pulls decrypted chunks from Worker via MessagePort
+ *
+ * Stream mode is the key for Firefox/Safari where OPFS may be blocked.
+ * Like Mozilla Send: Worker decrypts -> MessagePort -> SW ReadableStream -> download manager -> disk.
+ * Backpressure: pull() only requests next chunk when browser is ready for more.
  */
 
-/** @type {Map<string, { tempName: string, filename: string, mimeType: string }>} */
+/** @type {Map<string, {filename:string, mimeType:string, tempName?:string|null, port?:MessagePort|null}>} */
 const pending = new Map();
 
 self.addEventListener("install", () => {
@@ -24,9 +25,10 @@ self.addEventListener("message", (event) => {
   const msg = event.data || {};
   if (msg.type === "config" && msg.id) {
     pending.set(msg.id, {
-      tempName: msg.tempName,
       filename: msg.filename,
       mimeType: msg.mimeType,
+      tempName: msg.tempName || null,
+      port: msg.port || null,
     });
     // ACK so main thread knows config is stored
     event.source.postMessage({ type: "config-ok", id: msg.id });
@@ -43,36 +45,77 @@ self.addEventListener("fetch", (event) => {
   if (!config) return;
   pending.delete(id);
 
-  event.respondWith(
-    (async () => {
-      try {
-        const root = await navigator.storage.getDirectory();
-        const handle = await root.getFileHandle(config.tempName);
-        const file = await handle.getFile();
-
-        const headers = new Headers({
-          "Content-Type": config.mimeType || "application/octet-stream",
-          "Content-Length": String(file.size),
-        });
-
-        // RFC 6266 Content-Disposition with UTF-8 filename
-        const encoded = encodeURIComponent(config.filename).replace(
-          /[!'()*]/g,
-          (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
-        );
-        headers.set(
-          "Content-Disposition",
-          "attachment; filename*=UTF-8''" + encoded,
-        );
-
-        // Stream from OPFS - browser download manager writes to disk
-        return new Response(file.stream(), { headers });
-      } catch (err) {
-        return new Response(
-          JSON.stringify({ error: String(err) }),
-          { status: 500, headers: { "Content-Type": "application/json" } },
-        );
-      }
-    })(),
-  );
+  event.respondWith(handleDownload(config));
 });
+
+/**
+ * @param {{filename:string, mimeType:string, tempName?:string|null, port?:MessagePort|null}} config
+ */
+async function handleDownload(config) {
+  const { filename, mimeType, tempName, port } = config;
+
+  const headers = new Headers({
+    "Content-Type": mimeType || "application/octet-stream",
+  });
+
+  // RFC 6266 Content-Disposition with UTF-8 filename
+  const encoded = encodeURIComponent(filename).replace(
+    /[!'()*]/g,
+    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
+  );
+  headers.set(
+    "Content-Disposition",
+    "attachment; filename*=UTF-8''" + encoded,
+  );
+
+  try {
+    if (port) {
+      // Stream mode: pull decrypted chunks from Worker via MessagePort.
+      // Each pull() sends a "pull" request and waits for the chunk.
+      // This gives natural backpressure - the browser download manager
+      // controls the read speed, and we only ask for more when ready.
+      const stream = new ReadableStream({
+        pull(controller) {
+          return new Promise((resolve, reject) => {
+            port.onmessage = (e) => {
+              const data = e.data;
+              if (data && data.done) {
+                controller.close();
+                port.close();
+                resolve();
+              } else if (data && data.error) {
+                const err = new Error(data.error);
+                controller.error(err);
+                port.close();
+                reject(err);
+              } else {
+                // data is a transferred ArrayBuffer from the Worker
+                controller.enqueue(new Uint8Array(data));
+                resolve();
+              }
+            };
+            port.postMessage({ type: "pull" });
+          });
+        },
+        cancel() {
+          port.postMessage({ type: "cancel" });
+          port.close();
+        },
+      });
+
+      return new Response(stream, { headers });
+    }
+
+    // OPFS mode: stream completed file from disk
+    const root = await navigator.storage.getDirectory();
+    const handle = await root.getFileHandle(tempName);
+    const file = await handle.getFile();
+    headers.set("Content-Length", String(file.size));
+    return new Response(file.stream(), { headers });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}

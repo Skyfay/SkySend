@@ -12,7 +12,7 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
-import { checkOpfsSupport, startOpfsDownload, triggerSwDownload, triggerBlobDownload } from "@/lib/opfs-download";
+import { checkOpfsSupport, startOpfsDownload, triggerSwDownload, triggerBlobDownload, ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
 
 export type DownloadPhase =
   | "idle"
@@ -154,7 +154,7 @@ export function useDownload() {
         }));
 
         // Log which download strategy is being used
-        const tier = writable ? "1 (showSaveFilePicker)" : useOpfs ? "2 (OPFS Worker)" : "3 (Blob fallback)";
+        const tier = writable ? "1 (showSaveFilePicker)" : useOpfs ? "2 (OPFS Worker)" : "2/3 (SW stream or Blob)";
         console.info(`[SkySend] Download tier: ${tier}`);
 
         if (writable) {
@@ -232,44 +232,84 @@ export function useDownload() {
         }
 
         if (!writable && !useOpfs) {
-          // Tier 3: Blob fallback - uses RAM (ancient browsers only)
-          console.warn("[SkySend] Using Blob fallback - large files will use RAM");
-          const { stream, size } = await api.downloadFile(id, authTokenB64);
+          // Tier 2b: SW stream (Firefox/Safari) - no OPFS needed
+          // Falls back to Tier 3 (Blob) if SW is not available
+          let streamed = false;
+          try {
+            const sw = await ensureSwController();
+            if (sw) {
+              console.info("[SkySend] Download tier: 2 (SW stream)");
 
-          let loaded = 0;
-          const progressStream = stream.pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(chunk, controller) {
-                loaded += chunk.byteLength;
-                setState((s) => ({
-                  ...s,
-                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-                }));
-                controller.enqueue(chunk);
-              },
-            }),
-          );
+              const apiBase = import.meta.env.DEV
+                ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
+                : window.location.origin;
+              const downloadUrl = `${apiBase}/api/download/${id}`;
 
-          const decryptedStream = progressStream.pipeThrough(
-            createDecryptStream(keys.fileKey),
-          );
+              const secretBuf = secret.buffer.slice(
+                secret.byteOffset,
+                secret.byteOffset + secret.byteLength,
+              ) as ArrayBuffer;
+              const saltBuf = salt.buffer.slice(
+                salt.byteOffset,
+                salt.byteOffset + salt.byteLength,
+              ) as ArrayBuffer;
 
-          const reader = decryptedStream.getReader();
-          const chunks: Uint8Array[] = [];
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
+              await streamDownloadViaSw(
+                downloadUrl,
+                authTokenB64,
+                secretBuf,
+                saltBuf,
+                filename,
+                mimeType,
+                info.size,
+                (progress) => setState((s) => ({ ...s, progress })),
+              );
+              streamed = true;
+            }
+          } catch (swErr) {
+            console.warn("[SkySend] SW stream failed, falling back to Blob:", swErr);
           }
-          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
+
+          if (!streamed) {
+            // Tier 3: Blob fallback - uses RAM
+            console.warn("[SkySend] Using Blob fallback - large files will use RAM");
+            const { stream, size } = await api.downloadFile(id, authTokenB64);
+
+            let loaded = 0;
+            const progressStream = stream.pipeThrough(
+              new TransformStream<Uint8Array, Uint8Array>({
+                transform(chunk, controller) {
+                  loaded += chunk.byteLength;
+                  setState((s) => ({
+                    ...s,
+                    progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                  }));
+                  controller.enqueue(chunk);
+                },
+              }),
+            );
+
+            const decryptedStream = progressStream.pipeThrough(
+              createDecryptStream(keys.fileKey),
+            );
+
+            const reader = decryptedStream.getReader();
+            const chunks: Uint8Array[] = [];
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+            }
+            const blob = new Blob(chunks as BlobPart[], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }
         }
 
         setState((s) => ({ ...s, phase: "done", progress: 100 }));

@@ -11,60 +11,31 @@
  * browser's download manager reads chunks on demand and writes to disk.
  */
 
-// Lightweight inline JS for probing OPFS support.
-// Does NOT import any modules - avoids Vite/module-loading issues in Firefox/Safari Workers.
-const PROBE_JS = [
-  "(async()=>{try{",
-  "const r=await navigator.storage.getDirectory();",
-  "const n='.skysend-probe-'+Date.now();",
-  "const h=await r.getFileHandle(n,{create:true});",
-  "const s=await h.createSyncAccessHandle();",
-  "s.write(new Uint8Array([1,2,3]));",
-  "s.flush();s.close();",
-  "await r.removeEntry(n);",
-  "self.postMessage('ok')",
-  "}catch(e){self.postMessage('fail:'+e.message)}})();",
-].join("");
-
 let _opfsSupported: boolean | null = null;
 
 /**
- * Pre-flight: tests OPFS + createSyncAccessHandle in a lightweight
- * inline Worker (blob URL). No module imports - works reliably everywhere.
+ * Pre-flight: tests OPFS support on the MAIN THREAD.
+ *
+ * We test getDirectory() + getFileHandle() here. The actual
+ * createSyncAccessHandle() is Worker-only but is supported in all
+ * browsers that support OPFS (Firefox 111+, Safari 15.2+, Chrome 102+).
+ *
+ * We CANNOT use a Blob-URL Worker for the probe because Firefox/Safari
+ * block navigator.storage.getDirectory() from opaque (blob:) origins.
  */
 export async function checkOpfsSupport(): Promise<boolean> {
   if (_opfsSupported !== null) return _opfsSupported;
 
   try {
-    _opfsSupported = await new Promise<boolean>((resolve) => {
-      const blob = new Blob([PROBE_JS], { type: "application/javascript" });
-      const url = URL.createObjectURL(blob);
-      const w = new Worker(url);
-
-      const timeout = setTimeout(() => {
-        w.terminate();
-        URL.revokeObjectURL(url);
-        resolve(false);
-      }, 5000);
-
-      w.onmessage = (event) => {
-        clearTimeout(timeout);
-        w.terminate();
-        URL.revokeObjectURL(url);
-        const ok = event.data === "ok";
-        if (!ok) console.warn("[SkySend] OPFS probe failed:", event.data);
-        resolve(ok);
-      };
-
-      w.onerror = (err) => {
-        clearTimeout(timeout);
-        w.terminate();
-        URL.revokeObjectURL(url);
-        console.warn("[SkySend] OPFS probe Worker error:", err);
-        resolve(false);
-      };
-    });
-  } catch {
+    const root = await navigator.storage.getDirectory();
+    const probeName = ".skysend-probe-" + Date.now();
+    await root.getFileHandle(probeName, { create: true });
+    // Clean up probe file
+    await root.removeEntry(probeName).catch(() => {});
+    // If we got here, OPFS works
+    _opfsSupported = true;
+  } catch (err) {
+    console.warn("[SkySend] OPFS probe failed:", err);
     _opfsSupported = false;
   }
 
@@ -213,4 +184,140 @@ export async function triggerBlobDownload(
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
+/**
+ * Waits for a Service Worker to be controlling this page.
+ * On first registration, waits up to 3s for skipWaiting+claim.
+ */
+export async function ensureSwController(): Promise<ServiceWorker | null> {
+  if (!("serviceWorker" in navigator)) return null;
+
+  if (navigator.serviceWorker.controller) {
+    return navigator.serviceWorker.controller;
+  }
+
+  try {
+    await navigator.serviceWorker.ready;
+    if (navigator.serviceWorker.controller) {
+      return navigator.serviceWorker.controller;
+    }
+
+    // Wait for clients.claim() from the SW
+    return new Promise<ServiceWorker | null>((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 3000);
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => {
+          clearTimeout(timeout);
+          resolve(navigator.serviceWorker.controller);
+        },
+        { once: true },
+      );
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Stream download via Service Worker + MessageChannel (no OPFS needed).
+ *
+ * Flow: Worker (fetch→decrypt) → MessagePort → SW (ReadableStream) → download manager → disk
+ *
+ * This is the same architecture Mozilla Send used. The SW's pull() function
+ * provides natural backpressure - we only request the next chunk when the
+ * browser's download manager is ready for more data. Zero RAM usage.
+ */
+export async function streamDownloadViaSw(
+  url: string,
+  authToken: string,
+  secret: ArrayBuffer,
+  salt: ArrayBuffer,
+  filename: string,
+  mimeType: string,
+  encryptedSize: number,
+  onProgress: (progress: number) => void,
+): Promise<void> {
+  const sw = await ensureSwController();
+  if (!sw) throw new Error("Service Worker not available");
+
+  const worker = new Worker(
+    new URL("./opfs-worker.ts", import.meta.url),
+    { type: "module" },
+  );
+
+  const channel = new MessageChannel();
+  const cleanup = () => worker.terminate();
+
+  try {
+    // Track Worker completion
+    const workerDone = new Promise<void>((resolve, reject) => {
+      worker.onmessage = (event) => {
+        const msg = event.data;
+        if (msg.type === "progress") onProgress(msg.progress);
+        else if (msg.type === "done") resolve();
+        else if (msg.type === "error") reject(new Error(msg.message));
+      };
+      worker.onerror = (err) =>
+        reject(new Error(err.message || "Worker error"));
+    });
+
+    // Start Worker with port1 (Worker <-> SW communication)
+    worker.postMessage(
+      {
+        type: "download-stream",
+        url,
+        authToken,
+        secret,
+        salt,
+        encryptedSize,
+        port: channel.port1,
+      },
+      [secret, salt, channel.port1],
+    );
+
+    // Send config + port2 to SW and wait for ACK
+    const downloadId = crypto.randomUUID();
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        navigator.serviceWorker.removeEventListener("message", handler);
+        reject(new Error("SW config timeout"));
+      }, 5000);
+
+      const handler = (e: MessageEvent) => {
+        if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
+          clearTimeout(timeout);
+          navigator.serviceWorker.removeEventListener("message", handler);
+          resolve();
+        }
+      };
+
+      navigator.serviceWorker.addEventListener("message", handler);
+      sw.postMessage(
+        {
+          type: "config",
+          id: downloadId,
+          filename,
+          mimeType,
+          port: channel.port2,
+        },
+        [channel.port2],
+      );
+    });
+
+    // Navigate to SW-intercepted URL - triggers browser download
+    const a = document.createElement("a");
+    a.href = `/__skysend_download__/${downloadId}`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Wait for all data to be streamed through
+    await workerDone;
+  } finally {
+    // Give browser time to finish writing (port messages may still be in flight)
+    setTimeout(cleanup, 120_000);
+  }
 }
