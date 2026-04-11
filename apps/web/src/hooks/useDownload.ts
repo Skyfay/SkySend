@@ -19,7 +19,6 @@ export type DownloadPhase =
   | "needs-password"
   | "verifying-password"
   | "downloading"
-  | "decrypting"
   | "done"
   | "error";
 
@@ -114,6 +113,32 @@ export function useDownload() {
           metadata = await decryptMetadata(metaCiphertext, metaNonce, keys.metaKey);
         }
 
+        // Determine filename and mime type early (needed for save dialog)
+        let filename = "download";
+        let mimeType = "application/octet-stream";
+        if (metadata?.type === "single") {
+          filename = metadata.name;
+          mimeType = metadata.mimeType;
+        } else if (metadata?.type === "archive") {
+          filename = "archive.zip";
+          mimeType = "application/zip";
+        }
+
+        const supportsFilePicker = typeof window.showSaveFilePicker === "function";
+
+        // If File System Access API is available, prompt user first
+        // so we can stream directly to disk with zero RAM usage.
+        let writable: FileSystemWritableFileStream | null = null;
+        if (supportsFilePicker) {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: filename,
+            types: mimeType !== "application/octet-stream"
+              ? [{ accept: { [mimeType]: [] } }]
+              : undefined,
+          });
+          writable = await fileHandle.createWritable();
+        }
+
         setState((s) => ({
           ...s,
           phase: "downloading",
@@ -125,7 +150,7 @@ export function useDownload() {
         // Download the encrypted stream
         const { stream, size } = await api.downloadFile(id, authTokenB64);
 
-        // Track progress
+        // Pipeline: network -> progress tracking -> decrypt
         let loaded = 0;
         const progressStream = stream.pipeThrough(
           new TransformStream<Uint8Array, Uint8Array>({
@@ -140,45 +165,80 @@ export function useDownload() {
           }),
         );
 
-        // Decrypt
-        setState((s) => ({ ...s, phase: "decrypting" }));
         const decryptedStream = progressStream.pipeThrough(
           createDecryptStream(keys.fileKey),
         );
 
-        // Collect decrypted data
-        const reader = decryptedStream.getReader();
-        const chunks: Uint8Array[] = [];
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
+        if (writable) {
+          // Tier 1: showSaveFilePicker - zero RAM (Chrome, Edge)
+          await decryptedStream.pipeTo(writable);
+        } else {
+          // Tier 2: Try OPFS - stream to temp file on disk, then trigger download.
+          // Zero RAM during decrypt. Falls back to Blob if OPFS is unavailable
+          // (e.g. Firefox SecurityError, older browsers).
+          let usedOpfs = false;
+
+          if (typeof navigator?.storage?.getDirectory === "function") {
+            try {
+              const opfsRoot = await navigator.storage.getDirectory();
+              const tempName = `skysend-${crypto.randomUUID()}`;
+              const tempHandle = await opfsRoot.getFileHandle(tempName, { create: true });
+              const opfsWritable = await tempHandle.createWritable();
+
+              await decryptedStream.pipeTo(opfsWritable);
+
+              // getFile() returns a disk-backed File reference (no RAM copy)
+              const file = await tempHandle.getFile();
+              const url = URL.createObjectURL(file);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+
+              // Clean up after the browser has read the file.
+              // The File object stays valid as long as the objectURL exists,
+              // so we must revoke the URL first, then delete the OPFS entry.
+              setTimeout(async () => {
+                URL.revokeObjectURL(url);
+                await opfsRoot.removeEntry(tempName).catch(() => {});
+              }, 120_000);
+
+              usedOpfs = true;
+            } catch {
+              // OPFS failed (SecurityError in Firefox, etc.) - fall through to Blob
+            }
+          }
+
+          if (!usedOpfs) {
+            // Tier 3: Blob fallback - uses RAM (Firefox, ancient browsers)
+            const reader = decryptedStream.getReader();
+            const chunks: Uint8Array[] = [];
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+            }
+            const blob = new Blob(chunks as BlobPart[], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          }
         }
-
-        const totalLength = chunks.reduce((s, c) => s + c.byteLength, 0);
-        const decrypted = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of chunks) {
-          decrypted.set(chunk, offset);
-          offset += chunk.byteLength;
-        }
-
-        // Determine filename and trigger download
-        let filename = "download";
-        let mimeType = "application/octet-stream";
-
-        if (metadata?.type === "single") {
-          filename = metadata.name;
-          mimeType = metadata.mimeType;
-        } else if (metadata?.type === "archive") {
-          filename = "archive.zip";
-          mimeType = "application/zip";
-        }
-
-        triggerBrowserDownload(decrypted, filename, mimeType);
 
         setState((s) => ({ ...s, phase: "done", progress: 100 }));
       } catch (err) {
+        // User cancelled the save dialog - not an error
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setState((s) => ({ ...s, phase: "idle" }));
+          return;
+        }
         const message = err instanceof api.ApiError
           ? err.message
           : err instanceof Error
@@ -201,24 +261,4 @@ export function useDownload() {
   }, []);
 
   return { ...state, loadInfo, download, reset };
-}
-
-function triggerBrowserDownload(
-  data: Uint8Array,
-  filename: string,
-  mimeType: string,
-) {
-  const blob = new Blob([data as BlobPart], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  // Cleanup after a short delay to ensure download starts
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    a.remove();
-  }, 1000);
 }

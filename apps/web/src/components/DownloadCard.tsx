@@ -33,7 +33,7 @@ export function DownloadCard({
 }: DownloadCardProps) {
   const { t } = useTranslation();
 
-  const isDownloading = phase === "downloading" || phase === "decrypting";
+  const isDownloading = phase === "downloading";
   const isDone = phase === "done";
   const isError = phase === "error";
 
@@ -101,9 +101,7 @@ export function DownloadCard({
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span className="text-sm font-medium">
-              {phase === "decrypting"
-                ? t("download.decrypting")
-                : t("download.downloading")}
+              {t("download.downloading")}
             </span>
             <span className="ml-auto text-sm text-muted-foreground">
               {progress}%
