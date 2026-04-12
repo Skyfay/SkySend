@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "skysend-docs",
+  "compatibility_date": "2026-04-12",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./.vitepress/dist"
+  }
+}
