@@ -13,8 +13,8 @@ hero:
       text: Developer Guide
       link: /developer-guide/
     - theme: alt
-      text: GitHub
-      link: https://github.com/Skyfay/SkySend
+      text: Instances
+      link: /instances
 
 features:
   - icon: 🔒
