@@ -2,7 +2,7 @@
 
 All notable changes to SkySend are documented here.
 
-## v1.0.1
+## v1.0.1 - Patch Release for Docker Permissions Issue
 *Released: April 12, 2026*
 
 ### 🐛 Bug Fixes
