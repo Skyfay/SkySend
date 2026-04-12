@@ -100,6 +100,7 @@ The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are v
 | :--- | :---: | :--- | :--- |
 | `PUID` | ❌ | `1001` | User ID the container runs as. |
 | `PGID` | ❌ | `1001` | Group ID the container runs as. |
+| `SKIP_CHOWN` | ❌ | `false` | Skip `chown` of `/data` and `/uploads` on startup. Required for NFS mounts or read-only filesystems where `chown` is not permitted. You must ensure correct permissions yourself. |
 
 ## Validation
 
