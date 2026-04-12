@@ -6,15 +6,15 @@ SkySend uses a tiered download strategy to handle large encrypted files (multi-G
 
 | Tier | Name | Browsers | RAM Usage | Progress | Speed |
 | --- | --- | --- | --- | --- | --- |
-| 1 | SW Streaming Decrypt | All modern browsers | Low (buffers only) | Yes | Very fast (~270 MB/s) |
+| 1 | SW Streaming Decrypt | All modern browsers except Safari | Low (buffers only) | Yes | Very fast (~270 MB/s) |
 | 2 | File System Access | Chrome, Edge (fallback) | ~0 | Yes | Fast (~110 MB/s) |
-| 3 | Blob Fallback | All (last resort) | Full file size | Yes | Moderate |
+| 3 | Blob Fallback | All (last resort) / Safari default | Full file size | Yes | Moderate |
 
-Tier 1 (SW stream) is always attempted first because it is the fastest method. It runs decryption in the Service Worker thread, keeping the main thread free and achieving higher throughput than main-thread decryption. If the Service Worker is not available, Tier 2 (`showSaveFilePicker`) is used as a fallback in Chrome/Edge. Tier 3 (Blob) is the last resort.
+Tier 1 (SW stream) is attempted first because it is the fastest method. It runs decryption in the Service Worker thread, keeping the main thread free and achieving higher throughput than main-thread decryption. Safari is excluded from Tier 1 because it terminates Service Workers aggressively and buffers `ReadableStream` responses in RAM instead of streaming to disk - making it no better than Tier 3. On Safari, the download falls through directly to Tier 3 (Blob). For files larger than 256 MB on Safari a warning is shown before starting the download. If the Service Worker is not available on other browsers, Tier 2 (`showSaveFilePicker`) is used as a fallback in Chrome/Edge. Tier 3 (Blob) is the last resort.
 
 ## Tier 1: Service Worker Streaming Decryption
 
-**Browsers**: All modern browsers (Chrome, Edge, Firefox, Safari, Brave)
+**Browsers**: All modern browsers except Safari (Chrome, Edge, Firefox, Brave)
 
 The primary download method. The Service Worker performs the entire pipeline: fetch, HKDF key derivation, ECE decryption, and streaming the plaintext as a `Response` to the browser's download manager. This is the fastest method because decryption runs on the SW thread (not the main thread).
 
@@ -103,7 +103,11 @@ The SW reports progress to the main thread via `client.postMessage({ type: "dl-p
 
 ## Tier 3: Blob Fallback
 
-**Browsers**: All (last resort when neither File System Access, OPFS, nor Service Workers are available)
+**Browsers**: All (last resort when neither File System Access nor Service Workers are available) / Safari default
+
+This is the default download path for Safari. Safari terminates Service Workers aggressively and buffers `ReadableStream` responses in RAM instead of streaming to disk, so SW streaming (Tier 1) is skipped entirely. For files larger than 256 MB a warning is displayed before the download begins.
+
+On non-Safari browsers this tier is only reached when both Tier 1 and Tier 2 are unavailable.
 
 Collects all decrypted chunks into a `Blob`, creates an object URL, and triggers a download via an anchor element.
 
@@ -126,8 +130,10 @@ The entire decrypted file is held in RAM. For large files this will cause the br
 The selection happens in `useDownload.ts`:
 
 ```typescript
-// Tier 1: SW stream (primary for ALL browsers)
-const sw = await ensureSwController();
+const safari = isSafari();
+
+// Tier 1: SW stream (all browsers except Safari)
+const sw = !safari ? await ensureSwController() : null;
 if (sw) {
   // Send config to SW, navigate to intercepted URL, wait for completion
 }
@@ -137,7 +143,7 @@ if (!downloaded && typeof window.showSaveFilePicker === "function") {
   // Open file picker, stream decrypt to file
 }
 
-// Tier 3: Blob fallback
+// Tier 3: Blob fallback (last resort / Safari default)
 if (!downloaded) {
   // Collect chunks, create Blob, trigger download
 }
@@ -164,4 +170,4 @@ The SW uses `skipWaiting()` and `clients.claim()` to activate immediately. The s
 | Service Worker | Yes | Yes | Yes | Yes | Yes |
 | `crypto.subtle` in SW | Yes | Yes | Yes | Yes | Yes |
 | `ReadableStream` in SW | Yes | Yes | Yes | Yes | Yes |
-| Download tier used | 1 (SW) | 1 (SW) | 1 (SW) | 1 (SW) | 1 (SW) |
+| Download tier used | 1 (SW) | 1 (SW) | 1 (SW) | 3 (Blob) | 1 (SW) |

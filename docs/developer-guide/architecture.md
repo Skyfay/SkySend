@@ -66,9 +66,9 @@ SkySend uses a tiered approach to handle large file downloads without exhausting
 
 | Tier | Browsers | Method | RAM Usage |
 | --- | --- | --- | --- |
-| 1 | All modern browsers | Service Worker streaming decryption | Low (buffer only) |
+| 1 | All modern browsers except Safari | Service Worker streaming decryption | Low (buffer only) |
 | 2 | Chrome, Edge (fallback) | `showSaveFilePicker` API | Zero |
-| 3 | Legacy fallback | Blob in memory | Full file size |
+| 3 | Safari default / legacy fallback | Blob in memory | Full file size |
 
 ## Package Dependencies
 
