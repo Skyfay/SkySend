@@ -3,7 +3,7 @@ import type { VariantProps } from "class-variance-authority";
 import type { toastVariants } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 5000;
+const TOAST_REMOVE_DELAY = 3000;
 
 type ToasterToast = {
   id: string;
@@ -96,6 +96,12 @@ function toast(input: ToastInput) {
     type: "ADD_TOAST",
     toast: { ...input, id, open: true },
   });
+
+  // Auto-dismiss after delay
+  setTimeout(() => {
+    dispatch({ type: "DISMISS_TOAST", toastId: id });
+  }, TOAST_REMOVE_DELAY);
+
   return {
     id,
     dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: id }),

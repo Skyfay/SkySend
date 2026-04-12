@@ -39,3 +39,15 @@ export function formatTimeRemaining(expiresAt: string): string {
   const h = Math.floor((seconds % 86400) / 3600);
   return h > 0 ? `${d}d ${h}h` : `${d}d`;
 }
+
+/**
+ * Detect Safari (including all iOS browsers which use WebKit).
+ * Matches Mozilla Send's approach: Safari is excluded from SW streaming.
+ */
+export function isSafari(): boolean {
+  const ua = navigator.userAgent;
+  return /safari/i.test(ua) && !/chrome|chromium|edg|opr|opera|brave/i.test(ua);
+}
+
+/** 256 MB - files above this threshold show a warning on Safari */
+export const SAFARI_BIG_SIZE = 256 * 1024 * 1024;

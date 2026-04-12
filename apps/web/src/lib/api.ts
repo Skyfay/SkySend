@@ -7,10 +7,29 @@ const configResponseSchema = z.object({
   defaultExpire: z.number(),
   downloadOptions: z.array(z.number()),
   defaultDownload: z.number(),
-  siteTitle: z.string(),
+  customTitle: z.string(),
+  uploadQuotaBytes: z.number(),
+  uploadQuotaWindow: z.number(),
+  customColor: z.string().nullable(),
+  customLogo: z.string().nullable(),
+  customPrivacy: z.string().nullable(),
+  customLegal: z.string().nullable(),
+  customLinkUrl: z.string().nullable(),
+  customLinkName: z.string().nullable(),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;
+
+const quotaResponseSchema = z.object({
+  enabled: z.boolean(),
+  limit: z.number(),
+  used: z.number(),
+  remaining: z.number(),
+  resetsAt: z.string().nullable(),
+  window: z.number(),
+});
+
+export type QuotaStatus = z.infer<typeof quotaResponseSchema>;
 
 const infoResponseSchema = z.object({
   id: z.string(),
@@ -60,6 +79,11 @@ export async function fetchConfig(): Promise<ServerConfig> {
   return handleResponse(res, configResponseSchema);
 }
 
+export async function fetchQuota(): Promise<QuotaStatus> {
+  const res = await fetch("/api/quota");
+  return handleResponse(res, quotaResponseSchema);
+}
+
 export async function fetchInfo(id: string): Promise<UploadInfo> {
   const res = await fetch(`/api/info/${encodeURIComponent(id)}`);
   return handleResponse(res, infoResponseSchema);
@@ -77,16 +101,24 @@ export async function uploadFile(
   headers: Record<string, string>,
   onProgress?: (loaded: number) => void,
 ): Promise<{ id: string; ownerToken: string; url: string }> {
-  // Collect the encrypted stream and track progress
-  const body = await collectStream(
-    encryptedStream,
-    onProgress ?? (() => {}),
-  );
+  // Wrap the stream with a byte counter for progress tracking.
+  // The stream is piped directly into fetch - no buffering in memory.
+  let loaded = 0;
+  const countingStream = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      loaded += chunk.byteLength;
+      onProgress?.(loaded);
+      controller.enqueue(chunk);
+    },
+  });
+  const trackedStream = encryptedStream.pipeThrough(countingStream);
 
   const res = await fetch("/api/upload", {
     method: "POST",
     headers,
-    body: body as BodyInit,
+    body: trackedStream,
+    // @ts-expect-error -- Required for streaming upload in Chrome/Firefox
+    duplex: "half",
   });
 
   if (!res.ok) {
@@ -178,29 +210,4 @@ export async function deleteUpload(
       (data as { error?: string }).error ?? "Delete failed",
     );
   }
-}
-
-async function collectStream(
-  stream: ReadableStream<Uint8Array>,
-  onProgress: (loaded: number) => void,
-): Promise<Uint8Array> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let loaded = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    loaded += value.byteLength;
-    onProgress(loaded);
-  }
-
-  const result = new Uint8Array(loaded);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return result;
 }

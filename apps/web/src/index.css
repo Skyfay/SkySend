@@ -9,7 +9,7 @@
   --color-card-foreground: oklch(0.145 0 0);
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.205 0 0);
+  --color-primary: oklch(0.696 0.130 167.275);
   --color-primary-foreground: oklch(0.985 0 0);
   --color-secondary: oklch(0.965 0 0);
   --color-secondary-foreground: oklch(0.205 0 0);
@@ -17,11 +17,11 @@
   --color-muted-foreground: oklch(0.556 0 0);
   --color-accent: oklch(0.965 0 0);
   --color-accent-foreground: oklch(0.205 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.577 0.245 27.325);
+  --color-destructive: oklch(0.55 0.18 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
   --color-border: oklch(0.922 0 0);
   --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  --color-ring: oklch(0.696 0.130 167.275);
   --color-success: oklch(0.627 0.194 149.214);
   --color-success-foreground: oklch(0.985 0 0);
 
@@ -50,19 +50,19 @@
   --color-card-foreground: oklch(0.985 0 0);
   --color-popover: oklch(0.205 0 0);
   --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.985 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
+  --color-primary: oklch(0.750 0.130 167.275);
+  --color-primary-foreground: oklch(0.985 0 0);
   --color-secondary: oklch(0.269 0 0);
   --color-secondary-foreground: oklch(0.985 0 0);
   --color-muted: oklch(0.269 0 0);
   --color-muted-foreground: oklch(0.708 0 0);
   --color-accent: oklch(0.269 0 0);
   --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.396 0.141 25.723);
-  --color-destructive-foreground: oklch(0.637 0.237 25.331);
+  --color-destructive: oklch(0.60 0.16 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
   --color-border: oklch(0.269 0 0);
   --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.439 0 0);
+  --color-ring: oklch(0.750 0.130 167.275);
   --color-success: oklch(0.627 0.194 149.214);
   --color-success-foreground: oklch(0.985 0 0);
 }
@@ -75,5 +75,17 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(300%);
   }
 }

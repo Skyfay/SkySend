@@ -49,6 +49,35 @@ export class FileStorage {
     return bytesWritten;
   }
 
+  /** Create an empty file for chunked uploads. */
+  async createEmpty(id: string): Promise<void> {
+    const filePath = this.getPath(id);
+    const ws = createWriteStream(filePath);
+    ws.end();
+    await new Promise<void>((resolve, reject) => {
+      ws.on("finish", resolve);
+      ws.on("error", reject);
+    });
+  }
+
+  /**
+   * Append a chunk (Buffer or ReadableStream) to an existing file.
+   * Returns the number of bytes appended.
+   */
+  async appendChunk(id: string, stream: ReadableStream<Uint8Array>): Promise<number> {
+    const filePath = this.getPath(id);
+    const nodeStream = Readable.fromWeb(stream as ReadableStream);
+    const writeStream = createWriteStream(filePath, { flags: "a" });
+
+    let bytesWritten = 0;
+    nodeStream.on("data", (chunk: Buffer) => {
+      bytesWritten += chunk.length;
+    });
+
+    await pipeline(nodeStream, writeStream);
+    return bytesWritten;
+  }
+
   /**
    * Create a Node.js ReadStream for downloading.
    * The caller is responsible for converting to a web ReadableStream if needed.

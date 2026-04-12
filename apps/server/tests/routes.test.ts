@@ -39,7 +39,7 @@ const DEFAULT_CONFIG = {
   DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
   DEFAULT_DOWNLOAD: 1,
   CLEANUP_INTERVAL: 60,
-  SITE_TITLE: "SkySend",
+  CUSTOM_TITLE: "SkySend",
   RATE_LIMIT_WINDOW: 60000,
   RATE_LIMIT_MAX: 60,
   UPLOAD_QUOTA_BYTES: 0,
@@ -96,7 +96,7 @@ describe("routes", () => {
       expect(body.maxFilesPerUpload).toBe(32);
       expect(body.expireOptions).toEqual([300, 3600, 86400, 604800]);
       expect(body.downloadOptions).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
-      expect(body.siteTitle).toBe("SkySend");
+      expect(body.customTitle).toBe("SkySend");
     });
   });
 
@@ -567,7 +567,7 @@ describe("routes", () => {
         "X-Max-Downloads": "1",
         "X-Expire-Sec": "86400",
         "X-File-Count": "1",
-        "Content-Length": "5",
+        "X-Content-Length": "5",
         ...overrides,
       };
     }
@@ -653,7 +653,7 @@ describe("routes", () => {
 
       const res = await app.request("/api/upload", {
         method: "POST",
-        headers: makeUploadHeaders({ "Content-Length": "5" }),
+        headers: makeUploadHeaders({ "X-Content-Length": "5" }),
         body: new Uint8Array([1, 2, 3, 4, 5]),
       });
 

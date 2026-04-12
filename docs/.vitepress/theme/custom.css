@@ -1,0 +1,41 @@
+/**
+ * SkySend brand colors - green theme based on logo (#46c89d)
+ *
+ * VitePress uses oklch() for its color system.
+ * See: https://vitepress.dev/reference/default-theme-config#default-theme-css-variables
+ */
+
+:root {
+  --vp-c-brand-1: #3ba885;
+  --vp-c-brand-2: #46c89d;
+  --vp-c-brand-3: #56d2aa;
+  --vp-c-brand-soft: rgba(70, 200, 157, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #56d2aa;
+  --vp-c-brand-2: #46c89d;
+  --vp-c-brand-3: #3ba885;
+  --vp-c-brand-soft: rgba(70, 200, 157, 0.16);
+}
+
+:root {
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #fff;
+  --vp-button-brand-bg: #46c89d;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #fff;
+  --vp-button-brand-hover-bg: #3ba885;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #fff;
+  --vp-button-brand-active-bg: #339476;
+}
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(
+    120deg,
+    #46c89d 30%,
+    #56d2aa
+  );
+}

@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "SkySend",
+    "tabSubtitle": "Verschlüsselter Dateitransfer",
     "tagline": "Ende-zu-Ende verschlüsselte Dateifreigabe",
     "loading": "Laden...",
     "error": "Etwas ist schiefgelaufen",
@@ -8,6 +9,7 @@
     "copy": "Kopieren",
     "copied": "Kopiert!",
     "delete": "Löschen",
+    "download": "Herunterladen",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "close": "Schließen",
@@ -32,18 +34,23 @@
     "downloads": "Max. Downloads",
     "password": "Passwortschutz",
     "passwordPlaceholder": "Passwort eingeben (optional)",
-    "uploading": "Verschlüsseln und hochladen...",
+    "uploading": "Verschlüsseln & Hochladen...",
+    "encryptingProgress": "Verschlüsseln...",
     "processing": "Verarbeitung...",
     "uploadComplete": "Upload abgeschlossen!",
     "shareLink": "Diesen Link teilen",
     "shareLinkHint": "Der Schlüssel befindet sich im URL-Fragment - er erreicht niemals den Server.",
+    "cancel": "Upload abbrechen",
+    "startUpload": "Hochladen",
     "newUpload": "Neuer Upload",
     "fileTooLarge": "Datei überschreitet maximale Größe von {{size}}",
-    "tooManyFiles": "Maximal {{count}} Dateien pro Upload"
+    "tooManyFiles": "Maximal {{count}} Dateien pro Upload",
+    "fileNotReadable": "Die ausgewählte Datei konnte nicht gelesen werden. Bitte wähle sie erneut aus und versuche es nochmal."
   },
   "download": {
     "title": "Datei herunterladen",
     "fileInfo": "Datei-Informationen",
+    "encryptedFile": "Verschlüsselte Datei",
     "size": "Größe",
     "downloads": "Downloads",
     "expires": "Läuft ab",
@@ -58,7 +65,12 @@
     "downloading": "Entschlüsseln und herunterladen...",
     "decrypting": "Entschlüsseln...",
     "complete": "Download abgeschlossen!",
-    "failed": "Download fehlgeschlagen"
+    "failed": "Download fehlgeschlagen",
+    "safariWarning": "Dieser Browser kann eine so grosse Datei moglicherweise nicht herunterladen.",
+    "safariWarningDesc": "Safari ladt die gesamte Datei in den Arbeitsspeicher, bevor sie gespeichert wird. Bei grossen Dateien kann der Download fehlschlagen.",
+    "safariCopyLink": "Link fur anderen Browser kopieren",
+    "safariContinue": "Trotzdem herunterladen",
+    "safariLinkCopied": "Link kopiert!"
   },
   "myUploads": {
     "title": "Meine Uploads",
@@ -90,9 +102,21 @@
     "weeks_one": "{{count}} Woche",
     "weeks_other": "{{count}} Wochen"
   },
+  "quota": {
+    "title": "Upload-Kontingent",
+    "remaining": "{{size}} verbleibend",
+    "exceeded": "Upload-Kontingent erschöpft",
+    "fileTooLarge": "Datei überschreitet das verbleibende Kontingent ({{remaining}} übrig)",
+    "resetsIn": "Wird zurückgesetzt in {{time}}"
+  },
   "theme": {
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System"
+  },
+  "footer": {
+    "privacy": "Datenschutz",
+    "legal": "Impressum",
+    "source": "Quellcode"
   }
 }

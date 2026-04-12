@@ -2,61 +2,68 @@
 
 All notable changes to SkySend are documented here.
 
-## v0.1.0 - Initial Release
+## v1.0.0 - First Stable Release
 *Release: In Progress*
 
-### Features
+This is the first stable release of SkySend, marking the completion of the initial development phase and the beginning of production use. The v1.0.0 release includes all core features, security measures, and documentation necessary for self-hosting and public deployment.
 
-- **Crypto Library** (`@skysend/crypto`)
-  - AES-256-GCM streaming encryption/decryption (64KB record size)
-  - HKDF-SHA256 key derivation with domain-separated keys (fileKey, metaKey, authKey)
-  - Metadata encryption with random IV
-  - Password protection via Argon2id (WASM) with PBKDF2-SHA256 fallback
-  - Base64url encoding, constant-time comparison, and utility functions
-  - Full unit and integration test suite
+### ✨ Features
 
-- **Backend** (`apps/server`)
-  - Hono-based REST API with streaming upload/download
-  - SQLite database with Drizzle ORM and WAL mode
-  - Filesystem storage layer with path traversal protection
-  - Auth middleware with constant-time token comparison
-  - Rate limiting (sliding window, per-IP)
-  - Upload quota with HMAC-hashed IPs and daily key rotation
-  - Automatic cleanup job for expired uploads
-  - Static SPA serving from Vite build output
-  - Graceful shutdown with 10-second timeout
-
-- **Frontend** (`apps/web`)
-  - React 19 SPA with Vite and Shadcn UI
-  - Drag & drop upload zone (files and folders)
-  - Multi-file upload with client-side zip (fflate)
-  - Configurable expiry time and download limits
-  - Optional password protection
-  - Upload progress indicator
-  - Share link with copy button
-  - Upload management dashboard (IndexedDB-based, no account required)
-  - Download page with password prompt and progress
-  - Dark mode with automatic detection
-  - Internationalization (English, German) with auto-detection
-  - Responsive design (mobile + desktop)
-
-- **Admin CLI** (`apps/cli`)
-  - `list` - Show active uploads
-  - `delete` - Delete upload by ID
-  - `stats` - Storage overview
-  - `cleanup` - Remove expired uploads
-  - `config` - Show server configuration
-
-- **Infrastructure**
-  - Multi-stage Dockerfile (Node 24 Alpine)
-  - Docker Compose with volume persistence
-  - pnpm monorepo with workspaces
-  - ESLint + Prettier configuration
-  - TypeScript strict mode
-  - Vitest test suite
+- **crypto**: AES-256-GCM streaming encryption and decryption with 64KB record size
+- **crypto**: HKDF-SHA256 key derivation with domain-separated keys (fileKey, metaKey, authKey)
+- **crypto**: Metadata encryption with random IV for filenames, MIME types, and file lists
+- **crypto**: Password protection via Argon2id (WASM) with PBKDF2-SHA256 fallback
+- **crypto**: Base64url encoding, constant-time comparison, and utility functions
+- **server**: Hono-based REST API with streaming upload and download
+- **server**: Chunked upload flow with init, stream, and finalize endpoints
+- **server**: SQLite database with Drizzle ORM and WAL mode
+- **server**: Filesystem storage layer with path traversal protection
+- **server**: Auth middleware with constant-time token comparison
+- **server**: Sliding-window rate limiting per IP with `X-RateLimit-*` response headers
+- **server**: Upload quota with HMAC-SHA256 hashed IPs and daily rotating keys for privacy
+- **server**: Quota status endpoint (`GET /api/quota`) with remaining bytes and reset time
+- **server**: Health check endpoint (`GET /api/health`) with version and timestamp
+- **server**: Automatic cleanup job for expired uploads on startup and at configurable intervals
+- **server**: Static SPA serving from Vite build output
+- **server**: Graceful shutdown with 10-second timeout
+- **server**: Configurable branding via environment variables (title, color, logo, footer links)
+- **web**: React 19 SPA with Vite, Tailwind CSS, and shadcn/ui components
+- **web**: Drag-and-drop upload zone supporting files and folders
+- **web**: Multi-file upload with client-side zip compression (fflate)
+- **web**: Three-tier download strategy - Service Worker streaming, File System Access API, and in-memory blob fallback
+- **web**: OPFS-backed decryption pipeline via Web Worker for zero-RAM streaming downloads
+- **web**: Safari warning for large file downloads exceeding 256 MB
+- **web**: Configurable expiry time and download limits per upload
+- **web**: Optional password protection with show/hide toggle
+- **web**: Upload progress with phase indicator, percentage, and speed display
+- **web**: Favicon progress circle during active uploads
+- **web**: Share link page with one-click copy
+- **web**: Upload history dashboard backed by IndexedDB - no account required
+- **web**: Download page with metadata decryption, password prompt, and progress
+- **web**: Quota bar with visual progress indicator
+- **web**: Skeleton loading states for all pages
+- **web**: Version number displayed in footer from package.json
+- **web**: Dark mode with automatic system preference detection
+- **web**: Internationalization (English, German) with browser language auto-detection
+- **web**: Responsive design for mobile and desktop
+- **web**: Toast notification system for success, error, and warning messages
+- **cli**: `list` command to show active uploads
+- **cli**: `delete` command to remove an upload by ID
+- **cli**: `stats` command for storage overview
+- **cli**: `cleanup` command to remove expired uploads
+- **cli**: `config` command to display server configuration
+- **docs**: Full documentation site with VitePress
+- **docs**: Developer guide covering architecture, API reference, crypto internals, and download modes
+- **docs**: User guide with installation, configuration, security, and self-hosting sections
+- **infra**: Multi-stage Dockerfile based on Node 24 Alpine
+- **infra**: Docker Compose with volume persistence and health checks
+- **infra**: pnpm monorepo with workspaces
+- **infra**: ESLint and Prettier configuration
+- **infra**: TypeScript strict mode across all packages
+- **infra**: Vitest test suite with unit and integration tests
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:v0.1.0`
-- **Also tagged as**: `latest`, `v0`
+- **Image**: `skyfay/skysend:v1.0.0`
+- **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64

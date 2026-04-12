@@ -11,6 +11,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["apps/web/public/download-sw.js"],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker,
+      },
+    },
+  },
+  {
     files: ["apps/web/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
@@ -14,7 +15,7 @@ const passwordRoute = new Hono();
  * The client derives keys from: secret XOR passwordDerivedKey,
  * then computes an authToken. This endpoint verifies that token.
  */
-passwordRoute.post("/:id", async (c) => {
+passwordRoute.post("/:id", bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ error: "Request body too large" }, 413) }), async (c) => {
   const id = c.req.param("id");
 
   let body: { authToken?: string };

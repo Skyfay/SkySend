@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { bodyLimit } from "hono/body-limit";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { eq } from "drizzle-orm";
@@ -7,8 +8,8 @@ import { ownerMiddleware } from "../middleware/auth.js";
 import type { Upload } from "../db/schema.js";
 
 const metaBodySchema = z.object({
-  encryptedMeta: z.string().min(1),
-  nonce: z.string().min(1),
+  encryptedMeta: z.string().min(1).max(100_000),
+  nonce: z.string().min(1).max(100),
 });
 
 const metaRoute = new Hono<{
@@ -19,7 +20,7 @@ const metaRoute = new Hono<{
  * POST /api/meta/:id
  * Save encrypted metadata for an upload. Requires owner token.
  */
-metaRoute.post("/:id", ownerMiddleware, async (c) => {
+metaRoute.post("/:id", ownerMiddleware, bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "Request body too large" }, 413) }), async (c) => {
   const upload = c.get("upload");
 
   // Do not allow overwriting metadata

@@ -12,14 +12,16 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
+import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
+import { isSafari, SAFARI_BIG_SIZE } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
   | "loading-info"
   | "needs-password"
   | "verifying-password"
+  | "safari-warning"
   | "downloading"
-  | "decrypting"
   | "done"
   | "error";
 
@@ -29,6 +31,8 @@ interface DownloadState {
   error: string | null;
   info: api.UploadInfo | null;
   metadata: FileMetadata | null;
+  /** Stashed args so Safari warning can resume the download */
+  pendingDownloadArgs: { id: string; secretB64: string; password?: string; argon2id?: Argon2idHashFn } | null;
 }
 
 export function useDownload() {
@@ -38,6 +42,7 @@ export function useDownload() {
     error: null,
     info: null,
     metadata: null,
+    pendingDownloadArgs: null,
   });
 
   const loadInfo = useCallback(async (id: string) => {
@@ -62,10 +67,24 @@ export function useDownload() {
       secretB64: string,
       password?: string,
       argon2id?: Argon2idHashFn,
+      /** Skip the Safari large-file warning (user chose "continue anyway") */
+      forceSafari = false,
     ) => {
       try {
         const info = state.info ?? (await api.fetchInfo(id));
         if (!info) throw new Error("Upload not found");
+
+        // Safari large-file warning (like Mozilla Send's noStreams warning).
+        // Show before doing any crypto work.
+        if (!forceSafari && isSafari() && info.size > SAFARI_BIG_SIZE) {
+          setState((s) => ({
+            ...s,
+            phase: "safari-warning",
+            info,
+            pendingDownloadArgs: { id, secretB64, password, argon2id },
+          }));
+          return;
+        }
 
         let secret = fromBase64url(secretB64);
         const salt = fromBase64url(info.salt);
@@ -114,59 +133,9 @@ export function useDownload() {
           metadata = await decryptMetadata(metaCiphertext, metaNonce, keys.metaKey);
         }
 
-        setState((s) => ({
-          ...s,
-          phase: "downloading",
-          progress: 0,
-          metadata,
-          error: null,
-        }));
-
-        // Download the encrypted stream
-        const { stream, size } = await api.downloadFile(id, authTokenB64);
-
-        // Track progress
-        let loaded = 0;
-        const progressStream = stream.pipeThrough(
-          new TransformStream<Uint8Array, Uint8Array>({
-            transform(chunk, controller) {
-              loaded += chunk.byteLength;
-              setState((s) => ({
-                ...s,
-                progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-              }));
-              controller.enqueue(chunk);
-            },
-          }),
-        );
-
-        // Decrypt
-        setState((s) => ({ ...s, phase: "decrypting" }));
-        const decryptedStream = progressStream.pipeThrough(
-          createDecryptStream(keys.fileKey),
-        );
-
-        // Collect decrypted data
-        const reader = decryptedStream.getReader();
-        const chunks: Uint8Array[] = [];
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-
-        const totalLength = chunks.reduce((s, c) => s + c.byteLength, 0);
-        const decrypted = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of chunks) {
-          decrypted.set(chunk, offset);
-          offset += chunk.byteLength;
-        }
-
-        // Determine filename and trigger download
+        // Determine filename and mime type early (needed for save dialog)
         let filename = "download";
         let mimeType = "application/octet-stream";
-
         if (metadata?.type === "single") {
           filename = metadata.name;
           mimeType = metadata.mimeType;
@@ -175,10 +144,151 @@ export function useDownload() {
           mimeType = "application/zip";
         }
 
-        triggerBrowserDownload(decrypted, filename, mimeType);
+        setState((s) => ({
+          ...s,
+          phase: "downloading",
+          progress: 0,
+          metadata,
+          error: null,
+        }));
+
+        // ── Safari: skip SW streaming (like Mozilla Send) ──────
+        // Safari terminates Service Workers aggressively and buffers
+        // ReadableStream responses in RAM instead of streaming to disk.
+        // For files > 256 MB we show a warning first (handled by caller).
+        const safari = isSafari();
+
+        // ── Download Strategy (ordered by preference) ──────────
+        // Tier 1: SW stream - fastest (Chrome, Edge, Brave, Firefox)
+        // Tier 2: showSaveFilePicker - zero RAM fallback (Chrome, Edge)
+        // Tier 3: Blob - last resort / Safari default (uses full file size in RAM)
+        let downloaded = false;
+
+        // Tier 1: Service Worker streaming decryption (non-Safari browsers)
+        try {
+          const sw = !safari ? await ensureSwController() : null;
+          if (sw) {
+            console.info("[SkySend] Download tier: 1 (SW stream)");
+
+            const apiBase = import.meta.env.DEV
+              ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
+              : window.location.origin;
+            const downloadUrl = `${apiBase}/api/download/${id}`;
+
+            const secretBuf = secret.buffer.slice(
+              secret.byteOffset,
+              secret.byteOffset + secret.byteLength,
+            ) as ArrayBuffer;
+            const saltBuf = salt.buffer.slice(
+              salt.byteOffset,
+              salt.byteOffset + salt.byteLength,
+            ) as ArrayBuffer;
+
+            await streamDownloadViaSw(
+              downloadUrl,
+              authTokenB64,
+              secretBuf,
+              saltBuf,
+              filename,
+              mimeType,
+              info.size,
+              (progress) => setState((s) => ({ ...s, progress })),
+            );
+            downloaded = true;
+          }
+        } catch (swErr) {
+          console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
+        }
+
+        // Tier 2: showSaveFilePicker fallback (Chrome, Edge - if SW failed)
+        if (!downloaded && typeof window.showSaveFilePicker === "function") {
+          try {
+            console.info("[SkySend] Download tier: 2 (showSaveFilePicker)");
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: mimeType !== "application/octet-stream"
+                ? [{ accept: { [mimeType]: [] } }]
+                : undefined,
+            });
+            const writable = await fileHandle.createWritable();
+
+            const { stream, size } = await api.downloadFile(id, authTokenB64);
+
+            let loaded = 0;
+            const progressStream = stream.pipeThrough(
+              new TransformStream<Uint8Array, Uint8Array>({
+                transform(chunk, controller) {
+                  loaded += chunk.byteLength;
+                  setState((s) => ({
+                    ...s,
+                    progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                  }));
+                  controller.enqueue(chunk);
+                },
+              }),
+            );
+
+            await progressStream
+              .pipeThrough(createDecryptStream(keys.fileKey))
+              .pipeTo(writable);
+            downloaded = true;
+          } catch (pickerErr) {
+            // User cancelled = AbortError, rethrow to be caught by outer handler
+            if (pickerErr instanceof DOMException && pickerErr.name === "AbortError") {
+              throw pickerErr;
+            }
+            console.warn("[SkySend] showSaveFilePicker failed:", pickerErr);
+          }
+        }
+
+        // Tier 3: Blob fallback (uses RAM - last resort / Safari default)
+        if (!downloaded) {
+          console.warn(`[SkySend] Download tier: 3 (Blob fallback${safari ? " - Safari" : ""})`);
+          const { stream, size } = await api.downloadFile(id, authTokenB64);
+
+          let loaded = 0;
+          const progressStream = stream.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(chunk, controller) {
+                loaded += chunk.byteLength;
+                setState((s) => ({
+                  ...s,
+                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
+                }));
+                controller.enqueue(chunk);
+              },
+            }),
+          );
+
+          const decryptedStream = progressStream.pipeThrough(
+            createDecryptStream(keys.fileKey),
+          );
+
+          const reader = decryptedStream.getReader();
+          const chunks: Uint8Array[] = [];
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
 
         setState((s) => ({ ...s, phase: "done", progress: 100 }));
       } catch (err) {
+        // User cancelled the save dialog - not an error
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setState((s) => ({ ...s, phase: "idle" }));
+          return;
+        }
         const message = err instanceof api.ApiError
           ? err.message
           : err instanceof Error
@@ -197,28 +307,22 @@ export function useDownload() {
       error: null,
       info: null,
       metadata: null,
+      pendingDownloadArgs: null,
     });
   }, []);
 
-  return { ...state, loadInfo, download, reset };
-}
+  /** User chose "Continue anyway" on the Safari large-file warning */
+  const confirmSafariDownload = useCallback(() => {
+    const args = state.pendingDownloadArgs;
+    if (!args) return;
+    setState((s) => ({ ...s, pendingDownloadArgs: null }));
+    download(args.id, args.secretB64, args.password, args.argon2id, true);
+  }, [state.pendingDownloadArgs, download]);
 
-function triggerBrowserDownload(
-  data: Uint8Array,
-  filename: string,
-  mimeType: string,
-) {
-  const blob = new Blob([data as BlobPart], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  // Cleanup after a short delay to ensure download starts
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    a.remove();
-  }, 1000);
+  /** User dismissed the Safari warning */
+  const dismissSafariWarning = useCallback(() => {
+    setState((s) => ({ ...s, phase: "idle", pendingDownloadArgs: null }));
+  }, []);
+
+  return { ...state, loadInfo, download, reset, confirmSafariDownload, dismissSafariWarning };
 }

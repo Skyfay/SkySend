@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Link, Plus } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ interface ShareLinkProps {
 export function ShareLink({ link, onNewUpload }: ShareLinkProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [qrExpanded, setQrExpanded] = useState(false);
 
   const copyToClipboard = async () => {
     try {
@@ -33,9 +35,9 @@ export function ShareLink({ link, onNewUpload }: ShareLinkProps) {
   };
 
   return (
-    <Card className="border-success/30 bg-success/5">
+    <Card className="border-primary/30 bg-primary/5">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg text-success">
+        <CardTitle className="flex items-center gap-2 text-lg text-primary">
           <Check className="h-5 w-5" />
           {t("upload.uploadComplete")}
         </CardTitle>
@@ -71,6 +73,20 @@ export function ShareLink({ link, onNewUpload }: ShareLinkProps) {
           <p className="text-xs text-muted-foreground">
             {t("upload.shareLinkHint")}
           </p>
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setQrExpanded((v) => !v)}
+            className="cursor-pointer rounded-lg bg-white p-2 transition-transform hover:scale-105"
+          >
+            <QRCodeSVG
+              value={link}
+              size={qrExpanded ? 256 : 96}
+              level="L"
+            />
+          </button>
         </div>
 
         <Button onClick={onNewUpload} variant="outline" className="w-full">

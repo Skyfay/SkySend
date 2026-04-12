@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "SkySend",
+    "tabSubtitle": "Encrypted File Transfer",
     "tagline": "End-to-end encrypted file sharing",
     "loading": "Loading...",
     "error": "Something went wrong",
@@ -8,6 +9,7 @@
     "copy": "Copy",
     "copied": "Copied!",
     "delete": "Delete",
+    "download": "Download",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
@@ -32,18 +34,23 @@
     "downloads": "Max downloads",
     "password": "Password protection",
     "passwordPlaceholder": "Enter password (optional)",
-    "uploading": "Encrypting and uploading...",
+    "uploading": "Encrypting & uploading...",
+    "encryptingProgress": "Encrypting...",
     "processing": "Processing...",
     "uploadComplete": "Upload complete!",
     "shareLink": "Share this link",
     "shareLinkHint": "The encryption key is in the URL fragment - it never reaches the server.",
+    "cancel": "Cancel upload",
+    "startUpload": "Upload",
     "newUpload": "New upload",
     "fileTooLarge": "File exceeds maximum size of {{size}}",
-    "tooManyFiles": "Maximum {{count}} files per upload"
+    "tooManyFiles": "Maximum {{count}} files per upload",
+    "fileNotReadable": "The selected file could not be read. Please re-select it and try again."
   },
   "download": {
     "title": "Download File",
     "fileInfo": "File Information",
+    "encryptedFile": "Encrypted file",
     "size": "Size",
     "downloads": "Downloads",
     "expires": "Expires",
@@ -58,7 +65,12 @@
     "downloading": "Decrypting and downloading...",
     "decrypting": "Decrypting...",
     "complete": "Download complete!",
-    "failed": "Download failed"
+    "failed": "Download failed",
+    "safariWarning": "This browser may not be able to download a file this large.",
+    "safariWarningDesc": "Safari downloads the entire file into memory before saving. For large files this can cause the download to fail.",
+    "safariCopyLink": "Copy link for another browser",
+    "safariContinue": "Download anyway",
+    "safariLinkCopied": "Link copied!"
   },
   "myUploads": {
     "title": "My Uploads",
@@ -90,9 +102,21 @@
     "weeks_one": "{{count}} week",
     "weeks_other": "{{count}} weeks"
   },
+  "quota": {
+    "title": "Upload Quota",
+    "remaining": "{{size}} remaining",
+    "exceeded": "Upload quota exceeded",
+    "fileTooLarge": "File exceeds remaining quota ({{remaining}} left)",
+    "resetsIn": "Resets in {{time}}"
+  },
   "theme": {
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "legal": "Legal Notice",
+    "source": "Source Code"
   }
 }

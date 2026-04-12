@@ -17,7 +17,15 @@ configRoute.get("/", (c) => {
     defaultExpire: config.DEFAULT_EXPIRE_SEC,
     downloadOptions: config.DOWNLOAD_OPTIONS,
     defaultDownload: config.DEFAULT_DOWNLOAD,
-    siteTitle: config.SITE_TITLE,
+    customTitle: config.CUSTOM_TITLE,
+    uploadQuotaBytes: config.UPLOAD_QUOTA_BYTES,
+    uploadQuotaWindow: config.UPLOAD_QUOTA_WINDOW,
+    customColor: config.CUSTOM_COLOR ?? null,
+    customLogo: config.CUSTOM_LOGO ?? null,
+    customPrivacy: config.CUSTOM_PRIVACY ?? null,
+    customLegal: config.CUSTOM_LEGAL ?? null,
+    customLinkUrl: config.CUSTOM_LINK_URL ?? null,
+    customLinkName: config.CUSTOM_LINK_NAME ?? null,
   });
 });
 

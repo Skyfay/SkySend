@@ -38,9 +38,14 @@ const configSchema = z.object({
 
   BASE_URL: z
     .string()
-    .url()
-    .default("http://localhost:3000")
+    .min(1, "BASE_URL is required (e.g. https://send.example.com)")
+    .url("BASE_URL must be a valid URL (e.g. https://send.example.com)")
     .transform((v) => v.replace(/\/+$/, "")),
+
+  CORS_ORIGINS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()) : [])),
 
   DATA_DIR: z.string().default("./data"),
 
@@ -72,7 +77,7 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  SITE_TITLE: z.string().default("SkySend"),
+  CUSTOM_TITLE: z.string().default("SkySend"),
 
   RATE_LIMIT_WINDOW: z
     .string()
@@ -114,6 +119,37 @@ const configSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true"),
+
+  CUSTOM_COLOR: z
+    .string()
+    .regex(/^#?[0-9a-fA-F]{6}$/, "Must be a 6-digit hex color, e.g. 46c89d or #46c89d")
+    .transform((v) => (v.startsWith("#") ? v : `#${v}`))
+    .optional(),
+
+  CUSTOM_LOGO: z
+    .string()
+    .refine(
+      (v) => /^https?:\/\//.test(v) || v.startsWith("/"),
+      "Must be a URL (https://...) or an absolute path (/logo.svg)",
+    )
+    .optional(),
+
+  CUSTOM_PRIVACY: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LEGAL: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LINK_URL: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LINK_NAME: z.string().max(50).optional(),
 });
 
 type RawConfig = z.infer<typeof configSchema>;

@@ -73,7 +73,9 @@ Returns server limits and options for the client UI.
   "defaultExpire": 86400,
   "downloadOptions": [1, 2, 3, 4, 5, 10, 20, 50, 100],
   "defaultDownload": 1,
-  "siteTitle": "SkySend"
+  "customTitle": "SkySend",
+  "customColor": null,
+  "customLogo": null
 }
 ```
 

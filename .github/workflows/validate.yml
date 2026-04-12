@@ -54,6 +54,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @skysend/crypto build
       - run: pnpm typecheck
 
   test:
@@ -72,6 +73,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @skysend/crypto build
       - run: pnpm test
 
   docs-build:

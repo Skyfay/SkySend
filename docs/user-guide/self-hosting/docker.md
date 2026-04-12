@@ -19,6 +19,7 @@ services:
     env_file:
       - .env
     environment:
+      - BASE_URL=https://send.example.com
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
       - PUID=${PUID:-1001}
@@ -37,6 +38,7 @@ Pass environment variables via `.env` file or directly:
 
 ```bash
 # .env
+BASE_URL=https://send.example.com
 PORT=3000
 MAX_FILE_SIZE=2GB
 DEFAULT_EXPIRE_SEC=86400

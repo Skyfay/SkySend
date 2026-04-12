@@ -26,6 +26,25 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setConfig(cfg);
           setLoading(false);
+
+          // Apply custom brand color if configured
+          if (cfg.customColor) {
+            const style = document.createElement("style");
+            style.textContent = `
+              :root, .dark {
+                --color-primary: ${cfg.customColor} !important;
+                --color-primary-foreground: #ffffff !important;
+                --color-ring: ${cfg.customColor} !important;
+              }
+            `;
+            document.head.appendChild(style);
+          }
+
+          // Apply custom logo as favicon
+          if (cfg.customLogo) {
+            const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+            if (link) link.href = cfg.customLogo;
+          }
         }
       })
       .catch((err) => {

@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: 'SkySend',
+  title: 'SkySend | Docs',
   description: 'Minimalist, self-hostable, end-to-end encrypted file sharing. Zero knowledge - the server never sees your data.',
   lang: 'en-US',
   cleanUrls: true,
@@ -11,6 +11,8 @@ export default defineConfig({
     /localhost/
   ],
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/logo.png' }],
     ['meta', { name: 'keywords', content: 'file sharing, end-to-end encryption, self-hosted, zero knowledge, encrypted upload, docker, open source' }],
     ['meta', { name: 'author', content: 'Skyfay' }],
     ['meta', { name: 'robots', content: 'index, follow' }],
@@ -35,6 +37,8 @@ export default defineConfig({
     })]
   ],
   themeConfig: {
+    logo: '/logo.svg',
+
     lastUpdated: {
       text: 'Last updated',
       formatOptions: {
@@ -47,6 +51,7 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'User Guide', link: '/user-guide/getting-started' },
       { text: 'Developer Guide', link: '/developer-guide/' },
+      { text: 'Instances', link: '/instances' },
       {
         text: 'Resources',
         items: [
@@ -152,8 +157,8 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the AGPLv3 License.',
-      copyright: 'Copyright \u00a9 2025 SkySend'
+      message: 'Released under the AGPLv3 License. | <a href="https://skyfay.ch/privacy" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="https://skyfay.ch/legal" target="_blank" rel="noopener noreferrer">Legal Notice</a>',
+      copyright: 'Copyright \u00a9 2026 SkySend'
     },
 
     search: {
@@ -167,6 +172,8 @@ export default defineConfig({
   },
 
   vite: {
+    // Override esbuild target so it doesn't inherit ES2024 from root tsconfig
+    esbuild: { target: 'es2022' },
     build: {
       chunkSizeWarningLimit: 1200,
       rollupOptions: {

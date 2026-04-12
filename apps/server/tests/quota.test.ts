@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Hono } from "hono";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createUploadQuota } from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
+import { initDatabase, closeDatabase } from "../src/db/index.js";
+
+let tempDir: string;
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
   return {
@@ -15,7 +21,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
     DEFAULT_DOWNLOAD: 1,
     CLEANUP_INTERVAL: 60,
-    SITE_TITLE: "SkySend",
+    CUSTOM_TITLE: "SkySend",
     RATE_LIMIT_WINDOW: 60000,
     RATE_LIMIT_MAX: 60,
     UPLOAD_QUOTA_BYTES: 1024, // 1 KB quota
@@ -27,6 +33,16 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
 }
 
 describe("upload quota", () => {
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), "skysend-quota-test-"));
+    initDatabase(tempDir);
+  });
+
+  afterEach(() => {
+    closeDatabase();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
   it("should be a no-op when quota is disabled", async () => {
     const config = makeConfig({ UPLOAD_QUOTA_BYTES: 0 });
     const quota = createUploadQuota(config);

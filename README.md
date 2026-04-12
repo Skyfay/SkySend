@@ -1,6 +1,5 @@
 <div align="center">
-  <!-- TODO: Add logo once available -->
-  <!-- <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/logo.svg" alt="SkySend Logo" width="120"> -->
+  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/logo.svg" alt="SkySend Logo" width="120">
 </div>
 
 <h1 align="center">SkySend</h1>
@@ -37,8 +36,7 @@ No accounts required. No telemetry. No external dependencies. Just upload a file
 Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send), SkySend is built from scratch with higher security standards and a minimal, maintainable codebase.
 
 <div align="center">
-  <!-- TODO: Replace with actual screenshot -->
-  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/screenshots/screenshot.png" alt="SkySend Screenshot" width="800">
+  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/screenshots/overview.png" alt="SkySend Screenshot" width="800">
 </div>
 
 ## ✨ Features
@@ -107,6 +105,7 @@ services:
       - ./data:/data
       - ./uploads:/uploads
     environment:
+      - BASE_URL=http://localhost:3000
       - PUID=1000
       - PGID=1000
       # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
@@ -116,7 +115,7 @@ services:
 docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser - no configuration required.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 📖 **Full installation guide**: [docs.skysend.ch/user-guide/getting-started](https://docs.skysend.ch/user-guide/getting-started)
 

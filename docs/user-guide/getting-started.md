@@ -36,7 +36,7 @@ docker compose up -d
 
 Then open [http://localhost:3000](http://localhost:3000).
 
-That's it. No environment variables required for a basic setup.
+That's it. Only `BASE_URL` is required - see [Environment Variables](/user-guide/configuration/environment-variables).
 
 ## Next Steps
 

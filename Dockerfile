@@ -53,6 +53,9 @@ RUN apk add --no-cache su-exec
 RUN addgroup -g 1001 skysend && \
     adduser -u 1001 -G skysend -s /bin/sh -D skysend
 
+# Ensure all app files are readable by the non-root user
+RUN chmod -R a+rX /app
+
 # Create data and uploads directories
 RUN mkdir -p /data/db /uploads && \
     chown -R skysend:skysend /data /uploads

@@ -1,6 +1,6 @@
 {
   "name": "@skysend/server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -26,8 +26,8 @@
     }
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc && cp -r src/db/migrations dist/db/migrations",
+    "dev": "tsx watch --env-file=../../.env.dev src/index.ts",
+    "build": "tsc && rm -rf dist/db/migrations && cp -r src/db/migrations dist/db/migrations",
     "start": "node dist/index.js",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
