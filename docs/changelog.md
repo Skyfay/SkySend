@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## v1.0.1
+*Released: April 12, 2026*
+
+### 🐛 Bug Fixes
+
+- **docker**: Replaced recursive `chown` on `/uploads` with a non-recursive, fault-tolerant call to prevent startup failures on NFS mounts and read-only filesystems
+
+### ✨ Features
+
+- **docker**: Added `SKIP_CHOWN` environment variable to skip ownership changes on `/data` and `/uploads` entirely
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v1.0.1`
+- **Also tagged as**: `latest`, `v1`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v1.0.0 - First Stable Release
 *Released: April 12, 2026*
 

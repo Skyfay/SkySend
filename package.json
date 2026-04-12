@@ -1,6 +1,6 @@
 {
   "name": "skysend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
