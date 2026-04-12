@@ -87,6 +87,7 @@ jobs:
         run: |
           docker run -d --name smoke \
             -p 3000:3000 \
+            -e BASE_URL=http://localhost:3000 \
             "${{ env.GHCR_IMAGE }}:${{ github.ref_name }}-amd64"
 
       - name: Wait for healthy
