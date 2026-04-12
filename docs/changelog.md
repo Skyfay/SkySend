@@ -3,7 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## v1.0.0 - First Stable Release
-*Release: In Progress*
+*Released: April 12, 2026*
 
 This is the first stable release of SkySend, marking the completion of the initial development phase and the beginning of production use. The v1.0.0 release includes all core features, security measures, and documentation necessary for self-hosting and public deployment.
 
