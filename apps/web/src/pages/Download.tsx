@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
@@ -45,8 +46,27 @@ export function DownloadPage() {
 
   if (downloadHook.phase === "loading-info") {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-8 w-56" />
+          </div>
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-11 w-full rounded-md" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

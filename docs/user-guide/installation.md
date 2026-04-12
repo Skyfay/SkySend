@@ -1,85 +1,105 @@
 # Installation
 
-SkySend can be deployed using Docker (recommended) or built from source.
+This guide covers how to install and run SkySend using Docker.
 
-## Docker (Recommended)
+## Prerequisites
 
-### Prerequisites
+- Docker Engine 20.10+
+- Docker Compose v2+ (recommended)
 
-- [Docker](https://docs.docker.com/get-docker/) 20.10+
-- [Docker Compose](https://docs.docker.com/compose/install/) v2+
+::: tip Multi-Architecture Support
+SkySend images are available for **AMD64** (x86_64) and **ARM64** (aarch64) architectures.
 
-### Quick Start
+Supports: Intel/AMD servers, Raspberry Pi 4+, Apple Silicon (M1/M2/M3), AWS Graviton
+:::
 
-Clone the repository and start SkySend:
+## Docker Installation
+
+::: code-group
+
+```yaml [Docker Compose (Recommended)]
+# docker-compose.yml
+services:
+  skysend:
+    image: skyfay/skysend:latest
+    container_name: skysend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATA_DIR=/data
+      - UPLOADS_DIR=/uploads
+      # - MAX_FILE_SIZE=2GB         # Optional: Max upload size
+      # - UPLOAD_QUOTA_BYTES=10GB   # Optional: Per-IP quota per 24h
+      # - TRUST_PROXY=true          # Optional: If behind a reverse proxy
+      # - PUID=1001                 # Optional: User ID
+      # - PGID=1001                 # Optional: Group ID
+    volumes:
+      - ./data:/data
+      - ./uploads:/uploads
+```
+
+```bash [Docker Run]
+docker run -d \
+  --name skysend \
+  --restart always \
+  -p 3000:3000 \
+  -e DATA_DIR=/data \
+  -e UPLOADS_DIR=/uploads \
+  -v "$(pwd)/data:/data" \
+  -v "$(pwd)/uploads:/uploads" \
+  skyfay/skysend:latest
+```
+
+:::
+
+### Start & Access
 
 ```bash
-git clone https://github.com/Skyfay/SkySend.git
-cd SkySend
 docker compose up -d
 ```
 
 SkySend is now running at [http://localhost:3000](http://localhost:3000).
 
-### Custom Configuration
+## Environment Variables
 
-Create a `.env` file in the project root to override defaults:
+All environment variables are optional. SkySend works out of the box with sensible defaults.
 
-```bash
-# .env
-PORT=3000
-MAX_FILE_SIZE=2GB
-DEFAULT_EXPIRE_SEC=86400
-DEFAULT_DOWNLOAD=1
-```
+→ See the full **[Environment Variables](/user-guide/configuration/environment-variables)** reference for all options, default values and descriptions.
 
-See [Environment Variables](/user-guide/configuration/environment-variables) for all options.
+## Volume Mounts
 
-## Build from Source
+| Mount Point | Required | Purpose |
+| :--- | :---: | :--- |
+| `/data` | ✅ | Database and persistent data. |
+| `/uploads` | ✅ | Encrypted file storage. |
 
-### Prerequisites
+::: warning Data Persistence
+Always mount both `/data` and `/uploads` to host directories. Without volumes, all uploads and database state are lost when the container is recreated.
+:::
 
-- [Node.js](https://nodejs.org/) 24 LTS or later
-- [pnpm](https://pnpm.io/) 9+
+## Health Check
 
-### Steps
-
-```bash
-# Clone the repository
-git clone https://github.com/Skyfay/SkySend.git
-cd SkySend
-
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Start the server
-node apps/server/dist/index.js
-```
-
-The server will start on port 3000 by default and serve the built frontend.
-
-## Verify Installation
-
-After starting SkySend, verify it is running:
+SkySend includes a built-in Docker health check:
 
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Expected response:
-
+Response:
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-01-01T00:00:00.000Z"
+  "version": "0.1.0",
+  "timestamp": "2026-01-01T00:00:00.000Z"
 }
 ```
+
+The health check runs every 30 seconds. Docker marks the container as `unhealthy` if 3 consecutive checks fail.
 
 ## Next Steps
 
 - [First Steps](/user-guide/first-steps) - Upload your first file
-- [Docker Setup](/user-guide/self-hosting/docker) - Detailed Docker configuration
+- [Docker Setup](/user-guide/self-hosting/docker) - Advanced Docker configuration
 - [Reverse Proxy](/user-guide/self-hosting/reverse-proxy) - Set up Nginx, Caddy, or Traefik
+- [Rate Limiting & Quotas](/user-guide/configuration/rate-limiting) - Configure upload quotas

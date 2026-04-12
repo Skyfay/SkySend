@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UploadZone } from "@/components/UploadZone";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadProgress } from "@/components/UploadProgress";
@@ -55,8 +56,47 @@ export function UploadPage() {
 
   if (configLoading || !config) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Title skeleton */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-7 w-7 rounded" />
+            <Skeleton className="h-8 w-48" />
+          </div>
+          <Skeleton className="h-4 w-72" />
+        </div>
+
+        {/* Card skeleton */}
+        <Card>
+          <CardContent className="space-y-6 pt-6">
+            {/* Upload zone skeleton */}
+            <Skeleton className="h-50 w-full rounded-lg" />
+
+            {/* Expiry selectors skeleton */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            </div>
+
+            {/* Password toggle skeleton */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+
+            {/* Upload button skeleton */}
+            <Skeleton className="h-11 w-full rounded-md" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

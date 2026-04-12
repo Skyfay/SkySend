@@ -31,7 +31,7 @@ const instances = ref<Instance[]>([
     quota: '100 GB',
     maxExpiry: '7 days',
     maxDownloads: 100,
-    contact: { label: 'SkySend', url: 'http://docs.skysend.ch/#%F0%9F%92%AC-community-support' },
+    contact: { label: 'Contact', url: 'http://docs.skysend.ch/#%F0%9F%92%AC-community-support' },
     version: null,
   },
 ])
