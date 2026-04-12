@@ -40,9 +40,10 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
             document.head.appendChild(style);
           }
 
-          // Apply custom title
-          if (cfg.customTitle) {
-            document.title = cfg.customTitle;
+          // Apply custom logo as favicon
+          if (cfg.customLogo) {
+            const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+            if (link) link.href = cfg.customLogo;
           }
         }
       })

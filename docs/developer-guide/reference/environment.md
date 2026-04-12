@@ -190,10 +190,10 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Property | Value |
 | --- | --- |
 | Required | No |
-| Type | URL |
+| Type | URL or absolute path |
 | Default | - (uses built-in SkySend logo) |
-| Validation | Must be a valid URL |
-| Description | URL to a custom logo image displayed in the web app header. Supports SVG, PNG, or any browser-supported image format. |
+| Validation | Must be a URL (`https://...`) or an absolute path (`/...`) |
+| Description | URL or path to a custom logo image displayed in the web app header and as favicon. For local files, place them in the `public/` directory (e.g. `public/custom-logo.svg`) and reference as `/custom-logo.svg`. |
 
 ### PUID
 
@@ -223,4 +223,4 @@ All environment variables are validated on startup using Zod. Invalid values cau
 - `MAX_FILE_SIZE` must be a valid byte size string with a recognized unit
 - `BASE_URL` must be a valid URL
 - `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
-- `CUSTOM_LOGO` must be a valid URL
+- `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`

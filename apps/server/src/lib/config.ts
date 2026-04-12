@@ -128,7 +128,10 @@ const configSchema = z.object({
 
   CUSTOM_LOGO: z
     .string()
-    .url("Must be a valid URL")
+    .refine(
+      (v) => /^https?:\/\//.test(v) || v.startsWith("/"),
+      "Must be a URL (https://...) or an absolute path (/logo.svg)",
+    )
     .optional(),
 });
 

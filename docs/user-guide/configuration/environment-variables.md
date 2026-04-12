@@ -70,7 +70,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | --- | --- | --- | --- |
 | `CUSTOM_TITLE` | No | `SkySend` | Displayed site title in the UI |
 | `CUSTOM_COLOR` | No | - | Primary brand color as 6-digit hex code (e.g. `46c89d`). The `#` prefix is optional. Overrides the default primary color in the web UI. |
-| `CUSTOM_LOGO` | No | - | URL to a custom logo image (e.g. `https://example.com/logo.svg`). Replaces the default SkySend logo in the header. |
+| `CUSTOM_LOGO` | No | - | URL or absolute path to a custom logo image (e.g. `https://example.com/logo.svg` or `/custom-logo.svg`). Replaces the default SkySend logo in the header and favicon. |
 
 ::: tip Example
 ```yaml
@@ -102,6 +102,6 @@ SkySend validates all environment variables on startup using Zod:
 - `MAX_FILE_SIZE` must be a valid byte size string
 - `BASE_URL` must be a valid URL (trailing slashes are stripped automatically)
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
-- `CUSTOM_LOGO` must be a valid URL
+- `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
 
 If any variable is invalid, the server will fail to start with a descriptive error message.

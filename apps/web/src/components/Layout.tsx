@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 import { Upload, FolderOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useServerConfig } from "@/hooks/useServerConfig";
@@ -12,6 +13,10 @@ export function Layout() {
 
   const logoSrc = config?.customLogo ?? "/logo.svg";
   const title = config?.customTitle ?? t("common.appName");
+
+  useEffect(() => {
+    document.title = `${title} | ${t("common.tabSubtitle")}`;
+  }, [title, t]);
 
   const navItems = [
     { to: "/", label: t("nav.upload"), icon: Upload },
