@@ -77,7 +77,7 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  SITE_TITLE: z.string().default("SkySend"),
+  CUSTOM_TITLE: z.string().default("SkySend"),
 
   RATE_LIMIT_WINDOW: z
     .string()
@@ -119,6 +119,17 @@ const configSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true"),
+
+  CUSTOM_COLOR: z
+    .string()
+    .regex(/^#?[0-9a-fA-F]{6}$/, "Must be a 6-digit hex color, e.g. 46c89d or #46c89d")
+    .transform((v) => (v.startsWith("#") ? v : `#${v}`))
+    .optional(),
+
+  CUSTOM_LOGO: z
+    .string()
+    .url("Must be a valid URL")
+    .optional(),
 });
 
 type RawConfig = z.infer<typeof configSchema>;

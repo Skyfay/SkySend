@@ -15,7 +15,7 @@ export async function showConfig(ctx: CliContext, options: ConfigOptions): Promi
 
   console.log("Server Configuration");
   console.log("====================");
-  console.log(`Site Title:         ${config.SITE_TITLE}`);
+  console.log(`Site Title:         ${config.CUSTOM_TITLE}`);
   console.log(`Base URL:           ${config.BASE_URL}`);
   console.log(`Host:               ${config.HOST}:${config.PORT}`);
   console.log(`Data Directory:     ${config.DATA_DIR}`);

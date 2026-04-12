@@ -58,7 +58,7 @@ This page outlines planned features and improvements for SkySend. Features are s
 - Webhook or email notification
 
 ### Custom Branding
-- Configurable site title (already supported via `SITE_TITLE`)
+- Configurable site title (already supported via `CUSTOM_TITLE`)
 - Custom logo and favicon support
 - Custom colors/theme
 

@@ -39,7 +39,7 @@ const DEFAULT_CONFIG = {
   DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
   DEFAULT_DOWNLOAD: 1,
   CLEANUP_INTERVAL: 60,
-  SITE_TITLE: "SkySend",
+  CUSTOM_TITLE: "SkySend",
   RATE_LIMIT_WINDOW: 60000,
   RATE_LIMIT_MAX: 60,
   UPLOAD_QUOTA_BYTES: 0,
@@ -96,7 +96,7 @@ describe("routes", () => {
       expect(body.maxFilesPerUpload).toBe(32);
       expect(body.expireOptions).toEqual([300, 3600, 86400, 604800]);
       expect(body.downloadOptions).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
-      expect(body.siteTitle).toBe("SkySend");
+      expect(body.customTitle).toBe("SkySend");
     });
   });
 

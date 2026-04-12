@@ -44,6 +44,7 @@ self.onmessage = async (event: MessageEvent) => {
         opfsRoot = await navigator.storage.getDirectory();
       }
       const fileHandle = await opfsRoot.getFileHandle(tempName, { create: true });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- createSyncAccessHandle is not in TS libs yet
       const syncHandle = await (fileHandle as any).createSyncAccessHandle();
 
       // Download the encrypted file

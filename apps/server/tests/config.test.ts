@@ -36,7 +36,7 @@ describe("config", () => {
       expect(config.DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
       expect(config.DEFAULT_DOWNLOAD).toBe(1);
       expect(config.CLEANUP_INTERVAL).toBe(60);
-      expect(config.SITE_TITLE).toBe("SkySend");
+      expect(config.CUSTOM_TITLE).toBe("SkySend");
       expect(config.RATE_LIMIT_WINDOW).toBe(60000);
       expect(config.RATE_LIMIT_MAX).toBe(60);
       expect(config.UPLOAD_QUOTA_BYTES).toBe(0);
@@ -94,10 +94,10 @@ describe("config", () => {
       expect(config.UPLOAD_QUOTA_BYTES).toBe(5 * 1024 ** 3);
     });
 
-    it("should parse SITE_TITLE", async () => {
-      process.env.SITE_TITLE = "MyShare";
+    it("should parse CUSTOM_TITLE", async () => {
+      process.env.CUSTOM_TITLE = "MyShare";
       const config = await loadFreshConfig();
-      expect(config.SITE_TITLE).toBe("MyShare");
+      expect(config.CUSTOM_TITLE).toBe("MyShare");
     });
   });
 

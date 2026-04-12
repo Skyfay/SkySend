@@ -15,7 +15,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     DOWNLOAD_OPTIONS: [1, 5, 10],
     DEFAULT_DOWNLOAD: 1,
     CLEANUP_INTERVAL: 60,
-    SITE_TITLE: "SkySend",
+    CUSTOM_TITLE: "SkySend",
     RATE_LIMIT_WINDOW: 60000,
     RATE_LIMIT_MAX: 5,
     UPLOAD_QUOTA_BYTES: 0,

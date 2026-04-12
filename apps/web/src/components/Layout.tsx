@@ -1,12 +1,17 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Upload, FolderOpen, Shield } from "lucide-react";
+import { Upload, FolderOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useServerConfig } from "@/hooks/useServerConfig";
 import { cn } from "@/lib/utils";
 
 export function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { config } = useServerConfig();
+
+  const logoSrc = config?.customLogo ?? "/logo.svg";
+  const title = config?.customTitle ?? t("common.appName");
 
   const navItems = [
     { to: "/", label: t("nav.upload"), icon: Upload },
@@ -21,8 +26,8 @@ export function Layout() {
             to="/"
             className="flex items-center gap-2 text-lg font-bold tracking-tight"
           >
-            <Shield className="h-5 w-5 text-primary" />
-            <span>{t("common.appName")}</span>
+            <img src={logoSrc} alt="" className="h-6 w-6" />
+            <span>{title}</span>
           </Link>
 
           <nav className="flex items-center gap-1">
@@ -52,7 +57,7 @@ export function Layout() {
 
       <footer className="border-t border-border py-4 text-center text-xs text-muted-foreground">
         <p>
-          {t("common.appName")} - {t("common.tagline")}
+          {title} - {t("common.tagline")}
         </p>
       </footer>
     </div>

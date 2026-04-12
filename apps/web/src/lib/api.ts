@@ -7,9 +7,11 @@ const configResponseSchema = z.object({
   defaultExpire: z.number(),
   downloadOptions: z.array(z.number()),
   defaultDownload: z.number(),
-  siteTitle: z.string(),
+  customTitle: z.string(),
   uploadQuotaBytes: z.number(),
   uploadQuotaWindow: z.number(),
+  customColor: z.string().nullable(),
+  customLogo: z.string().nullable(),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;

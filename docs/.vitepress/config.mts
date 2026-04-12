@@ -35,6 +35,8 @@ export default defineConfig({
     })]
   ],
   themeConfig: {
+    logo: '/logo.svg',
+
     lastUpdated: {
       text: 'Last updated',
       formatOptions: {

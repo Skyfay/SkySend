@@ -121,7 +121,7 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Default | `60` |
 | Description | Interval for the automatic cleanup job |
 
-### SITE_TITLE
+### CUSTOM_TITLE
 
 | Property | Value |
 | --- | --- |
@@ -175,6 +175,26 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Default | `false` |
 | Description | Trust `X-Forwarded-For` / `X-Real-IP` headers from reverse proxy |
 
+### CUSTOM_COLOR
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Hex color code |
+| Default | - (uses default theme) |
+| Validation | Must match 6 hex digits, e.g. `46c89d` (the `#` prefix is optional) |
+| Description | Primary brand color for the web UI. Overrides the default primary color on buttons, links, icons, and other accented elements. |
+
+### CUSTOM_LOGO
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | - (uses built-in SkySend logo) |
+| Validation | Must be a valid URL |
+| Description | URL to a custom logo image displayed in the web app header. Supports SVG, PNG, or any browser-supported image format. |
+
 ### PUID
 
 | Property | Value |
@@ -202,3 +222,5 @@ All environment variables are validated on startup using Zod. Invalid values cau
 - `PORT` must be between 1 and 65535
 - `MAX_FILE_SIZE` must be a valid byte size string with a recognized unit
 - `BASE_URL` must be a valid URL
+- `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
+- `CUSTOM_LOGO` must be a valid URL

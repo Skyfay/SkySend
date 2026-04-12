@@ -68,7 +68,22 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `SITE_TITLE` | No | `SkySend` | Displayed site title in the UI |
+| `CUSTOM_TITLE` | No | `SkySend` | Displayed site title in the UI |
+| `CUSTOM_COLOR` | No | - | Primary brand color as 6-digit hex code (e.g. `46c89d`). The `#` prefix is optional. Overrides the default primary color in the web UI. |
+| `CUSTOM_LOGO` | No | - | URL to a custom logo image (e.g. `https://example.com/logo.svg`). Replaces the default SkySend logo in the header. |
+
+::: tip Example
+```yaml
+# docker-compose.yml
+environment:
+  CUSTOM_TITLE: MyShare
+  CUSTOM_COLOR: ff6b35
+  CUSTOM_LOGO: "https://example.com/my-logo.svg"
+```
+
+::: tip
+The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are valid. Omitting the `#` avoids quoting issues in `.env` files.
+:::
 
 ## Docker
 
@@ -86,5 +101,7 @@ SkySend validates all environment variables on startup using Zod:
 - `PORT` must be between 1 and 65535
 - `MAX_FILE_SIZE` must be a valid byte size string
 - `BASE_URL` must be a valid URL (trailing slashes are stripped automatically)
+- `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
+- `CUSTOM_LOGO` must be a valid URL
 
 If any variable is invalid, the server will fail to start with a descriptive error message.

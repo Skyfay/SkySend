@@ -305,11 +305,3 @@ async function broadcast(msg) {
     }
   } catch { /* ignore */ }
 }
-
-function appendBuf(a, b) {
-  if (a.length === 0) return b;
-  const c = new Uint8Array(a.length + b.length);
-  c.set(a, 0);
-  c.set(b, a.length);
-  return c;
-}

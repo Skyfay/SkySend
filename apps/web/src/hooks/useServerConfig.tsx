@@ -26,6 +26,24 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setConfig(cfg);
           setLoading(false);
+
+          // Apply custom brand color if configured
+          if (cfg.customColor) {
+            const style = document.createElement("style");
+            style.textContent = `
+              :root, .dark {
+                --color-primary: ${cfg.customColor} !important;
+                --color-primary-foreground: #ffffff !important;
+                --color-ring: ${cfg.customColor} !important;
+              }
+            `;
+            document.head.appendChild(style);
+          }
+
+          // Apply custom title
+          if (cfg.customTitle) {
+            document.title = cfg.customTitle;
+          }
         }
       })
       .catch((err) => {
