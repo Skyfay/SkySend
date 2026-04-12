@@ -69,6 +69,8 @@ app.use(
     xFrameOptions: "DENY",
   }),
 );
+// Allow any origin on the public health endpoint (read-only, no sensitive data)
+app.use("/api/health", cors({ origin: "*" }));
 app.use(
   "*",
   cors({

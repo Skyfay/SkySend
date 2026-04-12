@@ -2,6 +2,19 @@
 
 All notable changes to SkySend are documented here.
 
+## v1.0.2
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+- **server**: Added open CORS policy (`*`) on `/api/health` endpoint so external sites can fetch instance status
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v1.0.2`
+- **Also tagged as**: `latest`, `v1`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v1.0.1 - Patch Release for Docker Permissions Issue
 *Released: April 12, 2026*
 
