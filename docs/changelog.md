@@ -8,7 +8,10 @@ All notable changes to SkySend are documented here.
 ### 🐛 Bug Fixes
 - **server**: Added open CORS policy (`*`) on `/api/health` endpoint so external sites can fetch instance status
 
-### 🐳 Docker
+### � Documentation
+- **docs**: Added website and instances links to README navigation bar
+
+### �🐳 Docker
 
 - **Image**: `ghcr.io/skyfay/skysend:v1.0.2`
 - **Also tagged as**: `latest`, `v1`
