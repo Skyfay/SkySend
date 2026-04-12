@@ -1,8 +1,27 @@
 import { useEffect, useRef } from "react";
 
 const SIZE = 32;
+const FALLBACK_COLOR = "#7c3aed";
 
-function drawProgress(canvas: HTMLCanvasElement, progress: number): string {
+/** Resolve a CSS color value (oklch, hex, etc.) to an rgb() string canvas can always use. */
+function resolvePrimaryColor(): string {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-primary")
+    .trim();
+  if (!raw) return FALLBACK_COLOR;
+  const el = document.createElement("div");
+  el.style.color = raw;
+  document.body.appendChild(el);
+  const resolved = getComputedStyle(el).color;
+  document.body.removeChild(el);
+  return resolved || FALLBACK_COLOR;
+}
+
+function drawProgress(
+  canvas: HTMLCanvasElement,
+  progress: number,
+  color: string,
+): string {
   const ctx = canvas.getContext("2d")!;
   const center = SIZE / 2;
   const radius = 12;
@@ -22,7 +41,7 @@ function drawProgress(canvas: HTMLCanvasElement, progress: number): string {
   const endAngle = startAngle + (progress / 100) * Math.PI * 2;
   ctx.beginPath();
   ctx.arc(center, center, radius, startAngle, endAngle);
-  ctx.strokeStyle = "#7c3aed";
+  ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = "round";
   ctx.stroke();
@@ -48,6 +67,7 @@ function restoreFavicon(href: string) {
 export function useFaviconProgress(progress: number | null) {
   const originalHref = useRef<string>("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const colorRef = useRef<string>("");
   const wasActive = useRef(false);
 
   // Capture original favicon once
@@ -69,7 +89,16 @@ export function useFaviconProgress(progress: number | null) {
         canvasRef.current.height = SIZE;
       }
 
-      const dataUrl = drawProgress(canvasRef.current, Math.round(progress));
+      // Resolve the primary color once per upload session
+      if (!colorRef.current) {
+        colorRef.current = resolvePrimaryColor();
+      }
+
+      const dataUrl = drawProgress(
+        canvasRef.current,
+        Math.round(progress),
+        colorRef.current,
+      );
       let link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
       if (!link) {
         link = document.createElement("link");
@@ -80,6 +109,7 @@ export function useFaviconProgress(progress: number | null) {
     } else if (wasActive.current) {
       // Upload finished - restore original favicon
       wasActive.current = false;
+      colorRef.current = "";
       restoreFavicon(originalHref.current);
     }
   }, [progress]);

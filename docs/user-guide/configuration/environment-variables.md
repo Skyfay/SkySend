@@ -8,7 +8,7 @@ Complete reference of all environment variables supported by SkySend.
 | :--- | :---: | :--- | :--- |
 | `PORT` | ❌ | `3000` | Server port (1-65535). |
 | `HOST` | ❌ | `0.0.0.0` | Server bind address. |
-| `BASE_URL` | ❌ | `http://localhost:3000` | Public URL of the instance (used for generated links). |
+| `BASE_URL` | ✅ | - | Public URL of the instance (used for CORS and generated links). |
 | `DATA_DIR` | ❌ | `./data` | Directory for the database (`DATA_DIR/db/skysend.db`). |
 | `UPLOADS_DIR` | ❌ | `{DATA_DIR}/uploads` | Directory for encrypted upload files. In Docker, defaults to `/uploads`. |
 | `TRUST_PROXY` | ❌ | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |

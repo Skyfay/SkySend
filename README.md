@@ -107,6 +107,7 @@ services:
       - ./data:/data
       - ./uploads:/uploads
     environment:
+      - BASE_URL=http://localhost:3000
       - PUID=1000
       - PGID=1000
       # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
@@ -116,7 +117,7 @@ services:
 docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser - no configuration required.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 📖 **Full installation guide**: [docs.skysend.ch/user-guide/getting-started](https://docs.skysend.ch/user-guide/getting-started)
 

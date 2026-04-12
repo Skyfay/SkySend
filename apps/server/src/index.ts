@@ -156,25 +156,11 @@ app.use(
   serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
 );
 
+// Serve all static files from the Vite build output (logo.svg, favicon.svg,
+// download-sw.js, robots.txt, .well-known/*, etc.) before the SPA fallback.
 app.use(
-  "/favicon.ico",
-  serveStatic({ root: webDistPath, path: "/favicon.ico" }),
-);
-
-// Service Worker must be served with correct MIME type (not as index.html)
-app.use(
-  "/download-sw.js",
-  serveStatic({ root: webDistPath, path: "/download-sw.js" }),
-);
-
-app.use(
-  "/robots.txt",
-  serveStatic({ root: webDistPath, path: "/robots.txt" }),
-);
-
-app.use(
-  "/.well-known/*",
-  serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
+  "*",
+  serveStatic({ root: webDistPath }),
 );
 
 // SPA fallback - serve index.html for all non-API routes
@@ -189,8 +175,10 @@ const server = serve(
     hostname: config.HOST,
   },
   (info) => {
-    console.log(`[skysend] Server running at http://${config.HOST}:${info.port}`);
+    console.log(`[skysend] Server running at ${config.BASE_URL}`);
+    console.log(`[skysend] Listening on http://${config.HOST}:${info.port}`);
     console.log(`[skysend] Data directory: ${resolve(config.DATA_DIR)}`);
+    console.log(`[skysend] Uploads directory: ${resolve(config.UPLOADS_DIR)}`);
     console.log(`[skysend] Max file size: ${(config.MAX_FILE_SIZE / (1024 ** 2)).toFixed(0)} MB`);
     if (config.UPLOAD_QUOTA_BYTES > 0) {
       console.log(`[skysend] Upload quota: ${(config.UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.UPLOAD_QUOTA_WINDOW}s`);

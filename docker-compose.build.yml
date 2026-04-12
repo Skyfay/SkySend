@@ -1,3 +1,4 @@
+# docker compose -f docker-compose.build.yml up --build
 services:
   skysend:
     build: .
@@ -6,6 +7,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - BASE_URL=http://localhost:3000
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
       - MAX_FILE_SIZE=10GB
@@ -15,10 +17,18 @@ services:
       - DOWNLOAD_OPTIONS=10,50,1000
       - DEFAULT_DOWNLOAD=50
       - UPLOAD_QUOTA_BYTES=10GB
-      - CUSTOM_TITLE=SkySend Test
       - RATE_LIMIT_MAX=600
     #  - PUID=${PUID:-1001}
     #  - PGID=${PGID:-1001}
+      - CUSTOM_TITLE=SkySend Build
+      - CUSTOM_COLOR=ff5f5a
+      #CUSTOM_LOGO=
+      - CUSTOM_PRIVACY=https://skysend.ch
+      - CUSTOM_LEGAL=https://skysend.ch
+      - CUSTOM_LINK_URL=https://skysend.ch
+      - CUSTOM_LINK_NAME=Build
+      - RATE_LIMIT_MAX=600
+      - CORS_ORIGINS=http://localhost:5173
     volumes:
       - ./test/data:/data
       - ./test/uploads:/uploads

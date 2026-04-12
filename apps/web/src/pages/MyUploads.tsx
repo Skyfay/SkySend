@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Loader2, Inbox } from "lucide-react";
+import { FolderOpen, Inbox } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UploadCard } from "@/components/UploadCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";

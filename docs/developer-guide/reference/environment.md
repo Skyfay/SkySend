@@ -31,9 +31,9 @@ All environment variables are validated on startup using Zod. Invalid values cau
 
 | Property | Value |
 | --- | --- |
-| Required | No |
+| Required | **Yes** |
 | Type | URL |
-| Default | `http://localhost:3000` |
+| Default | - |
 | Description | Public URL of the instance. Trailing slashes are stripped automatically. |
 
 ### DATA_DIR

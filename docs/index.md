@@ -64,6 +64,7 @@ Get SkySend running in seconds with Docker:
 
 ```bash [Docker Run]
 docker run -d --name skysend -p 3000:3000 \
+  -e BASE_URL=http://localhost:3000 \
   -v "$(pwd)/data:/data" \
   -v "$(pwd)/uploads:/uploads" \
   skyfay/skysend:latest
@@ -81,8 +82,7 @@ services:
       - ./data:/data
       - ./uploads:/uploads
     environment:
-      - PUID=1000
-      - PGID=1000
+      - BASE_URL=http://localhost:3000
 ```
 
 :::

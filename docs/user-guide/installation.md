@@ -27,8 +27,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATA_DIR=/data
-      - UPLOADS_DIR=/uploads
+      - BASE_URL=http://localhost:3000
+      # - DATA_DIR=/data            # Optional: Custom data directory (for the skysend.db SQLite file)
+      # - UPLOADS_DIR=/uploads      # Optional: Custom data and uploads directories
       # - MAX_FILE_SIZE=2GB         # Optional: Max upload size
       # - UPLOAD_QUOTA_BYTES=10GB   # Optional: Per-IP quota per 24h
       # - TRUST_PROXY=true          # Optional: If behind a reverse proxy
@@ -44,6 +45,7 @@ docker run -d \
   --name skysend \
   --restart always \
   -p 3000:3000 \
+  -e BASE_URL=http://localhost:3000 \
   -e DATA_DIR=/data \
   -e UPLOADS_DIR=/uploads \
   -v "$(pwd)/data:/data" \

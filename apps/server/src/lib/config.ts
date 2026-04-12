@@ -38,8 +38,8 @@ const configSchema = z.object({
 
   BASE_URL: z
     .string()
-    .url()
-    .default("http://localhost:3000")
+    .min(1, "BASE_URL is required (e.g. https://send.example.com)")
+    .url("BASE_URL must be a valid URL (e.g. https://send.example.com)")
     .transform((v) => v.replace(/\/+$/, "")),
 
   CORS_ORIGINS: z

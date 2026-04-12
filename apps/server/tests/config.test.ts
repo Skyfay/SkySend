@@ -10,8 +10,8 @@ describe("config", () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     // Vitest/Vite injects BASE_URL="/", which conflicts with our config's BASE_URL (a full URL).
-    // Remove it so the Zod default applies.
-    delete process.env.BASE_URL;
+    // Set a valid BASE_URL for all tests since it's required.
+    process.env.BASE_URL = "http://localhost:3000";
   });
 
   afterEach(() => {
@@ -119,6 +119,11 @@ describe("config", () => {
 
     it("should reject invalid BASE_URL", async () => {
       process.env.BASE_URL = "not-a-url";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should reject missing BASE_URL", async () => {
+      delete process.env.BASE_URL;
       await expect(loadFreshConfig()).rejects.toThrow();
     });
 
