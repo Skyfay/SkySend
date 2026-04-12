@@ -71,6 +71,19 @@ export function useUpload() {
     });
   }, []);
 
+  const cancel = useCallback(() => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    setState({
+      phase: "idle",
+      progress: 0,
+      speed: null,
+      shareLink: null,
+      error: null,
+      uploadId: null,
+    });
+  }, []);
+
   const upload = useCallback(async (options: UploadOptions) => {
     const { files, maxDownloads, expireSec, password } = options;
 
@@ -251,5 +264,5 @@ export function useUpload() {
     }
   }, []);
 
-  return { ...state, upload, reset };
+  return { ...state, upload, reset, cancel };
 }

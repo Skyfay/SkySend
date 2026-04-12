@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,10 +125,74 @@ export function UploadPage() {
     setQuotaRefreshKey((k) => k + 1);
   };
 
+  const handleCancel = () => {
+    uploadHook.cancel();
+  };
+
   // Show share link when done
   if (uploadHook.phase === "done" && uploadHook.shareLink) {
     return <ShareLink link={uploadHook.shareLink} onNewUpload={handleNewUpload} />;
   }
+
+  // Dedicated upload-in-progress view
+  if (isUploading) {
+    const fileCount = files.length;
+    const fileName = fileCount === 1 ? files[0]!.name : undefined;
+
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            <Shield className="h-7 w-7 text-primary" />
+            {t("upload.title")}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t("common.tagline")}</p>
+        </div>
+
+        <Card>
+          <CardContent className="space-y-6 pt-6">
+            {/* File info */}
+            <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4">
+              {fileCount > 1 ? (
+                <FolderArchive className="h-10 w-10 shrink-0 text-primary" />
+              ) : (
+                <FileIcon className="h-10 w-10 shrink-0 text-primary" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {fileName ?? t("upload.selectedFiles", { count: fileCount })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatBytes(totalSize)}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <UploadProgress
+              phase={uploadHook.phase}
+              progress={uploadHook.progress}
+              speed={uploadHook.speed}
+            />
+
+            {/* Cancel button */}
+            <Button
+              onClick={handleCancel}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <X className="mr-2 h-5 w-5" />
+              {t("upload.cancel")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state - show inline on idle form
+  // (falls through to the form below)
 
   return (
     <div className="space-y-6">
@@ -151,7 +215,7 @@ export function UploadPage() {
             onFilesChange={setFiles}
             maxFiles={config.maxFilesPerUpload}
             maxSize={config.maxFileSize}
-            disabled={isUploading}
+            disabled={false}
           />
 
           {/* Validation errors */}
@@ -181,7 +245,7 @@ export function UploadPage() {
             maxDownloads={maxDownloads}
             onExpireChange={setExpireSec}
             onDownloadsChange={setMaxDownloads}
-            disabled={isUploading}
+            disabled={false}
           />
 
           {/* Password */}
@@ -198,7 +262,6 @@ export function UploadPage() {
                 id="password-toggle"
                 checked={passwordEnabled}
                 onCheckedChange={setPasswordEnabled}
-                disabled={isUploading}
               />
             </div>
             {passwordEnabled && (
@@ -208,7 +271,6 @@ export function UploadPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t("upload.passwordPlaceholder")}
-                  disabled={isUploading}
                   autoComplete="off"
                 />
                 <button
@@ -227,15 +289,6 @@ export function UploadPage() {
             )}
           </div>
 
-          {/* Progress */}
-          {isUploading && (
-            <UploadProgress
-              phase={uploadHook.phase}
-              progress={uploadHook.progress}
-              speed={uploadHook.speed}
-            />
-          )}
-
           {/* Error */}
           {uploadHook.phase === "error" && uploadHook.error && (
             <p className="text-sm text-destructive-foreground" role="alert">
@@ -244,21 +297,15 @@ export function UploadPage() {
           )}
 
           {/* Upload button */}
-          {!isUploading && (
-            <Button
-              onClick={handleUpload}
-              disabled={!canUpload}
-              className="w-full"
-              size="lg"
-            >
-              {isUploading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Shield className="mr-2 h-5 w-5" />
-              )}
-              {t("upload.uploading").replace("...", "")}
-            </Button>
-          )}
+          <Button
+            onClick={handleUpload}
+            disabled={!canUpload}
+            className="w-full"
+            size="lg"
+          >
+            <Shield className="mr-2 h-5 w-5" />
+            {t("upload.startUpload")}
+          </Button>
         </CardContent>
       </Card>
     </div>
