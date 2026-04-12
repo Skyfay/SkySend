@@ -12,8 +12,6 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
@@ -102,10 +100,7 @@ export function DownloadPage() {
       </h1>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t("download.fileInfo")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {/* Password prompt */}
           {downloadHook.phase === "needs-password" && (
             <PasswordPrompt

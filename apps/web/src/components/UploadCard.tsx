@@ -9,7 +9,9 @@ import {
   Loader2,
   Clock,
   Download,
+  QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +33,7 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showQrDialog, setShowQrDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const shareLink = `${window.location.origin}/d/${upload.id}#${upload.secret}`;
@@ -118,8 +121,26 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setShowQrDialog(true)}
+          >
+            <QrCode className="h-4 w-4" />
+            <span className="sr-only">QR</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={shareLink}>
+              <Download className="h-4 w-4" />
+              <span className="sr-only">{t("common.download")}</span>
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowDeleteDialog(true)}
-            className="text-destructive-foreground hover:bg-destructive/10"
+            className="px-2.5 text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
             <Trash2 className="h-4 w-4" />
             <span className="sr-only">{t("common.delete")}</span>
@@ -153,6 +174,20 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
               {t("common.delete")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR code dialog */}
+      <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <div className="rounded-lg bg-white p-3">
+              <QRCodeSVG value={shareLink} size={240} level="L" />
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

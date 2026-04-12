@@ -9,6 +9,7 @@
     "copy": "Copy",
     "copied": "Copied!",
     "delete": "Delete",
+    "download": "Download",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
@@ -47,6 +48,7 @@
   "download": {
     "title": "Download File",
     "fileInfo": "File Information",
+    "encryptedFile": "Encrypted file",
     "size": "Size",
     "downloads": "Downloads",
     "expires": "Expires",

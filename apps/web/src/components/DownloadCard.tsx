@@ -68,7 +68,7 @@ export function DownloadCard({
                   </ul>
                 </div>
               ) : (
-                <p className="text-muted-foreground">{t("download.fileInfo")}</p>
+                <p className="text-muted-foreground">{t("download.encryptedFile")}</p>
               )}
             </div>
           </div>
