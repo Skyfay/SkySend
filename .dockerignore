@@ -6,6 +6,8 @@ node_modules
 !.env.example
 *.md
 !README.md
+!PHILOSOPHY.md
+!CONTRIBUTING.md
 data
 uploads
 **/data/db
