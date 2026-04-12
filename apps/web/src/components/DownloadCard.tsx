@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Archive,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +14,7 @@ import { formatBytes, formatTimeRemaining } from "@/lib/utils";
 import type { UploadInfo } from "@/lib/api";
 import type { FileMetadata } from "@skysend/crypto";
 import type { DownloadPhase } from "@/hooks/useDownload";
+import { useNavigate } from "react-router-dom";
 
 interface DownloadCardProps {
   info: UploadInfo;
@@ -32,6 +34,7 @@ export function DownloadCard({
   onDownload,
 }: DownloadCardProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const isDownloading = phase === "downloading";
   const isDone = phase === "done";
@@ -113,9 +116,16 @@ export function DownloadCard({
 
       {/* Done */}
       {isDone && (
-        <div className="flex items-center gap-2 rounded-lg bg-success/10 p-4 text-success">
-          <CheckCircle2 className="h-5 w-5" />
-          <span className="font-medium">{t("download.complete")}</span>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold text-primary">
+            <CheckCircle2 className="h-5 w-5" />
+            <span>{t("download.complete")}</span>
+          </div>
+
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+            <Plus className="mr-1 h-4 w-4" />
+            {t("upload.newUpload")}
+          </Button>
         </div>
       )}
 

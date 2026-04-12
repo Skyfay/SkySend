@@ -48,13 +48,33 @@ const app = new Hono();
 
 // Global middleware
 app.use("*", logger());
-app.use("*", secureHeaders());
+app.use(
+  "*",
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      workerSrc: ["'self'", "blob:"],
+      childSrc: ["'self'", "blob:"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+    strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",
+    xFrameOptions: "DENY",
+  }),
+);
 app.use(
   "*",
   cors({
     origin: (origin) => {
       const allowed = [config.BASE_URL, ...config.CORS_ORIGINS];
-      return allowed.includes(origin) ? origin : config.BASE_URL;
+      return allowed.includes(origin) ? origin : null;
     },
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: [
@@ -147,6 +167,16 @@ app.use(
   serveStatic({ root: webDistPath, path: "/download-sw.js" }),
 );
 
+app.use(
+  "/robots.txt",
+  serveStatic({ root: webDistPath, path: "/robots.txt" }),
+);
+
+app.use(
+  "/.well-known/*",
+  serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
+);
+
 // SPA fallback - serve index.html for all non-API routes
 app.get("*", serveStatic({ root: webDistPath, path: "/index.html" }));
 
@@ -168,11 +198,14 @@ const server = serve(
   },
 );
 
-// Disable Node.js default timeouts - large file uploads can take a long time
+// Timeout tuning for large file uploads over slow connections:
+// - headersTimeout: 60s to receive HTTP headers (prevents Slowloris attacks)
+// - requestTimeout: 0 (disabled) - uploads can take hours on slow connections
+// - timeout: 0 (disabled) - socket inactivity handled by Node.js keep-alive defaults
 const nodeServer = server as unknown as import("node:http").Server;
-nodeServer.timeout = 0;
+nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;
-nodeServer.headersTimeout = 0;
+nodeServer.timeout = 0;
 
 // ── Graceful Shutdown ──────────────────────────────────
 

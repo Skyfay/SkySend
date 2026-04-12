@@ -118,7 +118,11 @@ export function createUploadQuota(config: Config) {
     }
 
     // Reject uploads that would exceed the remaining quota
-    const contentLength = parseInt(c.req.header("Content-Length") ?? "0", 10);
+    // X-Content-Length is used for chunked uploads (init declares total size)
+    const contentLength = parseInt(
+      c.req.header("X-Content-Length") ?? c.req.header("Content-Length") ?? "0",
+      10,
+    );
     if (contentLength > 0 && entry.bytesUsed + contentLength > config.UPLOAD_QUOTA_BYTES) {
       return c.json(
         { error: "File size exceeds remaining quota." },
