@@ -12,6 +12,10 @@ const configResponseSchema = z.object({
   uploadQuotaWindow: z.number(),
   customColor: z.string().nullable(),
   customLogo: z.string().nullable(),
+  customPrivacy: z.string().nullable(),
+  customLegal: z.string().nullable(),
+  customLinkUrl: z.string().nullable(),
+  customLinkName: z.string().nullable(),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;

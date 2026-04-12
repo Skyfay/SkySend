@@ -111,5 +111,10 @@
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System"
+  },
+  "footer": {
+    "privacy": "Datenschutz",
+    "legal": "Impressum",
+    "source": "Quellcode"
   }
 }

@@ -111,5 +111,10 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "legal": "Legal Notice",
+    "source": "Source Code"
   }
 }

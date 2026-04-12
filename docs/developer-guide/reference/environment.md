@@ -195,6 +195,46 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Validation | Must be a URL (`https://...`) or an absolute path (`/...`) |
 | Description | URL or path to a custom logo image displayed in the web app header and as favicon. For local files, place them in the `public/` directory (e.g. `public/custom-logo.svg`) and reference as `/custom-logo.svg`. |
 
+### CUSTOM_PRIVACY
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | - (not shown in footer) |
+| Validation | Must be a valid URL (`https://...`) |
+| Description | URL to your privacy policy page. When set, a "Privacy Policy" link is displayed in the footer. |
+
+### CUSTOM_LEGAL
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | - (not shown in footer) |
+| Validation | Must be a valid URL (`https://...`) |
+| Description | URL to your legal notice / impressum page. When set, a "Legal Notice" link is displayed in the footer. |
+
+### CUSTOM_LINK_URL
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | - (not shown in footer) |
+| Validation | Must be a valid URL (`https://...`) |
+| Description | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
+
+### CUSTOM_LINK_NAME
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | String |
+| Default | - |
+| Validation | Max 50 characters |
+| Description | Display text for the custom footer link defined by `CUSTOM_LINK_URL`. Both variables must be set for the link to appear. |
+
 ### PUID
 
 | Property | Value |
@@ -224,3 +264,7 @@ All environment variables are validated on startup using Zod. Invalid values cau
 - `BASE_URL` must be a valid URL
 - `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
+- `CUSTOM_PRIVACY` must be a valid URL
+- `CUSTOM_LEGAL` must be a valid URL
+- `CUSTOM_LINK_URL` must be a valid URL
+- `CUSTOM_LINK_NAME` must be at most 50 characters

@@ -22,6 +22,10 @@ configRoute.get("/", (c) => {
     uploadQuotaWindow: config.UPLOAD_QUOTA_WINDOW,
     customColor: config.CUSTOM_COLOR ?? null,
     customLogo: config.CUSTOM_LOGO ?? null,
+    customPrivacy: config.CUSTOM_PRIVACY ?? null,
+    customLegal: config.CUSTOM_LEGAL ?? null,
+    customLinkUrl: config.CUSTOM_LINK_URL ?? null,
+    customLinkName: config.CUSTOM_LINK_NAME ?? null,
   });
 });
 

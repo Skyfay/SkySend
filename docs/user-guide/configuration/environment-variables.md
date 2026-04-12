@@ -72,6 +72,10 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_TITLE` | ❌ | `SkySend` | Displayed site title in the UI. |
 | `CUSTOM_COLOR` | ❌ | _(none)_ | Primary brand color as 6-digit hex code (e.g. `46c89d`). The `#` prefix is optional. |
 | `CUSTOM_LOGO` | ❌ | _(none)_ | URL or absolute path to a custom logo (e.g. `https://example.com/logo.svg` or `/custom-logo.svg`). |
+| `CUSTOM_PRIVACY` | ❌ | _(none)_ | URL to your privacy policy page. Shown as a link in the footer if set. |
+| `CUSTOM_LEGAL` | ❌ | _(none)_ | URL to your legal notice / impressum page. Shown as a link in the footer if set. |
+| `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
+| `CUSTOM_LINK_NAME` | ❌ | _(none)_ | Display text for the custom footer link (max 50 characters). |
 
 ::: tip Example
 ```yaml
@@ -80,6 +84,10 @@ environment:
   CUSTOM_TITLE: MyShare
   CUSTOM_COLOR: ff6b35
   CUSTOM_LOGO: "https://example.com/my-logo.svg"
+  CUSTOM_PRIVACY: "https://example.com/privacy"
+  CUSTOM_LEGAL: "https://example.com/impressum"
+  CUSTOM_LINK_URL: "https://example.com"
+  CUSTOM_LINK_NAME: "My Website"
 ```
 
 ::: tip
@@ -104,5 +112,9 @@ SkySend validates all environment variables on startup using Zod:
 - `BASE_URL` must be a valid URL (trailing slashes are stripped automatically)
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
+- `CUSTOM_PRIVACY` must be a valid URL
+- `CUSTOM_LEGAL` must be a valid URL
+- `CUSTOM_LINK_URL` must be a valid URL
+- `CUSTOM_LINK_NAME` must be at most 50 characters
 
 If any variable is invalid, the server will fail to start with a descriptive error message.

@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __APP_VERSION__: string;
+
 interface FileSystemWritableFileStream extends WritableStream {
   write(data: BufferSource | Blob | string | WriteParams): Promise<void>;
   seek(position: number): Promise<void>;

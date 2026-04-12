@@ -133,6 +133,23 @@ const configSchema = z.object({
       "Must be a URL (https://...) or an absolute path (/logo.svg)",
     )
     .optional(),
+
+  CUSTOM_PRIVACY: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LEGAL: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LINK_URL: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
+  CUSTOM_LINK_NAME: z.string().max(50).optional(),
 });
 
 type RawConfig = z.infer<typeof configSchema>;
