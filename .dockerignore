@@ -8,6 +8,9 @@ node_modules
 !README.md
 data
 uploads
+**/data/db
+**/data/uploads
+test
 docs
 .vscode
 .idea

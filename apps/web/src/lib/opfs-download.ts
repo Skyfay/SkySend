@@ -304,7 +304,19 @@ export async function streamDownloadViaSw(
   // Wait for SW to signal completion (dl-done or dl-error).
   // Messages are filtered by downloadId (not clientId, which is empty for navigations).
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    let gotFirstMessage = false;
+
+    // If the SW never responds (e.g. CSP blocks the iframe, SW not active),
+    // reject quickly so fallback tiers can take over.
+    const initialTimeout = setTimeout(() => {
+      if (!gotFirstMessage) {
+        navigator.serviceWorker.removeEventListener("message", handler);
+        iframe.remove();
+        reject(new Error("Service Worker did not respond"));
+      }
+    }, 10_000);
+
+    const completionTimeout = setTimeout(() => {
       navigator.serviceWorker.removeEventListener("message", handler);
       iframe.remove();
       resolve(); // Don't error on timeout - download may have completed
@@ -314,15 +326,20 @@ export async function streamDownloadViaSw(
       const msg = e.data;
       if (msg?.downloadId !== downloadId) return;
 
+      if (!gotFirstMessage) {
+        gotFirstMessage = true;
+        clearTimeout(initialTimeout);
+      }
+
       if (msg.type === "dl-progress") {
         onProgress(msg.progress);
       } else if (msg.type === "dl-done") {
-        clearTimeout(timeout);
+        clearTimeout(completionTimeout);
         navigator.serviceWorker.removeEventListener("message", handler);
         iframe.remove();
         resolve();
       } else if (msg.type === "dl-error") {
-        clearTimeout(timeout);
+        clearTimeout(completionTimeout);
         navigator.serviceWorker.removeEventListener("message", handler);
         iframe.remove();
         reject(new Error(msg.error || "Download failed in SW"));
