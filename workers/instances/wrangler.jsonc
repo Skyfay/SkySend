@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "skysend-instances",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-12",
+  "workers_dev": true,
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SKYSEND_INSTANCES",
+      "id": "21dd0c6faeb8469694754480c0ff1f8b"
+    }
+  ]
+}

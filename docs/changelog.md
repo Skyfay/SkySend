@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.0.1 - Dynamic Instances Page
+*Release: In Progress*
+
+### ✨ Features
+- **docs**: Added Cloudflare Worker that fetches instance data (version, config, enabled services) hourly and caches it in KV
+- **docs**: Instances page now loads all data from a single cached API endpoint instead of querying each instance individually
+- **docs**: Instance limits (max file size, quota, expiry, downloads) are now fetched dynamically from each instance's `/api/config` endpoint
+- **docs**: Added service filter (All / Files / Notes) to instances page based on each instance's `enabledServices` configuration
+- **docs**: Added skeleton loading animation while instance data is being fetched
+- **docs**: Instance list is now maintained via `docs/public/instances.json` - users can add instances via pull request
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.0.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.0.0 - Encrypted Notes, Text, Passwords, Code Snippets, and SSH Keys
 *Released: April 13, 2026*
 

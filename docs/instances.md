@@ -8,7 +8,7 @@ aside: false
 A list of publicly available SkySend instances. If you don't want to self-host, you can use one of these.
 
 ::: tip Want to list your instance?
-Open a [GitHub Issue](https://github.com/Skyfay/SkySend/issues) or submit a pull request to add your public instance to this list.
+Open a [GitHub Issue](https://github.com/Skyfay/SkySend/issues) or submit a pull request adding your instance to [`docs/public/instances.json`](https://github.com/Skyfay/SkySend/blob/main/docs/public/instances.json).
 :::
 
 ## Available Instances
@@ -20,7 +20,7 @@ import InstancesTable from './.vitepress/components/InstancesTable.vue'
 <InstancesTable />
 
 ::: info
-The version badge is fetched live from each instance's `/api/health` endpoint. If an instance shows **offline**, it may be temporarily unavailable.
+Instance data (version, limits, enabled services) is fetched automatically every hour from each instance's API. If an instance shows **offline**, it may be temporarily unavailable.
 :::
 
 ::: warning Disclaimer
