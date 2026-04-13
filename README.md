@@ -21,8 +21,10 @@
 </p>
 
 <p align="center">
+  <a href="https://skysend.ch">Website</a> •
   <a href="https://docs.skysend.ch">Documentation</a> •
   <a href="https://docs.skysend.ch/user-guide/getting-started">Quick Start</a> •
+  <a href="https://docs.skysend.ch/instances">Public Instances</a> •
   <a href="https://docs.skysend.ch/changelog">Changelog</a> •
   <a href="https://docs.skysend.ch/roadmap">Roadmap</a>
 </p>
