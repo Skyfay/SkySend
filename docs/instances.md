@@ -20,9 +20,9 @@ import InstancesTable from './.vitepress/components/InstancesTable.vue'
 <InstancesTable />
 
 ::: info
-Instance data (version, limits, enabled services) is fetched automatically every hour from each instance's API. If an instance shows **offline**, it may be temporarily unavailable.
+Instance data (version, limits, enabled services) is fetched automatically every 30 minutes from each instance's API. If an instance shows **offline**, it may be temporarily unavailable.
 :::
 
 ::: warning Disclaimer
-Public instances are operated by independent parties. SkySend is end-to-end encrypted, so instance operators cannot access your file contents. However, availability, uptime and data retention are not guaranteed by the SkySend project.
+**Community** instances are operated by independent parties. SkySend is end-to-end encrypted, so instance operators cannot access your file contents. However, availability, uptime and data retention are not guaranteed by the SkySend project. **Official** instances (marked in blue) are operated directly by the SkySend project.
 :::

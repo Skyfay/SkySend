@@ -19,7 +19,7 @@
     }
   },
   "triggers": {
-    "crons": ["0 * * * *"]
+    "crons": ["*/30 * * * *"]
   },
   "kv_namespaces": [
     {

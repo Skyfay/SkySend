@@ -13,6 +13,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Added skeleton loading animation while instance data is being fetched
 - **docs**: Instance list is now maintained via `docs/public/instances.json` - users can add instances via pull request
 - **docs**: Instance cards show separate Files and Notes stats sections, each only visible when the service is enabled
+- **docs**: Instance cards show "Official" or "Community" badge, with official instances (skysend.ch) always sorted first
 
 ### 🐳 Docker
 

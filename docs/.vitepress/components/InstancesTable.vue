@@ -33,11 +33,23 @@ const instances = ref<Instance[]>([])
 const lastUpdated = ref<string | null>(null)
 const filter = ref<'all' | 'file' | 'note'>('all')
 
+function isOfficial(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith('skysend.ch')
+  } catch {
+    return false
+  }
+}
+
 const filteredInstances = computed(() => {
-  if (filter.value === 'all') return instances.value
-  return instances.value.filter((inst) =>
-    inst.enabledServices.includes(filter.value),
-  )
+  const list = filter.value === 'all'
+    ? instances.value
+    : instances.value.filter((inst) => inst.enabledServices.includes(filter.value))
+  return [...list].sort((a, b) => {
+    const aOff = isOfficial(a.url) ? 0 : 1
+    const bOff = isOfficial(b.url) ? 0 : 1
+    return aOff - bOff
+  })
 })
 
 function formatBytes(bytes: number | null): string {
@@ -140,6 +152,9 @@ onMounted(async () => {
           <a :href="inst.url" target="_blank" rel="noopener noreferrer">{{ inst.name }}</a>
           <span v-if="inst.online && inst.version" class="badge version">v{{ inst.version }}</span>
           <span v-else class="badge offline">offline</span>
+          <span class="badge-spacer"></span>
+          <span v-if="isOfficial(inst.url)" class="badge official">Official</span>
+          <span v-else class="badge community">Community</span>
         </div>
         <div class="card-subtitle">
           {{ inst.country }}
@@ -384,6 +399,20 @@ onMounted(async () => {
 .badge.offline {
   background: var(--vp-c-danger-soft);
   color: var(--vp-c-danger-1);
+}
+
+.badge-spacer {
+  flex: 1;
+}
+
+.badge.official {
+  background: rgba(56, 120, 206, 0.15);
+  color: #5b9cf0;
+}
+
+.badge.community {
+  background: rgba(148, 100, 220, 0.12);
+  color: #b08ce0;
 }
 
 .empty-state {
