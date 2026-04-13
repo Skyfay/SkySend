@@ -24,6 +24,7 @@ All notable changes to SkySend are documented here.
 - **server**: Added unlimited views option (`maxViews: 0`) for notes - notes expire only by time, not by view count
 - **web**: View selector shows "Unlimited" option when `0` is included in `NOTE_VIEW_OPTIONS`
 - **web**: Added translations for Spanish, French, Finnish, Swedish, Norwegian, Dutch, Italian, and Polish
+- **web**: Added syntax highlighting with line numbers for code notes (auto-detects 22 languages)
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
