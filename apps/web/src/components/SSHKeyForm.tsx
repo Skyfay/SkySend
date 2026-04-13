@@ -10,12 +10,15 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Wand2,
+  ClipboardPaste,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,14 +29,16 @@ import {
 import { ShareLink } from "@/components/ShareLink";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
   generateRSAKeyPair,
   type SSHKeyPair,
 } from "@/lib/ssh-keygen";
 
+type Mode = "paste" | "generate";
 type Algorithm = "ed25519" | "rsa";
+type RSABits = 1024 | 2048 | 4096;
 type ShareMode = "both" | "public";
 
 export function SSHKeyForm() {
@@ -41,8 +46,15 @@ export function SSHKeyForm() {
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
 
-  // Generation config
+  // Mode toggle
+  const [mode, setMode] = useState<Mode>("generate");
+
+  // Paste mode
+  const [pasteContent, setPasteContent] = useState("");
+
+  // Generate config
   const [algorithm, setAlgorithm] = useState<Algorithm>("ed25519");
+  const [rsaBits, setRsaBits] = useState<RSABits>(4096);
   const [comment, setComment] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [showPassphrase, setShowPassphrase] = useState(false);
@@ -52,7 +64,7 @@ export function SSHKeyForm() {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
-  // Share settings
+  // Share settings (used by both modes)
   const [shareMode, setShareMode] = useState<ShareMode>("both");
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
@@ -82,13 +94,17 @@ export function SSHKeyForm() {
     [],
   );
 
-  // Initialize defaults when config loads
   useEffect(() => {
     if (config && expireSec === null) setExpireSec(config.noteDefaultExpire);
     if (config && maxViews === null) setMaxViews(config.noteDefaultViews);
   }, [config, expireSec, maxViews]);
 
   if (!config || expireSec === null || maxViews === null) return null;
+
+  const isSubmitting =
+    noteHook.phase === "encrypting" || noteHook.phase === "uploading";
+
+  // --- Generate mode handlers ---
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -101,7 +117,7 @@ export function SSHKeyForm() {
               passphrase || undefined,
             )
           : await generateRSAKeyPair(
-              4096,
+              rsaBits,
               comment || undefined,
               passphrase || undefined,
             );
@@ -120,18 +136,27 @@ export function SSHKeyForm() {
     setGenError(null);
   };
 
-  const shareContent =
-    shareMode === "both" && keyPair
-      ? `${keyPair.publicKey}\n\n${keyPair.privateKey}`
-      : keyPair?.publicKey ?? "";
+  // --- Content for note upload ---
 
-  const isSubmitting =
-    noteHook.phase === "encrypting" || noteHook.phase === "uploading";
+  const getSubmitContent = (): string => {
+    if (mode === "paste") return pasteContent;
+    if (!keyPair) return "";
+    return shareMode === "both"
+      ? `${keyPair.publicKey}\n\n${keyPair.privateKey}`
+      : keyPair.publicKey;
+  };
+
+  const canSubmit =
+    mode === "paste"
+      ? pasteContent.length > 0 &&
+        new TextEncoder().encode(pasteContent).length <= config.noteMaxSize
+      : keyPair !== null;
 
   const handleSubmit = () => {
-    if (!keyPair) return;
+    const content = getSubmitContent();
+    if (!content) return;
     noteHook.upload({
-      content: shareContent,
+      content,
       contentType: "code",
       maxViews,
       expireSec,
@@ -142,21 +167,190 @@ export function SSHKeyForm() {
   const handleNewNote = () => {
     noteHook.reset();
     setKeyPair(null);
+    setPasteContent("");
     setPassphrase("");
     setComment("");
     setNotePassword("");
     setNotePasswordEnabled(false);
   };
 
-  // Show share link when done
   if (noteHook.phase === "done" && noteHook.shareLink) {
     return <ShareLink link={noteHook.shareLink} onNewUpload={handleNewNote} />;
   }
 
+  const pasteContentBytes = new TextEncoder().encode(pasteContent).length;
+  const pasteSizeExceeded = pasteContentBytes > config.noteMaxSize;
+
+  // --- Shared UI pieces ---
+
+  const renderShareSettings = () => (
+    <>
+      {/* Expiry + Max Views */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>{t("note.expiry")}</Label>
+          <Select
+            value={String(expireSec)}
+            onValueChange={(v) => setExpireSec(parseInt(v, 10))}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {config.noteExpireOptions.map((sec) => (
+                <SelectItem key={sec} value={String(sec)}>
+                  {formatDuration(sec)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t("note.maxViews")}</Label>
+          <Select
+            value={String(maxViews)}
+            onValueChange={(v) => setMaxViews(parseInt(v, 10))}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {config.noteViewOptions.map((num) => (
+                <SelectItem key={num} value={String(num)}>
+                  {num === 0
+                    ? t("note.unlimited")
+                    : num === 1
+                      ? t("note.burnAfterReading")
+                      : String(num)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Note Password */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            {t("upload.password")}
+          </Label>
+          <Switch
+            checked={notePasswordEnabled}
+            onCheckedChange={setNotePasswordEnabled}
+            disabled={isSubmitting}
+          />
+        </div>
+        {notePasswordEnabled && (
+          <div className="relative">
+            <Input
+              type={showNotePassword ? "text" : "password"}
+              value={notePassword}
+              onChange={(e) => setNotePassword(e.target.value)}
+              placeholder={t("upload.passwordPlaceholder")}
+              autoComplete="off"
+              disabled={isSubmitting}
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowNotePassword(!showNotePassword)}
+            >
+              {showNotePassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {noteHook.phase === "error" && noteHook.error && (
+        <p className="text-sm text-destructive-foreground" role="alert">
+          {noteHook.error}
+        </p>
+      )}
+    </>
+  );
+
   return (
     <Card>
       <CardContent className="space-y-6 pt-6">
-        {!keyPair ? (
+        {/* Mode toggle */}
+        <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+          {([
+            { key: "generate" as const, icon: Wand2, label: t("sshKey.modeGenerate") },
+            { key: "paste" as const, icon: ClipboardPaste, label: t("sshKey.modePaste") },
+          ]).map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setMode(key); setKeyPair(null); }}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                mode === key
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ====== PASTE MODE ====== */}
+        {mode === "paste" && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="ssh-paste">{t("sshKey.pasteLabel")}</Label>
+                <span
+                  className={`text-xs ${pasteSizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
+                >
+                  {formatBytes(pasteContentBytes)} / {formatBytes(config.noteMaxSize)}
+                </span>
+              </div>
+              <Textarea
+                id="ssh-paste"
+                value={pasteContent}
+                onChange={(e) => setPasteContent(e.target.value)}
+                placeholder={t("sshKey.pastePlaceholder")}
+                className="min-h-50 resize-y font-mono text-sm"
+                disabled={isSubmitting}
+              />
+              {pasteSizeExceeded && (
+                <p className="text-sm text-destructive-foreground" role="alert">
+                  {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
+                </p>
+              )}
+            </div>
+
+            {renderShareSettings()}
+
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+              className="w-full"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-5 w-5" />
+              )}
+              {isSubmitting ? t("note.creating") : t("sshKey.createNote")}
+            </Button>
+          </>
+        )}
+
+        {/* ====== GENERATE MODE ====== */}
+        {mode === "generate" && !keyPair && (
           <>
             {/* Algorithm */}
             <div className="space-y-2">
@@ -171,10 +365,31 @@ export function SSHKeyForm() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ed25519">Ed25519</SelectItem>
-                  <SelectItem value="rsa">RSA-4096</SelectItem>
+                  <SelectItem value="rsa">RSA</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* RSA bits */}
+            {algorithm === "rsa" && (
+              <div className="space-y-2">
+                <Label>{t("sshKey.keySize")}</Label>
+                <Select
+                  value={String(rsaBits)}
+                  onValueChange={(v) => setRsaBits(parseInt(v, 10) as RSABits)}
+                  disabled={generating}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1024">1024 bit</SelectItem>
+                    <SelectItem value="2048">2048 bit</SelectItem>
+                    <SelectItem value="4096">4096 bit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Comment */}
             <div className="space-y-2">
@@ -242,13 +457,18 @@ export function SSHKeyForm() {
               {generating ? t("sshKey.generating") : t("sshKey.generate")}
             </Button>
           </>
-        ) : (
+        )}
+
+        {/* ====== GENERATE MODE - KEY DISPLAY ====== */}
+        {mode === "generate" && keyPair && (
           <>
             {/* Key Info */}
             <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <KeyRound className="h-4 w-4 text-primary" />
-                {keyPair.algorithm === "ed25519" ? "Ed25519" : "RSA-4096"}
+                {keyPair.algorithm === "ed25519"
+                  ? "Ed25519"
+                  : `RSA-${rsaBits}`}
               </div>
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 {keyPair.fingerprint}
@@ -334,97 +554,7 @@ export function SSHKeyForm() {
               </div>
             </div>
 
-            {/* Expiry + Max Views */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t("note.expiry")}</Label>
-                <Select
-                  value={String(expireSec)}
-                  onValueChange={(v) => setExpireSec(parseInt(v, 10))}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {config.noteExpireOptions.map((sec) => (
-                      <SelectItem key={sec} value={String(sec)}>
-                        {formatDuration(sec)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t("note.maxViews")}</Label>
-                <Select
-                  value={String(maxViews)}
-                  onValueChange={(v) => setMaxViews(parseInt(v, 10))}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {config.noteViewOptions.map((num) => (
-                      <SelectItem key={num} value={String(num)}>
-                        {num === 0
-                          ? t("note.unlimited")
-                          : num === 1
-                            ? t("note.burnAfterReading")
-                            : String(num)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Note Password */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  {t("upload.password")}
-                </Label>
-                <Switch
-                  checked={notePasswordEnabled}
-                  onCheckedChange={setNotePasswordEnabled}
-                  disabled={isSubmitting}
-                />
-              </div>
-              {notePasswordEnabled && (
-                <div className="relative">
-                  <Input
-                    type={showNotePassword ? "text" : "password"}
-                    value={notePassword}
-                    onChange={(e) => setNotePassword(e.target.value)}
-                    placeholder={t("upload.passwordPlaceholder")}
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowNotePassword(!showNotePassword)}
-                  >
-                    {showNotePassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Error */}
-            {noteHook.phase === "error" && noteHook.error && (
-              <p className="text-sm text-destructive-foreground" role="alert">
-                {noteHook.error}
-              </p>
-            )}
+            {renderShareSettings()}
 
             {/* Submit + Regenerate */}
             <div className="flex gap-2">
