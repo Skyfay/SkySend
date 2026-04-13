@@ -2,7 +2,7 @@
 
 All notable changes to SkySend are documented here.
 
-## v1.0.2
+## v1.0.2 - Patch Release for CORS correction on Health Endpoint
 *Released: April 13, 2026*
 
 ### 🐛 Bug Fixes
