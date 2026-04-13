@@ -31,6 +31,8 @@ All notable changes to SkySend are documented here.
 
 ### 🧪 Tests
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
+- **server**: Added 33 tests for note API routes (CRUD, view counting, burn-after-reading, auth tokens, password verification, size/expiry/view validation)
+- **server**: Added 4 cleanup tests for note expiry and view limit enforcement
 
 ### 🐳 Docker
 
