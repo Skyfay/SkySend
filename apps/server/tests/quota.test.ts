@@ -14,20 +14,28 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     PORT: 3000,
     HOST: "0.0.0.0",
     BASE_URL: "http://localhost:3000",
+    CORS_ORIGINS: [],
     DATA_DIR: "./data",
-    MAX_FILE_SIZE: 2 * 1024 ** 3,
-    EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
-    DEFAULT_EXPIRE_SEC: 86400,
-    DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
-    DEFAULT_DOWNLOAD: 1,
+    UPLOADS_DIR: "./data/uploads",
+    FILE_MAX_SIZE: 2 * 1024 ** 3,
+    FILE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
+    FILE_DEFAULT_EXPIRE_SEC: 86400,
+    FILE_DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
+    FILE_DEFAULT_DOWNLOAD: 1,
+    FILE_MAX_FILES_PER_UPLOAD: 32,
+    FILE_UPLOAD_QUOTA_BYTES: 1024, // 1 KB quota
+    FILE_UPLOAD_QUOTA_WINDOW: 86400,
+    NOTE_MAX_SIZE: 1024 ** 2,
+    NOTE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
+    NOTE_DEFAULT_EXPIRE_SEC: 86400,
+    NOTE_VIEW_OPTIONS: [1, 2, 3, 5, 10, 20, 50, 100],
+    NOTE_DEFAULT_VIEWS: 1,
     CLEANUP_INTERVAL: 60,
     CUSTOM_TITLE: "SkySend",
     RATE_LIMIT_WINDOW: 60000,
     RATE_LIMIT_MAX: 60,
-    UPLOAD_QUOTA_BYTES: 1024, // 1 KB quota
-    UPLOAD_QUOTA_WINDOW: 86400,
-    MAX_FILES_PER_UPLOAD: 32,
     TRUST_PROXY: false,
+    ENABLED_SERVICES: ["file", "note"] as ("file" | "note")[],
     ...overrides,
   };
 }
@@ -44,7 +52,7 @@ describe("upload quota", () => {
   });
 
   it("should be a no-op when quota is disabled", async () => {
-    const config = makeConfig({ UPLOAD_QUOTA_BYTES: 0 });
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 0 });
     const quota = createUploadQuota(config);
     const app = new Hono();
     app.use("*", quota.middleware);
@@ -55,7 +63,7 @@ describe("upload quota", () => {
   });
 
   it("should allow requests under quota", async () => {
-    const config = makeConfig({ UPLOAD_QUOTA_BYTES: 1024 });
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 1024 });
     const quota = createUploadQuota(config);
     const app = new Hono();
     app.use("*", quota.middleware);
@@ -71,7 +79,7 @@ describe("upload quota", () => {
   });
 
   it("should block when quota is exhausted", async () => {
-    const config = makeConfig({ UPLOAD_QUOTA_BYTES: 1024 });
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 1024 });
     const quota = createUploadQuota(config);
     const app = new Hono();
     app.use("*", quota.middleware);
@@ -94,7 +102,7 @@ describe("upload quota", () => {
   });
 
   it("should track usage incrementally", async () => {
-    const config = makeConfig({ UPLOAD_QUOTA_BYTES: 1000 });
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 1000 });
     const quota = createUploadQuota(config);
     const app = new Hono();
     app.use("*", quota.middleware);
@@ -123,7 +131,7 @@ describe("upload quota", () => {
   });
 
   it("should not record usage when quota is disabled", () => {
-    const config = makeConfig({ UPLOAD_QUOTA_BYTES: 0 });
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 0 });
     const quota = createUploadQuota(config);
     // Should not throw
     quota.recordUsage("some-hashed-ip", 99999);

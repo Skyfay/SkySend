@@ -36,7 +36,7 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const shareLink = `${window.location.origin}/d/${upload.id}#${upload.secret}`;
+  const shareLink = `${window.location.origin}/file/${upload.id}#${upload.secret}`;
 
   const copyLink = async () => {
     try {

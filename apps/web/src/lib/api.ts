@@ -1,15 +1,26 @@
 import { z } from "zod";
+import type { NoteContentType } from "@skysend/crypto";
 
 const configResponseSchema = z.object({
-  maxFileSize: z.number(),
-  maxFilesPerUpload: z.number(),
-  expireOptions: z.array(z.number()),
-  defaultExpire: z.number(),
-  downloadOptions: z.array(z.number()),
-  defaultDownload: z.number(),
+  // Service toggles
+  enabledServices: z.array(z.enum(["file", "note"])),
+  // File configuration
+  fileMaxSize: z.number(),
+  fileMaxFilesPerUpload: z.number(),
+  fileExpireOptions: z.array(z.number()),
+  fileDefaultExpire: z.number(),
+  fileDownloadOptions: z.array(z.number()),
+  fileDefaultDownload: z.number(),
+  fileUploadQuotaBytes: z.number(),
+  fileUploadQuotaWindow: z.number(),
+  // Note configuration
+  noteMaxSize: z.number(),
+  noteExpireOptions: z.array(z.number()),
+  noteDefaultExpire: z.number(),
+  noteViewOptions: z.array(z.number()),
+  noteDefaultViews: z.number(),
+  // General
   customTitle: z.string(),
-  uploadQuotaBytes: z.number(),
-  uploadQuotaWindow: z.number(),
   customColor: z.string().nullable(),
   customLogo: z.string().nullable(),
   customPrivacy: z.string().nullable(),
@@ -200,6 +211,121 @@ export async function deleteUpload(
   ownerToken: string,
 ): Promise<void> {
   const res = await fetch(`/api/upload/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { "X-Owner-Token": ownerToken },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Delete failed" }));
+    throw new ApiError(
+      res.status,
+      (data as { error?: string }).error ?? "Delete failed",
+    );
+  }
+}
+
+// ── Note API ───────────────────────────────────────────
+
+export interface CreateNoteRequest {
+  encryptedContent: string;
+  nonce: string;
+  salt: string;
+  ownerToken: string;
+  authToken: string;
+  contentType: NoteContentType;
+  maxViews: number;
+  expireSec: number;
+  hasPassword: boolean;
+  passwordSalt?: string;
+  passwordAlgo?: string;
+}
+
+export interface CreateNoteResponse {
+  id: string;
+  expiresAt: string;
+}
+
+export async function createNote(
+  data: CreateNoteRequest,
+): Promise<CreateNoteResponse> {
+  const res = await fetch("/api/note", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Failed to create note" }));
+    throw new ApiError(
+      res.status,
+      (body as { error?: string }).error ?? "Failed to create note",
+    );
+  }
+  return (await res.json()) as CreateNoteResponse;
+}
+
+// ── Note Info / View / Password ────────────────────────
+
+const noteInfoResponseSchema = z.object({
+  id: z.string(),
+  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  hasPassword: z.boolean(),
+  passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
+  passwordSalt: z.string().optional(),
+  salt: z.string(),
+  maxViews: z.number(),
+  viewCount: z.number(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+
+export type NoteInfo = z.infer<typeof noteInfoResponseSchema>;
+
+const noteViewResponseSchema = z.object({
+  encryptedContent: z.string(),
+  nonce: z.string(),
+  viewCount: z.number(),
+  maxViews: z.number(),
+});
+
+export type NoteViewResponse = z.infer<typeof noteViewResponseSchema>;
+
+export async function fetchNoteInfo(id: string): Promise<NoteInfo> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}`);
+  return handleResponse(res, noteInfoResponseSchema);
+}
+
+export async function viewNote(
+  id: string,
+  authToken: string,
+): Promise<NoteViewResponse> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}/view`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authToken }),
+  });
+  return handleResponse(res, noteViewResponseSchema);
+}
+
+export async function verifyNotePassword(
+  id: string,
+  authToken: string,
+): Promise<boolean> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authToken }),
+  });
+  if (res.status === 401) return false;
+  if (!res.ok) {
+    throw new ApiError(res.status, "Password verification failed");
+  }
+  return true;
+}
+
+export async function deleteNote(
+  id: string,
+  ownerToken: string,
+): Promise<void> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: { "X-Owner-Token": ownerToken },
   });

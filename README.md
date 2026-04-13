@@ -5,7 +5,7 @@
 <h1 align="center">SkySend</h1>
 
 <p align="center">
-  <strong>Minimalist, end-to-end encrypted, self-hostable file sharing service.</strong>
+  <strong>Minimalist, end-to-end encrypted, self-hostable file and note sharing service.</strong>
 </p>
 
 <p align="center">
@@ -31,9 +31,9 @@
 
 ### What is SkySend?
 
-SkySend is a minimalist, self-hostable file sharing service with end-to-end encryption. Files are encrypted entirely in the browser using AES-256-GCM before they ever reach the server - the server stores only encrypted blobs and never has access to the decryption key.
+SkySend is a minimalist, self-hostable file and note sharing service with end-to-end encryption. Files and notes are encrypted entirely in the browser using AES-256-GCM before they ever reach the server - the server stores only encrypted blobs and never has access to the decryption key.
 
-No accounts required. No telemetry. No external dependencies. Just upload a file, get a link, share it. Links expire automatically after a configurable time or number of downloads.
+No accounts required. No telemetry. No external dependencies. Upload a file, share a note, get a link. Links expire automatically after a configurable time or number of downloads/views.
 
 Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send), SkySend is built from scratch with higher security standards and a minimal, maintainable codebase.
 
@@ -59,11 +59,21 @@ Inspired by [timvisee/send](https://github.com/timvisee/send) (the community for
 - **Password Protection** - optional, GPU-resistant key derivation
 - **Share Links** - copy and share with one click
 
+### 📝 Encrypted Notes
+
+- **Text Notes** - share encrypted text snippets with optional Markdown rendering (GFM support with live preview)
+- **Password Sharing** - store multiple passwords with individual masked display, reveal toggles, copy buttons, and a built-in password generator
+- **Code Snippets** - share code with syntax highlighting (22 auto-detected languages) and line numbers
+- **Markdown** - write and preview Markdown notes with full GitHub Flavored Markdown support
+- **SSH Keys** - generate Ed25519 or RSA key pairs in the browser, or paste existing keys, and share them as encrypted notes
+- **Burn After Reading** - notes that self-destruct after a single view
+- **View Limits** - configurable maximum number of views (including unlimited)
+
 ### 📊 Upload Dashboard
 
-- **No Account Needed** - upload history stored locally in IndexedDB
-- **Live Status** - download counts, remaining downloads, expiry countdowns
-- **Manage Uploads** - re-copy share links or delete uploads
+- **No Account Needed** - upload and note history stored locally in IndexedDB
+- **Live Status** - download/view counts, remaining downloads/views, expiry countdowns
+- **Filter & Manage** - filter by files or notes, re-copy share links, or delete entries
 - **Auto-Cleanup** - expired entries removed automatically
 
 ### 🐳 Docker Ready
@@ -128,6 +138,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Secret Key | 256-bit Random (32 Bytes) |
 | Key Derivation | HKDF-SHA256 |
 | File Encryption | AES-256-GCM, 64KB Record Size |
+| Note Encryption | AES-256-GCM + Random IV |
 | Metadata Encryption | AES-256-GCM + Random IV |
 | Nonce Handling | Counter-based (XOR) |
 | Auth Token | HMAC-SHA256 |

@@ -90,3 +90,28 @@ export function insertTestUpload(
   db.insert(schema.uploads).values(values).run();
   return values;
 }
+
+/** Insert a test note record into the database */
+export function insertTestNote(
+  db: ReturnType<typeof drizzle<typeof schema>>,
+  overrides: Partial<schema.NewNote> = {},
+) {
+  const defaults: schema.NewNote = {
+    id: TEST_UUID,
+    ownerToken: fakeBase64urlToken(),
+    authToken: fakeBase64urlToken(),
+    salt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+    encryptedContent: Buffer.from("encrypted-test-content"),
+    nonce: Buffer.from(crypto.getRandomValues(new Uint8Array(12))),
+    contentType: "text",
+    hasPassword: false,
+    maxViews: 10,
+    viewCount: 0,
+    expiresAt: new Date(Date.now() + 86400 * 1000),
+    createdAt: new Date(),
+  };
+
+  const values = { ...defaults, ...overrides };
+  db.insert(schema.notes).values(values).run();
+  return values;
+}

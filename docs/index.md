@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: "SkySend"
-  text: "Encrypted File Sharing"
-  tagline: Minimalist, self-hostable, end-to-end encrypted file sharing. Zero knowledge - the server never sees your data.
+  text: "Encrypted File & Note Sharing"
+  tagline: Minimalist, self-hostable, end-to-end encrypted file and note sharing. Zero knowledge - the server never sees your data.
   actions:
     - theme: brand
       text: User Guide
@@ -32,12 +32,15 @@ features:
   - icon: 📁
     title: Multi-File & Folder Uploads
     details: Upload multiple files or entire folders. Files are zipped client-side with fflate before encryption - the server sees only one encrypted blob.
+  - icon: 📝
+    title: Encrypted Notes
+    details: Share text, passwords, code, Markdown, or SSH keys with end-to-end encryption. Includes syntax highlighting, password generator, SSH key generation, burn-after-reading, view limits, and password protection.
   - icon: ⏱️
     title: Automatic Expiry
-    details: Uploads expire automatically after a configurable time or download count. No data lingers on the server.
+    details: Uploads and notes expire automatically after a configurable time or download/view count. No data lingers on the server.
   - icon: 📊
     title: Upload Dashboard
-    details: Track your uploads locally via IndexedDB. View download counts, expiry countdowns, and re-copy share links - no account needed.
+    details: Track your uploads and notes locally via IndexedDB. View download/view counts, expiry countdowns, and re-copy share links - no account needed.
   - icon: 🛠️
     title: Admin CLI
     details: Manage uploads, view statistics, trigger cleanup, and inspect configuration from the command line inside the container.

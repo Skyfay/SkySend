@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID } from "./helpers.js";
-import { uploads } from "../src/db/schema.js";
+import { createTestDb, createTestStorage, insertTestUpload, insertTestNote, TEST_UUID } from "./helpers.js";
+import { uploads, notes } from "../src/db/schema.js";
 
 // We need to mock getDb since cleanup.ts imports it directly
 vi.mock("../src/db/index.js", () => ({
@@ -146,5 +146,91 @@ describe("cleanup", () => {
       where: eq(uploads.id, activeId),
     });
     expect(active).toBeDefined();
+  });
+
+  // ── Note Cleanup ──────────────────────────────────────
+
+  it("should delete expired notes", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440010";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(1);
+
+    const result = await dbCtx.db.query.notes.findFirst({
+      where: eq(notes.id, noteId),
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("should delete notes that reached view limit", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440011";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      maxViews: 3,
+      viewCount: 3,
+      expiresAt: new Date(Date.now() + 86400 * 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(1);
+  });
+
+  it("should not delete active notes", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440012";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      maxViews: 10,
+      viewCount: 2,
+      expiresAt: new Date(Date.now() + 86400 * 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(0);
+
+    const result = await dbCtx.db.query.notes.findFirst({
+      where: eq(notes.id, noteId),
+    });
+    expect(result).toBeDefined();
+  });
+
+  it("should not delete unlimited-view notes (maxViews=0)", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440014";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      maxViews: 0,
+      viewCount: 50,
+      expiresAt: new Date(Date.now() + 86400 * 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(0);
+
+    const result = await dbCtx.db.query.notes.findFirst({
+      where: eq(notes.id, noteId),
+    });
+    expect(result).toBeDefined();
+  });
+
+  it("should clean both expired uploads and notes together", async () => {
+    // Expired upload
+    insertTestUpload(dbCtx.db, {
+      id: TEST_UUID,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    await storageCtx.storage.save(TEST_UUID, createStream(new Uint8Array([1])));
+
+    // Expired note
+    const noteId = "550e8400-e29b-41d4-a716-446655440013";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(2);
   });
 });

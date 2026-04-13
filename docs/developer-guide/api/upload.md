@@ -44,7 +44,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 ```json
 {
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "url": "http://localhost:3000/d/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  "url": "http://localhost:3000/file/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 

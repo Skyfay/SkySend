@@ -70,6 +70,65 @@ SkySend uses a tiered approach to handle large file downloads without exhausting
 | 2 | Chrome, Edge (fallback) | `showSaveFilePicker` API | Zero |
 | 3 | Safari default / legacy fallback | Blob in memory | Full file size |
 
+## Note Flow
+
+Notes use the same key derivation and encryption as files, but content is stored in the database instead of the filesystem.
+
+### Create Note
+
+```
+Client                                          Server
+------                                          ------
+1. Generate secret (32 bytes)
+2. Derive metaKey, authKey (HKDF)
+3. Compute authToken, ownerToken
+4. Encrypt note content (AES-256-GCM + random IV)
+5. POST /api/note ------------------>  Store encrypted content in DB
+                                       Create DB record
+                                <----  Return { id, expiresAt }
+6. Build share link: baseUrl/note/:id#secret
+7. Store in IndexedDB (local history)
+```
+
+### View Note
+
+```
+Client                                          Server
+------                                          ------
+1. Parse secret from URL fragment (#)
+2. GET /api/note/:id ----------------->  Return note info
+                                  <----  { salt, contentType, hasPassword, ... }
+3. Derive keys from secret + salt
+4. If password-protected:
+   a. Prompt user for password
+   b. Derive passwordKey
+   c. Recover secret = protectedSecret XOR passwordKey
+   d. POST /api/note/:id/password -->  Verify auth token
+                                  <----  200 OK
+5. POST /api/note/:id/view ---------->  Increment view count atomically
+   (authToken in body)                  Return encrypted content
+                                  <----  { encryptedContent, nonce, viewCount }
+6. Decrypt content (AES-256-GCM)
+7. Render based on contentType:
+   - text: plain text
+   - markdown: rendered GFM
+   - password: masked fields with reveal/copy
+   - code: syntax-highlighted with line numbers
+   - sshkey: structured Public/Private Key sections
+```
+
+### Content Types
+
+Notes support five content types, each with a dedicated UI:
+
+| contentType | Description | Viewer |
+| --- | --- | --- |
+| `text` | Plain text | Whitespace-preserving display |
+| `markdown` | Markdown (GFM) | Rendered HTML via react-markdown |
+| `password` | One or more passwords | Per-password masked display with reveal/copy |
+| `code` | Code snippets | Syntax highlighting (22 languages) with line numbers |
+| `sshkey` | SSH key pairs | Structured Public Key / Private Key sections |
+
 ## Package Dependencies
 
 ```
@@ -100,6 +159,11 @@ apps/server/src/
     exists.ts           # GET  /api/exists     - Check existence
     health.ts           # GET  /api/health     - Health check
     config.ts           # GET  /api/config     - Server limits
+    note.ts             # POST /api/note       - Create note
+                        # GET  /api/note/:id   - Note info
+                        # POST /api/note/:id/view     - View note
+                        # POST /api/note/:id/password - Verify password
+                        # DELETE /api/note/:id        - Delete note
   middleware/
     auth.ts             # Auth + owner token validation
     rate-limit.ts       # Per-IP sliding window rate limiter
@@ -122,8 +186,9 @@ apps/web/src/
   main.tsx              # Entry point
   App.tsx               # React Router setup
   pages/
-    Upload.tsx          # Main upload page
-    Download.tsx        # Download page (/d/:id)
+    Upload.tsx          # Main upload page (tabs: File, Text, Password, Code, SSH Key)
+    Download.tsx        # Download page (/file/:id)
+    NoteView.tsx        # Note view page (/note/:id)
     MyUploads.tsx       # Upload management dashboard
     NotFound.tsx        # 404 page
   components/
@@ -134,10 +199,17 @@ apps/web/src/
     PasswordPrompt.tsx  # Password input dialog
     ExpirySelector.tsx  # Expiry + download limit config
     UploadCard.tsx      # Single upload status card
+    NoteForm.tsx        # Note creation form (text, code, markdown)
+    NoteContent.tsx     # Note content renderer (all 5 content types)
+    NoteCard.tsx        # Note card in My Uploads
+    PasswordForm.tsx    # Password note form (multi-password support)
+    PasswordGenerator.tsx # Password generator with entropy display
+    SSHKeyForm.tsx      # SSH key generation/paste form
     ui/                 # Shadcn UI components
   hooks/
     useUpload.ts        # Upload logic (encrypt + stream)
     useDownload.ts      # Download logic (tier selection + decrypt)
+    useNoteUpload.ts    # Note upload logic (encrypt + submit)
     useUploadHistory.ts # IndexedDB upload history
     useServerConfig.tsx # Fetch server config
     useTheme.tsx        # Dark/light mode
@@ -155,14 +227,22 @@ apps/web/src/
     index.ts            # i18next setup with auto-detection
     en.json             # English translations
     de.json             # German translations
+    es.json             # Spanish translations
+    fr.json             # French translations
+    fi.json             # Finnish translations
+    sv.json             # Swedish translations
+    nb.json             # Norwegian translations
+    nl.json             # Dutch translations
+    it.json             # Italian translations
+    pl.json             # Polish translations
 ```
 
 ## Data Storage
 
 ### Server-Side
 
-- **SQLite database** (`data/skysend.db`) - Upload metadata, tokens, encrypted metadata
-- **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`)
+- **SQLite database** (`data/skysend.db`) - Upload metadata, tokens, encrypted metadata, and encrypted note content
+- **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Notes are stored entirely in the database.
 
 ### Client-Side
 

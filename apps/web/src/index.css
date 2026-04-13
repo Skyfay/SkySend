@@ -22,7 +22,7 @@
   --color-border: oklch(0.922 0 0);
   --color-input: oklch(0.922 0 0);
   --color-ring: oklch(0.696 0.130 167.275);
-  --color-success: oklch(0.627 0.194 149.214);
+  --color-success: oklch(0.696 0.130 167.275);
   --color-success-foreground: oklch(0.985 0 0);
 
   --radius-sm: 0.25rem;
@@ -63,7 +63,7 @@
   --color-border: oklch(0.269 0 0);
   --color-input: oklch(0.269 0 0);
   --color-ring: oklch(0.750 0.130 167.275);
-  --color-success: oklch(0.627 0.194 149.214);
+  --color-success: oklch(0.750 0.130 167.275);
   --color-success-foreground: oklch(0.985 0 0);
 }
 
@@ -88,4 +88,21 @@
   100% {
     transform: translateX(300%);
   }
+}
+
+/* Custom scrollbar matching shadcn ScrollArea style */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 9999px;
+  border: 1px solid transparent;
 }

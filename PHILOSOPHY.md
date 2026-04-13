@@ -2,8 +2,8 @@
 
 ## What this project IS
 
-- A minimal, self-hostable, end-to-end encrypted file sharing service
-- Zero-knowledge: the server never sees your files
+- A minimal, self-hostable, end-to-end encrypted file and note sharing service
+- Zero-knowledge: the server never sees your files or notes
 - No accounts, no tracking, no analytics
 - A single Docker container you can deploy in minutes
 - Open source so anyone can verify the encryption claims
@@ -34,7 +34,7 @@ This project is designed to run on your own hardware. No vendor lock-in, no exte
 
 Before opening an issue, ask yourself:
 
-- Does this serve the core mission of simple, private file sharing?
+- Does this serve the core mission of simple, private file and note sharing?
 - Can this be solved with configuration instead of new code?
 - Does this increase the attack surface?
 - Does this add a required external dependency?

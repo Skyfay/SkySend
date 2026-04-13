@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 import { logger } from "hono/logger";
@@ -24,6 +24,7 @@ import { passwordRoute } from "./routes/password.js";
 import { createDeleteRoute } from "./routes/delete.js";
 import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
+import { noteRoute } from "./routes/note.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -119,6 +120,22 @@ api.use("*", createRateLimiter(config));
 
 api.route("/config", configRoute);
 api.route("/health", healthRoute);
+
+// File service routes - guarded by ENABLED_SERVICES
+const fileServiceGuard = async (c: Context, next: Next) => {
+  if (!config.ENABLED_SERVICES.includes("file")) {
+    return c.json({ error: "File service is disabled" }, 403);
+  }
+  return next();
+};
+api.use("/info/*", fileServiceGuard);
+api.use("/exists/*", fileServiceGuard);
+api.use("/password/*", fileServiceGuard);
+api.use("/meta/*", fileServiceGuard);
+api.use("/download/*", fileServiceGuard);
+api.use("/upload/*", fileServiceGuard);
+api.use("/quota", fileServiceGuard);
+
 api.route("/info", infoRoute);
 api.route("/exists", existsRoute);
 api.route("/password", passwordRoute);
@@ -144,6 +161,15 @@ api.route("/upload", uploadWithQuota);
 
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
+
+// Note routes (E2EE encrypted notes) - guarded by ENABLED_SERVICES
+api.use("/note/*", async (c: Context, next: Next) => {
+  if (!config.ENABLED_SERVICES.includes("note")) {
+    return c.json({ error: "Note service is disabled" }, 403);
+  }
+  return next();
+});
+api.route("/note", noteRoute);
 
 app.route("/api", api);
 
@@ -181,9 +207,10 @@ const server = serve(
     console.log(`[skysend] Listening on http://${config.HOST}:${info.port}`);
     console.log(`[skysend] Data directory: ${resolve(config.DATA_DIR)}`);
     console.log(`[skysend] Uploads directory: ${resolve(config.UPLOADS_DIR)}`);
-    console.log(`[skysend] Max file size: ${(config.MAX_FILE_SIZE / (1024 ** 2)).toFixed(0)} MB`);
-    if (config.UPLOAD_QUOTA_BYTES > 0) {
-      console.log(`[skysend] Upload quota: ${(config.UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.UPLOAD_QUOTA_WINDOW}s`);
+    console.log(`[skysend] Max file size: ${(config.FILE_MAX_SIZE / (1024 ** 2)).toFixed(0)} MB`);
+    console.log(`[skysend] Max note size: ${(config.NOTE_MAX_SIZE / (1024 ** 2)).toFixed(2)} MB`);
+    if (config.FILE_UPLOAD_QUOTA_BYTES > 0) {
+      console.log(`[skysend] Upload quota: ${(config.FILE_UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.FILE_UPLOAD_QUOTA_WINDOW}s`);
     }
   },
 );

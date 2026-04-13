@@ -27,6 +27,12 @@ const commaSeparatedInts = z
   .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
   .pipe(z.array(z.number().int().positive()).min(1));
 
+/** Comma-separated list of non-negative integers (allows 0). */
+const commaSeparatedNonNegativeInts = z
+  .string()
+  .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
+  .pipe(z.array(z.number().int().nonnegative()).min(1));
+
 const configSchema = z.object({
   PORT: z
     .string()
@@ -49,27 +55,88 @@ const configSchema = z.object({
 
   DATA_DIR: z.string().default("./data"),
 
-  MAX_FILE_SIZE: z
+  // --- File-specific configuration ---
+
+  FILE_MAX_SIZE: z
     .string()
     .default("2GB")
     .transform((v) => parseByteSize(v))
     .pipe(z.number().positive()),
 
-  EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+  FILE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
 
-  DEFAULT_EXPIRE_SEC: z
+  FILE_DEFAULT_EXPIRE_SEC: z
     .string()
     .default("86400")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  DOWNLOAD_OPTIONS: commaSeparatedInts.default(() => [1, 2, 3, 4, 5, 10, 20, 50, 100]),
+  FILE_DOWNLOAD_OPTIONS: commaSeparatedInts.default(() => [1, 2, 3, 4, 5, 10, 20, 50, 100]),
 
-  DEFAULT_DOWNLOAD: z
+  FILE_DEFAULT_DOWNLOAD: z
     .string()
     .default("1")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
+
+  FILE_MAX_FILES_PER_UPLOAD: z
+    .string()
+    .default("32")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
+  FILE_UPLOAD_QUOTA_BYTES: z
+    .string()
+    .default("0")
+    .transform((v) => {
+      // Support both raw numbers and human-readable sizes
+      if (/^\d+$/.test(v.trim())) return parseInt(v, 10);
+      return parseByteSize(v);
+    })
+    .pipe(z.number().int().min(0)),
+
+  FILE_UPLOAD_QUOTA_WINDOW: z
+    .string()
+    .default("86400")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
+  // --- Note-specific configuration ---
+
+  NOTE_MAX_SIZE: z
+    .string()
+    .default("1MB")
+    .transform((v) => parseByteSize(v))
+    .pipe(z.number().positive()),
+
+  NOTE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+
+  NOTE_DEFAULT_EXPIRE_SEC: z
+    .string()
+    .default("86400")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
+  NOTE_VIEW_OPTIONS: commaSeparatedNonNegativeInts.default(() => [0, 1, 2, 3, 5, 10, 20, 50, 100]),
+
+  NOTE_DEFAULT_VIEWS: z
+    .string()
+    .default("0")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().nonnegative()),
+
+  // --- General configuration ---
+
+  ENABLED_SERVICES: z
+    .string()
+    .default("file,note")
+    .transform((s) =>
+      s
+        .split(",")
+        .map((v) => v.trim().toLowerCase())
+        .filter((v) => v === "file" || v === "note"),
+    )
+    .pipe(z.array(z.enum(["file", "note"])).min(1, "ENABLED_SERVICES must contain at least one of: file, note")),
 
   CLEANUP_INTERVAL: z
     .string()
@@ -88,28 +155,6 @@ const configSchema = z.object({
   RATE_LIMIT_MAX: z
     .string()
     .default("60")
-    .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
-
-  UPLOAD_QUOTA_BYTES: z
-    .string()
-    .default("0")
-    .transform((v) => {
-      // Support both raw numbers and human-readable sizes
-      if (/^\d+$/.test(v.trim())) return parseInt(v, 10);
-      return parseByteSize(v);
-    })
-    .pipe(z.number().int().min(0)),
-
-  UPLOAD_QUOTA_WINDOW: z
-    .string()
-    .default("86400")
-    .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
-
-  MAX_FILES_PER_UPLOAD: z
-    .string()
-    .default("32")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
@@ -174,16 +219,32 @@ export function loadConfig(): Config {
     UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
   } as Config;
 
-  // Cross-field validation
-  if (!_config.EXPIRE_OPTIONS_SEC.includes(_config.DEFAULT_EXPIRE_SEC)) {
-    throw new Error(
-      `DEFAULT_EXPIRE_SEC (${_config.DEFAULT_EXPIRE_SEC}) must be one of EXPIRE_OPTIONS_SEC (${_config.EXPIRE_OPTIONS_SEC.join(", ")})`
+  // Cross-field validation - Files
+  if (_config.ENABLED_SERVICES.includes("file")) {
+    if (!_config.FILE_EXPIRE_OPTIONS_SEC.includes(_config.FILE_DEFAULT_EXPIRE_SEC)) {
+      throw new Error(
+        `FILE_DEFAULT_EXPIRE_SEC (${_config.FILE_DEFAULT_EXPIRE_SEC}) must be one of FILE_EXPIRE_OPTIONS_SEC (${_config.FILE_EXPIRE_OPTIONS_SEC.join(", ")})`
+      );
+    }
+    if (!_config.FILE_DOWNLOAD_OPTIONS.includes(_config.FILE_DEFAULT_DOWNLOAD)) {
+      throw new Error(
+        `FILE_DEFAULT_DOWNLOAD (${_config.FILE_DEFAULT_DOWNLOAD}) must be one of FILE_DOWNLOAD_OPTIONS (${_config.FILE_DOWNLOAD_OPTIONS.join(", ")})`
+      );
+    }
+  }
+
+  // Cross-field validation - Notes
+  if (_config.ENABLED_SERVICES.includes("note")) {
+    if (!_config.NOTE_EXPIRE_OPTIONS_SEC.includes(_config.NOTE_DEFAULT_EXPIRE_SEC)) {
+      throw new Error(
+      `NOTE_DEFAULT_EXPIRE_SEC (${_config.NOTE_DEFAULT_EXPIRE_SEC}) must be one of NOTE_EXPIRE_OPTIONS_SEC (${_config.NOTE_EXPIRE_OPTIONS_SEC.join(", ")})`
     );
   }
-  if (!_config.DOWNLOAD_OPTIONS.includes(_config.DEFAULT_DOWNLOAD)) {
-    throw new Error(
-      `DEFAULT_DOWNLOAD (${_config.DEFAULT_DOWNLOAD}) must be one of DOWNLOAD_OPTIONS (${_config.DOWNLOAD_OPTIONS.join(", ")})`
-    );
+    if (!_config.NOTE_VIEW_OPTIONS.includes(_config.NOTE_DEFAULT_VIEWS)) {
+      throw new Error(
+        `NOTE_DEFAULT_VIEWS (${_config.NOTE_DEFAULT_VIEWS}) must be one of NOTE_VIEW_OPTIONS (${_config.NOTE_VIEW_OPTIONS.join(", ")})`
+      );
+    }
   }
 
   return _config;

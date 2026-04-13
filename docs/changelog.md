@@ -2,6 +2,73 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.0.0 - Encrypted Notes, Text, Passwords, Code Snippets, and SSH Keys
+*Released: April 13, 2026*
+
+> ⚠️ **Breaking:** All file-related environment variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the environment reference for the full mapping.
+
+### ✨ Features
+- **server**: Added encrypted notes API with support for text, password, and code content types
+- **server**: Added burn-after-reading support for notes via configurable max view count
+- **server**: Added new `NOTE_` environment variables for independent note configuration (`NOTE_MAX_SIZE`, `NOTE_EXPIRE_OPTIONS_SEC`, `NOTE_DEFAULT_EXPIRE_SEC`, `NOTE_VIEW_OPTIONS`, `NOTE_DEFAULT_VIEWS`)
+- **crypto**: Added `encryptNoteContent` and `decryptNoteContent` for AES-256-GCM note encryption
+- **web**: Added tab navigation on upload page (File, Text, Password, Code)
+- **web**: Added note creation form with content editor, expiry, view limits, and password protection
+- **web**: Added IndexedDB storage for created notes
+- **web**: Added note view page with decryption, password prompt, view counter, and burn-after-reading indicator
+- **web**: Added note API client functions for fetching note info, viewing content, and password verification
+- **web**: Added My Uploads page filter tabs (All, Files, Text, Passwords, Code, Markdown, SSH Keys) with combined chronological list
+- **web**: Added note cards in My Uploads with view counter, expiry, QR code, copy link, and delete
+- **server**: Added `ENABLED_SERVICES` environment variable to enable/disable file and note services independently
+- **web**: Upload page and My Uploads page dynamically hide tabs for disabled services
+- **server**: Added unlimited views option (`maxViews: 0`) for notes - notes expire only by time, not by view count
+- **web**: View selector shows "Unlimited" option when `0` is included in `NOTE_VIEW_OPTIONS`
+- **web**: Added translations for Spanish, French, Finnish, Swedish, Norwegian, Dutch, Italian, and Polish
+- **web**: Added syntax highlighting with line numbers for code notes (auto-detects 22 languages)
+- **web**: Added password generator in the Password tab with configurable length, character types, and entropy display
+- **web**: Added SSH Key tab with Generate/Paste modes, Ed25519 and RSA (1024/2048/4096) key pair generation, optional passphrase (PKCS#8), and sharing as encrypted note
+- **web**: Added Markdown mode in Text tab with Plain Text/Markdown sub-toggle, live preview, and rendered Markdown display on note view (GFM support via react-markdown)
+- **crypto**: Added `sshkey` as dedicated `NoteContentType` so SSH key notes display with their own icon and label in My Uploads
+- **web**: Redesigned Password tab with single-line input fields, per-field password generator toggle, and add/remove support for multiple passwords
+- **web**: Password note viewer now shows each password individually with separate reveal and copy buttons
+- **cli**: Added notes support to `list`, `delete`, `stats`, and `cleanup` commands
+
+### 🔄 Changed
+- **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
+- **server**: Cleanup job now also removes expired notes and notes that reached their view limit
+- **web**: File download URLs changed from `/d/:id` to `/file/:id` with automatic redirect from old URLs
+
+### 🎨 Improvements
+- **web**: Replaced default browser scrollbar with custom styled scrollbar on textareas and code blocks
+- **web**: Updated footer tagline and browser tab subtitle to reflect file and note sharing
+- **web**: Removed primary-color border from ShareLink card and NoteView card to avoid confusion with custom color themes
+- **web**: Added `success` Tailwind color variable (fixed SkySend green) for the "Upload complete" text so it stays green regardless of custom primary color
+
+### 📝 Documentation
+- **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
+- **docs**: Added v1 to v2 environment variable migration table to environment reference
+- **docs**: Updated URL references from `/d/` to `/file/` in architecture and API docs
+- **docs**: Added comprehensive API documentation for all 5 note endpoints
+- **docs**: Updated API index with note endpoints overview table
+- **docs**: Updated user guide with note creation, viewing, and burn-after-reading instructions
+- **docs**: Updated README, PHILOSOPHY, and docs landing page branding to reflect file and note sharing
+- **docs**: Added screenshots page with overview, note types, and My Uploads views
+
+### 🧪 Tests
+- **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
+- **server**: Added 33 tests for note API routes (CRUD, view counting, burn-after-reading, auth tokens, password verification, size/expiry/view validation)
+- **server**: Added 4 cleanup tests for note expiry and view limit enforcement
+- **server**: Added 7 config tests for `ENABLED_SERVICES` parsing, validation, and cross-field skip logic
+- **server**: Added 7 route tests for service guard middleware (403 on disabled services)
+- **server**: Added 3 tests for unlimited views (creation, viewing, cleanup skip)
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.0.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v1.0.2 - Patch Release for CORS correction on Health Endpoint
 *Released: April 13, 2026*
 

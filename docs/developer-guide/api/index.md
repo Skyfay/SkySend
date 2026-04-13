@@ -10,6 +10,8 @@ http://localhost:3000/api
 
 ## Endpoints
 
+### File Endpoints
+
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
 | `GET` | `/api/config` | Server configuration (limits) | - |
@@ -17,10 +19,20 @@ http://localhost:3000/api
 | `POST` | `/api/meta/:id` | Save encrypted metadata | Owner Token |
 | `GET` | `/api/info/:id` | Upload info (size, expiry, downloads) | - |
 | `GET` | `/api/download/:id` | Download encrypted file stream | Auth Token |
-| `POST` | `/api/password/:id` | Verify password | - |
+| `POST` | `/api/password/:id` | Verify file password | - |
 | `DELETE` | `/api/upload/:id` | Delete upload | Owner Token |
 | `GET` | `/api/exists/:id` | Check if upload exists | - |
 | `GET` | `/api/health` | Health check | - |
+
+### Note Endpoints
+
+| Method | Path | Description | Auth |
+| --- | --- | --- | --- |
+| `POST` | `/api/note` | Create encrypted note | - |
+| `GET` | `/api/note/:id` | Note info (type, views, expiry) | - |
+| `POST` | `/api/note/:id/view` | View note (returns encrypted content) | Auth Token |
+| `POST` | `/api/note/:id/password` | Verify note password | - |
+| `DELETE` | `/api/note/:id` | Delete note | Owner Token |
 
 ## Authentication
 

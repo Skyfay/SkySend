@@ -11,15 +11,25 @@ const configRoute = new Hono();
 configRoute.get("/", (c) => {
   const config = getConfig();
   return c.json({
-    maxFileSize: config.MAX_FILE_SIZE,
-    maxFilesPerUpload: config.MAX_FILES_PER_UPLOAD,
-    expireOptions: config.EXPIRE_OPTIONS_SEC,
-    defaultExpire: config.DEFAULT_EXPIRE_SEC,
-    downloadOptions: config.DOWNLOAD_OPTIONS,
-    defaultDownload: config.DEFAULT_DOWNLOAD,
+    // Service toggles
+    enabledServices: config.ENABLED_SERVICES,
+    // File configuration
+    fileMaxSize: config.FILE_MAX_SIZE,
+    fileMaxFilesPerUpload: config.FILE_MAX_FILES_PER_UPLOAD,
+    fileExpireOptions: config.FILE_EXPIRE_OPTIONS_SEC,
+    fileDefaultExpire: config.FILE_DEFAULT_EXPIRE_SEC,
+    fileDownloadOptions: config.FILE_DOWNLOAD_OPTIONS,
+    fileDefaultDownload: config.FILE_DEFAULT_DOWNLOAD,
+    fileUploadQuotaBytes: config.FILE_UPLOAD_QUOTA_BYTES,
+    fileUploadQuotaWindow: config.FILE_UPLOAD_QUOTA_WINDOW,
+    // Note configuration
+    noteMaxSize: config.NOTE_MAX_SIZE,
+    noteExpireOptions: config.NOTE_EXPIRE_OPTIONS_SEC,
+    noteDefaultExpire: config.NOTE_DEFAULT_EXPIRE_SEC,
+    noteViewOptions: config.NOTE_VIEW_OPTIONS,
+    noteDefaultViews: config.NOTE_DEFAULT_VIEWS,
+    // General
     customTitle: config.CUSTOM_TITLE,
-    uploadQuotaBytes: config.UPLOAD_QUOTA_BYTES,
-    uploadQuotaWindow: config.UPLOAD_QUOTA_WINDOW,
     customColor: config.CUSTOM_COLOR ?? null,
     customLogo: config.CUSTOM_LOGO ?? null,
     customPrivacy: config.CUSTOM_PRIVACY ?? null,
