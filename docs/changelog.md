@@ -37,6 +37,8 @@ All notable changes to SkySend are documented here.
 ### 🎨 Improvements
 - **web**: Replaced default browser scrollbar with custom styled scrollbar on textareas and code blocks
 - **web**: Updated footer tagline and browser tab subtitle to reflect file and note sharing
+- **web**: Removed primary-color border from ShareLink card and NoteView card to avoid confusion with custom color themes
+- **web**: Added `success` Tailwind color variable (fixed SkySend green) for the "Upload complete" text so it stays green regardless of custom primary color
 
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names

@@ -187,7 +187,7 @@ export function NoteViewPage() {
           className={
             noteHook.phase === "destroyed"
               ? "border-destructive/30"
-              : "border-primary/30 bg-primary/5"
+              : ""
           }
         >
           <CardContent className="space-y-4 pt-6">

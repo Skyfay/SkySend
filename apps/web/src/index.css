@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -23,7 +22,7 @@
   --color-border: oklch(0.922 0 0);
   --color-input: oklch(0.922 0 0);
   --color-ring: oklch(0.696 0.130 167.275);
-  --color-success: oklch(0.627 0.194 149.214);
+  --color-success: oklch(0.696 0.130 167.275);
   --color-success-foreground: oklch(0.985 0 0);
 
   --radius-sm: 0.25rem;
@@ -64,7 +63,7 @@
   --color-border: oklch(0.269 0 0);
   --color-input: oklch(0.269 0 0);
   --color-ring: oklch(0.750 0.130 167.275);
-  --color-success: oklch(0.627 0.194 149.214);
+  --color-success: oklch(0.750 0.130 167.275);
   --color-success-foreground: oklch(0.985 0 0);
 }
 
