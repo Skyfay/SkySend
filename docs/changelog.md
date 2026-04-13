@@ -15,6 +15,8 @@ All notable changes to SkySend are documented here.
 - **web**: Added tab navigation on upload page (File, Text, Password, Code)
 - **web**: Added note creation form with content editor, expiry, view limits, and password protection
 - **web**: Added IndexedDB storage for created notes
+- **web**: Added note view page with decryption, password prompt, view counter, and burn-after-reading indicator
+- **web**: Added note API client functions for fetching note info, viewing content, and password verification
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity

@@ -105,6 +105,21 @@
     "unavailable": "Nicht verfügbar",
     "files": "{{count}} Datei(en)"
   },
+  "noteView": {
+    "title": "Verschlüsselte Notiz",
+    "notFound": "Notiz nicht gefunden",
+    "expired": "Diese Notiz ist abgelaufen",
+    "limitReached": "Aufruf-Limit erreicht",
+    "viewsRemaining": "{{remaining}} von {{max}} Aufrufen verbleibend",
+    "expiresIn": "Läuft ab in {{time}}",
+    "burnWarning": "Diese Notiz wird nach dem Lesen unwiderruflich gelöscht.",
+    "viewNote": "Notiz anzeigen",
+    "viewCount": "Aufruf {{current}} von {{max}}",
+    "destroyed": "Diese Notiz wurde unwiderruflich gelöscht. Sichern Sie den Inhalt jetzt - er kann nicht erneut abgerufen werden.",
+    "reveal": "Anzeigen",
+    "hide": "Verbergen",
+    "verifying": "Überprüfen..."
+  },
   "notFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht.",

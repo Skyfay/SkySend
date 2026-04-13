@@ -105,6 +105,21 @@
     "unavailable": "Unavailable",
     "files": "{{count}} file(s)"
   },
+  "noteView": {
+    "title": "Encrypted Note",
+    "notFound": "Note not found",
+    "expired": "This note has expired",
+    "limitReached": "View limit reached",
+    "viewsRemaining": "{{remaining}} of {{max}} views remaining",
+    "expiresIn": "Expires in {{time}}",
+    "burnWarning": "This note will be permanently deleted after viewing.",
+    "viewNote": "View note",
+    "viewCount": "View {{current}} of {{max}}",
+    "destroyed": "This note has been permanently deleted. Save the content now - it cannot be accessed again.",
+    "reveal": "Reveal",
+    "hide": "Hide",
+    "verifying": "Verifying..."
+  },
   "notFound": {
     "title": "Page not found",
     "description": "The page you're looking for doesn't exist.",

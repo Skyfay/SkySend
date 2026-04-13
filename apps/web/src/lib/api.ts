@@ -259,6 +259,65 @@ export async function createNote(
   return (await res.json()) as CreateNoteResponse;
 }
 
+// ── Note Info / View / Password ────────────────────────
+
+const noteInfoResponseSchema = z.object({
+  id: z.string(),
+  contentType: z.enum(["text", "password", "code"]),
+  hasPassword: z.boolean(),
+  passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
+  passwordSalt: z.string().optional(),
+  salt: z.string(),
+  maxViews: z.number(),
+  viewCount: z.number(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+
+export type NoteInfo = z.infer<typeof noteInfoResponseSchema>;
+
+const noteViewResponseSchema = z.object({
+  encryptedContent: z.string(),
+  nonce: z.string(),
+  viewCount: z.number(),
+  maxViews: z.number(),
+});
+
+export type NoteViewResponse = z.infer<typeof noteViewResponseSchema>;
+
+export async function fetchNoteInfo(id: string): Promise<NoteInfo> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}`);
+  return handleResponse(res, noteInfoResponseSchema);
+}
+
+export async function viewNote(
+  id: string,
+  authToken: string,
+): Promise<NoteViewResponse> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}/view`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authToken }),
+  });
+  return handleResponse(res, noteViewResponseSchema);
+}
+
+export async function verifyNotePassword(
+  id: string,
+  authToken: string,
+): Promise<boolean> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authToken }),
+  });
+  if (res.status === 401) return false;
+  if (!res.ok) {
+    throw new ApiError(res.status, "Password verification failed");
+  }
+  return true;
+}
+
 export async function deleteNote(
   id: string,
   ownerToken: string,
