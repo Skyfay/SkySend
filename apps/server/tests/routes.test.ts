@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { Hono } from "hono";
+import type { Context, Next } from "hono";
 import { eq } from "drizzle-orm";
 import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
 import { uploads } from "../src/db/schema.js";
@@ -711,7 +712,7 @@ describe("routes", () => {
     function createGuardedApp() {
       const app = new Hono();
       // Replicate the service guard middleware from index.ts
-      const fileGuard = async (c: any, next: any) => {
+      const fileGuard = async (c: Context, next: Next) => {
         const config = getConfig();
         if (!config.ENABLED_SERVICES.includes("file")) {
           return c.json({ error: "File service is disabled" }, 403);
@@ -722,7 +723,7 @@ describe("routes", () => {
       app.use("/api/info/*", fileGuard);
       app.use("/api/download/*", fileGuard);
 
-      const noteGuard = async (c: any, next: any) => {
+      const noteGuard = async (c: Context, next: Next) => {
         const config = getConfig();
         if (!config.ENABLED_SERVICES.includes("note")) {
           return c.json({ error: "Note service is disabled" }, 403);
