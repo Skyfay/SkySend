@@ -31,6 +31,7 @@ All notable changes to SkySend are documented here.
 
 ### 🎨 Improvements
 - **web**: Replaced default browser scrollbar with custom styled scrollbar on textareas and code blocks
+- **web**: Updated footer tagline and browser tab subtitle to reflect file and note sharing
 
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names

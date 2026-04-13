@@ -1,8 +1,8 @@
 {
   "common": {
     "appName": "SkySend",
-    "tabSubtitle": "Encrypted File Transfer",
-    "tagline": "End-to-end encrypted file sharing",
+    "tabSubtitle": "Encrypted File & Note Sharing",
+    "tagline": "End-to-end encrypted file and note sharing",
     "loading": "Loading...",
     "error": "Something went wrong",
     "retry": "Try again",

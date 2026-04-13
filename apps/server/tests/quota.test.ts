@@ -14,7 +14,9 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     PORT: 3000,
     HOST: "0.0.0.0",
     BASE_URL: "http://localhost:3000",
+    CORS_ORIGINS: [],
     DATA_DIR: "./data",
+    UPLOADS_DIR: "./data/uploads",
     FILE_MAX_SIZE: 2 * 1024 ** 3,
     FILE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
     FILE_DEFAULT_EXPIRE_SEC: 86400,
@@ -33,6 +35,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     RATE_LIMIT_WINDOW: 60000,
     RATE_LIMIT_MAX: 60,
     TRUST_PROXY: false,
+    ENABLED_SERVICES: ["file", "note"] as ("file" | "note")[],
     ...overrides,
   };
 }

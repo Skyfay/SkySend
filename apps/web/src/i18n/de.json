@@ -1,8 +1,8 @@
 {
   "common": {
     "appName": "SkySend",
-    "tabSubtitle": "Verschlüsselter Dateitransfer",
-    "tagline": "Ende-zu-Ende verschlüsselte Dateifreigabe",
+    "tabSubtitle": "Verschlüsselte Datei- & Notizfreigabe",
+    "tagline": "Ende-zu-Ende verschlüsselte Datei- und Notizfreigabe",
     "loading": "Laden...",
     "error": "Etwas ist schiefgelaufen",
     "retry": "Erneut versuchen",
