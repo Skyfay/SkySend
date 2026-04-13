@@ -3,7 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## v1.0.2
-*Release: In Progress*
+*Released: April 13, 2026*
 
 ### 🐛 Bug Fixes
 - **server**: Added open CORS policy (`*`) on `/api/health` endpoint so external sites can fetch instance status
