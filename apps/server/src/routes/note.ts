@@ -17,7 +17,7 @@ const createNoteSchema = z.object({
   salt: z.string().min(1),
   ownerToken: z.string().min(1),
   authToken: z.string().min(1),
-  contentType: z.enum(["text", "password", "code", "markdown"]),
+  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
   maxViews: z.number().int().nonnegative(),
   expireSec: z.number().int().positive(),
   hasPassword: z.boolean().default(false),

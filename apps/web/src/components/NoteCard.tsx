@@ -12,6 +12,7 @@ import {
   Eye,
   QrCode,
   Heading,
+  Terminal,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const CONTENT_TYPE_ICONS = {
   password: KeyRound,
   code: Code,
   markdown: Heading,
+  sshkey: Terminal,
 } as const;
 
 interface NoteCardProps {

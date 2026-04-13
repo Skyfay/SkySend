@@ -157,7 +157,7 @@ export function SSHKeyForm() {
     if (!content) return;
     noteHook.upload({
       content,
-      contentType: "code",
+      contentType: "sshkey",
       maxViews,
       expireSec,
       password: notePasswordEnabled ? notePassword : "",

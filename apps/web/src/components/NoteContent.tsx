@@ -68,7 +68,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   const [revealed, setRevealed] = useState(false);
 
   const highlightedCode = useMemo(() => {
-    if (contentType !== "code") return "";
+    if (contentType !== "code" && contentType !== "sshkey") return "";
     return hljs.highlightAuto(content).value;
   }, [content, contentType]);
 
@@ -122,7 +122,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
     );
   }
 
-  if (contentType === "code") {
+  if (contentType === "code" || contentType === "sshkey") {
     const lines = content.split("\n");
     const lineNumberWidth = String(lines.length).length;
 
