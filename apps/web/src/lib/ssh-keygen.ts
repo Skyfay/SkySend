@@ -9,6 +9,7 @@ export interface SSHKeyPair {
   privateKey: string;
   algorithm: "ed25519" | "rsa";
   fingerprint: string;
+  warning?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -19,10 +20,17 @@ export async function generateEd25519KeyPair(
   comment = "",
   passphrase?: string,
 ): Promise<SSHKeyPair> {
-  const keyPair = await crypto.subtle.generateKey("Ed25519", true, [
-    "sign",
-    "verify",
-  ]);
+  let keyPair: CryptoKeyPair;
+  try {
+    keyPair = await crypto.subtle.generateKey("Ed25519", true, [
+      "sign",
+      "verify",
+    ]);
+  } catch {
+    throw new Error(
+      "Ed25519 is not supported in this browser. Please use RSA or try a different browser (Chrome 113+, Firefox 130+, Safari 17+).",
+    );
+  }
 
   const publicKeyRaw = new Uint8Array(
     await crypto.subtle.exportKey("raw", keyPair.publicKey),
@@ -39,20 +47,44 @@ export async function generateEd25519KeyPair(
     sshString(publicKeyRaw),
   );
 
-  const publicKeyStr = `ssh-ed25519 ${base64Encode(publicKeyBlob)}${comment ? ` ${comment}` : ""}`;
+  // Try full generation with comment + passphrase first
+  const hasExtras = !!(comment || passphrase);
+  try {
+    const publicKeyStr = `ssh-ed25519 ${base64Encode(publicKeyBlob)}${comment ? ` ${comment}` : ""}`;
 
-  let privateKeyStr: string;
-  if (passphrase) {
-    privateKeyStr = await encryptPKCS8(pkcs8, passphrase);
-  } else {
-    const privateSection = buildEd25519PrivateSection(
-      publicKeyRaw,
-      seed,
-      comment,
-    );
-    privateKeyStr = buildOpenSSHPrivateKey(publicKeyBlob, privateSection);
+    let privateKeyStr: string;
+    if (passphrase) {
+      privateKeyStr = await encryptPKCS8(pkcs8, passphrase);
+    } else {
+      const privateSection = buildEd25519PrivateSection(
+        publicKeyRaw,
+        seed,
+        comment,
+      );
+      privateKeyStr = buildOpenSSHPrivateKey(publicKeyBlob, privateSection);
+    }
+
+    const fingerprint = await sshFingerprint(publicKeyBlob);
+
+    return {
+      publicKey: publicKeyStr,
+      privateKey: privateKeyStr,
+      algorithm: "ed25519",
+      fingerprint,
+    };
+  } catch {
+    // If no extras were requested, there is nothing to fall back to
+    if (!hasExtras) {
+      throw new Error(
+        "Ed25519 key generation failed in this browser. Please use RSA or try a different browser.",
+      );
+    }
   }
 
+  // Fallback: generate without comment and passphrase
+  const publicKeyStr = `ssh-ed25519 ${base64Encode(publicKeyBlob)}`;
+  const privateSection = buildEd25519PrivateSection(publicKeyRaw, seed, "");
+  const privateKeyStr = buildOpenSSHPrivateKey(publicKeyBlob, privateSection);
   const fingerprint = await sshFingerprint(publicKeyBlob);
 
   return {
@@ -60,6 +92,8 @@ export async function generateEd25519KeyPair(
     privateKey: privateKeyStr,
     algorithm: "ed25519",
     fingerprint,
+    warning:
+      "Ed25519 keys with comment or passphrase are not supported in this browser. The key was generated without them.",
   };
 }
 

@@ -116,7 +116,12 @@
     "filter": {
       "all": "Alles",
       "files": "Bestanden",
-      "notes": "Notities"
+      "notes": "Notities",
+      "notes-text": "Tekst",
+      "notes-password": "Wachtwoorden",
+      "notes-code": "Code",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH-sleutels"
     },
     "remaining": "{{count}} downloads resterend",
     "expired": "Verlopen",
@@ -204,8 +209,6 @@
     "publicKey": "Publieke sleutel",
     "privateKey": "Privésleutel",
     "shareAs": "Delen als versleutelde notitie",
-    "shareBoth": "Beide sleutels",
-    "sharePublicOnly": "Alleen publieke sleutel",
     "createNote": "Delen als notitie"
   }
 }

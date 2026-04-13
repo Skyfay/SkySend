@@ -116,7 +116,12 @@
     "filter": {
       "all": "Alle",
       "files": "Dateien",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "notes-text": "Text",
+      "notes-password": "Passwörter",
+      "notes-code": "Code",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH Keys"
     },
     "remaining": "{{count}} Downloads verbleibend",
     "expired": "Abgelaufen",
@@ -204,8 +209,6 @@
     "publicKey": "Öffentlicher Schlüssel",
     "privateKey": "Privater Schlüssel",
     "shareAs": "Als verschlüsselte Notiz teilen",
-    "shareBoth": "Beide Schlüssel",
-    "sharePublicOnly": "Nur öffentlicher Schlüssel",
     "createNote": "Als Notiz teilen"
   }
 }

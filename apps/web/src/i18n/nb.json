@@ -116,7 +116,12 @@
     "filter": {
       "all": "Alle",
       "files": "Filer",
-      "notes": "Notater"
+      "notes": "Notater",
+      "notes-text": "Tekst",
+      "notes-password": "Passord",
+      "notes-code": "Kode",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH-nøkler"
     },
     "remaining": "{{count}} nedlastinger igjen",
     "expired": "Utløpt",
@@ -202,8 +207,6 @@
     "publicKey": "Offentlig nøkkel",
     "privateKey": "Privat nøkkel",
     "shareAs": "Del som kryptert notat",
-    "shareBoth": "Begge nøkler",
-    "sharePublicOnly": "Kun offentlig nøkkel",
     "createNote": "Del som notat"
   }
 }

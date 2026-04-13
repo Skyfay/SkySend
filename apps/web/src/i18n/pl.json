@@ -116,7 +116,12 @@
     "filter": {
       "all": "Wszystko",
       "files": "Pliki",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "notes-text": "Tekst",
+      "notes-password": "Hasła",
+      "notes-code": "Kod",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "Klucze SSH"
     },
     "remaining": "Pozostało {{count}} pobrań",
     "expired": "Wygasło",
@@ -204,8 +209,6 @@
     "publicKey": "Klucz publiczny",
     "privateKey": "Klucz prywatny",
     "shareAs": "Udostępnij jako zaszyfrowaną notatkę",
-    "shareBoth": "Oba klucze",
-    "sharePublicOnly": "Tylko klucz publiczny",
     "createNote": "Udostępnij jako notatkę"
   }
 }

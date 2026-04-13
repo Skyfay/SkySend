@@ -116,7 +116,12 @@
     "filter": {
       "all": "Alla",
       "files": "Filer",
-      "notes": "Anteckningar"
+      "notes": "Anteckningar",
+      "notes-text": "Text",
+      "notes-password": "Lösenord",
+      "notes-code": "Kod",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH-nycklar"
     },
     "remaining": "{{count}} nedladdningar kvar",
     "expired": "Upphörd",
@@ -202,8 +207,6 @@
     "publicKey": "Offentlig nyckel",
     "privateKey": "Privat nyckel",
     "shareAs": "Dela som krypterad anteckning",
-    "shareBoth": "Båda nycklarna",
-    "sharePublicOnly": "Endast offentlig nyckel",
     "createNote": "Dela som anteckning"
   }
 }

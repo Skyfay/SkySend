@@ -1,21 +1,26 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Inbox, File, FileText, Layers } from "lucide-react";
+import { FolderOpen, Inbox, File, FileText, Layers, KeyRound, Code, Heading, Terminal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
+import type { NoteContentType } from "@skysend/crypto";
 import { toast } from "@/hooks/useToast";
 
-type Filter = "all" | "files" | "notes";
+type Filter = "all" | "files" | "notes-text" | "notes-password" | "notes-code" | "notes-markdown" | "notes-sshkey";
 
-const FILTER_ICONS = {
+const FILTER_ICONS: Record<Filter, React.ComponentType<{ className?: string }>> = {
   all: Layers,
   files: File,
-  notes: FileText,
-} as const;
+  "notes-text": FileText,
+  "notes-password": KeyRound,
+  "notes-code": Code,
+  "notes-markdown": Heading,
+  "notes-sshkey": Terminal,
+};
 
 export function MyUploadsPage() {
   const { t } = useTranslation();
@@ -54,16 +59,23 @@ export function MyUploadsPage() {
   };
 
   // Build combined list sorted by createdAt
+  const isNoteFilter = filter.startsWith("notes-");
+  const noteContentFilter: NoteContentType | null =
+    filter.startsWith("notes-") ? (filter.replace("notes-", "") as NoteContentType) : null;
+
   const items: Array<
     | { type: "upload"; data: (typeof uploads)[number] }
     | { type: "note"; data: (typeof notes)[number] }
   > = [];
 
-  if (filter !== "notes") {
+  if (filter === "all" || filter === "files") {
     for (const u of uploads) items.push({ type: "upload", data: u });
   }
-  if (filter !== "files") {
-    for (const n of notes) items.push({ type: "note", data: n });
+  if (filter === "all" || isNoteFilter) {
+    for (const n of notes) {
+      if (noteContentFilter && n.contentType !== noteContentFilter) continue;
+      items.push({ type: "note", data: n });
+    }
   }
 
   items.sort(
@@ -73,11 +85,30 @@ export function MyUploadsPage() {
 
   const isEmpty = items.length === 0 && !loading;
 
+  // Build content type counts for note sub-filters
+  const noteTypeCounts: Record<string, number> = {};
+  for (const n of notes) {
+    noteTypeCounts[n.contentType] = (noteTypeCounts[n.contentType] ?? 0) + 1;
+  }
+
+  const noteSubFilters: Filter[] = (
+    ["text", "password", "code", "markdown", "sshkey"] as const
+  )
+    .filter((ct) => (noteTypeCounts[ct] ?? 0) > 0)
+    .map((ct) => `notes-${ct}` as Filter);
+
   const filters: Filter[] = [
     ...(fileEnabled && noteEnabled ? ["all" as const] : []),
-    ...(fileEnabled ? ["files" as const] : []),
-    ...(noteEnabled ? ["notes" as const] : []),
+    ...(fileEnabled && uploads.length > 0 ? ["files" as const] : []),
+    ...(noteEnabled ? noteSubFilters : []),
   ];
+
+  const getFilterCount = (f: Filter): number => {
+    if (f === "all") return uploads.length + notes.length;
+    if (f === "files") return uploads.length;
+    const ct = f.replace("notes-", "");
+    return noteTypeCounts[ct] ?? 0;
+  };
 
   return (
     <div className="space-y-6">
@@ -88,15 +119,10 @@ export function MyUploadsPage() {
 
       {/* Filter tabs */}
       {(uploads.length > 0 || notes.length > 0) && (
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1">
           {filters.map((f) => {
             const Icon = FILTER_ICONS[f];
-            const count =
-              f === "all"
-                ? uploads.length + notes.length
-                : f === "files"
-                  ? uploads.length
-                  : notes.length;
+            const count = getFilterCount(f);
             return (
               <button
                 key={f}

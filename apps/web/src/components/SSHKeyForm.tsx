@@ -29,6 +29,7 @@ import {
 import { ShareLink } from "@/components/ShareLink";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
+import { toast } from "@/hooks/useToast";
 import { formatDuration, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
@@ -39,7 +40,6 @@ import {
 type Mode = "paste" | "generate";
 type Algorithm = "ed25519" | "rsa";
 type RSABits = 1024 | 2048 | 4096;
-type ShareMode = "both" | "public";
 
 export function SSHKeyForm() {
   const { t } = useTranslation();
@@ -66,7 +66,9 @@ export function SSHKeyForm() {
   const [genError, setGenError] = useState<string | null>(null);
 
   // Share settings (used by both modes)
-  const [shareMode, setShareMode] = useState<ShareMode>("both");
+  const [sharePublicKey, setSharePublicKey] = useState(true);
+  const [sharePrivateKey, setSharePrivateKey] = useState(true);
+  const [sharePassphrase, setSharePassphrase] = useState(true);
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [notePassword, setNotePassword] = useState("");
@@ -121,6 +123,9 @@ export function SSHKeyForm() {
               passphrase || undefined,
             );
       setKeyPair(pair);
+      if (pair.warning) {
+        toast({ title: pair.warning, variant: "destructive" });
+      }
     } catch (err) {
       setGenError(
         err instanceof Error ? err.message : "Key generation failed",
@@ -143,9 +148,11 @@ export function SSHKeyForm() {
       return parts.join("\n\n");
     }
     if (!keyPair) return "";
-    return shareMode === "both"
-      ? `${keyPair.publicKey}\n\n${keyPair.privateKey}`
-      : keyPair.publicKey;
+    const parts: string[] = [];
+    if (sharePublicKey) parts.push(keyPair.publicKey);
+    if (sharePrivateKey) parts.push(keyPair.privateKey);
+    if (sharePassphrase && passphrase) parts.push(`Passphrase: ${passphrase}`);
+    return parts.join("\n\n");
   };
 
   const pasteContent = mode === "paste"
@@ -156,7 +163,7 @@ export function SSHKeyForm() {
     mode === "paste"
       ? (pastePublicKey.trim().length > 0 || pastePrivateKey.trim().length > 0) &&
         new TextEncoder().encode(pasteContent).length <= config.noteMaxSize
-      : keyPair !== null;
+      : keyPair !== null && (sharePublicKey || sharePrivateKey || (sharePassphrase && !!passphrase));
 
   const handleSubmit = () => {
     const content = getSubmitContent();
@@ -179,6 +186,9 @@ export function SSHKeyForm() {
     setComment("");
     setNotePassword("");
     setNotePasswordEnabled(false);
+    setSharePublicKey(true);
+    setSharePrivateKey(true);
+    setSharePassphrase(true);
   };
 
   if (noteHook.phase === "done" && noteHook.shareLink) {
@@ -546,32 +556,54 @@ export function SSHKeyForm() {
               </pre>
             </div>
 
-            {/* Share Mode */}
-            <div className="space-y-2">
+            {/* Share Selection */}
+            <div className="space-y-3">
               <Label>{t("sshKey.shareAs")}</Label>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => setShareMode("both")}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    shareMode === "both"
-                      ? "border-primary bg-primary/10 text-primary"
+                  onClick={() => setSharePublicKey(!sharePublicKey)}
+                  className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    sharePublicKey
+                      ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {t("sshKey.shareBoth")}
+                  <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePublicKey ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
+                    {sharePublicKey && <Check className="h-3 w-3" />}
+                  </div>
+                  {t("sshKey.publicKey")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShareMode("public")}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    shareMode === "public"
-                      ? "border-primary bg-primary/10 text-primary"
+                  onClick={() => setSharePrivateKey(!sharePrivateKey)}
+                  className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    sharePrivateKey
+                      ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {t("sshKey.sharePublicOnly")}
+                  <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePrivateKey ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
+                    {sharePrivateKey && <Check className="h-3 w-3" />}
+                  </div>
+                  {t("sshKey.privateKey")}
                 </button>
+                {passphrase && (
+                  <button
+                    type="button"
+                    onClick={() => setSharePassphrase(!sharePassphrase)}
+                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
+                      sharePassphrase
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePassphrase ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
+                      {sharePassphrase && <Check className="h-3 w-3" />}
+                    </div>
+                    {t("sshKey.passphrase")}
+                  </button>
+                )}
               </div>
             </div>
 

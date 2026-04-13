@@ -116,7 +116,12 @@
     "filter": {
       "all": "Kaikki",
       "files": "Tiedostot",
-      "notes": "Muistiinpanot"
+      "notes": "Muistiinpanot",
+      "notes-text": "Teksti",
+      "notes-password": "Salasanat",
+      "notes-code": "Koodi",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH-avaimet"
     },
     "remaining": "{{count}} latausta jäljellä",
     "expired": "Vanhentunut",
@@ -204,8 +209,6 @@
     "publicKey": "Julkinen avain",
     "privateKey": "Yksityinen avain",
     "shareAs": "Jaa salattuna muistiinpanona",
-    "shareBoth": "Molemmat avaimet",
-    "sharePublicOnly": "Vain julkinen avain",
     "createNote": "Jaa muistiinpanona"
   }
 }

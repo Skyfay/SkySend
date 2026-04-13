@@ -116,7 +116,12 @@
     "filter": {
       "all": "Todo",
       "files": "Archivos",
-      "notes": "Notas"
+      "notes": "Notas",
+      "notes-text": "Texto",
+      "notes-password": "Contraseñas",
+      "notes-code": "Código",
+      "notes-markdown": "Markdown",
+      "notes-sshkey": "SSH Keys"
     },
     "remaining": "{{count}} descargas restantes",
     "expired": "Expirado",
@@ -204,8 +209,6 @@
     "publicKey": "Clave pública",
     "privateKey": "Clave privada",
     "shareAs": "Compartir como nota cifrada",
-    "shareBoth": "Ambas claves",
-    "sharePublicOnly": "Solo clave pública",
     "createNote": "Compartir como nota"
   }
 }

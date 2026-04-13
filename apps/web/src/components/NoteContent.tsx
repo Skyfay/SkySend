@@ -67,6 +67,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   const [copied, setCopied] = useState(false);
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedPrivate, setCopiedPrivate] = useState(false);
+  const [copiedPassphrase, setCopiedPassphrase] = useState(false);
   const [revealedPasswords, setRevealedPasswords] = useState<Set<number>>(new Set());
   const [copiedPasswords, setCopiedPasswords] = useState<Set<number>>(new Set());
 
@@ -175,12 +176,19 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   }
 
   if (contentType === "sshkey") {
+    // Parse passphrase line
+    const passphraseMatch = content.match(/^Passphrase: (.+)$/m);
+    const passphrase = passphraseMatch?.[1] ?? null;
+    const contentWithoutPassphrase = passphrase
+      ? content.replace(passphraseMatch![0], "").trim()
+      : content;
+
     // Parse content into public key and private key sections
-    const privateKeyMatch = content.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
+    const privateKeyMatch = contentWithoutPassphrase.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
     const privateKey = privateKeyMatch?.[1]?.trim() ?? null;
     const publicKey = privateKey
-      ? content.replace(privateKey, "").trim()
-      : content.trim();
+      ? contentWithoutPassphrase.replace(privateKey, "").trim()
+      : contentWithoutPassphrase.trim();
 
     const copyText = async (text: string, setter: (v: boolean) => void) => {
       try {
@@ -242,6 +250,32 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
             </div>
             <pre className="max-h-40 overflow-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs scrollbar-thin">
               {privateKey}
+            </pre>
+          </div>
+        )}
+
+        {/* Passphrase */}
+        {passphrase && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{t("sshKey.passphrase")}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => copyText(passphrase, setCopiedPassphrase)}
+              >
+                {copiedPassphrase ? (
+                  <Check className="mr-1 h-3 w-3" />
+                ) : (
+                  <Copy className="mr-1 h-3 w-3" />
+                )}
+                {copiedPassphrase ? t("common.copied") : t("common.copy")}
+              </Button>
+            </div>
+            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs break-all whitespace-pre-wrap scrollbar-thin">
+              {passphrase}
             </pre>
           </div>
         )}
