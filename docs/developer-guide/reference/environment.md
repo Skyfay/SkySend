@@ -6,6 +6,23 @@ Complete reference of all environment variables, their types, defaults, and vali
 
 All environment variables are validated on startup using Zod. Invalid values cause the server to fail with a descriptive error message. None of the variables are strictly required - all have sensible defaults for local development. For Docker deployments, `DATA_DIR` and `UPLOADS_DIR` are set automatically in the image.
 
+::: warning v2.0.0 Breaking Change
+All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the migration table below.
+:::
+
+### Migration from v1.x
+
+| Old Name (v1) | New Name (v2) |
+| --- | --- |
+| `MAX_FILE_SIZE` | `FILE_MAX_SIZE` |
+| `MAX_FILES_PER_UPLOAD` | `FILE_MAX_FILES_PER_UPLOAD` |
+| `EXPIRE_OPTIONS_SEC` | `FILE_EXPIRE_OPTIONS_SEC` |
+| `DEFAULT_EXPIRE_SEC` | `FILE_DEFAULT_EXPIRE_SEC` |
+| `DOWNLOAD_OPTIONS` | `FILE_DOWNLOAD_OPTIONS` |
+| `DEFAULT_DOWNLOAD` | `FILE_DEFAULT_DOWNLOAD` |
+| `UPLOAD_QUOTA_BYTES` | `FILE_UPLOAD_QUOTA_BYTES` |
+| `UPLOAD_QUOTA_WINDOW` | `FILE_UPLOAD_QUOTA_WINDOW` |
+
 ## Variables
 
 ### PORT
@@ -54,7 +71,7 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Default | `DATA_DIR/uploads` |
 | Description | Directory for encrypted upload files. Falls back to `DATA_DIR/uploads` if not set. In Docker, defaults to `/uploads` for separate volume mounting. |
 
-### MAX_FILE_SIZE
+### FILE_MAX_SIZE
 
 | Property | Value |
 | --- | --- |
@@ -63,7 +80,7 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Default | `2GB` |
 | Description | Maximum upload size. Supports: `B`, `KB`, `MB`, `GB` |
 
-### MAX_FILES_PER_UPLOAD
+### FILE_MAX_FILES_PER_UPLOAD
 
 | Property | Value |
 | --- | --- |
@@ -71,46 +88,110 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Type | Integer |
 | Default | `32` |
 | Range | >= 1 |
-| Required | No |
 | Description | Maximum files per multi-file upload |
 
-### EXPIRE_OPTIONS_SEC
+### FILE_EXPIRE_OPTIONS_SEC
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Comma-separated integers |
 | Default | `300,3600,86400,604800` |
-| Description | Selectable expiry times in seconds |
+| Description | Selectable expiry times in seconds for file uploads |
 
-### DEFAULT_EXPIRE_SEC
+### FILE_DEFAULT_EXPIRE_SEC
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Integer |
 | Default | `86400` |
-| Validation | Must be one of `EXPIRE_OPTIONS_SEC` |
-| Description | Default expiry time |
+| Validation | Must be one of `FILE_EXPIRE_OPTIONS_SEC` |
+| Description | Default expiry time for file uploads |
 
-### DOWNLOAD_OPTIONS
+### FILE_DOWNLOAD_OPTIONS
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Comma-separated integers |
 | Default | `1,2,3,4,5,10,20,50,100` |
-| Description | Selectable download limits |
+| Description | Selectable download limits for file uploads |
 
-### DEFAULT_DOWNLOAD
+### FILE_DEFAULT_DOWNLOAD
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Integer |
 | Default | `1` |
-| Validation | Must be one of `DOWNLOAD_OPTIONS` |
-| Description | Default download limit |
+| Validation | Must be one of `FILE_DOWNLOAD_OPTIONS` |
+| Description | Default download limit for file uploads |
+
+### FILE_UPLOAD_QUOTA_BYTES
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer (bytes) or byte size string |
+| Default | `0` (disabled) |
+| Description | Maximum upload volume per user per window. `0` disables quotas. Supports raw bytes or units: `B`, `KB`, `MB`, `GB` |
+
+### FILE_UPLOAD_QUOTA_WINDOW
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer (seconds) |
+| Default | `86400` |
+| Description | Quota time window for file upload quotas |
+
+### NOTE_MAX_SIZE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Byte size string |
+| Default | `1MB` |
+| Description | Maximum plaintext note size before encryption. Supports: `B`, `KB`, `MB`, `GB` |
+
+### NOTE_EXPIRE_OPTIONS_SEC
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `300,3600,86400,604800` |
+| Description | Selectable expiry times in seconds for notes |
+
+### NOTE_DEFAULT_EXPIRE_SEC
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `86400` |
+| Validation | Must be one of `NOTE_EXPIRE_OPTIONS_SEC` |
+| Description | Default expiry time for notes |
+
+### NOTE_VIEW_OPTIONS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `1,2,3,5,10,20,50,100` |
+| Description | Selectable view limits for notes |
+
+### NOTE_DEFAULT_VIEWS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `1` |
+| Validation | Must be one of `NOTE_VIEW_OPTIONS` |
+| Description | Default view limit for notes. `1` means burn-after-reading by default. |
 
 ### CLEANUP_INTERVAL
 
@@ -147,24 +228,6 @@ All environment variables are validated on startup using Zod. Invalid values cau
 | Type | Integer |
 | Default | `60` |
 | Description | Maximum requests per window per IP |
-
-### UPLOAD_QUOTA_BYTES
-
-| Property | Value |
-| --- | --- |
-| Required | No |
-| Type | Integer (bytes) or byte size string |
-| Default | `0` (disabled) |
-| Description | Maximum upload volume per user per window. `0` disables quotas. Supports raw bytes or units: `B`, `KB`, `MB`, `GB` |
-
-### UPLOAD_QUOTA_WINDOW
-
-| Property | Value |
-| --- | --- |
-| Required | No |
-| Type | Integer (seconds) |
-| Default | `86400` |
-| Description | Quota time window |
 
 ### TRUST_PROXY
 
@@ -257,10 +320,13 @@ All environment variables are validated on startup using Zod. Invalid values cau
 
 ## Validation Rules
 
-- `DEFAULT_EXPIRE_SEC` must be included in `EXPIRE_OPTIONS_SEC`
-- `DEFAULT_DOWNLOAD` must be included in `DOWNLOAD_OPTIONS`
+- `FILE_DEFAULT_EXPIRE_SEC` must be included in `FILE_EXPIRE_OPTIONS_SEC`
+- `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS`
+- `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC`
+- `NOTE_DEFAULT_VIEWS` must be included in `NOTE_VIEW_OPTIONS`
 - `PORT` must be between 1 and 65535
-- `MAX_FILE_SIZE` must be a valid byte size string with a recognized unit
+- `FILE_MAX_SIZE` must be a valid byte size string with a recognized unit
+- `NOTE_MAX_SIZE` must be a valid byte size string with a recognized unit
 - `BASE_URL` must be a valid URL
 - `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`

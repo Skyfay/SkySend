@@ -46,18 +46,48 @@ The recipient downloads a `.zip` file containing all original files with their n
 3. Click **Download**
 4. The file is downloaded, decrypted in your browser, and saved to your device
 
+## Share a Note
+
+SkySend also supports sharing encrypted text notes - no file needed.
+
+1. Open SkySend and switch to the **Note** tab
+2. Choose a note type:
+   - **Text** - Plain text content
+   - **Password** - A password or secret (displayed masked with a reveal toggle)
+   - **Code** - Code snippets (displayed in a monospace font)
+3. Enter your content
+4. Optionally configure:
+   - **Expiry time** - How long the note should be available
+   - **View limit** - Maximum number of views
+   - **Password** - Optional password protection
+   - **Burn after reading** - Destroy the note after a single view
+5. Click **Create Note**
+6. Copy the share link
+
+### View a Note
+
+1. Open the note share link in your browser
+2. If password-protected, enter the password
+3. Click **View Note** to decrypt and display the content
+4. If burn after reading is enabled, the note is permanently destroyed after viewing
+
+::: warning Burn After Reading
+When burn after reading is enabled, the note content is deleted from the server the moment it is viewed. There is no way to recover it.
+:::
+
 ## Manage Your Uploads
 
-SkySend stores your upload history locally in your browser (IndexedDB). No account is needed.
+SkySend stores your upload and note history locally in your browser (IndexedDB). No account is needed.
 
 Navigate to **My Uploads** to:
 
-- View all uploads you made from this browser
-- See download count and remaining downloads
+- Filter by **All**, **Files**, or **Notes**
+- View all uploads and notes you created from this browser
+- See download/view count and remaining downloads/views
 - See expiry countdown
 - Re-copy the share link
-- Delete uploads manually
+- Delete uploads or notes manually
 
 ::: info Browser-Local Data
-Upload history is stored only in your browser. Switching browsers or clearing browser data will lose the upload list. The uploads themselves remain on the server until they expire.
+Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire.
 :::

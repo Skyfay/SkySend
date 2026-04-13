@@ -27,7 +27,11 @@ All notable changes to SkySend are documented here.
 
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
+- **docs**: Added v1 to v2 environment variable migration table to environment reference
 - **docs**: Updated URL references from `/d/` to `/file/` in architecture and API docs
+- **docs**: Added comprehensive API documentation for all 5 note endpoints
+- **docs**: Updated API index with note endpoints overview table
+- **docs**: Updated user guide with note creation, viewing, and burn-after-reading instructions
 
 ### 🧪 Tests
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
