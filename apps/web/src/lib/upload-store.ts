@@ -8,28 +8,41 @@ export interface StoredUpload {
   createdAt: string;
 }
 
-const PREFIX = "upload:";
+export interface StoredNote {
+  id: string;
+  ownerToken: string;
+  secret: string;
+  contentType: "text" | "password" | "code";
+  createdAt: string;
+}
 
-function key(id: string): string {
-  return `${PREFIX}${id}`;
+const UPLOAD_PREFIX = "upload:";
+const NOTE_PREFIX = "note:";
+
+function uploadKey(id: string): string {
+  return `${UPLOAD_PREFIX}${id}`;
+}
+
+function noteKey(id: string): string {
+  return `${NOTE_PREFIX}${id}`;
 }
 
 export async function saveUpload(upload: StoredUpload): Promise<void> {
-  await set(key(upload.id), upload);
+  await set(uploadKey(upload.id), upload);
 }
 
 export async function getUpload(id: string): Promise<StoredUpload | undefined> {
-  return get<StoredUpload>(key(id));
+  return get<StoredUpload>(uploadKey(id));
 }
 
 export async function removeUpload(id: string): Promise<void> {
-  await del(key(id));
+  await del(uploadKey(id));
 }
 
 export async function getAllUploads(): Promise<StoredUpload[]> {
   const allKeys = await keys();
   const uploadKeys = allKeys.filter(
-    (k): k is string => typeof k === "string" && k.startsWith(PREFIX),
+    (k): k is string => typeof k === "string" && k.startsWith(UPLOAD_PREFIX),
   );
 
   const uploads: StoredUpload[] = [];
@@ -48,8 +61,52 @@ export async function getAllUploads(): Promise<StoredUpload[]> {
 export async function clearExpiredUploads(activeIds: Set<string>): Promise<void> {
   const allKeys = await keys();
   for (const k of allKeys) {
-    if (typeof k === "string" && k.startsWith(PREFIX)) {
-      const id = k.slice(PREFIX.length);
+    if (typeof k === "string" && k.startsWith(UPLOAD_PREFIX)) {
+      const id = k.slice(UPLOAD_PREFIX.length);
+      if (!activeIds.has(id)) {
+        await del(k);
+      }
+    }
+  }
+}
+
+// ── Note Storage ───────────────────────────────────────
+
+export async function saveNote(note: StoredNote): Promise<void> {
+  await set(noteKey(note.id), note);
+}
+
+export async function getNote(id: string): Promise<StoredNote | undefined> {
+  return get<StoredNote>(noteKey(id));
+}
+
+export async function removeNote(id: string): Promise<void> {
+  await del(noteKey(id));
+}
+
+export async function getAllNotes(): Promise<StoredNote[]> {
+  const allKeys = await keys();
+  const noteKeys = allKeys.filter(
+    (k): k is string => typeof k === "string" && k.startsWith(NOTE_PREFIX),
+  );
+
+  const notes: StoredNote[] = [];
+  for (const k of noteKeys) {
+    const note = await get<StoredNote>(k);
+    if (note) notes.push(note);
+  }
+
+  notes.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  return notes;
+}
+
+export async function clearExpiredNotes(activeIds: Set<string>): Promise<void> {
+  const allKeys = await keys();
+  for (const k of allKeys) {
+    if (typeof k === "string" && k.startsWith(NOTE_PREFIX)) {
+      const id = k.slice(NOTE_PREFIX.length);
       if (!activeIds.has(id)) {
         await del(k);
       }

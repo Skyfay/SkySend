@@ -123,7 +123,7 @@ apps/web/src/
   App.tsx               # React Router setup
   pages/
     Upload.tsx          # Main upload page
-    Download.tsx        # Download page (/d/:id)
+    Download.tsx        # Download page (/file/:id)
     MyUploads.tsx       # Upload management dashboard
     NotFound.tsx        # 404 page
   components/

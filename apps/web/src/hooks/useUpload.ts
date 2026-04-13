@@ -234,7 +234,7 @@ export function useUpload() {
       workerRef.current = null;
 
       // Build share link
-      const shareLink = `${window.location.origin}/d/${result.id}#${result.effectiveSecret}`;
+      const shareLink = `${window.location.origin}/file/${result.id}#${result.effectiveSecret}`;
 
       // Store in IndexedDB (main thread - needs DOM)
       await saveUpload({

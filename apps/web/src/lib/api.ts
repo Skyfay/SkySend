@@ -1,15 +1,23 @@
 import { z } from "zod";
 
 const configResponseSchema = z.object({
-  maxFileSize: z.number(),
-  maxFilesPerUpload: z.number(),
-  expireOptions: z.array(z.number()),
-  defaultExpire: z.number(),
-  downloadOptions: z.array(z.number()),
-  defaultDownload: z.number(),
+  // File configuration
+  fileMaxSize: z.number(),
+  fileMaxFilesPerUpload: z.number(),
+  fileExpireOptions: z.array(z.number()),
+  fileDefaultExpire: z.number(),
+  fileDownloadOptions: z.array(z.number()),
+  fileDefaultDownload: z.number(),
+  fileUploadQuotaBytes: z.number(),
+  fileUploadQuotaWindow: z.number(),
+  // Note configuration
+  noteMaxSize: z.number(),
+  noteExpireOptions: z.array(z.number()),
+  noteDefaultExpire: z.number(),
+  noteViewOptions: z.array(z.number()),
+  noteDefaultViews: z.number(),
+  // General
   customTitle: z.string(),
-  uploadQuotaBytes: z.number(),
-  uploadQuotaWindow: z.number(),
   customColor: z.string().nullable(),
   customLogo: z.string().nullable(),
   customPrivacy: z.string().nullable(),
@@ -200,6 +208,62 @@ export async function deleteUpload(
   ownerToken: string,
 ): Promise<void> {
   const res = await fetch(`/api/upload/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { "X-Owner-Token": ownerToken },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Delete failed" }));
+    throw new ApiError(
+      res.status,
+      (data as { error?: string }).error ?? "Delete failed",
+    );
+  }
+}
+
+// ── Note API ───────────────────────────────────────────
+
+export interface CreateNoteRequest {
+  encryptedContent: string;
+  nonce: string;
+  salt: string;
+  ownerToken: string;
+  authToken: string;
+  contentType: "text" | "password" | "code";
+  maxViews: number;
+  expireSec: number;
+  hasPassword: boolean;
+  passwordSalt?: string;
+  passwordAlgo?: string;
+}
+
+export interface CreateNoteResponse {
+  id: string;
+  expiresAt: string;
+}
+
+export async function createNote(
+  data: CreateNoteRequest,
+): Promise<CreateNoteResponse> {
+  const res = await fetch("/api/note", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Failed to create note" }));
+    throw new ApiError(
+      res.status,
+      (body as { error?: string }).error ?? "Failed to create note",
+    );
+  }
+  return (await res.json()) as CreateNoteResponse;
+}
+
+export async function deleteNote(
+  id: string,
+  ownerToken: string,
+): Promise<void> {
+  const res = await fetch(`/api/note/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: { "X-Owner-Token": ownerToken },
   });

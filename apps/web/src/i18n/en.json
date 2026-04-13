@@ -19,6 +19,26 @@
     "upload": "Upload",
     "myUploads": "My Uploads"
   },
+  "tab": {
+    "file": "File",
+    "text": "Text",
+    "password": "Password",
+    "code": "Code"
+  },
+  "note": {
+    "content": "Content",
+    "expiry": "Expires after",
+    "maxViews": "Max views",
+    "burnAfterReading": "1 (burn after reading)",
+    "create": "Create note",
+    "creating": "Encrypting...",
+    "tooLarge": "Note exceeds maximum size of {{size}}",
+    "placeholder": {
+      "text": "Enter your secret text...",
+      "password": "Enter the password to share...",
+      "code": "Paste your code here..."
+    }
+  },
   "upload": {
     "title": "Upload Files",
     "dropzone": "Drop files here or click to browse",

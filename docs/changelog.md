@@ -12,13 +12,18 @@ All notable changes to SkySend are documented here.
 - **server**: Added burn-after-reading support for notes via configurable max view count
 - **server**: Added new `NOTE_` environment variables for independent note configuration (`NOTE_MAX_SIZE`, `NOTE_EXPIRE_OPTIONS_SEC`, `NOTE_DEFAULT_EXPIRE_SEC`, `NOTE_VIEW_OPTIONS`, `NOTE_DEFAULT_VIEWS`)
 - **crypto**: Added `encryptNoteContent` and `decryptNoteContent` for AES-256-GCM note encryption
+- **web**: Added tab navigation on upload page (File, Text, Password, Code)
+- **web**: Added note creation form with content editor, expiry, view limits, and password protection
+- **web**: Added IndexedDB storage for created notes
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
 - **server**: Cleanup job now also removes expired notes and notes that reached their view limit
+- **web**: File download URLs changed from `/d/:id` to `/file/:id` with automatic redirect from old URLs
 
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
+- **docs**: Updated URL references from `/d/` to `/file/` in architecture and API docs
 
 ### 🧪 Tests
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)

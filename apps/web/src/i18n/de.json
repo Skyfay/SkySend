@@ -19,6 +19,26 @@
     "upload": "Hochladen",
     "myUploads": "Meine Uploads"
   },
+  "tab": {
+    "file": "Datei",
+    "text": "Text",
+    "password": "Passwort",
+    "code": "Code"
+  },
+  "note": {
+    "content": "Inhalt",
+    "expiry": "Läuft ab nach",
+    "maxViews": "Max. Aufrufe",
+    "burnAfterReading": "1 (nach dem Lesen löschen)",
+    "create": "Notiz erstellen",
+    "creating": "Verschlüsseln...",
+    "tooLarge": "Notiz überschreitet maximale Größe von {{size}}",
+    "placeholder": {
+      "text": "Geben Sie Ihren geheimen Text ein...",
+      "password": "Geben Sie das Passwort zum Teilen ein...",
+      "code": "Fügen Sie Ihren Code hier ein..."
+    }
+  },
   "upload": {
     "title": "Dateien hochladen",
     "dropzone": "Dateien hier ablegen oder klicken zum Auswählen",
