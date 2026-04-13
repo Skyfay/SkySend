@@ -2,8 +2,22 @@
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "skysend-instances",
   "main": "src/index.ts",
-  "compatibility_date": "2026-04-12",
-  "workers_dev": true,
+  "compatibility_date": "2026-04-13",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "instances.skysend.ch",
+      "zone_name": "skysend.ch",
+      "custom_domain": true
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
   "triggers": {
     "crons": ["0 * * * *"]
   },
