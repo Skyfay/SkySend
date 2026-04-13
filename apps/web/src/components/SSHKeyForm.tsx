@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Lock,
@@ -95,12 +95,10 @@ export function SSHKeyForm() {
     [],
   );
 
-  useEffect(() => {
-    if (config && expireSec === null) setExpireSec(config.noteDefaultExpire);
-    if (config && maxViews === null) setMaxViews(config.noteDefaultViews);
-  }, [config, expireSec, maxViews]);
+  if (!config) return null;
 
-  if (!config || expireSec === null || maxViews === null) return null;
+  const effectiveExpireSec = expireSec ?? config.noteDefaultExpire;
+  const effectiveMaxViews = maxViews ?? config.noteDefaultViews;
 
   const isSubmitting =
     noteHook.phase === "encrypting" || noteHook.phase === "uploading";
@@ -166,8 +164,8 @@ export function SSHKeyForm() {
     noteHook.upload({
       content,
       contentType: "sshkey",
-      maxViews,
-      expireSec,
+      maxViews: effectiveMaxViews,
+      expireSec: effectiveExpireSec,
       password: notePasswordEnabled ? notePassword : "",
     });
   };
@@ -199,7 +197,7 @@ export function SSHKeyForm() {
         <div className="space-y-2">
           <Label>{t("note.expiry")}</Label>
           <Select
-            value={String(expireSec)}
+            value={String(effectiveExpireSec)}
             onValueChange={(v) => setExpireSec(parseInt(v, 10))}
             disabled={isSubmitting}
           >
@@ -219,7 +217,7 @@ export function SSHKeyForm() {
         <div className="space-y-2">
           <Label>{t("note.maxViews")}</Label>
           <Select
-            value={String(maxViews)}
+            value={String(effectiveMaxViews)}
             onValueChange={(v) => setMaxViews(parseInt(v, 10))}
             disabled={isSubmitting}
           >

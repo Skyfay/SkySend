@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Lock,
@@ -43,12 +43,10 @@ export function PasswordForm() {
   const [showNotePassword, setShowNotePassword] = useState(false);
   const [notePasswordEnabled, setNotePasswordEnabled] = useState(false);
 
-  useEffect(() => {
-    if (config && expireSec === null) setExpireSec(config.noteDefaultExpire);
-    if (config && maxViews === null) setMaxViews(config.noteDefaultViews);
-  }, [config, expireSec, maxViews]);
+  if (!config) return null;
 
-  if (!config || expireSec === null || maxViews === null) return null;
+  const effectiveExpireSec = expireSec ?? config.noteDefaultExpire;
+  const effectiveMaxViews = maxViews ?? config.noteDefaultViews;
 
   const content = passwords.filter((p) => p.length > 0).join("\n\n");
   const contentBytes = new TextEncoder().encode(content).length;
@@ -93,8 +91,8 @@ export function PasswordForm() {
     noteHook.upload({
       content,
       contentType: "password",
-      maxViews,
-      expireSec,
+      maxViews: effectiveMaxViews,
+      expireSec: effectiveExpireSec,
       password: notePasswordEnabled ? notePassword : "",
     });
   };
@@ -210,7 +208,7 @@ export function PasswordForm() {
           <div className="space-y-2">
             <Label>{t("note.expiry")}</Label>
             <Select
-              value={String(expireSec)}
+              value={String(effectiveExpireSec)}
               onValueChange={(v) => setExpireSec(parseInt(v, 10))}
               disabled={isSubmitting}
             >
@@ -230,7 +228,7 @@ export function PasswordForm() {
           <div className="space-y-2">
             <Label>{t("note.maxViews")}</Label>
             <Select
-              value={String(maxViews)}
+              value={String(effectiveMaxViews)}
               onValueChange={(v) => setMaxViews(parseInt(v, 10))}
               disabled={isSubmitting}
             >
