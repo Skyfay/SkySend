@@ -45,6 +45,14 @@ export function UploadPage() {
 
   const quotaEnabled = config ? config.fileUploadQuotaBytes > 0 : false;
 
+  // Determine available tabs based on enabled services
+  const fileEnabled = config?.enabledServices.includes("file") ?? true;
+  const noteEnabled = config?.enabledServices.includes("note") ?? true;
+  const availableTabs: Tab[] = [
+    ...(fileEnabled ? ["file" as const] : []),
+    ...(noteEnabled ? (["text", "password", "code"] as const) : []),
+  ];
+
   useEffect(() => {
     if (!quotaEnabled) return;
     fetchQuota()
@@ -63,6 +71,10 @@ export function UploadPage() {
   if (config && expireSec === 0) {
     setExpireSec(config.fileDefaultExpire);
     setMaxDownloads(config.fileDefaultDownload);
+    // Set initial tab to first available service
+    if (!availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0]!);
+    }
   }
 
   if (configLoading || !config) {
@@ -216,8 +228,9 @@ export function UploadPage() {
       </div>
 
       {/* Tab bar */}
+      {availableTabs.length > 1 && (
       <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
-        {(["file", "text", "password", "code"] as const).map((tab) => {
+        {availableTabs.map((tab) => {
           const Icon = TAB_ICONS[tab];
           const isActive = activeTab === tab;
           return (
@@ -237,6 +250,7 @@ export function UploadPage() {
           );
         })}
       </div>
+      )}
 
       {/* File upload form */}
       {activeTab === "file" && (

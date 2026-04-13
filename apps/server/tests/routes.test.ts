@@ -27,6 +27,7 @@ import { passwordRoute } from "../src/routes/password.js";
 import { createDeleteRoute } from "../src/routes/delete.js";
 import { existsRoute } from "../src/routes/exists.js";
 import { healthRoute } from "../src/routes/health.js";
+import { noteRoute } from "../src/routes/note.js";
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -51,6 +52,7 @@ const DEFAULT_CONFIG = {
   RATE_LIMIT_WINDOW: 60000,
   RATE_LIMIT_MAX: 60,
   TRUST_PROXY: false,
+  ENABLED_SERVICES: ["file", "note"] as ("file" | "note")[],
 };
 
 describe("routes", () => {
@@ -700,6 +702,101 @@ describe("routes", () => {
       expect(res.status).toBe(400);
       const json = await res.json();
       expect(json.error).toContain("Password-protected");
+    });
+  });
+
+  // ── Service Guards ──────────────────────────────────
+
+  describe("ENABLED_SERVICES guards", () => {
+    function createGuardedApp() {
+      const app = new Hono();
+      // Replicate the service guard middleware from index.ts
+      const fileGuard = async (c: any, next: any) => {
+        const config = getConfig();
+        if (!config.ENABLED_SERVICES.includes("file")) {
+          return c.json({ error: "File service is disabled" }, 403);
+        }
+        return next();
+      };
+      app.use("/api/upload/*", fileGuard);
+      app.use("/api/info/*", fileGuard);
+      app.use("/api/download/*", fileGuard);
+
+      const noteGuard = async (c: any, next: any) => {
+        const config = getConfig();
+        if (!config.ENABLED_SERVICES.includes("note")) {
+          return c.json({ error: "Note service is disabled" }, 403);
+        }
+        return next();
+      };
+      app.use("/api/note/*", noteGuard);
+
+      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/info", infoRoute);
+      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/note", noteRoute);
+      return app;
+    }
+
+    it("should return 403 for file upload when file service is disabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["note"] });
+      const app = createGuardedApp();
+      const res = await app.request("/api/upload/init", { method: "POST" });
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toBe("File service is disabled");
+    });
+
+    it("should return 403 for file info when file service is disabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["note"] });
+      const app = createGuardedApp();
+      const res = await app.request(`/api/info/${TEST_UUID}`);
+      expect(res.status).toBe(403);
+    });
+
+    it("should return 403 for file download when file service is disabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["note"] });
+      const app = createGuardedApp();
+      const res = await app.request(`/api/download/${TEST_UUID}`, {
+        headers: { "X-Auth-Token": fakeBase64urlToken() },
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it("should return 403 for note creation when note service is disabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file"] });
+      const app = createGuardedApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: "text" }),
+      });
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toBe("Note service is disabled");
+    });
+
+    it("should return 403 for note info when note service is disabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file"] });
+      const app = createGuardedApp();
+      const res = await app.request(`/api/note/${TEST_UUID}`);
+      expect(res.status).toBe(403);
+    });
+
+    it("should allow file routes when file service is enabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file"] });
+      const app = createGuardedApp();
+      // Info for non-existent upload returns 404, not 403
+      const res = await app.request(`/api/info/${TEST_UUID}`);
+      expect(res.status).toBe(404);
+    });
+
+    it("should allow note routes when note service is enabled", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["note"] });
+      const app = createGuardedApp();
+      // Info for non-existent note returns 404, not 403
+      const res = await app.request(`/api/note/${TEST_UUID}`);
+      expect(res.status).toBe(404);
     });
   });
 });

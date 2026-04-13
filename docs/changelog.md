@@ -19,6 +19,8 @@ All notable changes to SkySend are documented here.
 - **web**: Added note API client functions for fetching note info, viewing content, and password verification
 - **web**: Added My Uploads page filter tabs (All, Files, Notes) with combined chronological list
 - **web**: Added note cards in My Uploads with view counter, expiry, QR code, copy link, and delete
+- **server**: Added `ENABLED_SERVICES` environment variable to enable/disable file and note services independently
+- **web**: Upload page and My Uploads page dynamically hide tabs for disabled services
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
@@ -32,11 +34,14 @@ All notable changes to SkySend are documented here.
 - **docs**: Added comprehensive API documentation for all 5 note endpoints
 - **docs**: Updated API index with note endpoints overview table
 - **docs**: Updated user guide with note creation, viewing, and burn-after-reading instructions
+- **docs**: Updated README, PHILOSOPHY, and docs landing page branding to reflect file and note sharing
 
 ### 🧪 Tests
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
 - **server**: Added 33 tests for note API routes (CRUD, view counting, burn-after-reading, auth tokens, password verification, size/expiry/view validation)
 - **server**: Added 4 cleanup tests for note expiry and view limit enforcement
+- **server**: Added 7 config tests for `ENABLED_SERVICES` parsing, validation, and cross-field skip logic
+- **server**: Added 7 route tests for service guard middleware (403 on disabled services)
 
 ### 🐳 Docker
 

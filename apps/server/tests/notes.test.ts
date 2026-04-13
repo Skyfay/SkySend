@@ -41,6 +41,7 @@ const DEFAULT_CONFIG = {
   RATE_LIMIT_WINDOW: 60000,
   RATE_LIMIT_MAX: 60,
   TRUST_PROXY: false,
+  ENABLED_SERVICES: ["file", "note"] as ("file" | "note")[],
 };
 
 function createApp() {

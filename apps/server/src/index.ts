@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 import { logger } from "hono/logger";
@@ -120,6 +120,22 @@ api.use("*", createRateLimiter(config));
 
 api.route("/config", configRoute);
 api.route("/health", healthRoute);
+
+// File service routes - guarded by ENABLED_SERVICES
+const fileServiceGuard = async (c: Context, next: Next) => {
+  if (!config.ENABLED_SERVICES.includes("file")) {
+    return c.json({ error: "File service is disabled" }, 403);
+  }
+  return next();
+};
+api.use("/info/*", fileServiceGuard);
+api.use("/exists/*", fileServiceGuard);
+api.use("/password/*", fileServiceGuard);
+api.use("/meta/*", fileServiceGuard);
+api.use("/download/*", fileServiceGuard);
+api.use("/upload/*", fileServiceGuard);
+api.use("/quota", fileServiceGuard);
+
 api.route("/info", infoRoute);
 api.route("/exists", existsRoute);
 api.route("/password", passwordRoute);
@@ -146,7 +162,13 @@ api.route("/upload", uploadWithQuota);
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
 
-// Note routes (E2EE encrypted notes)
+// Note routes (E2EE encrypted notes) - guarded by ENABLED_SERVICES
+api.use("/note/*", async (c: Context, next: Next) => {
+  if (!config.ENABLED_SERVICES.includes("note")) {
+    return c.json({ error: "Note service is disabled" }, 403);
+  }
+  return next();
+});
 api.route("/note", noteRoute);
 
 app.route("/api", api);

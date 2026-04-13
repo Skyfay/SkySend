@@ -6,6 +6,7 @@ import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
+import { useServerConfig } from "@/hooks/useServerConfig";
 import { toast } from "@/hooks/useToast";
 
 type Filter = "all" | "files" | "notes";
@@ -18,9 +19,13 @@ const FILTER_ICONS = {
 
 export function MyUploadsPage() {
   const { t } = useTranslation();
+  const { config } = useServerConfig();
   const { uploads, loading: uploadsLoading, deleteUpload } = useUploadHistory();
   const { notes, loading: notesLoading, deleteNote } = useNoteHistory();
   const [filter, setFilter] = useState<Filter>("all");
+
+  const fileEnabled = config?.enabledServices.includes("file") ?? true;
+  const noteEnabled = config?.enabledServices.includes("note") ?? true;
 
   const loading = uploadsLoading || notesLoading;
 
@@ -68,7 +73,11 @@ export function MyUploadsPage() {
 
   const isEmpty = items.length === 0 && !loading;
 
-  const filters: Filter[] = ["all", "files", "notes"];
+  const filters: Filter[] = [
+    ...(fileEnabled && noteEnabled ? ["all" as const] : []),
+    ...(fileEnabled ? ["files" as const] : []),
+    ...(noteEnabled ? ["notes" as const] : []),
+  ];
 
   return (
     <div className="space-y-6">

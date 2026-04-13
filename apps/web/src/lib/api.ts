@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const configResponseSchema = z.object({
+  // Service toggles
+  enabledServices: z.array(z.enum(["file", "note"])),
   // File configuration
   fileMaxSize: z.number(),
   fileMaxFilesPerUpload: z.number(),

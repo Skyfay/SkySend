@@ -11,6 +11,8 @@ const configRoute = new Hono();
 configRoute.get("/", (c) => {
   const config = getConfig();
   return c.json({
+    // Service toggles
+    enabledServices: config.ENABLED_SERVICES,
     // File configuration
     fileMaxSize: config.FILE_MAX_SIZE,
     fileMaxFilesPerUpload: config.FILE_MAX_FILES_PER_UPLOAD,

@@ -47,6 +47,7 @@ describe("config", () => {
       expect(config.NOTE_DEFAULT_EXPIRE_SEC).toBe(86400);
       expect(config.NOTE_VIEW_OPTIONS).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
       expect(config.NOTE_DEFAULT_VIEWS).toBe(1);
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
     });
   });
 
@@ -103,6 +104,24 @@ describe("config", () => {
       process.env.CUSTOM_TITLE = "MyShare";
       const config = await loadFreshConfig();
       expect(config.CUSTOM_TITLE).toBe("MyShare");
+    });
+
+    it("should parse ENABLED_SERVICES with only file", async () => {
+      process.env.ENABLED_SERVICES = "file";
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["file"]);
+    });
+
+    it("should parse ENABLED_SERVICES with only note", async () => {
+      process.env.ENABLED_SERVICES = "note";
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["note"]);
+    });
+
+    it("should ignore invalid values in ENABLED_SERVICES", async () => {
+      process.env.ENABLED_SERVICES = "file,invalid,note";
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
     });
   });
 
@@ -169,6 +188,33 @@ describe("config", () => {
       process.env.NOTE_VIEW_OPTIONS = "5,10";
       process.env.NOTE_DEFAULT_VIEWS = "1";
       await expect(loadFreshConfig()).rejects.toThrow("must be one of NOTE_VIEW_OPTIONS");
+    });
+
+    it("should treat empty ENABLED_SERVICES as default (both enabled)", async () => {
+      process.env.ENABLED_SERVICES = "";
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+    });
+
+    it("should reject ENABLED_SERVICES with only invalid values", async () => {
+      process.env.ENABLED_SERVICES = "invalid,unknown";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should skip file cross-validation when file service is disabled", async () => {
+      process.env.ENABLED_SERVICES = "note";
+      process.env.FILE_EXPIRE_OPTIONS_SEC = "300,3600";
+      process.env.FILE_DEFAULT_EXPIRE_SEC = "86400"; // Not in options - would normally fail
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["note"]);
+    });
+
+    it("should skip note cross-validation when note service is disabled", async () => {
+      process.env.ENABLED_SERVICES = "file";
+      process.env.NOTE_EXPIRE_OPTIONS_SEC = "300,3600";
+      process.env.NOTE_DEFAULT_EXPIRE_SEC = "86400"; // Not in options - would normally fail
+      const config = await loadFreshConfig();
+      expect(config.ENABLED_SERVICES).toEqual(["file"]);
     });
   });
 

@@ -22,7 +22,7 @@ export interface QuotaStatus {
  * The daily rotating key ensures that IPs cannot be correlated across days.
  * State is persisted in SQLite so quotas survive server restarts.
  *
- * If UPLOAD_QUOTA_BYTES is 0, the middleware is a no-op.
+ * If FILE_UPLOAD_QUOTA_BYTES is 0, the middleware is a no-op.
  */
 export function createUploadQuota(config: Config) {
   const keyRotationMs = 24 * 60 * 60 * 1000;

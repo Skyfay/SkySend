@@ -193,6 +193,17 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Must be one of `NOTE_VIEW_OPTIONS` |
 | Description | Default view limit for notes. `1` means burn-after-reading by default. |
 
+### ENABLED_SERVICES
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated list |
+| Default | `file,note` |
+| Allowed values | `file`, `note` |
+| Validation | At least one service must be enabled |
+| Description | Controls which services are available. Set to `file` for file sharing only, `note` for notes only, or `file,note` for both. Disabled services return HTTP 403 and their UI tabs are hidden. |
+
 ### CLEANUP_INTERVAL
 
 | Property | Value |
@@ -320,10 +331,11 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 
 ## Validation Rules
 
-- `FILE_DEFAULT_EXPIRE_SEC` must be included in `FILE_EXPIRE_OPTIONS_SEC`
-- `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS`
-- `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC`
-- `NOTE_DEFAULT_VIEWS` must be included in `NOTE_VIEW_OPTIONS`
+- `ENABLED_SERVICES` must contain at least one of `file` or `note`
+- `FILE_DEFAULT_EXPIRE_SEC` must be included in `FILE_EXPIRE_OPTIONS_SEC` (only validated when file service is enabled)
+- `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS` (only validated when file service is enabled)
+- `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC` (only validated when note service is enabled)
+- `NOTE_DEFAULT_VIEWS` must be included in `NOTE_VIEW_OPTIONS` (only validated when note service is enabled)
 - `PORT` must be between 1 and 65535
 - `FILE_MAX_SIZE` must be a valid byte size string with a recognized unit
 - `NOTE_MAX_SIZE` must be a valid byte size string with a recognized unit
