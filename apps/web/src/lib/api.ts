@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { NoteContentType } from "@skysend/crypto";
 
 const configResponseSchema = z.object({
   // Service toggles
@@ -230,7 +231,7 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  contentType: "text" | "password" | "code";
+  contentType: NoteContentType;
   maxViews: number;
   expireSec: number;
   hasPassword: boolean;
@@ -265,7 +266,7 @@ export async function createNote(
 
 const noteInfoResponseSchema = z.object({
   id: z.string(),
-  contentType: z.enum(["text", "password", "code"]),
+  contentType: z.enum(["text", "password", "code", "markdown"]),
   hasPassword: z.boolean(),
   passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
   passwordSalt: z.string().optional(),

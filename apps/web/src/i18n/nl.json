@@ -24,7 +24,8 @@
     "text": "Tekst",
     "password": "Wachtwoord",
     "code": "Code",
-    "sshkey": "SSH-sleutel"
+    "sshkey": "SSH-sleutel",
+    "markdown": "Markdown"
   },
   "note": {
     "content": "Inhoud",
@@ -35,10 +36,15 @@
     "create": "Notitie aanmaken",
     "creating": "Versleutelen...",
     "tooLarge": "Notitie overschrijdt de maximale grootte van {{size}}",
+    "plainText": "Platte tekst",
+    "edit": "Bewerken",
+    "preview": "Voorbeeld",
+    "previewEmpty": "Nog niets om te bekijken...",
     "placeholder": {
       "text": "Voer uw geheime tekst in...",
       "password": "Voer het te delen wachtwoord in...",
-      "code": "Plak uw code hier..."
+      "code": "Plak uw code hier...",
+      "markdown": "Schrijf uw markdown hier..."
     }
   },
   "upload": {

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff, Send, Loader2 } from "lucide-react";
+import { Lock, Eye, EyeOff, Send, Loader2, Type, Heading } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +33,8 @@ export function NoteForm({ contentType }: NoteFormProps) {
   const noteHook = useNoteUpload();
 
   const [content, setContent] = useState("");
+  const [markdownMode, setMarkdownMode] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [expireSec, setExpireSec] = useState<number | null>(() => null);
   const [maxViews, setMaxViews] = useState<number | null>(() => null);
   const [password, setPassword] = useState("");
@@ -52,10 +56,12 @@ export function NoteForm({ contentType }: NoteFormProps) {
   const isSubmitting = noteHook.phase === "encrypting" || noteHook.phase === "uploading";
   const canSubmit = content.length > 0 && !sizeExceeded && !isSubmitting;
 
+  const effectiveContentType = contentType === "text" && markdownMode ? "markdown" as const : contentType;
+
   const handleSubmit = () => {
     noteHook.upload({
       content,
-      contentType,
+      contentType: effectiveContentType,
       maxViews,
       expireSec,
       password: passwordEnabled ? password : "",
@@ -79,24 +85,91 @@ export function NoteForm({ contentType }: NoteFormProps) {
   return (
     <Card>
       <CardContent className="space-y-6 pt-6">
+        {/* Markdown mode toggle for text tab */}
+        {contentType === "text" && (
+          <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+            <button
+              type="button"
+              onClick={() => { setMarkdownMode(false); setShowPreview(false); }}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                !markdownMode
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Type className="h-4 w-4" />
+              {t("note.plainText")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMarkdownMode(true)}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                markdownMode
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Heading className="h-4 w-4" />
+              Markdown
+            </button>
+          </div>
+        )}
         {/* Content textarea */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="note-content">{t("note.content")}</Label>
-            <span
-              className={`text-xs ${sizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
-            >
-              {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
-            </span>
+            <div className="flex items-center gap-3">
+              {markdownMode && (
+                <div className="flex gap-1 rounded-md border border-border bg-muted/50 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(false)}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                      !showPreview
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("note.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                      showPreview
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("note.preview")}
+                  </button>
+                </div>
+              )}
+              <span
+                className={`text-xs ${sizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
+              >
+                {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
+              </span>
+            </div>
           </div>
-          <Textarea
-            id="note-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={t(placeholderKey)}
-            className={`min-h-50 resize-y ${contentType === "code" ? "font-mono text-sm" : ""} ${contentType === "password" ? "font-mono" : ""}`}
-            disabled={isSubmitting}
-          />
+          {markdownMode && showPreview ? (
+            <div className="min-h-50 rounded-md border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
+              {content ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              ) : (
+                <p className="text-muted-foreground italic">{t("note.previewEmpty")}</p>
+              )}
+            </div>
+          ) : (
+            <Textarea
+              id="note-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={markdownMode ? t("note.placeholder.markdown") : t(placeholderKey)}
+              className={`min-h-50 resize-y ${contentType === "code" ? "font-mono text-sm" : ""} ${contentType === "password" ? "font-mono" : ""}`}
+              disabled={isSubmitting}
+            />
+          )}
           {sizeExceeded && (
             <p className="text-sm text-destructive-foreground" role="alert">
               {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}

@@ -1,4 +1,5 @@
 import { get, set, del, keys } from "idb-keyval";
+import type { NoteContentType } from "@skysend/crypto";
 
 export interface StoredUpload {
   id: string;
@@ -12,7 +13,7 @@ export interface StoredNote {
   id: string;
   ownerToken: string;
   secret: string;
-  contentType: "text" | "password" | "code";
+  contentType: NoteContentType;
   createdAt: string;
 }
 

@@ -11,6 +11,7 @@ import {
   Clock,
   Eye,
   QrCode,
+  Heading,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const CONTENT_TYPE_ICONS = {
   text: FileText,
   password: KeyRound,
   code: Code,
+  markdown: Heading,
 } as const;
 
 interface NoteCardProps {

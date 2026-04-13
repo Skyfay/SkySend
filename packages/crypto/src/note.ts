@@ -20,7 +20,7 @@ import { randomBytes, asBytes, encodeUtf8, decodeUtf8 } from "./util.js";
 export const NOTE_NONCE_LENGTH = 12;
 
 /** Supported note content types. */
-export type NoteContentType = "text" | "password" | "code";
+export type NoteContentType = "text" | "password" | "code" | "markdown";
 
 /** Metadata describing a note (not the encrypted content itself). */
 export interface NoteMetadata {

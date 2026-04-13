@@ -24,7 +24,8 @@
     "text": "Tekst",
     "password": "Hasło",
     "code": "Kod",
-    "sshkey": "Klucz SSH"
+    "sshkey": "Klucz SSH",
+    "markdown": "Markdown"
   },
   "note": {
     "content": "Treść",
@@ -35,10 +36,15 @@
     "create": "Utwórz notatkę",
     "creating": "Szyfrowanie...",
     "tooLarge": "Notatka przekracza maksymalny rozmiar {{size}}",
+    "plainText": "Zwykły tekst",
+    "edit": "Edytuj",
+    "preview": "Podgląd",
+    "previewEmpty": "Nie ma jeszcze nic do podglądu...",
     "placeholder": {
       "text": "Wpisz swój tajny tekst...",
       "password": "Wpisz hasło do udostępnienia...",
-      "code": "Wklej swój kod tutaj..."
+      "code": "Wklej swój kod tutaj...",
+      "markdown": "Napisz swój markdown tutaj..."
     }
   },
   "upload": {

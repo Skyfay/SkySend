@@ -24,7 +24,8 @@
     "text": "Text",
     "password": "Lösenord",
     "code": "Kod",
-    "sshkey": "SSH-nyckel"
+    "sshkey": "SSH-nyckel",
+    "markdown": "Markdown"
   },
   "note": {
     "content": "Innehåll",
@@ -35,10 +36,15 @@
     "create": "Skapa anteckning",
     "creating": "Krypterar...",
     "tooLarge": "Anteckningen överskrider maxstorleken på {{size}}",
+    "plainText": "Oformaterad text",
+    "edit": "Redigera",
+    "preview": "Förhandsgranska",
+    "previewEmpty": "Inget att förhandsgranska ännu...",
     "placeholder": {
       "text": "Skriv din hemliga text...",
       "password": "Skriv lösenordet att dela...",
-      "code": "Klistra in din kod här..."
+      "code": "Klistra in din kod här...",
+      "markdown": "Skriv din markdown här..."
     }
   },
   "upload": {

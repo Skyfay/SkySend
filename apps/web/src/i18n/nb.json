@@ -24,7 +24,8 @@
     "text": "Tekst",
     "password": "Passord",
     "code": "Kode",
-    "sshkey": "SSH-nøkkel"
+    "sshkey": "SSH-nøkkel",
+    "markdown": "Markdown"
   },
   "note": {
     "content": "Innhold",
@@ -35,10 +36,15 @@
     "create": "Opprett notat",
     "creating": "Krypterer...",
     "tooLarge": "Notatet overskrider maksimalstørrelsen på {{size}}",
+    "plainText": "Ren tekst",
+    "edit": "Rediger",
+    "preview": "Forhåndsvisning",
+    "previewEmpty": "Ingenting å forhåndsvise ennå...",
     "placeholder": {
       "text": "Skriv inn din hemmelige tekst...",
       "password": "Skriv inn passordet som skal deles...",
-      "code": "Lim inn koden din her..."
+      "code": "Lim inn koden din her...",
+      "markdown": "Skriv din markdown her..."
     }
   },
   "upload": {

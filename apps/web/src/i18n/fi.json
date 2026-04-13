@@ -24,7 +24,8 @@
     "text": "Teksti",
     "password": "Salasana",
     "code": "Koodi",
-    "sshkey": "SSH-avain"
+    "sshkey": "SSH-avain",
+    "markdown": "Markdown"
   },
   "note": {
     "content": "Sisältö",
@@ -35,10 +36,15 @@
     "create": "Luo muistiinpano",
     "creating": "Salataan...",
     "tooLarge": "Muistiinpano ylittää enimmäiskoon {{size}}",
+    "plainText": "Pelkkä teksti",
+    "edit": "Muokkaa",
+    "preview": "Esikatselu",
+    "previewEmpty": "Ei vielä mitään esikatselua...",
     "placeholder": {
       "text": "Kirjoita salainen tekstisi...",
       "password": "Kirjoita jaettava salasana...",
-      "code": "Liitä koodisi tähän..."
+      "code": "Liitä koodisi tähän...",
+      "markdown": "Kirjoita markdown-tekstisi tähän..."
     }
   },
   "upload": {

@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import type { NoteContentType } from "@skysend/crypto";
 import hljs from "highlight.js/lib/core";
@@ -146,6 +148,24 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
               </tbody>
             </table>
           </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={copyToClipboard}>
+          {copied ? (
+            <Check className="mr-1.5 h-4 w-4" />
+          ) : (
+            <Copy className="mr-1.5 h-4 w-4" />
+          )}
+          {copied ? t("common.copied") : t("common.copy")}
+        </Button>
+      </div>
+    );
+  }
+
+  if (contentType === "markdown") {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border bg-muted/50 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
         <Button variant="outline" size="sm" onClick={copyToClipboard}>
           {copied ? (
