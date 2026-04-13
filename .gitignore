@@ -52,5 +52,8 @@ ehthumbs.db
 *.temp
 .cache/
 
+# Cloudflare Workers
+.wrangler/
+
 # Image Test
 test/

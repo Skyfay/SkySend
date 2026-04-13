@@ -12,6 +12,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Added service filter (All / Files / Notes) to instances page based on each instance's `enabledServices` configuration
 - **docs**: Added skeleton loading animation while instance data is being fetched
 - **docs**: Instance list is now maintained via `docs/public/instances.json` - users can add instances via pull request
+- **docs**: Instance cards show separate Files and Notes stats sections, each only visible when the service is enabled
 
 ### 🐳 Docker
 

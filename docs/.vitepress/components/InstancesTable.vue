@@ -152,10 +152,10 @@ onMounted(async () => {
           {{ serviceLabels(inst.enabledServices) }}
         </span>
       </div>
-      <div class="card-stats">
+      <div v-if="inst.enabledServices.includes('file')" class="card-stats">
         <div class="stat">
           <span class="stat-value">{{ formatBytes(inst.fileMaxSize) }}</span>
-          <span class="stat-label">Max File Size</span>
+          <span class="stat-label">Max Size</span>
         </div>
         <div class="stat">
           <span class="stat-value">{{ formatNumber(inst.fileMaxFilesPerUpload) }}</span>
@@ -173,6 +173,14 @@ onMounted(async () => {
           <span class="stat-value">{{ formatNumber(inst.fileMaxDownloads) }}</span>
           <span class="stat-label">Max Downloads</span>
         </div>
+      </div>
+      <div v-if="inst.enabledServices.includes('note')" class="note-details">
+        <span class="note-details-label">Notes:</span>
+        <span>{{ formatBytes(inst.noteMaxSize) }} max</span>
+        <span class="detail-sep">·</span>
+        <span>{{ formatDuration(inst.noteMaxExpiry) }} expiry</span>
+        <span class="detail-sep">·</span>
+        <span>{{ formatNumber(inst.noteMaxViews) }} views</span>
       </div>
     </div>
   </div>
@@ -289,6 +297,25 @@ onMounted(async () => {
 
 .card-services {
   margin-bottom: 0.75rem;
+}
+
+.note-details {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--vp-c-text-2);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.note-details-label {
+  font-weight: 600;
+  color: var(--vp-c-text-3);
+}
+
+.detail-sep {
+  color: var(--vp-c-text-3);
 }
 
 .service-badge {
