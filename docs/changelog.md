@@ -17,7 +17,7 @@ All notable changes to SkySend are documented here.
 - **web**: Added IndexedDB storage for created notes
 - **web**: Added note view page with decryption, password prompt, view counter, and burn-after-reading indicator
 - **web**: Added note API client functions for fetching note info, viewing content, and password verification
-- **web**: Added My Uploads page filter tabs (All, Files, Notes) with combined chronological list
+- **web**: Added My Uploads page filter tabs (All, Files, Text, Passwords, Code, Markdown, SSH Keys) with combined chronological list
 - **web**: Added note cards in My Uploads with view counter, expiry, QR code, copy link, and delete
 - **server**: Added `ENABLED_SERVICES` environment variable to enable/disable file and note services independently
 - **web**: Upload page and My Uploads page dynamically hide tabs for disabled services
@@ -31,6 +31,7 @@ All notable changes to SkySend are documented here.
 - **crypto**: Added `sshkey` as dedicated `NoteContentType` so SSH key notes display with their own icon and label in My Uploads
 - **web**: Redesigned Password tab with single-line input fields, per-field password generator toggle, and add/remove support for multiple passwords
 - **web**: Password note viewer now shows each password individually with separate reveal and copy buttons
+- **cli**: Added notes support to `list`, `delete`, `stats`, and `cleanup` commands
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
@@ -51,6 +52,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Updated API index with note endpoints overview table
 - **docs**: Updated user guide with note creation, viewing, and burn-after-reading instructions
 - **docs**: Updated README, PHILOSOPHY, and docs landing page branding to reflect file and note sharing
+- **docs**: Added screenshots page with overview, note types, and My Uploads views
 
 ### 🧪 Tests
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
