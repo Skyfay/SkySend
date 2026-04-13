@@ -197,6 +197,24 @@ describe("cleanup", () => {
     expect(result).toBeDefined();
   });
 
+  it("should not delete unlimited-view notes (maxViews=0)", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440014";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      maxViews: 0,
+      viewCount: 50,
+      expiresAt: new Date(Date.now() + 86400 * 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(0);
+
+    const result = await dbCtx.db.query.notes.findFirst({
+      where: eq(notes.id, noteId),
+    });
+    expect(result).toBeDefined();
+  });
+
   it("should clean both expired uploads and notes together", async () => {
     // Expired upload
     insertTestUpload(dbCtx.db, {

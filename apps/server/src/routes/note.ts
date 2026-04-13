@@ -18,7 +18,7 @@ const createNoteSchema = z.object({
   ownerToken: z.string().min(1),
   authToken: z.string().min(1),
   contentType: z.enum(["text", "password", "code"]),
-  maxViews: z.number().int().positive(),
+  maxViews: z.number().int().nonnegative(),
   expireSec: z.number().int().positive(),
   hasPassword: z.boolean().default(false),
   passwordSalt: z.string().optional(),
@@ -35,7 +35,7 @@ function isNoteAvailable(note: Note): { available: boolean; error?: string } {
   if (new Date() >= note.expiresAt) {
     return { available: false, error: "Note has expired" };
   }
-  if (note.viewCount >= note.maxViews) {
+  if (note.maxViews > 0 && note.viewCount >= note.maxViews) {
     return { available: false, error: "View limit reached" };
   }
   return { available: true };
@@ -242,7 +242,7 @@ noteRoute.post(
       .update(notes)
       .set({ viewCount: sql`${notes.viewCount} + 1` })
       .where(
-        sql`${notes.id} = ${id} AND ${notes.viewCount} < ${notes.maxViews}`,
+        sql`${notes.id} = ${id} AND (${notes.maxViews} = 0 OR ${notes.viewCount} < ${notes.maxViews})`,
       )
       .run();
 

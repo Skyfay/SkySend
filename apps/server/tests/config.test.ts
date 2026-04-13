@@ -45,8 +45,8 @@ describe("config", () => {
       expect(config.NOTE_MAX_SIZE).toBe(1024 ** 2);
       expect(config.NOTE_EXPIRE_OPTIONS_SEC).toEqual([300, 3600, 86400, 604800]);
       expect(config.NOTE_DEFAULT_EXPIRE_SEC).toBe(86400);
-      expect(config.NOTE_VIEW_OPTIONS).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
-      expect(config.NOTE_DEFAULT_VIEWS).toBe(1);
+      expect(config.NOTE_VIEW_OPTIONS).toEqual([0, 1, 2, 3, 5, 10, 20, 50, 100]);
+      expect(config.NOTE_DEFAULT_VIEWS).toBe(0);
       expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
     });
   });

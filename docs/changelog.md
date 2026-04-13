@@ -21,6 +21,8 @@ All notable changes to SkySend are documented here.
 - **web**: Added note cards in My Uploads with view counter, expiry, QR code, copy link, and delete
 - **server**: Added `ENABLED_SERVICES` environment variable to enable/disable file and note services independently
 - **web**: Upload page and My Uploads page dynamically hide tabs for disabled services
+- **server**: Added unlimited views option (`maxViews: 0`) for notes - notes expire only by time, not by view count
+- **web**: View selector shows "Unlimited" option when `0` is included in `NOTE_VIEW_OPTIONS`
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
@@ -45,6 +47,7 @@ All notable changes to SkySend are documented here.
 - **server**: Added 4 cleanup tests for note expiry and view limit enforcement
 - **server**: Added 7 config tests for `ENABLED_SERVICES` parsing, validation, and cross-field skip logic
 - **server**: Added 7 route tests for service guard middleware (403 on disabled services)
+- **server**: Added 3 tests for unlimited views (creation, viewing, cleanup skip)
 
 ### 🐳 Docker
 

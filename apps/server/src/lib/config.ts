@@ -27,6 +27,12 @@ const commaSeparatedInts = z
   .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
   .pipe(z.array(z.number().int().positive()).min(1));
 
+/** Comma-separated list of non-negative integers (allows 0). */
+const commaSeparatedNonNegativeInts = z
+  .string()
+  .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
+  .pipe(z.array(z.number().int().nonnegative()).min(1));
+
 const configSchema = z.object({
   PORT: z
     .string()
@@ -111,13 +117,13 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  NOTE_VIEW_OPTIONS: commaSeparatedInts.default(() => [1, 2, 3, 5, 10, 20, 50, 100]),
+  NOTE_VIEW_OPTIONS: commaSeparatedNonNegativeInts.default(() => [0, 1, 2, 3, 5, 10, 20, 50, 100]),
 
   NOTE_DEFAULT_VIEWS: z
     .string()
-    .default("1")
+    .default("0")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().nonnegative()),
 
   // --- General configuration ---
 

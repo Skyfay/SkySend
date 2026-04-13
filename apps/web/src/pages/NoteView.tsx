@@ -126,6 +126,7 @@ export function NoteViewPage() {
   if (noteHook.phase === "idle" && noteHook.info) {
     const info = noteHook.info;
     const isBurnAfterReading = info.maxViews === 1;
+    const isUnlimited = info.maxViews === 0;
 
     return (
       <div className="space-y-6">
@@ -136,10 +137,12 @@ export function NoteViewPage() {
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4" />
                 <span>
-                  {t("noteView.viewsRemaining", {
-                    remaining: info.maxViews - info.viewCount,
-                    max: info.maxViews,
-                  })}
+                  {isUnlimited
+                    ? t("noteView.viewsUnlimited")
+                    : t("noteView.viewsRemaining", {
+                        remaining: info.maxViews - info.viewCount,
+                        max: info.maxViews,
+                      })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -152,7 +155,7 @@ export function NoteViewPage() {
               </div>
             </div>
 
-            {isBurnAfterReading && (
+            {isBurnAfterReading && !isUnlimited && (
               <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive-foreground">
                 <Flame className="h-4 w-4 shrink-0" />
                 <span>{t("noteView.burnWarning")}</span>
@@ -192,10 +195,12 @@ export function NoteViewPage() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
               <span>
-                {t("noteView.viewCount", {
-                  current: noteHook.viewCount,
-                  max: noteHook.maxViews,
-                })}
+                {noteHook.maxViews === 0
+                  ? t("noteView.viewCountUnlimited", { current: noteHook.viewCount })
+                  : t("noteView.viewCount", {
+                      current: noteHook.viewCount,
+                      max: noteHook.maxViews,
+                    })}
               </span>
             </div>
 

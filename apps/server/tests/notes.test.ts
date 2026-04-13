@@ -34,8 +34,8 @@ const DEFAULT_CONFIG = {
   NOTE_MAX_SIZE: 1024 ** 2,
   NOTE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
   NOTE_DEFAULT_EXPIRE_SEC: 86400,
-  NOTE_VIEW_OPTIONS: [1, 2, 3, 5, 10, 20, 50, 100],
-  NOTE_DEFAULT_VIEWS: 1,
+  NOTE_VIEW_OPTIONS: [0, 1, 2, 3, 5, 10, 20, 50, 100],
+  NOTE_DEFAULT_VIEWS: 0,
   CLEANUP_INTERVAL: 60,
   CUSTOM_TITLE: "SkySend",
   RATE_LIMIT_WINDOW: 60000,
@@ -403,6 +403,35 @@ describe("note routes", () => {
         body: JSON.stringify({ authToken }),
       });
       expect(res2.status).toBe(410);
+    });
+
+    it("should allow unlimited views when maxViews=0", async () => {
+      const app = createApp();
+      const authToken = fakeBase64urlToken();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken, maxViews: 0 });
+
+      // View multiple times - should always succeed
+      for (let i = 1; i <= 5; i++) {
+        const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authToken }),
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.viewCount).toBe(i);
+        expect(body.maxViews).toBe(0);
+      }
+    });
+
+    it("should allow creating a note with maxViews=0", async () => {
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ maxViews: 0 })),
+      });
+      expect(res.status).toBe(201);
     });
 
     it("should atomically increment view count", async () => {

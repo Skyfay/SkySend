@@ -48,7 +48,7 @@ export async function runCleanup(storage: FileStorage): Promise<number> {
     .where(
       or(
         lte(notes.expiresAt, now),
-        sql`${notes.viewCount} >= ${notes.maxViews}`,
+        sql`${notes.maxViews} > 0 AND ${notes.viewCount} >= ${notes.maxViews}`,
       ),
     )
     .all();

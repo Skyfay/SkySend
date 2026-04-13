@@ -180,8 +180,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Comma-separated integers |
-| Default | `1,2,3,5,10,20,50,100` |
-| Description | Selectable view limits for notes |
+| Default | `0,1,2,3,5,10,20,50,100` |
+| Description | Selectable view limits for notes. `0` means unlimited views (the note expires only by time). |
 
 ### NOTE_DEFAULT_VIEWS
 
@@ -189,9 +189,9 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Integer |
-| Default | `1` |
+| Default | `0` |
 | Validation | Must be one of `NOTE_VIEW_OPTIONS` |
-| Description | Default view limit for notes. `1` means burn-after-reading by default. |
+| Description | Default view limit for notes. `0` means unlimited views (expires only by time). `1` means burn-after-reading. |
 
 ### ENABLED_SERVICES
 

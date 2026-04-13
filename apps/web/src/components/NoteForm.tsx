@@ -30,21 +30,21 @@ export function NoteForm({ contentType }: NoteFormProps) {
   const noteHook = useNoteUpload();
 
   const [content, setContent] = useState("");
-  const [expireSec, setExpireSec] = useState(() => 0);
-  const [maxViews, setMaxViews] = useState(() => 0);
+  const [expireSec, setExpireSec] = useState<number | null>(() => null);
+  const [maxViews, setMaxViews] = useState<number | null>(() => null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(false);
 
   // Initialize defaults when config loads
-  if (config && expireSec === 0) {
+  if (config && expireSec === null) {
     setExpireSec(config.noteDefaultExpire);
   }
-  if (config && maxViews === 0) {
+  if (config && maxViews === null) {
     setMaxViews(config.noteDefaultViews);
   }
 
-  if (!config) return null;
+  if (!config || expireSec === null || maxViews === null) return null;
 
   const contentBytes = new TextEncoder().encode(content).length;
   const sizeExceeded = contentBytes > config.noteMaxSize;
@@ -138,7 +138,11 @@ export function NoteForm({ contentType }: NoteFormProps) {
               <SelectContent>
                 {config.noteViewOptions.map((num) => (
                   <SelectItem key={num} value={String(num)}>
-                    {num === 1 ? t("note.burnAfterReading") : String(num)}
+                    {num === 0
+                      ? t("note.unlimited")
+                      : num === 1
+                        ? t("note.burnAfterReading")
+                        : String(num)}
                   </SelectItem>
                 ))}
               </SelectContent>
