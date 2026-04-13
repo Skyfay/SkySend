@@ -40,6 +40,7 @@
     "edit": "Modifica",
     "preview": "Anteprima",
     "previewEmpty": "Niente da visualizzare in anteprima...",
+    "expand": "Espandi editor",
     "placeholder": {
       "text": "Inserisci il tuo testo segreto...",
       "password": "Inserisci la password da condividere...",

@@ -40,6 +40,7 @@
     "edit": "Editar",
     "preview": "Vista previa",
     "previewEmpty": "Aún no hay nada que previsualizar...",
+    "expand": "Ampliar editor",
     "placeholder": {
       "text": "Escriba su texto secreto...",
       "password": "Escriba la contraseña a compartir...",

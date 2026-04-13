@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Upload, FolderOpen, X, FileIcon } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface UploadZoneProps {
   files: File[];
@@ -154,31 +155,33 @@ export function UploadZone({
             {" - "}
             {t("upload.totalSize", { size: formatBytes(totalSize) })}
           </p>
-          <ul className="max-h-60 space-y-1 overflow-y-auto" role="list">
-            {files.map((file, i) => (
-              <li
-                key={`${file.name}-${file.size}-${i}`}
-                className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"
-              >
-                <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">
-                  {file.webkitRelativePath || file.name}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {formatBytes(file.size)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${file.name}`}
-                  disabled={disabled}
+          <ScrollArea className="max-h-60 [&>[data-radix-scroll-area-viewport]]:max-h-60">
+            <ul className="space-y-1" role="list">
+              {files.map((file, i) => (
+                <li
+                  key={`${file.name}-${file.size}-${i}`}
+                  className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {file.webkitRelativePath || file.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatBytes(file.size)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                    aria-label={`Remove ${file.name}`}
+                    disabled={disabled}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
         </div>
       )}
     </div>

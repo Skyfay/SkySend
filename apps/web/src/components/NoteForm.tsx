@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff, Send, Loader2, Type, Heading } from "lucide-react";
+import { Lock, Eye, EyeOff, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -35,6 +41,7 @@ export function NoteForm({ contentType }: NoteFormProps) {
   const [content, setContent] = useState("");
   const [markdownMode, setMarkdownMode] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [expireSec, setExpireSec] = useState<number | null>(() => null);
   const [maxViews, setMaxViews] = useState<number | null>(() => null);
   const [password, setPassword] = useState("");
@@ -150,6 +157,14 @@ export function NoteForm({ contentType }: NoteFormProps) {
               >
                 {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
               </span>
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
+                title={t("note.expand")}
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
           {markdownMode && showPreview ? (
@@ -182,6 +197,73 @@ export function NoteForm({ contentType }: NoteFormProps) {
             />
           )}
         </div>
+
+        {/* Expanded editor dialog */}
+        <Dialog open={expanded} onOpenChange={setExpanded}>
+          <DialogContent className="flex h-[90vh] max-w-4xl flex-col p-0">
+            <DialogHeader className="flex-row items-center justify-between space-y-0 border-b px-6 py-4">
+              <DialogTitle className="flex items-center gap-2">
+                {t("note.content")}
+                {markdownMode && (
+                  <span className="text-sm font-normal text-muted-foreground">- Markdown</span>
+                )}
+              </DialogTitle>
+              <div className="flex items-center gap-3 pr-8">
+                {markdownMode && (
+                  <div className="flex gap-1 rounded-md border border-border bg-muted/50 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(false)}
+                      className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                        !showPreview
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t("note.edit")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(true)}
+                      className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                        showPreview
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t("note.preview")}
+                    </button>
+                  </div>
+                )}
+                <span
+                  className={`text-xs ${sizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
+                >
+                  {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
+                </span>
+              </div>
+            </DialogHeader>
+            <div className="flex-1 overflow-hidden p-6 pt-0">
+              {markdownMode && showPreview ? (
+                <div className="h-full overflow-auto rounded-md border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none">
+                  {content ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                  ) : (
+                    <p className="text-muted-foreground italic">{t("note.previewEmpty")}</p>
+                  )}
+                </div>
+              ) : (
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder={markdownMode ? t("note.placeholder.markdown") : t(placeholderKey)}
+                  className={`h-full resize-none ${contentType === "code" ? "font-mono text-sm" : ""} ${contentType === "password" ? "font-mono" : ""}`}
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Expiry + Max Views */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
