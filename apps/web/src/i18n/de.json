@@ -98,8 +98,17 @@
     "emptyHint": "Uploads, die Sie auf diesem Gerät machen, erscheinen hier.",
     "copyLink": "Link kopieren",
     "deleteConfirm": "Möchten Sie diesen Upload wirklich löschen?",
+    "deleteNoteConfirm": "Möchten Sie diese Notiz wirklich löschen?",
     "deleteSuccess": "Upload gelöscht",
     "deleteFailed": "Upload konnte nicht gelöscht werden",
+    "deleteNoteSuccess": "Notiz gelöscht",
+    "deleteNoteFailed": "Notiz konnte nicht gelöscht werden",
+    "note": "Notiz",
+    "filter": {
+      "all": "Alle",
+      "files": "Dateien",
+      "notes": "Notizen"
+    },
     "remaining": "{{count}} Downloads verbleibend",
     "expired": "Abgelaufen",
     "unavailable": "Nicht verfügbar",

@@ -1,15 +1,30 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Inbox } from "lucide-react";
+import { FolderOpen, Inbox, File, FileText, Layers } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UploadCard } from "@/components/UploadCard";
+import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
+import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { toast } from "@/hooks/useToast";
+
+type Filter = "all" | "files" | "notes";
+
+const FILTER_ICONS = {
+  all: Layers,
+  files: File,
+  notes: FileText,
+} as const;
 
 export function MyUploadsPage() {
   const { t } = useTranslation();
-  const { uploads, loading, deleteUpload } = useUploadHistory();
+  const { uploads, loading: uploadsLoading, deleteUpload } = useUploadHistory();
+  const { notes, loading: notesLoading, deleteNote } = useNoteHistory();
+  const [filter, setFilter] = useState<Filter>("all");
 
-  const handleDelete = async (id: string, ownerToken: string) => {
+  const loading = uploadsLoading || notesLoading;
+
+  const handleDeleteUpload = async (id: string, ownerToken: string) => {
     try {
       await deleteUpload(id, ownerToken);
       toast({ title: t("myUploads.deleteSuccess"), variant: "success" });
@@ -21,12 +36,78 @@ export function MyUploadsPage() {
     }
   };
 
+  const handleDeleteNote = async (id: string, ownerToken: string) => {
+    try {
+      await deleteNote(id, ownerToken);
+      toast({ title: t("myUploads.deleteNoteSuccess"), variant: "success" });
+    } catch {
+      toast({
+        title: t("myUploads.deleteNoteFailed"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Build combined list sorted by createdAt
+  const items: Array<
+    | { type: "upload"; data: (typeof uploads)[number] }
+    | { type: "note"; data: (typeof notes)[number] }
+  > = [];
+
+  if (filter !== "notes") {
+    for (const u of uploads) items.push({ type: "upload", data: u });
+  }
+  if (filter !== "files") {
+    for (const n of notes) items.push({ type: "note", data: n });
+  }
+
+  items.sort(
+    (a, b) =>
+      new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime(),
+  );
+
+  const isEmpty = items.length === 0 && !loading;
+
+  const filters: Filter[] = ["all", "files", "notes"];
+
   return (
     <div className="space-y-6">
       <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
         <FolderOpen className="h-7 w-7 text-primary" />
         {t("myUploads.title")}
       </h1>
+
+      {/* Filter tabs */}
+      {(uploads.length > 0 || notes.length > 0) && (
+        <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+          {filters.map((f) => {
+            const Icon = FILTER_ICONS[f];
+            const count =
+              f === "all"
+                ? uploads.length + notes.length
+                : f === "files"
+                  ? uploads.length
+                  : notes.length;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  filter === f
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{t(`myUploads.filter.${f}`)}</span>
+                <span className="ml-0.5 text-xs text-muted-foreground">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -48,7 +129,7 @@ export function MyUploadsPage() {
             </div>
           ))}
         </div>
-      ) : uploads.length === 0 ? (
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-muted-foreground">
           <Inbox className="h-12 w-12" />
           <div>
@@ -58,13 +139,21 @@ export function MyUploadsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {uploads.map((upload) => (
-            <UploadCard
-              key={upload.id}
-              upload={upload}
-              onDelete={handleDelete}
-            />
-          ))}
+          {items.map((item) =>
+            item.type === "upload" ? (
+              <UploadCard
+                key={`upload-${item.data.id}`}
+                upload={item.data}
+                onDelete={handleDeleteUpload}
+              />
+            ) : (
+              <NoteCard
+                key={`note-${item.data.id}`}
+                note={item.data}
+                onDelete={handleDeleteNote}
+              />
+            ),
+          )}
         </div>
       )}
     </div>

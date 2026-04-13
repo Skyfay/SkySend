@@ -98,8 +98,17 @@
     "emptyHint": "Uploads you make on this device will appear here.",
     "copyLink": "Copy link",
     "deleteConfirm": "Are you sure you want to delete this upload?",
+    "deleteNoteConfirm": "Are you sure you want to delete this note?",
     "deleteSuccess": "Upload deleted",
     "deleteFailed": "Failed to delete upload",
+    "deleteNoteSuccess": "Note deleted",
+    "deleteNoteFailed": "Failed to delete note",
+    "note": "Note",
+    "filter": {
+      "all": "All",
+      "files": "Files",
+      "notes": "Notes"
+    },
     "remaining": "{{count}} downloads remaining",
     "expired": "Expired",
     "unavailable": "Unavailable",
