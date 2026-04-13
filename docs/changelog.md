@@ -27,6 +27,9 @@ All notable changes to SkySend are documented here.
 - **server**: Cleanup job now also removes expired notes and notes that reached their view limit
 - **web**: File download URLs changed from `/d/:id` to `/file/:id` with automatic redirect from old URLs
 
+### 🎨 Improvements
+- **web**: Replaced default browser scrollbar with custom styled scrollbar on textareas and code blocks
+
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
 - **docs**: Added v1 to v2 environment variable migration table to environment reference

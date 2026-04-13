@@ -68,7 +68,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
     return (
       <div className="space-y-3">
         <div className="relative">
-          <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm">
+          <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm scrollbar-thin">
             <code>{content}</code>
           </pre>
         </div>
