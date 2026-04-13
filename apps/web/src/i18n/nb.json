@@ -23,7 +23,8 @@
     "file": "Fil",
     "text": "Tekst",
     "password": "Passord",
-    "code": "Kode"
+    "code": "Kode",
+    "sshkey": "SSH-nøkkel"
   },
   "note": {
     "content": "Innhold",
@@ -165,5 +166,27 @@
     "privacy": "Personvernerklæring",
     "legal": "Juridisk informasjon",
     "source": "Kildekode"
+  },
+  "passwordGenerator": {
+    "title": "Passordgenerator",
+    "length": "Lengde",
+    "generate": "Generer",
+    "bits": "bits med entropi"
+  },
+  "sshKey": {
+    "algorithm": "Algoritme",
+    "comment": "Kommentar",
+    "commentPlaceholder": "user@hostname (valgfritt)",
+    "passphrase": "Passfrase",
+    "passphrasePlaceholder": "Valgfri passfrase for privat nøkkel",
+    "passphraseHint": "Beskytter den private nøkkelen med en ekstra passfrase (PKCS#8-format).",
+    "generate": "Generer nøkkelpar",
+    "generating": "Genererer...",
+    "publicKey": "Offentlig nøkkel",
+    "privateKey": "Privat nøkkel",
+    "shareAs": "Del som kryptert notat",
+    "shareBoth": "Begge nøkler",
+    "sharePublicOnly": "Kun offentlig nøkkel",
+    "createNote": "Del som notat"
   }
 }

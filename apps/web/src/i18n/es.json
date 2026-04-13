@@ -23,7 +23,8 @@
     "file": "Archivo",
     "text": "Texto",
     "password": "Contraseña",
-    "code": "Código"
+    "code": "Código",
+    "sshkey": "Clave SSH"
   },
   "note": {
     "content": "Contenido",
@@ -165,5 +166,27 @@
     "privacy": "Política de privacidad",
     "legal": "Aviso legal",
     "source": "Código fuente"
+  },
+  "passwordGenerator": {
+    "title": "Generador de contraseñas",
+    "length": "Longitud",
+    "generate": "Generar",
+    "bits": "bits de entropía"
+  },
+  "sshKey": {
+    "algorithm": "Algoritmo",
+    "comment": "Comentario",
+    "commentPlaceholder": "user@hostname (opcional)",
+    "passphrase": "Frase de paso",
+    "passphrasePlaceholder": "Frase de paso opcional para la clave privada",
+    "passphraseHint": "Protege la clave privada con una frase de paso adicional (formato PKCS#8).",
+    "generate": "Generar par de claves",
+    "generating": "Generando...",
+    "publicKey": "Clave pública",
+    "privateKey": "Clave privada",
+    "shareAs": "Compartir como nota cifrada",
+    "shareBoth": "Ambas claves",
+    "sharePublicOnly": "Solo clave pública",
+    "createNote": "Compartir como nota"
   }
 }

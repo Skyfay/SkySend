@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,19 +13,21 @@ import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
 import { QuotaBar } from "@/components/QuotaBar";
 import { NoteForm } from "@/components/NoteForm";
+import { SSHKeyForm } from "@/components/SSHKeyForm";
 import { useUpload } from "@/hooks/useUpload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
 import { formatBytes } from "@/lib/utils";
 
-type Tab = "file" | "text" | "password" | "code";
+type Tab = "file" | "text" | "password" | "code" | "sshkey";
 
 const TAB_ICONS = {
   file: FileIcon,
   text: FileText,
   password: KeyRound,
   code: Code,
+  sshkey: Terminal,
 } as const;
 
 export function UploadPage() {
@@ -50,7 +52,7 @@ export function UploadPage() {
   const noteEnabled = config?.enabledServices.includes("note") ?? true;
   const availableTabs: Tab[] = [
     ...(fileEnabled ? ["file" as const] : []),
-    ...(noteEnabled ? (["text", "password", "code"] as const) : []),
+    ...(noteEnabled ? (["text", "password", "code", "sshkey"] as const) : []),
   ];
 
   useEffect(() => {
@@ -364,6 +366,7 @@ export function UploadPage() {
       {activeTab === "text" && <NoteForm contentType="text" />}
       {activeTab === "password" && <NoteForm contentType="password" />}
       {activeTab === "code" && <NoteForm contentType="code" />}
+      {activeTab === "sshkey" && <SSHKeyForm />}
     </div>
   );
 }

@@ -23,7 +23,8 @@
     "file": "Bestand",
     "text": "Tekst",
     "password": "Wachtwoord",
-    "code": "Code"
+    "code": "Code",
+    "sshkey": "SSH-sleutel"
   },
   "note": {
     "content": "Inhoud",
@@ -165,5 +166,27 @@
     "privacy": "Privacybeleid",
     "legal": "Juridische kennisgeving",
     "source": "Broncode"
+  },
+  "passwordGenerator": {
+    "title": "Wachtwoordgenerator",
+    "length": "Lengte",
+    "generate": "Genereren",
+    "bits": "bits entropie"
+  },
+  "sshKey": {
+    "algorithm": "Algoritme",
+    "comment": "Opmerking",
+    "commentPlaceholder": "user@hostname (optioneel)",
+    "passphrase": "Wachtwoordzin",
+    "passphrasePlaceholder": "Optionele wachtwoordzin voor privésleutel",
+    "passphraseHint": "Beschermt de privésleutel met een extra wachtwoordzin (PKCS#8-formaat).",
+    "generate": "Sleutelpaar genereren",
+    "generating": "Genereren...",
+    "publicKey": "Publieke sleutel",
+    "privateKey": "Privésleutel",
+    "shareAs": "Delen als versleutelde notitie",
+    "shareBoth": "Beide sleutels",
+    "sharePublicOnly": "Alleen publieke sleutel",
+    "createNote": "Delen als notitie"
   }
 }

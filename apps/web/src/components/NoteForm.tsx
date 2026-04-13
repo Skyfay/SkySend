@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
+import { PasswordGenerator } from "@/components/PasswordGenerator";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { formatDuration, formatBytes } from "@/lib/utils";
@@ -100,6 +101,12 @@ export function NoteForm({ contentType }: NoteFormProps) {
             <p className="text-sm text-destructive-foreground" role="alert">
               {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
             </p>
+          )}
+          {contentType === "password" && (
+            <PasswordGenerator
+              onGenerate={setContent}
+              disabled={isSubmitting}
+            />
           )}
         </div>
 

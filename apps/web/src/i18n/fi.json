@@ -23,7 +23,8 @@
     "file": "Tiedosto",
     "text": "Teksti",
     "password": "Salasana",
-    "code": "Koodi"
+    "code": "Koodi",
+    "sshkey": "SSH-avain"
   },
   "note": {
     "content": "Sisältö",
@@ -165,5 +166,27 @@
     "privacy": "Tietosuojakäytäntö",
     "legal": "Oikeudellinen ilmoitus",
     "source": "Lähdekoodi"
+  },
+  "passwordGenerator": {
+    "title": "Salasanageneraattori",
+    "length": "Pituus",
+    "generate": "Luo",
+    "bits": "bittiä entropiaa"
+  },
+  "sshKey": {
+    "algorithm": "Algoritmi",
+    "comment": "Kommentti",
+    "commentPlaceholder": "user@hostname (valinnainen)",
+    "passphrase": "Salasana",
+    "passphrasePlaceholder": "Valinnainen salasana yksityiselle avaimelle",
+    "passphraseHint": "Suojaa yksityisen avaimen lisäsalasanalla (PKCS#8-muoto).",
+    "generate": "Luo avainpari",
+    "generating": "Luodaan...",
+    "publicKey": "Julkinen avain",
+    "privateKey": "Yksityinen avain",
+    "shareAs": "Jaa salattuna muistiinpanona",
+    "shareBoth": "Molemmat avaimet",
+    "sharePublicOnly": "Vain julkinen avain",
+    "createNote": "Jaa muistiinpanona"
   }
 }

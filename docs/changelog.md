@@ -25,6 +25,8 @@ All notable changes to SkySend are documented here.
 - **web**: View selector shows "Unlimited" option when `0` is included in `NOTE_VIEW_OPTIONS`
 - **web**: Added translations for Spanish, French, Finnish, Swedish, Norwegian, Dutch, Italian, and Polish
 - **web**: Added syntax highlighting with line numbers for code notes (auto-detects 22 languages)
+- **web**: Added password generator in the Password tab with configurable length, character types, and entropy display
+- **web**: Added SSH Key tab with Ed25519 and RSA-4096 key pair generation, optional passphrase (PKCS#8), and sharing as encrypted note
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
