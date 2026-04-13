@@ -118,7 +118,7 @@ export function DownloadPage() {
         {t("download.title")}
       </h1>
 
-      <Card className={downloadHook.phase === "done" ? "border-primary/30 bg-primary/5" : ""}>
+      <Card>
         <CardContent className="space-y-6 pt-6">
           {/* Password prompt */}
           {downloadHook.phase === "needs-password" && (
