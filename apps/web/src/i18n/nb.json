@@ -1,0 +1,169 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tabSubtitle": "Kryptert fil- og notisdeling",
+    "tagline": "Ende-til-ende-kryptert fil- og notisdeling",
+    "loading": "Laster...",
+    "error": "Noe gikk galt",
+    "retry": "Prøv igjen",
+    "copy": "Kopier",
+    "copied": "Kopiert!",
+    "delete": "Slett",
+    "download": "Last ned",
+    "cancel": "Avbryt",
+    "confirm": "Bekreft",
+    "close": "Lukk",
+    "back": "Tilbake"
+  },
+  "nav": {
+    "upload": "Last opp",
+    "myUploads": "Mine opplastinger"
+  },
+  "tab": {
+    "file": "Fil",
+    "text": "Tekst",
+    "password": "Passord",
+    "code": "Kode"
+  },
+  "note": {
+    "content": "Innhold",
+    "expiry": "Utløper etter",
+    "maxViews": "Maks visninger",
+    "burnAfterReading": "1 (slett etter lesing)",
+    "unlimited": "Ubegrenset",
+    "create": "Opprett notat",
+    "creating": "Krypterer...",
+    "tooLarge": "Notatet overskrider maksimalstørrelsen på {{size}}",
+    "placeholder": {
+      "text": "Skriv inn din hemmelige tekst...",
+      "password": "Skriv inn passordet som skal deles...",
+      "code": "Lim inn koden din her..."
+    }
+  },
+  "upload": {
+    "title": "Last opp filer",
+    "dropzone": "Slipp filer her eller klikk for å bla",
+    "dropzoneActive": "Slipp filer her...",
+    "browseFiles": "Bla gjennom filer",
+    "browseFolder": "Bla gjennom mappe",
+    "or": "eller",
+    "selectedFiles": "{{count}} fil(er) valgt",
+    "totalSize": "Total størrelse: {{size}}",
+    "maxFiles": "Maksimalt {{count}} filer per opplasting",
+    "maxSize": "Maksimal filstørrelse: {{size}}",
+    "expiry": "Utløper etter",
+    "downloads": "Maks nedlastinger",
+    "password": "Passordbeskyttelse",
+    "passwordPlaceholder": "Skriv inn passord (valgfritt)",
+    "uploading": "Krypterer og laster opp...",
+    "encryptingProgress": "Krypterer...",
+    "processing": "Behandler...",
+    "uploadComplete": "Opplasting fullført!",
+    "shareLink": "Del denne lenken",
+    "shareLinkHint": "Krypteringsnøkkelen er i URL-fragmentet - den når aldri serveren.",
+    "cancel": "Avbryt opplasting",
+    "startUpload": "Last opp",
+    "newUpload": "Ny opplasting",
+    "fileTooLarge": "Filen overskrider maksimalstørrelsen på {{size}}",
+    "tooManyFiles": "Maksimalt {{count}} filer per opplasting",
+    "fileNotReadable": "Den valgte filen kunne ikke leses. Velg den på nytt og prøv igjen."
+  },
+  "download": {
+    "title": "Last ned fil",
+    "fileInfo": "Filinformasjon",
+    "encryptedFile": "Kryptert fil",
+    "size": "Størrelse",
+    "downloads": "Nedlastinger",
+    "expires": "Utløper",
+    "expired": "Denne opplastingen har utløpt",
+    "limitReached": "Nedlastingsgrensen nådd",
+    "notFound": "Opplasting ikke funnet",
+    "passwordRequired": "Denne filen er passordbeskyttet",
+    "passwordPlaceholder": "Skriv inn passord",
+    "unlock": "Lås opp",
+    "wrongPassword": "Feil passord",
+    "download": "Last ned",
+    "downloading": "Dekrypterer og laster ned...",
+    "decrypting": "Dekrypterer...",
+    "complete": "Nedlasting fullført!",
+    "failed": "Nedlasting mislyktes",
+    "safariWarning": "Denne nettleseren kan kanskje ikke laste ned en så stor fil.",
+    "safariWarningDesc": "Safari laster ned hele filen til minnet før den lagres. For store filer kan dette føre til at nedlastingen mislykkes.",
+    "safariCopyLink": "Kopier lenke for en annen nettleser",
+    "safariContinue": "Last ned likevel",
+    "safariLinkCopied": "Lenke kopiert!"
+  },
+  "myUploads": {
+    "title": "Mine opplastinger",
+    "empty": "Ingen opplastinger ennå",
+    "emptyHint": "Opplastinger du gjør på denne enheten vil vises her.",
+    "copyLink": "Kopier lenke",
+    "deleteConfirm": "Er du sikker på at du vil slette denne opplastingen?",
+    "deleteNoteConfirm": "Er du sikker på at du vil slette dette notatet?",
+    "deleteSuccess": "Opplasting slettet",
+    "deleteFailed": "Kunne ikke slette opplastingen",
+    "deleteNoteSuccess": "Notat slettet",
+    "deleteNoteFailed": "Kunne ikke slette notatet",
+    "note": "Notat",
+    "filter": {
+      "all": "Alle",
+      "files": "Filer",
+      "notes": "Notater"
+    },
+    "remaining": "{{count}} nedlastinger igjen",
+    "expired": "Utløpt",
+    "unavailable": "Utilgjengelig",
+    "files": "{{count}} fil(er)"
+  },
+  "noteView": {
+    "title": "Kryptert notat",
+    "notFound": "Notat ikke funnet",
+    "expired": "Dette notatet har utløpt",
+    "limitReached": "Visningsgrensen nådd",
+    "viewsRemaining": "{{remaining}} av {{max}} visninger igjen",
+    "viewsUnlimited": "Ubegrensede visninger",
+    "expiresIn": "Utløper om {{time}}",
+    "burnWarning": "Dette notatet vil bli permanent slettet etter visning.",
+    "viewNote": "Vis notat",
+    "viewCount": "Visning {{current}} av {{max}}",
+    "viewCountUnlimited": "Visning {{current}} (ubegrenset)",
+    "destroyed": "Dette notatet er permanent slettet. Lagre innholdet nå - det kan ikke åpnes igjen.",
+    "reveal": "Vis",
+    "hide": "Skjul",
+    "verifying": "Verifiserer..."
+  },
+  "notFound": {
+    "title": "Siden ble ikke funnet",
+    "description": "Siden du leter etter finnes ikke.",
+    "goHome": "Gå til opplastingssiden"
+  },
+  "time": {
+    "seconds_one": "{{count}} sekund",
+    "seconds_other": "{{count}} sekunder",
+    "minutes_one": "{{count}} minutt",
+    "minutes_other": "{{count}} minutter",
+    "hours_one": "{{count}} time",
+    "hours_other": "{{count}} timer",
+    "days_one": "{{count}} dag",
+    "days_other": "{{count}} dager",
+    "weeks_one": "{{count}} uke",
+    "weeks_other": "{{count}} uker"
+  },
+  "quota": {
+    "title": "Opplastingskvote",
+    "remaining": "{{size}} igjen",
+    "exceeded": "Opplastingskvoten overskredet",
+    "fileTooLarge": "Filen overskrider gjenværende kvote ({{remaining}} igjen)",
+    "resetsIn": "Tilbakestilles om {{time}}"
+  },
+  "theme": {
+    "light": "Lyst",
+    "dark": "Mørkt",
+    "system": "System"
+  },
+  "footer": {
+    "privacy": "Personvernerklæring",
+    "legal": "Juridisk informasjon",
+    "source": "Kildekode"
+  }
+}

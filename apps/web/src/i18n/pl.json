@@ -1,0 +1,169 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tabSubtitle": "Szyfrowane udostępnianie plików i notatek",
+    "tagline": "Szyfrowane end-to-end udostępnianie plików i notatek",
+    "loading": "Ładowanie...",
+    "error": "Coś poszło nie tak",
+    "retry": "Spróbuj ponownie",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano!",
+    "delete": "Usuń",
+    "download": "Pobierz",
+    "cancel": "Anuluj",
+    "confirm": "Potwierdź",
+    "close": "Zamknij",
+    "back": "Wstecz"
+  },
+  "nav": {
+    "upload": "Prześlij",
+    "myUploads": "Moje przesyłki"
+  },
+  "tab": {
+    "file": "Plik",
+    "text": "Tekst",
+    "password": "Hasło",
+    "code": "Kod"
+  },
+  "note": {
+    "content": "Treść",
+    "expiry": "Wygasa po",
+    "maxViews": "Maks. wyświetleń",
+    "burnAfterReading": "1 (zniszcz po odczytaniu)",
+    "unlimited": "Bez limitu",
+    "create": "Utwórz notatkę",
+    "creating": "Szyfrowanie...",
+    "tooLarge": "Notatka przekracza maksymalny rozmiar {{size}}",
+    "placeholder": {
+      "text": "Wpisz swój tajny tekst...",
+      "password": "Wpisz hasło do udostępnienia...",
+      "code": "Wklej swój kod tutaj..."
+    }
+  },
+  "upload": {
+    "title": "Prześlij pliki",
+    "dropzone": "Upuść pliki tutaj lub kliknij, aby przeglądać",
+    "dropzoneActive": "Upuść pliki tutaj...",
+    "browseFiles": "Przeglądaj pliki",
+    "browseFolder": "Przeglądaj folder",
+    "or": "lub",
+    "selectedFiles": "Wybrano {{count}} plik(ów)",
+    "totalSize": "Łączny rozmiar: {{size}}",
+    "maxFiles": "Maksymalnie {{count}} plików na przesyłkę",
+    "maxSize": "Maksymalny rozmiar pliku: {{size}}",
+    "expiry": "Wygasa po",
+    "downloads": "Maks. pobrań",
+    "password": "Ochrona hasłem",
+    "passwordPlaceholder": "Wprowadź hasło (opcjonalnie)",
+    "uploading": "Szyfrowanie i przesyłanie...",
+    "encryptingProgress": "Szyfrowanie...",
+    "processing": "Przetwarzanie...",
+    "uploadComplete": "Przesyłanie zakończone!",
+    "shareLink": "Udostępnij ten link",
+    "shareLinkHint": "Klucz szyfrowania znajduje się we fragmencie URL - nigdy nie trafia na serwer.",
+    "cancel": "Anuluj przesyłanie",
+    "startUpload": "Prześlij",
+    "newUpload": "Nowa przesyłka",
+    "fileTooLarge": "Plik przekracza maksymalny rozmiar {{size}}",
+    "tooManyFiles": "Maksymalnie {{count}} plików na przesyłkę",
+    "fileNotReadable": "Wybrany plik nie mógł zostać odczytany. Wybierz go ponownie i spróbuj jeszcze raz."
+  },
+  "download": {
+    "title": "Pobierz plik",
+    "fileInfo": "Informacje o pliku",
+    "encryptedFile": "Zaszyfrowany plik",
+    "size": "Rozmiar",
+    "downloads": "Pobrania",
+    "expires": "Wygasa",
+    "expired": "Ta przesyłka wygasła",
+    "limitReached": "Osiągnięto limit pobrań",
+    "notFound": "Nie znaleziono przesyłki",
+    "passwordRequired": "Ten plik jest chroniony hasłem",
+    "passwordPlaceholder": "Wprowadź hasło",
+    "unlock": "Odblokuj",
+    "wrongPassword": "Nieprawidłowe hasło",
+    "download": "Pobierz",
+    "downloading": "Odszyfrowywanie i pobieranie...",
+    "decrypting": "Odszyfrowywanie...",
+    "complete": "Pobieranie zakończone!",
+    "failed": "Pobieranie nie powiodło się",
+    "safariWarning": "Ta przeglądarka może nie być w stanie pobrać tak dużego pliku.",
+    "safariWarningDesc": "Safari pobiera cały plik do pamięci przed zapisaniem. W przypadku dużych plików może to spowodować niepowodzenie pobierania.",
+    "safariCopyLink": "Kopiuj link dla innej przeglądarki",
+    "safariContinue": "Pobierz mimo to",
+    "safariLinkCopied": "Link skopiowany!"
+  },
+  "myUploads": {
+    "title": "Moje przesyłki",
+    "empty": "Brak przesyłek",
+    "emptyHint": "Przesyłki wykonane na tym urządzeniu pojawią się tutaj.",
+    "copyLink": "Kopiuj link",
+    "deleteConfirm": "Czy na pewno chcesz usunąć tę przesyłkę?",
+    "deleteNoteConfirm": "Czy na pewno chcesz usunąć tę notatkę?",
+    "deleteSuccess": "Przesyłka usunięta",
+    "deleteFailed": "Nie udało się usunąć przesyłki",
+    "deleteNoteSuccess": "Notatka usunięta",
+    "deleteNoteFailed": "Nie udało się usunąć notatki",
+    "note": "Notatka",
+    "filter": {
+      "all": "Wszystko",
+      "files": "Pliki",
+      "notes": "Notatki"
+    },
+    "remaining": "Pozostało {{count}} pobrań",
+    "expired": "Wygasło",
+    "unavailable": "Niedostępne",
+    "files": "{{count}} plik(ów)"
+  },
+  "noteView": {
+    "title": "Zaszyfrowana notatka",
+    "notFound": "Nie znaleziono notatki",
+    "expired": "Ta notatka wygasła",
+    "limitReached": "Osiągnięto limit wyświetleń",
+    "viewsRemaining": "Pozostało {{remaining}} z {{max}} wyświetleń",
+    "viewsUnlimited": "Nieograniczone wyświetlenia",
+    "expiresIn": "Wygasa za {{time}}",
+    "burnWarning": "Ta notatka zostanie trwale usunięta po wyświetleniu.",
+    "viewNote": "Wyświetl notatkę",
+    "viewCount": "Wyświetlenie {{current}} z {{max}}",
+    "viewCountUnlimited": "Wyświetlenie {{current}} (bez limitu)",
+    "destroyed": "Ta notatka została trwale usunięta. Zapisz treść teraz - nie będzie już dostępna.",
+    "reveal": "Pokaż",
+    "hide": "Ukryj",
+    "verifying": "Weryfikacja..."
+  },
+  "notFound": {
+    "title": "Nie znaleziono strony",
+    "description": "Strona, której szukasz, nie istnieje.",
+    "goHome": "Przejdź do strony przesyłania"
+  },
+  "time": {
+    "seconds_one": "{{count}} sekunda",
+    "seconds_other": "{{count}} sekund",
+    "minutes_one": "{{count}} minuta",
+    "minutes_other": "{{count}} minut",
+    "hours_one": "{{count}} godzina",
+    "hours_other": "{{count}} godzin",
+    "days_one": "{{count}} dzień",
+    "days_other": "{{count}} dni",
+    "weeks_one": "{{count}} tydzień",
+    "weeks_other": "{{count}} tygodni"
+  },
+  "quota": {
+    "title": "Limit przesyłania",
+    "remaining": "Pozostało {{size}}",
+    "exceeded": "Przekroczono limit przesyłania",
+    "fileTooLarge": "Plik przekracza pozostały limit (pozostało {{remaining}})",
+    "resetsIn": "Resetuje się za {{time}}"
+  },
+  "theme": {
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "System"
+  },
+  "footer": {
+    "privacy": "Polityka prywatności",
+    "legal": "Informacje prawne",
+    "source": "Kod źródłowy"
+  }
+}

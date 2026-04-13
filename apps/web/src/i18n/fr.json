@@ -1,0 +1,169 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tabSubtitle": "Partage de fichiers et notes chiffré",
+    "tagline": "Partage de fichiers et notes chiffré de bout en bout",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "delete": "Supprimer",
+    "download": "Télécharger",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "back": "Retour"
+  },
+  "nav": {
+    "upload": "Téléverser",
+    "myUploads": "Mes envois"
+  },
+  "tab": {
+    "file": "Fichier",
+    "text": "Texte",
+    "password": "Mot de passe",
+    "code": "Code"
+  },
+  "note": {
+    "content": "Contenu",
+    "expiry": "Expire après",
+    "maxViews": "Vues max.",
+    "burnAfterReading": "1 (détruire après lecture)",
+    "unlimited": "Illimité",
+    "create": "Créer une note",
+    "creating": "Chiffrement...",
+    "tooLarge": "La note dépasse la taille maximale de {{size}}",
+    "placeholder": {
+      "text": "Saisissez votre texte secret...",
+      "password": "Saisissez le mot de passe à partager...",
+      "code": "Collez votre code ici..."
+    }
+  },
+  "upload": {
+    "title": "Téléverser des fichiers",
+    "dropzone": "Déposez les fichiers ici ou cliquez pour parcourir",
+    "dropzoneActive": "Déposez les fichiers ici...",
+    "browseFiles": "Parcourir les fichiers",
+    "browseFolder": "Parcourir un dossier",
+    "or": "ou",
+    "selectedFiles": "{{count}} fichier(s) sélectionné(s)",
+    "totalSize": "Taille totale : {{size}}",
+    "maxFiles": "Maximum {{count}} fichiers par envoi",
+    "maxSize": "Taille maximale du fichier : {{size}}",
+    "expiry": "Expire après",
+    "downloads": "Téléchargements max.",
+    "password": "Protection par mot de passe",
+    "passwordPlaceholder": "Saisissez un mot de passe (optionnel)",
+    "uploading": "Chiffrement et téléversement...",
+    "encryptingProgress": "Chiffrement...",
+    "processing": "Traitement...",
+    "uploadComplete": "Envoi terminé !",
+    "shareLink": "Partager ce lien",
+    "shareLinkHint": "La clé de chiffrement est dans le fragment de l'URL - elle n'atteint jamais le serveur.",
+    "cancel": "Annuler l'envoi",
+    "startUpload": "Téléverser",
+    "newUpload": "Nouvel envoi",
+    "fileTooLarge": "Le fichier dépasse la taille maximale de {{size}}",
+    "tooManyFiles": "Maximum {{count}} fichiers par envoi",
+    "fileNotReadable": "Le fichier sélectionné n'a pas pu être lu. Veuillez le sélectionner à nouveau et réessayer."
+  },
+  "download": {
+    "title": "Télécharger le fichier",
+    "fileInfo": "Informations sur le fichier",
+    "encryptedFile": "Fichier chiffré",
+    "size": "Taille",
+    "downloads": "Téléchargements",
+    "expires": "Expire",
+    "expired": "Cet envoi a expiré",
+    "limitReached": "Limite de téléchargements atteinte",
+    "notFound": "Envoi introuvable",
+    "passwordRequired": "Ce fichier est protégé par un mot de passe",
+    "passwordPlaceholder": "Saisissez le mot de passe",
+    "unlock": "Déverrouiller",
+    "wrongPassword": "Mot de passe incorrect",
+    "download": "Télécharger",
+    "downloading": "Déchiffrement et téléchargement...",
+    "decrypting": "Déchiffrement...",
+    "complete": "Téléchargement terminé !",
+    "failed": "Échec du téléchargement",
+    "safariWarning": "Ce navigateur pourrait ne pas pouvoir télécharger un fichier aussi volumineux.",
+    "safariWarningDesc": "Safari télécharge le fichier entier en mémoire avant de l'enregistrer. Pour les fichiers volumineux, cela peut entraîner l'échec du téléchargement.",
+    "safariCopyLink": "Copier le lien pour un autre navigateur",
+    "safariContinue": "Télécharger quand même",
+    "safariLinkCopied": "Lien copié !"
+  },
+  "myUploads": {
+    "title": "Mes envois",
+    "empty": "Aucun envoi pour le moment",
+    "emptyHint": "Les envois effectués depuis cet appareil apparaîtront ici.",
+    "copyLink": "Copier le lien",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet envoi ?",
+    "deleteNoteConfirm": "Êtes-vous sûr de vouloir supprimer cette note ?",
+    "deleteSuccess": "Envoi supprimé",
+    "deleteFailed": "Échec de la suppression de l'envoi",
+    "deleteNoteSuccess": "Note supprimée",
+    "deleteNoteFailed": "Échec de la suppression de la note",
+    "note": "Note",
+    "filter": {
+      "all": "Tout",
+      "files": "Fichiers",
+      "notes": "Notes"
+    },
+    "remaining": "{{count}} téléchargements restants",
+    "expired": "Expiré",
+    "unavailable": "Indisponible",
+    "files": "{{count}} fichier(s)"
+  },
+  "noteView": {
+    "title": "Note chiffrée",
+    "notFound": "Note introuvable",
+    "expired": "Cette note a expiré",
+    "limitReached": "Limite de vues atteinte",
+    "viewsRemaining": "{{remaining}} sur {{max}} vues restantes",
+    "viewsUnlimited": "Vues illimitées",
+    "expiresIn": "Expire dans {{time}}",
+    "burnWarning": "Cette note sera définitivement supprimée après consultation.",
+    "viewNote": "Voir la note",
+    "viewCount": "Vue {{current}} sur {{max}}",
+    "viewCountUnlimited": "Vue {{current}} (illimité)",
+    "destroyed": "Cette note a été définitivement supprimée. Sauvegardez le contenu maintenant - il ne sera plus accessible.",
+    "reveal": "Révéler",
+    "hide": "Masquer",
+    "verifying": "Vérification..."
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous recherchez n'existe pas.",
+    "goHome": "Aller à la page d'envoi"
+  },
+  "time": {
+    "seconds_one": "{{count}} seconde",
+    "seconds_other": "{{count}} secondes",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "hours_one": "{{count}} heure",
+    "hours_other": "{{count}} heures",
+    "days_one": "{{count}} jour",
+    "days_other": "{{count}} jours",
+    "weeks_one": "{{count}} semaine",
+    "weeks_other": "{{count}} semaines"
+  },
+  "quota": {
+    "title": "Quota d'envoi",
+    "remaining": "{{size}} restants",
+    "exceeded": "Quota d'envoi dépassé",
+    "fileTooLarge": "Le fichier dépasse le quota restant ({{remaining}} disponibles)",
+    "resetsIn": "Réinitialisation dans {{time}}"
+  },
+  "theme": {
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "footer": {
+    "privacy": "Politique de confidentialité",
+    "legal": "Mentions légales",
+    "source": "Code source"
+  }
+}

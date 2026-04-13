@@ -1,0 +1,169 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tabSubtitle": "Compartir archivos y notas cifrados",
+    "tagline": "Compartir archivos y notas con cifrado de extremo a extremo",
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "retry": "Reintentar",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "delete": "Eliminar",
+    "download": "Descargar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "back": "Volver"
+  },
+  "nav": {
+    "upload": "Subir",
+    "myUploads": "Mis subidas"
+  },
+  "tab": {
+    "file": "Archivo",
+    "text": "Texto",
+    "password": "Contraseña",
+    "code": "Código"
+  },
+  "note": {
+    "content": "Contenido",
+    "expiry": "Expira después de",
+    "maxViews": "Máximo de vistas",
+    "burnAfterReading": "1 (destruir tras leer)",
+    "unlimited": "Ilimitado",
+    "create": "Crear nota",
+    "creating": "Cifrando...",
+    "tooLarge": "La nota supera el tamaño máximo de {{size}}",
+    "placeholder": {
+      "text": "Escriba su texto secreto...",
+      "password": "Escriba la contraseña a compartir...",
+      "code": "Pegue su código aquí..."
+    }
+  },
+  "upload": {
+    "title": "Subir archivos",
+    "dropzone": "Arrastre archivos aquí o haga clic para seleccionar",
+    "dropzoneActive": "Suelte los archivos aquí...",
+    "browseFiles": "Seleccionar archivos",
+    "browseFolder": "Seleccionar carpeta",
+    "or": "o",
+    "selectedFiles": "{{count}} archivo(s) seleccionado(s)",
+    "totalSize": "Tamaño total: {{size}}",
+    "maxFiles": "Máximo {{count}} archivos por subida",
+    "maxSize": "Tamaño máximo de archivo: {{size}}",
+    "expiry": "Expira después de",
+    "downloads": "Máximo de descargas",
+    "password": "Protección con contraseña",
+    "passwordPlaceholder": "Introduzca contraseña (opcional)",
+    "uploading": "Cifrando y subiendo...",
+    "encryptingProgress": "Cifrando...",
+    "processing": "Procesando...",
+    "uploadComplete": "¡Subida completada!",
+    "shareLink": "Compartir este enlace",
+    "shareLinkHint": "La clave de cifrado está en el fragmento de la URL - nunca llega al servidor.",
+    "cancel": "Cancelar subida",
+    "startUpload": "Subir",
+    "newUpload": "Nueva subida",
+    "fileTooLarge": "El archivo supera el tamaño máximo de {{size}}",
+    "tooManyFiles": "Máximo {{count}} archivos por subida",
+    "fileNotReadable": "No se pudo leer el archivo seleccionado. Selecciónelo de nuevo e inténtelo otra vez."
+  },
+  "download": {
+    "title": "Descargar archivo",
+    "fileInfo": "Información del archivo",
+    "encryptedFile": "Archivo cifrado",
+    "size": "Tamaño",
+    "downloads": "Descargas",
+    "expires": "Expira",
+    "expired": "Esta subida ha expirado",
+    "limitReached": "Límite de descargas alcanzado",
+    "notFound": "Subida no encontrada",
+    "passwordRequired": "Este archivo está protegido con contraseña",
+    "passwordPlaceholder": "Introduzca contraseña",
+    "unlock": "Desbloquear",
+    "wrongPassword": "Contraseña incorrecta",
+    "download": "Descargar",
+    "downloading": "Descifrando y descargando...",
+    "decrypting": "Descifrando...",
+    "complete": "¡Descarga completada!",
+    "failed": "Error en la descarga",
+    "safariWarning": "Es posible que este navegador no pueda descargar un archivo tan grande.",
+    "safariWarningDesc": "Safari descarga el archivo completo en memoria antes de guardarlo. Para archivos grandes esto puede causar que la descarga falle.",
+    "safariCopyLink": "Copiar enlace para otro navegador",
+    "safariContinue": "Descargar de todos modos",
+    "safariLinkCopied": "¡Enlace copiado!"
+  },
+  "myUploads": {
+    "title": "Mis subidas",
+    "empty": "Aún no hay subidas",
+    "emptyHint": "Las subidas que realice en este dispositivo aparecerán aquí.",
+    "copyLink": "Copiar enlace",
+    "deleteConfirm": "¿Está seguro de que desea eliminar esta subida?",
+    "deleteNoteConfirm": "¿Está seguro de que desea eliminar esta nota?",
+    "deleteSuccess": "Subida eliminada",
+    "deleteFailed": "Error al eliminar la subida",
+    "deleteNoteSuccess": "Nota eliminada",
+    "deleteNoteFailed": "Error al eliminar la nota",
+    "note": "Nota",
+    "filter": {
+      "all": "Todo",
+      "files": "Archivos",
+      "notes": "Notas"
+    },
+    "remaining": "{{count}} descargas restantes",
+    "expired": "Expirado",
+    "unavailable": "No disponible",
+    "files": "{{count}} archivo(s)"
+  },
+  "noteView": {
+    "title": "Nota cifrada",
+    "notFound": "Nota no encontrada",
+    "expired": "Esta nota ha expirado",
+    "limitReached": "Límite de vistas alcanzado",
+    "viewsRemaining": "{{remaining}} de {{max}} vistas restantes",
+    "viewsUnlimited": "Vistas ilimitadas",
+    "expiresIn": "Expira en {{time}}",
+    "burnWarning": "Esta nota se eliminará permanentemente tras ser vista.",
+    "viewNote": "Ver nota",
+    "viewCount": "Vista {{current}} de {{max}}",
+    "viewCountUnlimited": "Vista {{current}} (ilimitado)",
+    "destroyed": "Esta nota ha sido eliminada permanentemente. Guarde el contenido ahora - no podrá acceder de nuevo.",
+    "reveal": "Mostrar",
+    "hide": "Ocultar",
+    "verifying": "Verificando..."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que busca no existe.",
+    "goHome": "Ir a la página de subida"
+  },
+  "time": {
+    "seconds_one": "{{count}} segundo",
+    "seconds_other": "{{count}} segundos",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minutos",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "days_one": "{{count}} día",
+    "days_other": "{{count}} días",
+    "weeks_one": "{{count}} semana",
+    "weeks_other": "{{count}} semanas"
+  },
+  "quota": {
+    "title": "Cuota de subida",
+    "remaining": "{{size}} restantes",
+    "exceeded": "Cuota de subida excedida",
+    "fileTooLarge": "El archivo supera la cuota restante ({{remaining}} disponibles)",
+    "resetsIn": "Se restablece en {{time}}"
+  },
+  "theme": {
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "footer": {
+    "privacy": "Política de privacidad",
+    "legal": "Aviso legal",
+    "source": "Código fuente"
+  }
+}

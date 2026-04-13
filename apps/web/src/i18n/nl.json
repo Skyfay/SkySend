@@ -1,0 +1,169 @@
+{
+  "common": {
+    "appName": "SkySend",
+    "tabSubtitle": "Versleuteld bestanden en notities delen",
+    "tagline": "End-to-end versleuteld bestanden en notities delen",
+    "loading": "Laden...",
+    "error": "Er is iets misgegaan",
+    "retry": "Opnieuw proberen",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd!",
+    "delete": "Verwijderen",
+    "download": "Downloaden",
+    "cancel": "Annuleren",
+    "confirm": "Bevestigen",
+    "close": "Sluiten",
+    "back": "Terug"
+  },
+  "nav": {
+    "upload": "Uploaden",
+    "myUploads": "Mijn uploads"
+  },
+  "tab": {
+    "file": "Bestand",
+    "text": "Tekst",
+    "password": "Wachtwoord",
+    "code": "Code"
+  },
+  "note": {
+    "content": "Inhoud",
+    "expiry": "Verloopt na",
+    "maxViews": "Max weergaven",
+    "burnAfterReading": "1 (vernietig na lezen)",
+    "unlimited": "Onbeperkt",
+    "create": "Notitie aanmaken",
+    "creating": "Versleutelen...",
+    "tooLarge": "Notitie overschrijdt de maximale grootte van {{size}}",
+    "placeholder": {
+      "text": "Voer uw geheime tekst in...",
+      "password": "Voer het te delen wachtwoord in...",
+      "code": "Plak uw code hier..."
+    }
+  },
+  "upload": {
+    "title": "Bestanden uploaden",
+    "dropzone": "Sleep bestanden hierheen of klik om te bladeren",
+    "dropzoneActive": "Sleep bestanden hierheen...",
+    "browseFiles": "Bestanden bladeren",
+    "browseFolder": "Map bladeren",
+    "or": "of",
+    "selectedFiles": "{{count}} bestand(en) geselecteerd",
+    "totalSize": "Totale grootte: {{size}}",
+    "maxFiles": "Maximaal {{count}} bestanden per upload",
+    "maxSize": "Maximale bestandsgrootte: {{size}}",
+    "expiry": "Verloopt na",
+    "downloads": "Max downloads",
+    "password": "Wachtwoordbeveiliging",
+    "passwordPlaceholder": "Voer wachtwoord in (optioneel)",
+    "uploading": "Versleutelen en uploaden...",
+    "encryptingProgress": "Versleutelen...",
+    "processing": "Verwerken...",
+    "uploadComplete": "Upload voltooid!",
+    "shareLink": "Deel deze link",
+    "shareLinkHint": "De encryptiesleutel zit in het URL-fragment - deze bereikt nooit de server.",
+    "cancel": "Upload annuleren",
+    "startUpload": "Uploaden",
+    "newUpload": "Nieuwe upload",
+    "fileTooLarge": "Bestand overschrijdt de maximale grootte van {{size}}",
+    "tooManyFiles": "Maximaal {{count}} bestanden per upload",
+    "fileNotReadable": "Het geselecteerde bestand kon niet worden gelezen. Selecteer het opnieuw en probeer het nogmaals."
+  },
+  "download": {
+    "title": "Bestand downloaden",
+    "fileInfo": "Bestandsinformatie",
+    "encryptedFile": "Versleuteld bestand",
+    "size": "Grootte",
+    "downloads": "Downloads",
+    "expires": "Verloopt",
+    "expired": "Deze upload is verlopen",
+    "limitReached": "Downloadlimiet bereikt",
+    "notFound": "Upload niet gevonden",
+    "passwordRequired": "Dit bestand is beveiligd met een wachtwoord",
+    "passwordPlaceholder": "Voer wachtwoord in",
+    "unlock": "Ontgrendelen",
+    "wrongPassword": "Onjuist wachtwoord",
+    "download": "Downloaden",
+    "downloading": "Ontsleutelen en downloaden...",
+    "decrypting": "Ontsleutelen...",
+    "complete": "Download voltooid!",
+    "failed": "Download mislukt",
+    "safariWarning": "Deze browser kan mogelijk geen bestand van deze grootte downloaden.",
+    "safariWarningDesc": "Safari downloadt het volledige bestand naar het geheugen voordat het wordt opgeslagen. Voor grote bestanden kan de download hierdoor mislukken.",
+    "safariCopyLink": "Link kopiëren voor andere browser",
+    "safariContinue": "Toch downloaden",
+    "safariLinkCopied": "Link gekopieerd!"
+  },
+  "myUploads": {
+    "title": "Mijn uploads",
+    "empty": "Nog geen uploads",
+    "emptyHint": "Uploads die u op dit apparaat maakt verschijnen hier.",
+    "copyLink": "Link kopiëren",
+    "deleteConfirm": "Weet u zeker dat u deze upload wilt verwijderen?",
+    "deleteNoteConfirm": "Weet u zeker dat u deze notitie wilt verwijderen?",
+    "deleteSuccess": "Upload verwijderd",
+    "deleteFailed": "Verwijderen van upload mislukt",
+    "deleteNoteSuccess": "Notitie verwijderd",
+    "deleteNoteFailed": "Verwijderen van notitie mislukt",
+    "note": "Notitie",
+    "filter": {
+      "all": "Alles",
+      "files": "Bestanden",
+      "notes": "Notities"
+    },
+    "remaining": "{{count}} downloads resterend",
+    "expired": "Verlopen",
+    "unavailable": "Niet beschikbaar",
+    "files": "{{count}} bestand(en)"
+  },
+  "noteView": {
+    "title": "Versleutelde notitie",
+    "notFound": "Notitie niet gevonden",
+    "expired": "Deze notitie is verlopen",
+    "limitReached": "Weergavelimiet bereikt",
+    "viewsRemaining": "{{remaining}} van {{max}} weergaven resterend",
+    "viewsUnlimited": "Onbeperkte weergaven",
+    "expiresIn": "Verloopt over {{time}}",
+    "burnWarning": "Deze notitie wordt permanent verwijderd na weergave.",
+    "viewNote": "Notitie bekijken",
+    "viewCount": "Weergave {{current}} van {{max}}",
+    "viewCountUnlimited": "Weergave {{current}} (onbeperkt)",
+    "destroyed": "Deze notitie is permanent verwijderd. Sla de inhoud nu op - deze is niet opnieuw toegankelijk.",
+    "reveal": "Tonen",
+    "hide": "Verbergen",
+    "verifying": "Verifiëren..."
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "description": "De pagina die u zoekt bestaat niet.",
+    "goHome": "Ga naar de uploadpagina"
+  },
+  "time": {
+    "seconds_one": "{{count}} seconde",
+    "seconds_other": "{{count}} seconden",
+    "minutes_one": "{{count}} minuut",
+    "minutes_other": "{{count}} minuten",
+    "hours_one": "{{count}} uur",
+    "hours_other": "{{count}} uur",
+    "days_one": "{{count}} dag",
+    "days_other": "{{count}} dagen",
+    "weeks_one": "{{count}} week",
+    "weeks_other": "{{count}} weken"
+  },
+  "quota": {
+    "title": "Uploadquotum",
+    "remaining": "{{size}} resterend",
+    "exceeded": "Uploadquotum overschreden",
+    "fileTooLarge": "Bestand overschrijdt resterend quotum ({{remaining}} over)",
+    "resetsIn": "Reset over {{time}}"
+  },
+  "theme": {
+    "light": "Licht",
+    "dark": "Donker",
+    "system": "Systeem"
+  },
+  "footer": {
+    "privacy": "Privacybeleid",
+    "legal": "Juridische kennisgeving",
+    "source": "Broncode"
+  }
+}

@@ -23,6 +23,7 @@ All notable changes to SkySend are documented here.
 - **web**: Upload page and My Uploads page dynamically hide tabs for disabled services
 - **server**: Added unlimited views option (`maxViews: 0`) for notes - notes expire only by time, not by view count
 - **web**: View selector shows "Unlimited" option when `0` is included in `NOTE_VIEW_OPTIONS`
+- **web**: Added translations for Spanish, French, Finnish, Swedish, Norwegian, Dutch, Italian, and Polish
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
