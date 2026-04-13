@@ -34,7 +34,7 @@ features:
     details: Upload multiple files or entire folders. Files are zipped client-side with fflate before encryption - the server sees only one encrypted blob.
   - icon: 📝
     title: Encrypted Notes
-    details: Share text, passwords, or code snippets with end-to-end encryption. Supports burn-after-reading, view limits, and password protection.
+    details: Share text, passwords, code, Markdown, or SSH keys with end-to-end encryption. Includes syntax highlighting, password generator, SSH key generation, burn-after-reading, view limits, and password protection.
   - icon: ⏱️
     title: Automatic Expiry
     details: Uploads and notes expire automatically after a configurable time or download/view count. No data lingers on the server.

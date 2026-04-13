@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.0.0 - Encrypted Notes, ENV Rename
-*Release: In Progress*
+## v2.0.0 - Encrypted Notes, Text, Passwords, Code Snippets, and SSH Keys
+*Released: April 13, 2026*
 
 > ⚠️ **Breaking:** All file-related environment variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the environment reference for the full mapping.
 
@@ -42,8 +42,6 @@ All notable changes to SkySend are documented here.
 - **web**: Updated footer tagline and browser tab subtitle to reflect file and note sharing
 - **web**: Removed primary-color border from ShareLink card and NoteView card to avoid confusion with custom color themes
 - **web**: Added `success` Tailwind color variable (fixed SkySend green) for the "Upload complete" text so it stays green regardless of custom primary color
-- **web**: SSH key notes now display with structured Public Key / Private Key sections and individual copy buttons instead of a raw code block
-- **web**: SSH Key paste mode now has separate Public Key and Private Key input fields instead of a single textarea
 
 ### 📝 Documentation
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names

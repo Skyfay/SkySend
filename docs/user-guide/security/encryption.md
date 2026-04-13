@@ -140,6 +140,28 @@ For a multi-file archive:
 
 The encrypted metadata and IV are stored in the database and returned via the info endpoint.
 
+## Note Encryption
+
+Note content is encrypted using the same AES-256-GCM algorithm as metadata, but with a dedicated key derivation path:
+
+- **Key**: `metaKey` (derived via HKDF, same as metadata encryption)
+- **IV**: 12-byte random per note
+- **Plaintext**: The raw note content (text, password, code, Markdown, or SSH key data)
+
+Unlike files, notes do not use streaming ECE because note content is limited in size (`NOTE_MAX_SIZE`, default 1 MB). The entire content is encrypted in a single AES-256-GCM operation.
+
+### Content Types
+
+The `contentType` field is stored unencrypted on the server so the client knows how to render the decrypted content. It does not reveal the actual note content. Supported values:
+
+| contentType | Description |
+| --- | --- |
+| `text` | Plain text |
+| `markdown` | Markdown (GitHub Flavored Markdown) |
+| `password` | One or more passwords (separated by `\n\n`) |
+| `code` | Code snippets |
+| `sshkey` | SSH key pairs (public and/or private key) |
+
 ## Password Protection
 
 When a user sets a password, additional protection is applied:

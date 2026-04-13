@@ -61,11 +61,13 @@ Inspired by [timvisee/send](https://github.com/timvisee/send) (the community for
 
 ### 📝 Encrypted Notes
 
-- **Text Notes** - share encrypted text snippets
-- **Password Sharing** - share secrets with a masked display and reveal toggle
-- **Code Snippets** - share code with monospace formatting
+- **Text Notes** - share encrypted text snippets with optional Markdown rendering (GFM support with live preview)
+- **Password Sharing** - store multiple passwords with individual masked display, reveal toggles, copy buttons, and a built-in password generator
+- **Code Snippets** - share code with syntax highlighting (22 auto-detected languages) and line numbers
+- **Markdown** - write and preview Markdown notes with full GitHub Flavored Markdown support
+- **SSH Keys** - generate Ed25519 or RSA key pairs in the browser, or paste existing keys, and share them as encrypted notes
 - **Burn After Reading** - notes that self-destruct after a single view
-- **View Limits** - configurable maximum number of views
+- **View Limits** - configurable maximum number of views (including unlimited)
 
 ### 📊 Upload Dashboard
 

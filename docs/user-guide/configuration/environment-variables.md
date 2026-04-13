@@ -48,8 +48,14 @@ The default options translate to:
 | `NOTE_MAX_SIZE` | ❌ | `1MB` | Maximum note content size. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `NOTE_EXPIRE_OPTIONS_SEC` | ❌ | `300,3600,86400,604800` | Comma-separated list of selectable expiry times for notes in seconds. |
 | `NOTE_DEFAULT_EXPIRE_SEC` | ❌ | `86400` | Default note expiry time (must be one of `NOTE_EXPIRE_OPTIONS_SEC`). |
-| `NOTE_VIEW_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | Comma-separated list of selectable view limits for notes. |
-| `NOTE_DEFAULT_VIEWS` | ❌ | `1` | Default view limit for notes (must be one of `NOTE_VIEW_OPTIONS`). `1` means burn-after-reading. |
+| `NOTE_VIEW_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | Comma-separated list of selectable view limits for notes. Include `0` for an "Unlimited" option. |
+| `NOTE_DEFAULT_VIEWS` | ❌ | `1` | Default view limit for notes (must be one of `NOTE_VIEW_OPTIONS`). `1` means burn-after-reading. `0` means unlimited. |
+
+## Services
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `ENABLED_SERVICES` | ❌ | `file,note` | Comma-separated list of enabled services. Set to `file` for file sharing only, `note` for notes only, or `file,note` for both. Disabled services return HTTP 403 and their UI tabs are hidden. |
 
 ## Cleanup
 
@@ -120,6 +126,7 @@ SkySend validates all environment variables on startup using Zod:
 - `FILE_DEFAULT_DOWNLOAD` must be one of the values in `FILE_DOWNLOAD_OPTIONS`
 - `NOTE_DEFAULT_EXPIRE_SEC` must be one of the values in `NOTE_EXPIRE_OPTIONS_SEC`
 - `NOTE_DEFAULT_VIEWS` must be one of the values in `NOTE_VIEW_OPTIONS`
+- `ENABLED_SERVICES` must contain at least one of `file` or `note`
 - `PORT` must be between 1 and 65535
 - `FILE_MAX_SIZE` must be a valid byte size string
 - `NOTE_MAX_SIZE` must be a valid byte size string

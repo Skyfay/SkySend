@@ -1,6 +1,6 @@
 # Notes API
 
-Encrypted notes (text, passwords, code snippets) are stored in the database - not on the filesystem. Each note has a view counter instead of a download counter, and content is returned inline (not streamed).
+Encrypted notes (text, passwords, code snippets, Markdown, SSH keys) are stored in the database - not on the filesystem. Each note has a view counter instead of a download counter, and content is returned inline (not streamed).
 
 ## POST /api/note
 
@@ -31,7 +31,7 @@ Create a new encrypted note.
 | `salt` | base64url | 16-byte HKDF salt |
 | `ownerToken` | base64url | Ownership token (HKDF-derived) |
 | `authToken` | base64url | Authentication token (HMAC-derived) |
-| `contentType` | string | `"text"`, `"password"`, or `"code"` |
+| `contentType` | string | `"text"`, `"password"`, `"code"`, `"markdown"`, or `"sshkey"` |
 | `maxViews` | integer | Maximum number of views (must be a valid option) |
 | `expireSec` | integer | Expiry time in seconds (must be a valid option) |
 | `hasPassword` | boolean | Whether the note is password-protected |

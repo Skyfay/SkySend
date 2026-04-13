@@ -4,12 +4,14 @@ SkySend is a minimalist, self-hostable, end-to-end encrypted file sharing servic
 
 ## What is SkySend?
 
-SkySend lets you share files securely. Files are encrypted in your browser before they leave your device, and the encryption key is embedded in the URL fragment (`#`), which is never sent to the server.
+SkySend lets you share files and encrypted notes securely. Files are encrypted in your browser before they leave your device, and the encryption key is embedded in the URL fragment (`#`), which is never sent to the server.
 
 - **No accounts** - No registration, no login
 - **No tracking** - No telemetry, no analytics
 - **No dependencies** - Single Docker container, SQLite database
 - **No trust required** - Server is cryptographically blind to your data
+
+SkySend supports sharing encrypted notes in five content types: plain text, Markdown, passwords, code snippets, and SSH keys. All notes use the same end-to-end encryption as file uploads.
 
 ## How It Works
 

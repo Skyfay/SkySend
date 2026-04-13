@@ -35,6 +35,10 @@ calculatePlaintextSize(encryptedSize): number
 encryptMetadata(metadata, metaKey): Promise<{ ciphertext, iv }>
 decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>
 
+// Note Content
+encryptNoteContent(content, metaKey): Promise<{ ciphertext, iv }>
+decryptNoteContent(ciphertext, iv, metaKey): Promise<string>
+
 // Password
 deriveKeyFromPassword(password, salt, argon2id?): Promise<{ key, algorithm }>
 applyPasswordProtection(secret, passwordKey): Uint8Array
