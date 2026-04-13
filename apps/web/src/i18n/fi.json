@@ -179,6 +179,12 @@
     "generate": "Luo",
     "bits": "bittiä entropiaa"
   },
+  "password": {
+    "passwords": "Salasanat",
+    "enterPassword": "Syötä salasana...",
+    "addAnother": "Lisää toinen salasana",
+    "passwordNumber": "Salasana {{number}}"
+  },
   "sshKey": {
     "algorithm": "Algoritmi",
     "comment": "Kommentti",

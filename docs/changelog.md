@@ -29,6 +29,8 @@ All notable changes to SkySend are documented here.
 - **web**: Added SSH Key tab with Generate/Paste modes, Ed25519 and RSA (1024/2048/4096) key pair generation, optional passphrase (PKCS#8), and sharing as encrypted note
 - **web**: Added Markdown mode in Text tab with Plain Text/Markdown sub-toggle, live preview, and rendered Markdown display on note view (GFM support via react-markdown)
 - **crypto**: Added `sshkey` as dedicated `NoteContentType` so SSH key notes display with their own icon and label in My Uploads
+- **web**: Redesigned Password tab with single-line input fields, per-field password generator toggle, and add/remove support for multiple passwords
+- **web**: Password note viewer now shows each password individually with separate reveal and copy buttons
 
 ### 🔄 Changed
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity

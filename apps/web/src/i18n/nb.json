@@ -178,8 +178,12 @@
     "length": "Lengde",
     "generate": "Generer",
     "bits": "bits med entropi"
-  },
-  "sshKey": {
+  },  "password": {
+    "passwords": "Passord",
+    "enterPassword": "Skriv inn passord...",
+    "addAnother": "Legg til et nytt passord",
+    "passwordNumber": "Passord {{number}}"
+  },  "sshKey": {
     "algorithm": "Algoritme",
     "comment": "Kommentar",
     "commentPlaceholder": "user@hostname (valgfritt)",

@@ -67,7 +67,8 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   const [copied, setCopied] = useState(false);
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedPrivate, setCopiedPrivate] = useState(false);
-  const [revealed, setRevealed] = useState(false);
+  const [revealedPasswords, setRevealedPasswords] = useState<Set<number>>(new Set());
+  const [copiedPasswords, setCopiedPasswords] = useState<Set<number>>(new Set());
 
   const highlightedCode = useMemo(() => {
     if (contentType !== "code") return "";
@@ -93,33 +94,82 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   };
 
   if (contentType === "password") {
+    const passwords = content.split("\n\n").filter((p) => p.length > 0);
+
+    const togglePasswordReveal = (index: number) => {
+      setRevealedPasswords((prev) => {
+        const next = new Set(prev);
+        if (next.has(index)) next.delete(index);
+        else next.add(index);
+        return next;
+      });
+    };
+
+    const copyPassword = async (text: string, index: number) => {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      setCopiedPasswords((prev) => new Set(prev).add(index));
+      setTimeout(() => {
+        setCopiedPasswords((prev) => {
+          const next = new Set(prev);
+          next.delete(index);
+          return next;
+        });
+      }, 2000);
+    };
+
     return (
       <div className="space-y-3">
-        <div className="relative rounded-lg border bg-muted/50 p-4 font-mono text-sm break-all">
-          {revealed ? content : "•".repeat(Math.min(content.length, 40))}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRevealed(!revealed)}
-          >
-            {revealed ? (
-              <EyeOff className="mr-1.5 h-4 w-4" />
-            ) : (
-              <Eye className="mr-1.5 h-4 w-4" />
+        {passwords.map((pw, index) => (
+          <div key={index} className="space-y-2">
+            {passwords.length > 1 && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("password.passwordNumber", { number: index + 1 })}
+              </span>
             )}
-            {revealed ? t("noteView.hide") : t("noteView.reveal")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={copyToClipboard}>
-            {copied ? (
-              <Check className="mr-1.5 h-4 w-4" />
-            ) : (
-              <Copy className="mr-1.5 h-4 w-4" />
-            )}
-            {copied ? t("common.copied") : t("common.copy")}
-          </Button>
-        </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-lg border bg-muted/50 px-4 py-2.5 font-mono text-sm break-all">
+                {revealedPasswords.has(index)
+                  ? pw
+                  : "•".repeat(Math.min(pw.length, 40))}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={() => togglePasswordReveal(index)}
+                title={revealedPasswords.has(index) ? t("noteView.hide") : t("noteView.reveal")}
+              >
+                {revealedPasswords.has(index) ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={() => copyPassword(pw, index)}
+                title={copiedPasswords.has(index) ? t("common.copied") : t("common.copy")}
+              >
+                {copiedPasswords.has(index) ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

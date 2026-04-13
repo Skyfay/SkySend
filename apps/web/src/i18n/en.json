@@ -179,6 +179,12 @@
     "generate": "Generate",
     "bits": "bits of entropy"
   },
+  "password": {
+    "passwords": "Passwords",
+    "enterPassword": "Enter password...",
+    "addAnother": "Add another password",
+    "passwordNumber": "Password {{number}}"
+  },
   "sshKey": {
     "algorithm": "Algorithm",
     "comment": "Comment",
