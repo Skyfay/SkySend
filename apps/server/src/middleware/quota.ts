@@ -74,7 +74,7 @@ export function createUploadQuota(config: Config) {
   // Periodic cleanup of expired entries
   const cleanupInterval = setInterval(() => {
     db.delete(quotaUsage).where(lt(quotaUsage.resetAt, Date.now())).run();
-  }, config.UPLOAD_QUOTA_WINDOW * 1000);
+  }, config.FILE_UPLOAD_QUOTA_WINDOW * 1000);
   cleanupInterval.unref();
 
   function hashIp(ip: string): string {
@@ -90,7 +90,7 @@ export function createUploadQuota(config: Config) {
     }
 
     // Create or reset entry
-    const resetAt = now + config.UPLOAD_QUOTA_WINDOW * 1000;
+    const resetAt = now + config.FILE_UPLOAD_QUOTA_WINDOW * 1000;
     db.insert(quotaUsage)
       .values({ hashedIp, bytesUsed: 0, resetAt })
       .onConflictDoUpdate({ target: quotaUsage.hashedIp, set: { bytesUsed: 0, resetAt } })
@@ -100,7 +100,7 @@ export function createUploadQuota(config: Config) {
 
   const middleware = createMiddleware<{ Variables: QuotaVariables }>(async (c, next) => {
     // Quota disabled
-    if (config.UPLOAD_QUOTA_BYTES <= 0) {
+    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
       await next();
       return;
     }
@@ -110,7 +110,7 @@ export function createUploadQuota(config: Config) {
     const entry = getOrCreateEntry(hashedIp);
 
     // Check quota before accepting upload
-    if (entry.bytesUsed >= config.UPLOAD_QUOTA_BYTES) {
+    if (entry.bytesUsed >= config.FILE_UPLOAD_QUOTA_BYTES) {
       return c.json(
         { error: "Upload quota exceeded. Try again later." },
         429,
@@ -123,7 +123,7 @@ export function createUploadQuota(config: Config) {
       c.req.header("X-Content-Length") ?? c.req.header("Content-Length") ?? "0",
       10,
     );
-    if (contentLength > 0 && entry.bytesUsed + contentLength > config.UPLOAD_QUOTA_BYTES) {
+    if (contentLength > 0 && entry.bytesUsed + contentLength > config.FILE_UPLOAD_QUOTA_BYTES) {
       return c.json(
         { error: "File size exceeds remaining quota." },
         413,
@@ -139,7 +139,7 @@ export function createUploadQuota(config: Config) {
    * Record bytes used after a successful upload.
    */
   function recordUsage(hashedIp: string, bytes: number): void {
-    if (config.UPLOAD_QUOTA_BYTES <= 0) return;
+    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) return;
     const entry = getOrCreateEntry(hashedIp);
     const newUsed = entry.bytesUsed + bytes;
     db.update(quotaUsage)
@@ -152,7 +152,7 @@ export function createUploadQuota(config: Config) {
    * Get quota status for a given Hono context (uses client IP).
    */
   function getStatus(c: Context): QuotaStatus {
-    if (config.UPLOAD_QUOTA_BYTES <= 0) {
+    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
       return { enabled: false, limit: 0, used: 0, remaining: 0, resetsAt: null, window: 0 };
     }
     const ip = getClientIp(c, config.TRUST_PROXY);
@@ -160,11 +160,11 @@ export function createUploadQuota(config: Config) {
     const entry = getOrCreateEntry(hashedIp);
     return {
       enabled: true,
-      limit: config.UPLOAD_QUOTA_BYTES,
+      limit: config.FILE_UPLOAD_QUOTA_BYTES,
       used: entry.bytesUsed,
-      remaining: Math.max(0, config.UPLOAD_QUOTA_BYTES - entry.bytesUsed),
+      remaining: Math.max(0, config.FILE_UPLOAD_QUOTA_BYTES - entry.bytesUsed),
       resetsAt: new Date(entry.resetAt).toISOString(),
-      window: config.UPLOAD_QUOTA_WINDOW,
+      window: config.FILE_UPLOAD_QUOTA_WINDOW,
     };
   }
 

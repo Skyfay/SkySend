@@ -2,6 +2,34 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.0.0 - Encrypted Notes, ENV Rename
+*Release: In Progress*
+
+> ⚠️ **Breaking:** All file-related environment variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the environment reference for the full mapping.
+
+### ✨ Features
+- **server**: Added encrypted notes API with support for text, password, and code content types
+- **server**: Added burn-after-reading support for notes via configurable max view count
+- **server**: Added new `NOTE_` environment variables for independent note configuration (`NOTE_MAX_SIZE`, `NOTE_EXPIRE_OPTIONS_SEC`, `NOTE_DEFAULT_EXPIRE_SEC`, `NOTE_VIEW_OPTIONS`, `NOTE_DEFAULT_VIEWS`)
+- **crypto**: Added `encryptNoteContent` and `decryptNoteContent` for AES-256-GCM note encryption
+
+### 🔄 Changed
+- **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
+- **server**: Cleanup job now also removes expired notes and notes that reached their view limit
+
+### 📝 Documentation
+- **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
+
+### 🧪 Tests
+- **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.0.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v1.0.2 - Patch Release for CORS correction on Health Endpoint
 *Released: April 13, 2026*
 

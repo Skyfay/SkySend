@@ -1,6 +1,6 @@
 import { lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { uploads } from "../db/schema.js";
+import { notes, uploads } from "../db/schema.js";
 import type { FileStorage } from "../storage/filesystem.js";
 
 /**
@@ -23,20 +23,40 @@ export async function runCleanup(storage: FileStorage): Promise<number> {
     )
     .all();
 
-  if (expiredUploads.length === 0) return 0;
-
-  // Delete files from disk
-  await Promise.allSettled(
-    expiredUploads.map((u) => storage.delete(u.id)),
-  );
-
-  // Delete from database
-  const ids = expiredUploads.map((u) => u.id);
   let deleted = 0;
-  for (const id of ids) {
+
+  if (expiredUploads.length > 0) {
+    // Delete files from disk
+    await Promise.allSettled(
+      expiredUploads.map((u) => storage.delete(u.id)),
+    );
+
+    // Delete from database
+    for (const { id } of expiredUploads) {
+      const result = db
+        .delete(uploads)
+        .where(sql`${uploads.id} = ${id}`)
+        .run();
+      deleted += result.changes;
+    }
+  }
+
+  // Clean up expired notes and notes that have reached their view limit
+  const expiredNotes = db
+    .select({ id: notes.id })
+    .from(notes)
+    .where(
+      or(
+        lte(notes.expiresAt, now),
+        sql`${notes.viewCount} >= ${notes.maxViews}`,
+      ),
+    )
+    .all();
+
+  for (const { id } of expiredNotes) {
     const result = db
-      .delete(uploads)
-      .where(sql`${uploads.id} = ${id}`)
+      .delete(notes)
+      .where(sql`${notes.id} = ${id}`)
       .run();
     deleted += result.changes;
   }
@@ -58,7 +78,7 @@ export function startCleanupJob(
     try {
       const deleted = await runCleanup(storage);
       if (deleted > 0) {
-        console.log(`[cleanup] Removed ${deleted} expired upload(s)`);
+        console.log(`[cleanup] Removed ${deleted} expired record(s)`);
       }
     } catch (err) {
       console.error("[cleanup] Error during cleanup:", err);

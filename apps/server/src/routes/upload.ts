@@ -57,19 +57,19 @@ function validateUploadHeaders(
     return { message: "Invalid salt encoding", status: 400 };
   }
 
-  if (headers.contentLength > config.MAX_FILE_SIZE) {
-    return { message: `File size exceeds maximum of ${config.MAX_FILE_SIZE} bytes`, status: 413 };
+  if (headers.contentLength > config.FILE_MAX_SIZE) {
+    return { message: `File size exceeds maximum of ${config.FILE_MAX_SIZE} bytes`, status: 413 };
   }
 
-  if (headers.fileCount > config.MAX_FILES_PER_UPLOAD) {
-    return { message: `Maximum ${config.MAX_FILES_PER_UPLOAD} files per upload`, status: 400 };
+  if (headers.fileCount > config.FILE_MAX_FILES_PER_UPLOAD) {
+    return { message: `Maximum ${config.FILE_MAX_FILES_PER_UPLOAD} files per upload`, status: 400 };
   }
 
-  if (!config.EXPIRE_OPTIONS_SEC.includes(headers.expireSec)) {
+  if (!config.FILE_EXPIRE_OPTIONS_SEC.includes(headers.expireSec)) {
     return { message: "Invalid expiry time. Must be one of the allowed options.", status: 400 };
   }
 
-  if (!config.DOWNLOAD_OPTIONS.includes(headers.maxDownloads)) {
+  if (!config.FILE_DOWNLOAD_OPTIONS.includes(headers.maxDownloads)) {
     return { message: "Invalid download limit. Must be one of the allowed options.", status: 400 };
   }
 

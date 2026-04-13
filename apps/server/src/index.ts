@@ -24,6 +24,7 @@ import { passwordRoute } from "./routes/password.js";
 import { createDeleteRoute } from "./routes/delete.js";
 import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
+import { noteRoute } from "./routes/note.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -145,6 +146,9 @@ api.route("/upload", uploadWithQuota);
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
 
+// Note routes (E2EE encrypted notes)
+api.route("/note", noteRoute);
+
 app.route("/api", api);
 
 // ── Static SPA Serving ─────────────────────────────────
@@ -181,9 +185,10 @@ const server = serve(
     console.log(`[skysend] Listening on http://${config.HOST}:${info.port}`);
     console.log(`[skysend] Data directory: ${resolve(config.DATA_DIR)}`);
     console.log(`[skysend] Uploads directory: ${resolve(config.UPLOADS_DIR)}`);
-    console.log(`[skysend] Max file size: ${(config.MAX_FILE_SIZE / (1024 ** 2)).toFixed(0)} MB`);
-    if (config.UPLOAD_QUOTA_BYTES > 0) {
-      console.log(`[skysend] Upload quota: ${(config.UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.UPLOAD_QUOTA_WINDOW}s`);
+    console.log(`[skysend] Max file size: ${(config.FILE_MAX_SIZE / (1024 ** 2)).toFixed(0)} MB`);
+    console.log(`[skysend] Max note size: ${(config.NOTE_MAX_SIZE / (1024 ** 2)).toFixed(2)} MB`);
+    if (config.FILE_UPLOAD_QUOTA_BYTES > 0) {
+      console.log(`[skysend] Upload quota: ${(config.FILE_UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.FILE_UPLOAD_QUOTA_WINDOW}s`);
     }
   },
 );

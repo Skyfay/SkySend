@@ -15,6 +15,13 @@
       "when": 1775842424199,
       "tag": "0001_complete_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776081107775,
+      "tag": "0002_flimsy_mother_askani",
+      "breakpoints": true
     }
   ]
 }

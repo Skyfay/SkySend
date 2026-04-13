@@ -66,3 +66,15 @@ export {
   randomBytes,
   nonceXorCounter,
 } from "./util.js";
+
+// Note encryption/decryption
+export {
+  encryptNoteContent,
+  decryptNoteContent,
+  NOTE_NONCE_LENGTH,
+} from "./note.js";
+export type {
+  NoteContentType,
+  NoteMetadata,
+  EncryptedNoteContent,
+} from "./note.js";

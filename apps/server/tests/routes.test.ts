@@ -33,18 +33,23 @@ const DEFAULT_CONFIG = {
   HOST: "0.0.0.0",
   BASE_URL: "http://localhost:3000",
   DATA_DIR: "./data",
-  MAX_FILE_SIZE: 2 * 1024 ** 3,
-  EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
-  DEFAULT_EXPIRE_SEC: 86400,
-  DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
-  DEFAULT_DOWNLOAD: 1,
+  FILE_MAX_SIZE: 2 * 1024 ** 3,
+  FILE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
+  FILE_DEFAULT_EXPIRE_SEC: 86400,
+  FILE_DOWNLOAD_OPTIONS: [1, 2, 3, 4, 5, 10, 20, 50, 100],
+  FILE_DEFAULT_DOWNLOAD: 1,
+  FILE_MAX_FILES_PER_UPLOAD: 32,
+  FILE_UPLOAD_QUOTA_BYTES: 0,
+  FILE_UPLOAD_QUOTA_WINDOW: 86400,
+  NOTE_MAX_SIZE: 1024 ** 2,
+  NOTE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
+  NOTE_DEFAULT_EXPIRE_SEC: 86400,
+  NOTE_VIEW_OPTIONS: [1, 2, 3, 5, 10, 20, 50, 100],
+  NOTE_DEFAULT_VIEWS: 1,
   CLEANUP_INTERVAL: 60,
   CUSTOM_TITLE: "SkySend",
   RATE_LIMIT_WINDOW: 60000,
   RATE_LIMIT_MAX: 60,
-  UPLOAD_QUOTA_BYTES: 0,
-  UPLOAD_QUOTA_WINDOW: 86400,
-  MAX_FILES_PER_UPLOAD: 32,
   TRUST_PROXY: false,
 };
 
@@ -92,11 +97,13 @@ describe("routes", () => {
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body.maxFileSize).toBe(DEFAULT_CONFIG.MAX_FILE_SIZE);
-      expect(body.maxFilesPerUpload).toBe(32);
-      expect(body.expireOptions).toEqual([300, 3600, 86400, 604800]);
-      expect(body.downloadOptions).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
+      expect(body.fileMaxSize).toBe(DEFAULT_CONFIG.FILE_MAX_SIZE);
+      expect(body.fileMaxFilesPerUpload).toBe(32);
+      expect(body.fileExpireOptions).toEqual([300, 3600, 86400, 604800]);
+      expect(body.fileDownloadOptions).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
       expect(body.customTitle).toBe("SkySend");
+      expect(body.noteMaxSize).toBe(1024 ** 2);
+      expect(body.noteViewOptions).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
     });
   });
 
@@ -642,10 +649,10 @@ describe("routes", () => {
       expect(json.error).toContain("download limit");
     });
 
-    it("should reject file exceeding MAX_FILE_SIZE", async () => {
+    it("should reject file exceeding FILE_MAX_SIZE", async () => {
       vi.mocked(getConfig).mockReturnValue({
         ...DEFAULT_CONFIG,
-        MAX_FILE_SIZE: 3, // 3 bytes
+        FILE_MAX_SIZE: 3, // 3 bytes
       });
 
       const app = new Hono();
@@ -663,7 +670,7 @@ describe("routes", () => {
     it("should reject too many files per upload", async () => {
       vi.mocked(getConfig).mockReturnValue({
         ...DEFAULT_CONFIG,
-        MAX_FILES_PER_UPLOAD: 5,
+        FILE_MAX_FILES_PER_UPLOAD: 5,
       });
 
       const app = new Hono();
