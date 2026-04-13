@@ -50,7 +50,8 @@ export function SSHKeyForm() {
   const [mode, setMode] = useState<Mode>("generate");
 
   // Paste mode
-  const [pasteContent, setPasteContent] = useState("");
+  const [pastePublicKey, setPastePublicKey] = useState("");
+  const [pastePrivateKey, setPastePrivateKey] = useState("");
 
   // Generate config
   const [algorithm, setAlgorithm] = useState<Algorithm>("ed25519");
@@ -139,16 +140,23 @@ export function SSHKeyForm() {
   // --- Content for note upload ---
 
   const getSubmitContent = (): string => {
-    if (mode === "paste") return pasteContent;
+    if (mode === "paste") {
+      const parts = [pastePublicKey.trim(), pastePrivateKey.trim()].filter(Boolean);
+      return parts.join("\n\n");
+    }
     if (!keyPair) return "";
     return shareMode === "both"
       ? `${keyPair.publicKey}\n\n${keyPair.privateKey}`
       : keyPair.publicKey;
   };
 
+  const pasteContent = mode === "paste"
+    ? [pastePublicKey.trim(), pastePrivateKey.trim()].filter(Boolean).join("\n\n")
+    : "";
+
   const canSubmit =
     mode === "paste"
-      ? pasteContent.length > 0 &&
+      ? (pastePublicKey.trim().length > 0 || pastePrivateKey.trim().length > 0) &&
         new TextEncoder().encode(pasteContent).length <= config.noteMaxSize
       : keyPair !== null;
 
@@ -167,7 +175,8 @@ export function SSHKeyForm() {
   const handleNewNote = () => {
     noteHook.reset();
     setKeyPair(null);
-    setPasteContent("");
+    setPastePublicKey("");
+    setPastePrivateKey("");
     setPassphrase("");
     setComment("");
     setNotePassword("");
@@ -307,9 +316,23 @@ export function SSHKeyForm() {
         {/* ====== PASTE MODE ====== */}
         {mode === "paste" && (
           <>
+            {/* Public Key */}
+            <div className="space-y-2">
+              <Label htmlFor="ssh-paste-public">{t("sshKey.publicKey")}</Label>
+              <Textarea
+                id="ssh-paste-public"
+                value={pastePublicKey}
+                onChange={(e) => setPastePublicKey(e.target.value)}
+                placeholder={t("sshKey.pastePlaceholderPublic")}
+                className="min-h-20 resize-y font-mono text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Private Key */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="ssh-paste">{t("sshKey.pasteLabel")}</Label>
+                <Label htmlFor="ssh-paste-private">{t("sshKey.privateKey")}</Label>
                 <span
                   className={`text-xs ${pasteSizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
                 >
@@ -317,11 +340,11 @@ export function SSHKeyForm() {
                 </span>
               </div>
               <Textarea
-                id="ssh-paste"
-                value={pasteContent}
-                onChange={(e) => setPasteContent(e.target.value)}
-                placeholder={t("sshKey.pastePlaceholder")}
-                className="min-h-50 resize-y font-mono text-sm"
+                id="ssh-paste-private"
+                value={pastePrivateKey}
+                onChange={(e) => setPastePrivateKey(e.target.value)}
+                placeholder={t("sshKey.pastePlaceholderPrivate")}
+                className="min-h-30 resize-y font-mono text-sm"
                 disabled={isSubmitting}
               />
               {pasteSizeExceeded && (

@@ -65,10 +65,12 @@ interface NoteContentProps {
 export function NoteContent({ content, contentType }: NoteContentProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [copiedPublic, setCopiedPublic] = useState(false);
+  const [copiedPrivate, setCopiedPrivate] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
   const highlightedCode = useMemo(() => {
-    if (contentType !== "code" && contentType !== "sshkey") return "";
+    if (contentType !== "code") return "";
     return hljs.highlightAuto(content).value;
   }, [content, contentType]);
 
@@ -122,7 +124,82 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
     );
   }
 
-  if (contentType === "code" || contentType === "sshkey") {
+  if (contentType === "sshkey") {
+    // Parse content into public key and private key sections
+    const privateKeyMatch = content.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
+    const privateKey = privateKeyMatch?.[1]?.trim() ?? null;
+    const publicKey = privateKey
+      ? content.replace(privateKey, "").trim()
+      : content.trim();
+
+    const copyText = async (text: string, setter: (v: boolean) => void) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setter(true);
+        setTimeout(() => setter(false), 2000);
+      } catch {
+        // Fallback
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        {/* Public Key */}
+        {publicKey && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{t("sshKey.publicKey")}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => copyText(publicKey, setCopiedPublic)}
+              >
+                {copiedPublic ? (
+                  <Check className="mr-1 h-3 w-3" />
+                ) : (
+                  <Copy className="mr-1 h-3 w-3" />
+                )}
+                {copiedPublic ? t("common.copied") : t("common.copy")}
+              </Button>
+            </div>
+            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs break-all whitespace-pre-wrap scrollbar-thin">
+              {publicKey}
+            </pre>
+          </div>
+        )}
+
+        {/* Private Key */}
+        {privateKey && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{t("sshKey.privateKey")}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => copyText(privateKey, setCopiedPrivate)}
+              >
+                {copiedPrivate ? (
+                  <Check className="mr-1 h-3 w-3" />
+                ) : (
+                  <Copy className="mr-1 h-3 w-3" />
+                )}
+                {copiedPrivate ? t("common.copied") : t("common.copy")}
+              </Button>
+            </div>
+            <pre className="max-h-40 overflow-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs scrollbar-thin">
+              {privateKey}
+            </pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (contentType === "code") {
     const lines = content.split("\n");
     const lineNumberWidth = String(lines.length).length;
 
