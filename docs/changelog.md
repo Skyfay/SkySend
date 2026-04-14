@@ -6,6 +6,7 @@ All notable changes to SkySend are documented here.
 *Release: In Progress*
 
 ### ✨ Features
+- **docs**: Added VitePress sitemap generation (`/sitemap.xml`) for Google Search Console indexing
 - **docs**: Added Cloudflare Worker that fetches instance data (version, config, enabled services) hourly and caches it in KV
 - **docs**: Instances page now loads all data from a single cached API endpoint instead of querying each instance individually
 - **docs**: Instance limits (max file size, quota, expiry, downloads) are now fetched dynamically from each instance's `/api/config` endpoint
