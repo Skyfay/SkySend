@@ -20,6 +20,7 @@ All notable changes to SkySend are documented here.
 
 ### 🎨 Improvements
 - **web**: Redesigned theme toggle from a cycling button to a dropdown menu with Auto, Light, and Dark options
+- **web**: Fixed an UI issue on text and markdown note cards, when they were expanded
 
 ### 🐳 Docker
 
