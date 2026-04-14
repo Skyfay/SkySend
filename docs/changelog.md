@@ -18,6 +18,9 @@ All notable changes to SkySend are documented here.
 - **web**: Added language switcher dropdown in the navbar with country flag icons via `flag-icons` library
 - **web**: Manual language selection is persisted in a cookie so it survives page reloads and sessions
 
+### 🎨 Improvements
+- **web**: Redesigned theme toggle from a cycling button to a dropdown menu with Auto, Light, and Dark options
+
 ### 🐳 Docker
 
 - **Image**: `ghcr.io/skyfay/skysend:v2.0.1`
