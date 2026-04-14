@@ -242,7 +242,7 @@ export function NoteForm({ contentType }: NoteFormProps) {
                 </span>
               </div>
             </DialogHeader>
-            <div className="flex-1 overflow-hidden p-6 pt-0">
+            <div className="flex-1 overflow-hidden p-6 pt-4">
               {markdownMode && showPreview ? (
                 <div className="h-full overflow-auto rounded-md border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none">
                   {content ? (

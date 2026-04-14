@@ -188,7 +188,8 @@
     "passwords": "Passord",
     "enterPassword": "Skriv inn passord...",
     "addAnother": "Legg til et nytt passord",
-    "passwordNumber": "Passord {{number}}"
+    "passwordNumber": "Passord {{number}}",
+    "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)"
   },  "sshKey": {
     "algorithm": "Algoritme",
     "comment": "Kommentar",

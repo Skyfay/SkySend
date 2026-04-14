@@ -95,7 +95,25 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   };
 
   if (contentType === "password") {
-    const passwords = content.split("\n\n").filter((p) => p.length > 0);
+    // Support both new JSON format and legacy plaintext format
+    let entries: { label: string; value: string }[];
+    try {
+      const parsed = JSON.parse(content) as unknown[];
+      if (Array.isArray(parsed) && parsed.every((e) => typeof e === "object" && e !== null && "value" in e)) {
+        entries = parsed.map((e) => {
+          const obj = e as Record<string, unknown>;
+          return {
+            label: typeof obj.label === "string" ? obj.label : "",
+            value: String(obj.value),
+          };
+        });
+      } else {
+        throw new Error("Not password JSON");
+      }
+    } catch {
+      // Legacy format: passwords separated by \n\n
+      entries = content.split("\n\n").filter((p) => p.length > 0).map((p) => ({ label: "", value: p }));
+    }
 
     const togglePasswordReveal = (index: number) => {
       setRevealedPasswords((prev) => {
@@ -129,18 +147,16 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
 
     return (
       <div className="space-y-3">
-        {passwords.map((pw, index) => (
+        {entries.map((entry, index) => (
           <div key={index} className="space-y-2">
-            {passwords.length > 1 && (
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("password.passwordNumber", { number: index + 1 })}
-              </span>
-            )}
+            <span className="text-xs font-medium text-muted-foreground">
+              {entry.label || t("password.passwordNumber", { number: index + 1 })}
+            </span>
             <div className="flex items-center gap-2">
               <div className="flex-1 rounded-lg border bg-muted/50 px-4 py-2.5 font-mono text-sm break-all">
                 {revealedPasswords.has(index)
-                  ? pw
-                  : "•".repeat(Math.min(pw.length, 40))}
+                  ? entry.value
+                  : "•".repeat(Math.min(entry.value.length, 40))}
               </div>
               <Button
                 variant="outline"
@@ -159,7 +175,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
                 variant="outline"
                 size="icon"
                 className="shrink-0"
-                onClick={() => copyPassword(pw, index)}
+                onClick={() => copyPassword(entry.value, index)}
                 title={copiedPasswords.has(index) ? t("common.copied") : t("common.copy")}
               >
                 {copiedPasswords.has(index) ? (

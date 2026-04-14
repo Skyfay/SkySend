@@ -12,6 +12,20 @@ import nl from "./nl.json";
 import it from "./it.json";
 import pl from "./pl.json";
 
+const COOKIE_NAME = "skysend-lang";
+
+export function getSavedLanguage(): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]+)`));
+  const value = match?.[1] ?? null;
+  if (value === "auto" || !value) return null;
+  return value;
+}
+
+export function saveLanguage(code: string) {
+  const maxAge = 365 * 24 * 60 * 60; // 1 year
+  document.cookie = `${COOKIE_NAME}=${code}; path=/; max-age=${maxAge}; SameSite=Lax`;
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -37,5 +51,11 @@ i18n
       caches: [],
     },
   });
+
+// Apply saved language preference (overrides browser detection)
+const saved = getSavedLanguage();
+if (saved) {
+  i18n.changeLanguage(saved);
+}
 
 export default i18n;

@@ -189,7 +189,8 @@
     "passwords": "Salasanat",
     "enterPassword": "Syötä salasana...",
     "addAnother": "Lisää toinen salasana",
-    "passwordNumber": "Salasana {{number}}"
+    "passwordNumber": "Salasana {{number}}",
+    "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)"
   },
   "sshKey": {
     "algorithm": "Algoritmi",

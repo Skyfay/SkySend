@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 import { Upload, FolderOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ export function Layout() {
                 <span className="hidden sm:inline">{label}</span>
               </Link>
             ))}
+            <LanguageSwitcher />
             <ThemeToggle />
           </nav>
         </div>
