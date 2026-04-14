@@ -33,7 +33,7 @@ export function PasswordForm() {
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
 
-  const [passwords, setPasswords] = useState<string[]>([""]);
+  const [passwords, setPasswords] = useState<{ label: string; value: string }[]>([{ label: "", value: "" }]);
   const [showValues, setShowValues] = useState<boolean[]>([false]);
   const [generatorIndex, setGeneratorIndex] = useState<number | null>(null);
 
@@ -48,20 +48,25 @@ export function PasswordForm() {
   const effectiveExpireSec = expireSec ?? config.noteDefaultExpire;
   const effectiveMaxViews = maxViews ?? config.noteDefaultViews;
 
-  const content = passwords.filter((p) => p.length > 0).join("\n\n");
+  const nonEmpty = passwords.filter((p) => p.value.length > 0);
+  const content = JSON.stringify(nonEmpty.map((p) => ({ label: p.label, value: p.value })));
   const contentBytes = new TextEncoder().encode(content).length;
   const sizeExceeded = contentBytes > config.noteMaxSize;
   const isSubmitting =
     noteHook.phase === "encrypting" || noteHook.phase === "uploading";
   const canSubmit =
-    passwords.some((p) => p.length > 0) && !sizeExceeded && !isSubmitting;
+    passwords.some((p) => p.value.length > 0) && !sizeExceeded && !isSubmitting;
 
   const updatePassword = (index: number, value: string) => {
-    setPasswords((prev) => prev.map((p, i) => (i === index ? value : p)));
+    setPasswords((prev) => prev.map((p, i) => (i === index ? { ...p, value } : p)));
+  };
+
+  const updateLabel = (index: number, label: string) => {
+    setPasswords((prev) => prev.map((p, i) => (i === index ? { ...p, label } : p)));
   };
 
   const addField = () => {
-    setPasswords((prev) => [...prev, ""]);
+    setPasswords((prev) => [...prev, { label: "", value: "" }]);
     setShowValues((prev) => [...prev, false]);
   };
 
@@ -99,7 +104,7 @@ export function PasswordForm() {
 
   const handleNewNote = () => {
     noteHook.reset();
-    setPasswords([""]);
+    setPasswords([{ label: "", value: "" }]);
     setShowValues([false]);
     setGeneratorIndex(null);
     setNotePassword("");
@@ -126,11 +131,20 @@ export function PasswordForm() {
 
           {passwords.map((pw, index) => (
             <div key={index} className="space-y-2">
+              <Input
+                type="text"
+                value={pw.label}
+                onChange={(e) => updateLabel(index, e.target.value)}
+                placeholder={t("password.labelPlaceholder", { number: index + 1 })}
+                className="text-xs h-8"
+                disabled={isSubmitting}
+                autoComplete="off"
+              />
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Input
                     type={showValues[index] ? "text" : "password"}
-                    value={pw}
+                    value={pw.value}
                     onChange={(e) => updatePassword(index, e.target.value)}
                     placeholder={t("password.enterPassword")}
                     className="pr-9 font-mono"

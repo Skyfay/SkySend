@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.0.1 - Dynamic Instances Page
-*Release: In Progress*
+## v2.1.0 - General UI and Documentation Improvements
+*Released: April 14, 2026*
 
 ### ✨ Features
 - **docs**: Added VitePress sitemap generation (`/sitemap.xml`) for Google Search Console indexing
@@ -17,6 +17,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Instance cards show "Official" or "Community" badge, with official instances (skysend.ch) always sorted first
 - **web**: Added language switcher dropdown in the navbar with country flag icons via `flag-icons` library
 - **web**: Manual language selection is persisted in a cookie so it survives page reloads and sessions
+- **web**: Added optional custom labels for password notes so users can describe what each password is for
 
 ### 🎨 Improvements
 - **web**: Redesigned theme toggle from a cycling button to a dropdown menu with Auto, Light, and Dark options
@@ -24,7 +25,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.0.1`
+- **Image**: `ghcr.io/skyfay/skysend:v2.1.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 

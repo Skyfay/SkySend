@@ -188,7 +188,8 @@
     "passwords": "Lösenord",
     "enterPassword": "Ange lösenord...",
     "addAnother": "Lägg till ytterligare lösenord",
-    "passwordNumber": "Lösenord {{number}}"
+    "passwordNumber": "Lösenord {{number}}",
+    "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)"
   },  "sshKey": {
     "algorithm": "Algoritm",
     "comment": "Kommentar",

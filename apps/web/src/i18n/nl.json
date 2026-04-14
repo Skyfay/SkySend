@@ -189,7 +189,8 @@
     "passwords": "Wachtwoorden",
     "enterPassword": "Wachtwoord invoeren...",
     "addAnother": "Nog een wachtwoord toevoegen",
-    "passwordNumber": "Wachtwoord {{number}}"
+    "passwordNumber": "Wachtwoord {{number}}",
+    "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)"
   },
   "sshKey": {
     "algorithm": "Algoritme",

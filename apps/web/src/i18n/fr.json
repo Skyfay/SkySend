@@ -189,7 +189,8 @@
     "passwords": "Mots de passe",
     "enterPassword": "Saisir le mot de passe...",
     "addAnother": "Ajouter un autre mot de passe",
-    "passwordNumber": "Mot de passe {{number}}"
+    "passwordNumber": "Mot de passe {{number}}",
+    "labelPlaceholder": "Libellé du mot de passe {{number}} (facultatif)"
   },
   "sshKey": {
     "algorithm": "Algorithme",
