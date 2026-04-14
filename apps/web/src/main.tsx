@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./i18n";
 import "./index.css";
+import "flag-icons/css/flag-icons.min.css";
 
 // Register download Service Worker (streams OPFS files to native download manager)
 if ("serviceWorker" in navigator) {
