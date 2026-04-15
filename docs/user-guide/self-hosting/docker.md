@@ -73,11 +73,11 @@ services:
 ```
 
 ::: tip
-When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database. Set `S3_PUBLIC_URL` to your R2 custom domain or public bucket URL to use direct downloads instead of presigned URLs - this is simpler and avoids CORS issues.
+When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database. Set `S3_PUBLIC_URL` to your R2 custom domain or public bucket URL to use direct downloads instead of presigned URLs.
 :::
 
 ::: warning
-When using presigned URLs (without `S3_PUBLIC_URL`), you must configure a **CORS policy** on your S3 bucket to allow browser downloads. See [CORS Configuration](/user-guide/configuration/environment-variables#s3-cors-configuration) for details.
+When using S3 storage, you must configure a **CORS policy** on your S3 bucket at your provider (Cloudflare R2, AWS, MinIO, etc.) to allow browser downloads. The policy must allow `GET` and `HEAD` methods from your SkySend domain. See [Storage Backend](/user-guide/configuration/environment-variables#storage-backend) for examples.
 :::
 
 See [Environment Variables](/user-guide/configuration/environment-variables#storage-backend) for all S3 configuration options and provider examples.

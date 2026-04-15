@@ -128,17 +128,21 @@ environment:
 :::
 
 ::: warning S3 CORS Configuration
-When using presigned URLs (without `S3_PUBLIC_URL`), your S3 bucket needs a **CORS policy** to allow browser downloads. Without it, downloads will fail with `No 'Access-Control-Allow-Origin' header` errors.
+When using S3 storage, your S3 bucket needs a **CORS policy** configured at your provider to allow browser downloads. Without it, downloads will fail with `No 'Access-Control-Allow-Origin' header` errors. The policy must allow `GET` and `HEAD` methods.
 
 **Cloudflare R2:** Go to **R2** > your bucket > **Settings** > **CORS Policy** and add:
 
 ```json
 [
   {
-    "AllowedOrigins": ["https://your-skysend-domain.com"],
-    "AllowedMethods": ["GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "MaxAgeSeconds": 86400
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "https://skysend.example.com"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "HEAD"
+    ]
   }
 ]
 ```
@@ -148,8 +152,6 @@ When using presigned URLs (without `S3_PUBLIC_URL`), your S3 bucket needs a **CO
 **MinIO:** Use `mc admin config set` or the MinIO Console.
 
 Replace `https://your-skysend-domain.com` with your actual SkySend URL. For local development, add `http://localhost:5173`.
-
-If you use `S3_PUBLIC_URL` with a custom domain on the same parent domain, CORS is typically not needed.
 :::
 
 ## Branding
