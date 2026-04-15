@@ -52,6 +52,13 @@ The default options translate to:
 Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
 :::
 
+## Upload Performance
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `FILE_UPLOAD_CONCURRENT_CHUNKS` | ❌ | `3` | Number of parallel chunk uploads per session (1-20). Increase to improve upload speed in Chromium browsers (Chrome, Edge, Brave) through HTTP/2 reverse proxies. |
+| `FILE_UPLOAD_SPEED_LIMIT` | ❌ | `0` (unlimited) | Maximum upload speed per session in bytes per second. `0` disables the limit. Supports units: `B`, `KB`, `MB`, `GB` (e.g. `100MB` for 100 MB/s). |
+
 ## Note Settings
 
 | Variable | Required | Default | Description |

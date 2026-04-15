@@ -114,6 +114,8 @@ export function createUploadRoute(storage: StorageBackend) {
     bufferedBytes: number;
     /** Serialization chain - ensures appendChunk calls are never concurrent. */
     writePromise: Promise<void>;
+    /** Timestamp (ms) of the first chunk received - for speed limiting. */
+    firstChunkAt: number;
   }
   const pendingSessions = new Map<string, UploadSession>();
 
@@ -179,6 +181,7 @@ export function createUploadRoute(storage: StorageBackend) {
       nextWriteIndex: 0,
       bufferedBytes: 0,
       writePromise: Promise.resolve(),
+      firstChunkAt: 0,
     });
 
     return c.json({ id }, 201);
@@ -211,6 +214,11 @@ export function createUploadRoute(storage: StorageBackend) {
     }
 
     try {
+      // Record when the first chunk arrives (for speed limiting)
+      if (session.firstChunkAt === 0) {
+        session.firstChunkAt = Date.now();
+      }
+
       // ── Always consume the request body immediately ──────────────────
       // With parallel uploads over HTTP/2 through proxies (Traefik, Caddy),
       // deferring body reads causes flow-control deadlocks: the proxy waits
@@ -272,6 +280,17 @@ export function createUploadRoute(storage: StorageBackend) {
 
       // Wait for all writes triggered by this request to complete
       await session.writePromise;
+
+      // ── Speed limit: delay response if uploading too fast ──────────
+      const speedLimit = getConfig().FILE_UPLOAD_SPEED_LIMIT;
+      if (speedLimit > 0 && session.bytesWritten > 0) {
+        const elapsedMs = Date.now() - session.firstChunkAt;
+        const expectedMs = (session.bytesWritten / speedLimit) * 1000;
+        const delayMs = expectedMs - elapsedMs;
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
 
       return c.json({ bytesWritten: session.bytesWritten }, 200);
     } catch (err) {

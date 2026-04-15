@@ -124,12 +124,16 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     // ── Encrypt + Upload ───────────────────────────────
     // Pre-flight: verify server is reachable before starting
+    let maxConcurrentUploads = 3; // fallback default
     try {
       const healthRes = await fetch(`${apiBase}/api/config`);
       if (!healthRes.ok) {
         throw new Error(`Server responded with ${healthRes.status}`);
       }
-      await healthRes.json();
+      const serverConfig = await healthRes.json() as { fileUploadConcurrentChunks?: number };
+      if (typeof serverConfig.fileUploadConcurrentChunks === "number" && serverConfig.fileUploadConcurrentChunks > 0) {
+        maxConcurrentUploads = serverConfig.fileUploadConcurrentChunks;
+      }
     } catch (e) {
       throw new Error(
         `Server unreachable at ${apiBase || "(same-origin)"}: ${e instanceof Error ? e.message : String(e)}`,
@@ -167,9 +171,8 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // To avoid OOM for very large files, we use a chunked upload approach:
     // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via parallel requests.
     // Chrome/Brave serialize large HTTP/2 POST bodies through reverse proxies,
-    // so we use smaller chunks (10 MB) with up to 3 concurrent uploads.
+    // so we use smaller chunks (10 MB) with server-configurable concurrent uploads.
     const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB per request
-    const MAX_CONCURRENT_UPLOADS = 3;
     const encryptedStream = plaintextStream.pipeThrough(
       createEncryptStream(keys.fileKey),
     );
@@ -242,7 +245,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         active.push(tracked);
 
         // Maintain concurrency limit
-        if (active.length >= MAX_CONCURRENT_UPLOADS) {
+        if (active.length >= maxConcurrentUploads) {
           await Promise.race(active);
         }
         // Bail out early if any upload failed

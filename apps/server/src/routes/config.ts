@@ -22,6 +22,7 @@ configRoute.get("/", (c) => {
     fileDefaultDownload: config.FILE_DEFAULT_DOWNLOAD,
     fileUploadQuotaBytes: config.FILE_UPLOAD_QUOTA_BYTES,
     fileUploadQuotaWindow: config.FILE_UPLOAD_QUOTA_WINDOW,
+    fileUploadConcurrentChunks: config.FILE_UPLOAD_CONCURRENT_CHUNKS,
     // Note configuration
     noteMaxSize: config.NOTE_MAX_SIZE,
     noteExpireOptions: config.NOTE_EXPIRE_OPTIONS_SEC,

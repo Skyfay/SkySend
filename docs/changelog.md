@@ -2,6 +2,25 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.2.4
+*Release: In Progress*
+
+### ✨ Features
+- **server**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` environment variable (default: `3`) to control the number of parallel chunk uploads per session - increase to improve upload speed in Chromium browsers through HTTP/2 proxies
+- **server**: Added `FILE_UPLOAD_SPEED_LIMIT` environment variable (default: `0` = unlimited) to cap upload throughput per session - supports human-readable values like `100MB` (bytes per second)
+- **web**: Client now reads the configured concurrent chunk count from the server and adjusts parallel uploads accordingly
+
+### � Documentation
+- **docs**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` and `FILE_UPLOAD_SPEED_LIMIT` to user-guide environment variables page with new "Upload Performance" section
+- **docs**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` and `FILE_UPLOAD_SPEED_LIMIT` to developer-guide environment reference
+
+### �🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.2.4`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.2.3 - Critical Bug Fixes for Chunked Uploads in HTTP/2 Proxied Environments
 *Released: April 15, 2026*
 
