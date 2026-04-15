@@ -98,10 +98,22 @@ export function createUploadRoute(storage: StorageBackend) {
 
   // ── In-memory tracker for chunked uploads ────────
   // Maps upload ID -> session data. Cleaned up on finalize or timeout.
+
+  /** Max bytes buffered in memory for out-of-order chunks per session. */
+  const MAX_BUFFER_PER_SESSION = 50 * 1024 * 1024; // 50 MB
+
   interface UploadSession {
     headers: z.infer<typeof uploadHeadersSchema>;
     bytesWritten: number;
     createdAt: number;
+    /** Chunks received out-of-order, waiting to be written. */
+    pendingChunks: Map<number, Uint8Array>;
+    /** Next chunk index the storage backend expects. */
+    nextWriteIndex: number;
+    /** Total bytes held in pendingChunks (for memory limiting). */
+    bufferedBytes: number;
+    /** Serialization chain - ensures appendChunk calls are never concurrent. */
+    writePromise: Promise<void>;
   }
   const pendingSessions = new Map<string, UploadSession>();
 
@@ -163,15 +175,21 @@ export function createUploadRoute(storage: StorageBackend) {
       headers,
       bytesWritten: 0,
       createdAt: Date.now(),
+      pendingChunks: new Map(),
+      nextWriteIndex: 0,
+      bufferedBytes: 0,
+      writePromise: Promise.resolve(),
     });
 
     return c.json({ id }, 201);
   });
 
   /**
-   * POST /api/upload/:id/chunk
+   * POST /api/upload/:id/chunk?index=N
    * Append a chunk of encrypted data to a pending upload.
-   * Body is the raw chunk bytes (no headers needed except the id in URL).
+   * Chunks may arrive out-of-order (parallel uploads from the client).
+   * The server buffers out-of-order chunks and writes them sequentially
+   * to the storage backend to guarantee data integrity.
    */
   route.post("/:id/chunk", async (c) => {
     const id = c.req.param("id");
@@ -180,21 +198,79 @@ export function createUploadRoute(storage: StorageBackend) {
       return c.json({ error: "Upload session not found or expired" }, 404);
     }
 
+    // Parse chunk index from query string
+    const indexParam = c.req.query("index");
+    const chunkIndex = indexParam !== undefined ? parseInt(indexParam, 10) : -1;
+    if (isNaN(chunkIndex) || chunkIndex < 0) {
+      return c.json({ error: "Missing or invalid chunk index" }, 400);
+    }
+
     const body = c.req.raw.body;
     if (!body) {
       return c.json({ error: "Missing chunk body" }, 400);
     }
 
     try {
-      const bytesAppended = await storage.appendChunk(id, body);
-      session.bytesWritten += bytesAppended;
-
-      // Safety check: don't exceed declared content length
-      if (session.bytesWritten > session.headers.contentLength) {
-        pendingSessions.delete(id);
-        await storage.abortChunkedUpload(id).catch(() => {});
-        return c.json({ error: "Total bytes exceed declared content length" }, 400);
+      // Read the incoming stream into a Uint8Array
+      const reader = body.getReader();
+      const parts: Uint8Array[] = [];
+      let totalBytes = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        parts.push(value);
+        totalBytes += value.byteLength;
       }
+      const chunkData = new Uint8Array(totalBytes);
+      let offset = 0;
+      for (const part of parts) {
+        chunkData.set(part, offset);
+        offset += part.byteLength;
+      }
+
+      // Memory guard: reject if buffering too much out-of-order data
+      if (
+        chunkIndex !== session.nextWriteIndex &&
+        session.bufferedBytes + totalBytes > MAX_BUFFER_PER_SESSION
+      ) {
+        return c.json({ error: "Too many out-of-order chunks buffered" }, 429);
+      }
+
+      // Store the chunk (may be in-order or out-of-order)
+      session.pendingChunks.set(chunkIndex, chunkData);
+      session.bufferedBytes += totalBytes;
+
+      // Flush all consecutive chunks starting from nextWriteIndex
+      // through the serialized write promise chain.
+      while (session.pendingChunks.has(session.nextWriteIndex)) {
+        const data = session.pendingChunks.get(session.nextWriteIndex)!;
+        session.pendingChunks.delete(session.nextWriteIndex);
+        session.bufferedBytes -= data.byteLength;
+        const writeIndex = session.nextWriteIndex;
+        session.nextWriteIndex++;
+
+        // Chain the write to ensure sequential, non-concurrent appendChunk calls
+        session.writePromise = session.writePromise.then(async () => {
+          const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(data);
+              controller.close();
+            },
+          });
+          const bytesAppended = await storage.appendChunk(id, stream);
+          session.bytesWritten += bytesAppended;
+
+          // Safety check: don't exceed declared content length
+          if (session.bytesWritten > session.headers.contentLength) {
+            throw new Error(
+              `Chunk ${writeIndex}: total bytes exceed declared content length`,
+            );
+          }
+        });
+      }
+
+      // Wait for all writes triggered by this request to complete
+      await session.writePromise;
 
       return c.json({ bytesWritten: session.bytesWritten }, 200);
     } catch (err) {

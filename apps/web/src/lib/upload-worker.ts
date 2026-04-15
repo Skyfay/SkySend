@@ -165,8 +165,11 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // Encrypt the entire file into chunks, collecting into a Blob.
     // We pipe through createEncryptStream but collect the output.
     // To avoid OOM for very large files, we use a chunked upload approach:
-    // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via sequential requests.
-    const CHUNK_UPLOAD_SIZE = 50 * 1024 * 1024; // 50 MB per request
+    // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via parallel requests.
+    // Chrome/Brave serialize large HTTP/2 POST bodies through reverse proxies,
+    // so we use smaller chunks (10 MB) with up to 3 concurrent uploads.
+    const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB per request
+    const MAX_CONCURRENT_UPLOADS = 3;
     const encryptedStream = plaintextStream.pipeThrough(
       createEncryptStream(keys.fileKey),
     );
@@ -183,20 +186,30 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     }
     const { id: uploadId } = (await initRes.json()) as { id: string };
 
-    // Stream encrypted data in chunks
+    // Stream encrypted data in chunks - uploaded in parallel for speed
     let loaded = 0;
     let chunkParts: Uint8Array[] = [];
     let chunkSize = 0;
+    let chunkIndex = 0;
+    let uploadError: Error | null = null;
 
-    const uploadChunk = async (data: Blob) => {
-      const res = await fetch(`${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk`, {
-        method: "POST",
-        body: data,
-      });
+    // Active upload promises, removed on completion
+    const active: Array<Promise<void>> = [];
+
+    const uploadChunk = async (data: Blob, index: number) => {
+      const res = await fetch(
+        `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
+        {
+          method: "POST",
+          body: data,
+        },
+      );
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "Chunk upload failed" }));
         throw new Error((errData as { error?: string }).error ?? "Chunk upload failed");
       }
+      // Consume response body - important for Chrome to release the HTTP/2 stream
+      await res.json();
     };
 
     while (true) {
@@ -212,12 +225,28 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         chunkParts = [];
         const uploadedChunkSize = chunkSize;
         chunkSize = 0;
-        await uploadChunk(blob);
-        // Report progress after the chunk has been fully uploaded
-        // (including server -> S3 forwarding). This ensures the bar
-        // reflects actual end-to-end progress, not just encryption speed.
-        loaded += uploadedChunkSize;
-        post({ type: "progress", loaded, total: encryptedSize });
+        const currentIndex = chunkIndex++;
+
+        // Start upload (non-blocking) with progress tracking
+        const p = uploadChunk(blob, currentIndex).then(() => {
+          loaded += uploadedChunkSize;
+          post({ type: "progress", loaded, total: encryptedSize });
+        });
+        // Remove from active set when done (success or failure)
+        const tracked = p.catch((err) => {
+          uploadError = err instanceof Error ? err : new Error(String(err));
+        }).finally(() => {
+          const idx = active.indexOf(tracked);
+          if (idx !== -1) active.splice(idx, 1);
+        });
+        active.push(tracked);
+
+        // Maintain concurrency limit
+        if (active.length >= MAX_CONCURRENT_UPLOADS) {
+          await Promise.race(active);
+        }
+        // Bail out early if any upload failed
+        if (uploadError) throw uploadError;
       }
     }
 
@@ -227,10 +256,24 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       const uploadedChunkSize = chunkSize;
       chunkParts = [];
       chunkSize = 0;
-      await uploadChunk(blob);
-      loaded += uploadedChunkSize;
-      post({ type: "progress", loaded, total: encryptedSize });
+      const currentIndex = chunkIndex++;
+
+      const p = uploadChunk(blob, currentIndex).then(() => {
+        loaded += uploadedChunkSize;
+        post({ type: "progress", loaded, total: encryptedSize });
+      });
+      const tracked = p.catch((err) => {
+        uploadError = err instanceof Error ? err : new Error(String(err));
+      }).finally(() => {
+        const idx = active.indexOf(tracked);
+        if (idx !== -1) active.splice(idx, 1);
+      });
+      active.push(tracked);
     }
+
+    // Wait for all in-flight uploads to complete
+    await Promise.all(active);
+    if (uploadError) throw uploadError;
 
     // Finalize the upload
     const finalizeRes = await fetch(
