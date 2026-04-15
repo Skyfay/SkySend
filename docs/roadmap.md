@@ -12,6 +12,12 @@ This page outlines planned features and improvements for SkySend. Features are s
 
 ## Planned
 
+### WebSocket Upload Transport
+- WebSocket-based upload path for continuous streaming without HTTP request-response overhead
+- Eliminates Chromium HTTP/2 multiplexing bottleneck through reverse proxies (Traefik, Nginx)
+- Expected to bring Chromium upload speed from ~50-60 MB/s to ~200+ MB/s through proxies
+- HTTP chunked uploads remain as automatic fallback when WebSocket is unavailable
+
 ### Load Argon2id WASM in Frontend
 - Integrate Argon2id WASM for password protection in the browser
 - Automatic fallback to PBKDF2-SHA256 if WASM is unavailable
@@ -31,10 +37,6 @@ This page outlines planned features and improvements for SkySend. Features are s
 ### Notification on Download
 - Optional notification when a file is downloaded
 - Webhook or email notification
-
-### S3 Storage Backend
-- Alternative storage backend using S3-compatible object storage
-- For users who need external storage
 
 ### Prometheus Metrics
 - Expose `/metrics` endpoint for monitoring

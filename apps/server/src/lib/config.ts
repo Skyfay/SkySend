@@ -101,6 +101,23 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
+  FILE_UPLOAD_CONCURRENT_CHUNKS: z
+    .string()
+    .default("3")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().min(1).max(20, "FILE_UPLOAD_CONCURRENT_CHUNKS must be between 1 and 20")),
+
+  FILE_UPLOAD_SPEED_LIMIT: z
+    .string()
+    .default("0")
+    .transform((v) => {
+      const trimmed = v.trim();
+      if (trimmed === "0" || trimmed === "") return 0;
+      if (/^\d+$/.test(trimmed)) return parseInt(trimmed, 10);
+      return parseByteSize(trimmed);
+    })
+    .pipe(z.number().int().min(0)),
+
   // --- Note-specific configuration ---
 
   NOTE_MAX_SIZE: z

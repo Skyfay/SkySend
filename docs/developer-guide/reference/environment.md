@@ -146,6 +146,25 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | `86400` |
 | Description | Quota time window for file upload quotas |
 
+### FILE_UPLOAD_CONCURRENT_CHUNKS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `3` |
+| Range | 1 - 20 |
+| Description | Number of parallel chunk uploads per session. Increase to improve upload speed in Chromium browsers through HTTP/2 reverse proxies. The value is exposed via `/api/config` and read by the client upload worker |
+
+### FILE_UPLOAD_SPEED_LIMIT
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer (bytes/s) or byte size string |
+| Default | `0` (unlimited) |
+| Description | Maximum upload throughput per session. `0` disables the limit. Supports raw bytes or units: `B`, `KB`, `MB`, `GB` (e.g. `100MB` for 100 MB/s). The server delays chunk responses to enforce the limit |
+
 ### NOTE_MAX_SIZE
 
 | Property | Value |
