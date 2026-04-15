@@ -2,14 +2,15 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.2.1
-*Release: In Progress*
+## v2.2.1 - Parallel Chunk Uploads and Performance Improvements
+*Released: April 15, 2026*
 
 ### 🎨 Improvements
 - **web**: Upload chunks are now sent in parallel (up to 3 concurrent, 10 MB each) instead of sequentially (50 MB each), dramatically improving upload speed in Chrome, Brave, and Edge through reverse proxies like Traefik
 - **server**: Chunk upload endpoint accepts an `index` query parameter and reassembles chunks in-order on the server, ensuring data integrity with parallel client uploads
 - **server**: In-order chunks are now streamed directly to storage without buffering, eliminating unnecessary memory copies on the hot path
 - **server**: Optimized S3 multipart upload buffering to avoid full-buffer reallocation on every chunk append
+- **server**: S3 part uploads now run as a concurrent pool with smooth backpressure - waits for one upload slot to free up instead of draining everything, giving consistent throughput instead of burst-stop cycles
 
 ### 🐳 Docker
 

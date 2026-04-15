@@ -41,6 +41,10 @@ interface MultipartSession {
   bufferChunks: Uint8Array[];
   bufferSize: number;
   partNumber: number;
+  /** Active S3 part upload promises. Used for concurrency limiting + backpressure. */
+  activeUploads: Set<Promise<void>>;
+  /** First error from a background upload, re-thrown on next appendChunk or finalize. */
+  uploadError: Error | null;
 }
 
 /**
@@ -162,19 +166,26 @@ export class S3Storage implements StorageBackend {
       bufferChunks: [],
       bufferSize: 0,
       partNumber: 1,
+      activeUploads: new Set(),
+      uploadError: null,
     });
   }
 
   /**
    * Append a chunk to a multipart upload session.
-   * Buffers data in memory until the target part size (25MB) is reached,
-   * then uploads parts to S3 in parallel (up to 4 concurrent).
+   * Buffers data until the target part size is reached, then uploads parts
+   * to S3 concurrently. Applies smooth backpressure by waiting for one
+   * S3 upload to complete when all concurrency slots are full, instead of
+   * draining the entire pipeline.
    */
   async appendChunk(id: string, stream: ReadableStream<Uint8Array>): Promise<number> {
     const session = this.multipartSessions.get(id);
     if (!session) {
       throw new Error(`No multipart session found for ${id}`);
     }
+
+    // Propagate any error from previous background uploads
+    if (session.uploadError) throw session.uploadError;
 
     // Read incoming stream chunks (keep as-is, no extra copy)
     const reader = stream.getReader();
@@ -212,24 +223,48 @@ export class S3Storage implements StorageBackend {
       session.partNumber++;
     }
 
-    // Upload parts in parallel batches
-    for (let i = 0; i < partsToUpload.length; i += this.concurrency) {
-      const batch = partsToUpload.slice(i, i + this.concurrency);
-      const results = await Promise.all(
-        batch.map(async (part) => {
-          const result = await this.client.send(
-            new UploadPartCommand({
-              Bucket: this.bucket,
-              Key: this.key(id),
-              UploadId: session.uploadId,
-              PartNumber: part.partNumber,
-              Body: part.data,
-            }),
-          );
-          return { PartNumber: part.partNumber, ETag: result.ETag! };
-        }),
-      );
-      session.parts.push(...results);
+    // Upload each part concurrently with a semaphore
+    for (const part of partsToUpload) {
+      // Wait for a free slot if all are in use (smooth backpressure)
+      while (session.activeUploads.size >= this.concurrency) {
+        await Promise.race(session.activeUploads);
+        if (session.uploadError) throw session.uploadError;
+      }
+
+      // Start this part upload (fire-and-forget, tracked via Set)
+      const p = this.client
+        .send(
+          new UploadPartCommand({
+            Bucket: this.bucket,
+            Key: this.key(id),
+            UploadId: session.uploadId,
+            PartNumber: part.partNumber,
+            Body: part.data,
+          }),
+        )
+        .then((result) => {
+          session.parts.push({
+            PartNumber: part.partNumber,
+            ETag: result.ETag!,
+          });
+        })
+        .catch((err) => {
+          if (!session.uploadError) {
+            session.uploadError =
+              err instanceof Error ? err : new Error(String(err));
+          }
+        })
+        .finally(() => {
+          session.activeUploads.delete(p);
+        });
+      session.activeUploads.add(p);
+    }
+
+    // Smooth backpressure: if all slots are full, wait for ONE to finish.
+    // This delays the HTTP response, throttling the client to ~S3 speed.
+    if (session.activeUploads.size >= this.concurrency) {
+      await Promise.race(session.activeUploads);
+      if (session.uploadError) throw session.uploadError;
     }
 
     return bytesRead;
@@ -246,6 +281,10 @@ export class S3Storage implements StorageBackend {
     }
 
     try {
+      // Wait for all active S3 part uploads to complete
+      await Promise.all(session.activeUploads);
+      if (session.uploadError) throw session.uploadError;
+
       // Upload remaining buffer as the last part (can be < 5MB)
       if (session.bufferSize > 0) {
         // Concatenate remaining buffer chunks into a single Uint8Array
