@@ -220,6 +220,23 @@ const configSchema = z.object({
     .default("300")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
+
+  S3_PUBLIC_URL: z
+    .string()
+    .url("S3_PUBLIC_URL must be a valid URL (e.g. https://cdn.example.com)")
+    .optional(),
+
+  S3_PART_SIZE: z
+    .string()
+    .default("25MB")
+    .transform((v) => parseByteSize(v))
+    .pipe(z.number().int().min(5 * 1024 * 1024, "S3_PART_SIZE must be at least 5MB (S3 minimum)").max(5 * 1024 * 1024 * 1024, "S3_PART_SIZE must be at most 5GB")),
+
+  S3_CONCURRENCY: z
+    .string()
+    .default("4")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().min(1).max(16, "S3_CONCURRENCY must be between 1 and 16")),
 });
 
 type RawConfig = z.infer<typeof configSchema>;

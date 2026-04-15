@@ -8,23 +8,29 @@ All notable changes to SkySend are documented here.
 ### ✨ Features
 - **server**: Added S3-compatible storage backend as alternative to local filesystem storage
 - **server**: Added `STORAGE_BACKEND` environment variable to switch between `filesystem` (default) and `s3` storage
-- **server**: Added S3 configuration via environment variables (`S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`)
-- **server**: Downloads in S3 mode use presigned URLs for direct client-to-S3 transfers, reducing server bandwidth and CPU load
+- **server**: Added S3 configuration via environment variables (`S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`, `S3_PUBLIC_URL`)
 - **server**: Uploads in S3 mode stream directly to S3 via multipart upload without disk buffering on the server
-- **web**: Client download logic transparently handles both direct file streams (filesystem) and presigned URL redirects (S3)
+- **server**: Added `S3_PUBLIC_URL` for direct download URLs via R2 custom domains or public buckets - avoids presigned URL complexity and CORS issues
+- **server**: Falls back to presigned URLs when `S3_PUBLIC_URL` is not set (for private buckets)
+- **web**: Client download logic transparently handles both direct file streams (filesystem), presigned URL redirects (S3 private), and public URL redirects (S3 public)
 - **server**: Supports all S3-compatible providers (AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, and more) via custom endpoint configuration
+- **server**: Logs storage mode on startup (filesystem path or S3 endpoint with public/presigned mode)
+- **server**: S3 connectivity test on startup - verifies bucket access, write, and delete permissions before accepting requests
+- **server**: Added `S3_PART_SIZE` and `S3_CONCURRENCY` environment variables for tuning S3 upload throughput
 
 ### 🔒 Security
 - **server**: CSP `connect-src` header is dynamically extended to allow client fetches to the configured S3 endpoint
 
 ### 🎨 Improvements
 - **server**: Introduced `StorageBackend` interface with adapter pattern for pluggable storage implementations
+- **server**: Optimized S3 multipart upload performance - configurable part size (default 25MB) and parallel part uploads (default 4 concurrent) to reduce round-trip overhead
 
 ### 📝 Documentation
-- **docs**: Added S3 storage backend section to environment variables reference with configuration table and provider examples (R2, MinIO)
-- **docs**: Added S3 variable definitions to developer environment reference (`STORAGE_BACKEND`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`)
-- **docs**: Updated architecture diagram and data storage section to reflect S3 backend and presigned URL download flow
-- **docs**: Added S3 Docker Compose example to self-hosting guide
+- **docs**: Added S3 storage backend section to environment variables reference with configuration table, `S3_PUBLIC_URL`, and provider examples (R2, MinIO)
+- **docs**: Added S3 variable definitions to developer environment reference (`STORAGE_BACKEND`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`, `S3_PUBLIC_URL`, `S3_PART_SIZE`, `S3_CONCURRENCY`)
+- **docs**: Updated architecture diagram and data storage section to reflect S3 backend and download flow
+- **docs**: Added S3 CORS configuration guide with examples for Cloudflare R2, AWS S3, and MinIO
+- **docs**: Added S3 Docker Compose example with `S3_PUBLIC_URL` to self-hosting guide
 - **docs**: Updated data backups guide with S3 storage note
 
 ### 🐳 Docker

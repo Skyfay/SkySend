@@ -30,6 +30,16 @@ import { noteRoute } from "./routes/note.js";
 
 const config = loadConfig();
 initDatabase(config.DATA_DIR);
+
+// Log storage mode
+if (config.STORAGE_BACKEND === "s3") {
+  const provider = config.S3_ENDPOINT ?? `AWS S3 (${config.S3_REGION})`;
+  const mode = config.S3_PUBLIC_URL ? "public URL" : "presigned URL";
+  console.log(`[storage] Using S3 backend (${mode}) - endpoint: ${provider}`);
+} else {
+  console.log(`[storage] Using filesystem backend - path: ${config.UPLOADS_DIR}`);
+}
+
 const storage = await createStorage(config);
 await storage.init();
 
@@ -50,11 +60,14 @@ const app = new Hono();
 // Build CSP connect-src based on storage backend
 const connectSrc: string[] = ["'self'"];
 if (config.STORAGE_BACKEND === "s3") {
-  if (config.S3_ENDPOINT) {
-    // Custom S3 provider (R2, Hetzner, MinIO, etc.)
+  if (config.S3_PUBLIC_URL) {
+    // Public URL mode - allow fetches to the public domain
+    connectSrc.push(config.S3_PUBLIC_URL.replace(/\/+$/, "") + "/");
+  } else if (config.S3_ENDPOINT) {
+    // Presigned URL mode with custom S3 provider
     connectSrc.push(config.S3_ENDPOINT.replace(/\/$/, "") + "/");
   } else if (config.S3_REGION) {
-    // AWS S3 - allow both path-style and virtual-hosted-style
+    // Presigned URL mode with AWS S3
     connectSrc.push(`https://s3.${config.S3_REGION}.amazonaws.com`);
     connectSrc.push(`https://*.s3.${config.S3_REGION}.amazonaws.com`);
   }

@@ -10,6 +10,7 @@ import {
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -17,7 +18,7 @@ import { Readable } from "node:stream";
 import type { createReadStream } from "node:fs";
 import type { StorageBackend } from "./types.js";
 
-/** Minimum part size for S3 multipart uploads (5 MB). */
+/** Minimum part size for S3 multipart uploads (5 MB - S3 requirement for non-final parts). */
 const MIN_PART_SIZE = 5 * 1024 * 1024;
 
 export interface S3StorageConfig {
@@ -28,6 +29,9 @@ export interface S3StorageConfig {
   secretAccessKey: string;
   forcePathStyle: boolean;
   presignedExpiry: number;
+  publicUrl?: string;
+  partSize: number;
+  concurrency: number;
 }
 
 interface MultipartSession {
@@ -50,11 +54,17 @@ export class S3Storage implements StorageBackend {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly presignedExpiry: number;
+  private readonly publicUrl?: string;
+  private readonly partSize: number;
+  private readonly concurrency: number;
   private readonly multipartSessions = new Map<string, MultipartSession>();
 
   constructor(config: S3StorageConfig) {
     this.bucket = config.bucket;
     this.presignedExpiry = config.presignedExpiry;
+    this.publicUrl = config.publicUrl?.replace(/\/+$/, "");
+    this.partSize = Math.max(config.partSize, MIN_PART_SIZE);
+    this.concurrency = config.concurrency;
 
     this.client = new S3Client({
       region: config.region,
@@ -74,10 +84,30 @@ export class S3Storage implements StorageBackend {
     return `${id}.bin`;
   }
 
-  /** Verify bucket exists and is accessible. Call once at startup. */
+  /** Verify bucket exists and test read/write connectivity. Call once at startup. */
   async init(): Promise<void> {
+    // 1. Verify bucket exists
     await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
-    console.log(`[s3] Connected to bucket: ${this.bucket}`);
+
+    // 2. Write a small test object to verify write permissions
+    const testKey = ".skysend-connectivity-test";
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: testKey,
+        Body: Buffer.from("ok"),
+      }),
+    );
+
+    // 3. Delete the test object to verify delete permissions
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: testKey,
+      }),
+    );
+
+    console.log(`[s3] Connected to bucket: ${this.bucket} (read/write OK)`);
   }
 
   /**
@@ -99,8 +129,9 @@ export class S3Storage implements StorageBackend {
         Key: this.key(id),
         Body: nodeStream,
       },
-      // Use 5MB parts for efficient streaming
-      partSize: MIN_PART_SIZE,
+      // Use configured part size and parallelism for better throughput
+      partSize: this.partSize,
+      queueSize: this.concurrency,
     });
 
     await upload.done();
@@ -133,8 +164,8 @@ export class S3Storage implements StorageBackend {
 
   /**
    * Append a chunk to a multipart upload session.
-   * Buffers data in memory until the minimum part size (5MB) is reached,
-   * then uploads a part to S3.
+   * Buffers data in memory until the target part size (25MB) is reached,
+   * then uploads parts to S3 in parallel (up to 4 concurrent).
    */
   async appendChunk(id: string, stream: ReadableStream<Uint8Array>): Promise<number> {
     const session = this.multipartSessions.get(id);
@@ -164,26 +195,33 @@ export class S3Storage implements StorageBackend {
     }
     session.buffer = newBuffer;
 
-    // Upload complete parts (>= 5MB each)
-    while (session.buffer.length >= MIN_PART_SIZE) {
-      const partData = session.buffer.slice(0, MIN_PART_SIZE);
-      session.buffer = session.buffer.slice(MIN_PART_SIZE);
+    // Collect parts to upload (>= partSize each)
+    const partsToUpload: Array<{ data: Uint8Array; partNumber: number }> = [];
+    while (session.buffer.length >= this.partSize) {
+      const partData = session.buffer.slice(0, this.partSize);
+      session.buffer = session.buffer.slice(this.partSize);
+      partsToUpload.push({ data: partData, partNumber: session.partNumber });
+      session.partNumber++;
+    }
 
-      const result = await this.client.send(
-        new UploadPartCommand({
-          Bucket: this.bucket,
-          Key: this.key(id),
-          UploadId: session.uploadId,
-          PartNumber: session.partNumber,
-          Body: partData,
+    // Upload parts in parallel batches
+    for (let i = 0; i < partsToUpload.length; i += this.concurrency) {
+      const batch = partsToUpload.slice(i, i + this.concurrency);
+      const results = await Promise.all(
+        batch.map(async (part) => {
+          const result = await this.client.send(
+            new UploadPartCommand({
+              Bucket: this.bucket,
+              Key: this.key(id),
+              UploadId: session.uploadId,
+              PartNumber: part.partNumber,
+              Body: part.data,
+            }),
+          );
+          return { PartNumber: part.partNumber, ETag: result.ETag! };
         }),
       );
-
-      session.parts.push({
-        PartNumber: session.partNumber,
-        ETag: result.ETag!,
-      });
-      session.partNumber++;
+      session.parts.push(...results);
     }
 
     return bytesRead;
@@ -372,9 +410,9 @@ export class S3Storage implements StorageBackend {
     } while (continuationToken);
   }
 
-  /** S3 storage supports presigned download URLs. */
+  /** S3 storage supports presigned download URLs (unless public URL is configured). */
   supportsPresignedUrls(): boolean {
-    return true;
+    return !this.publicUrl;
   }
 
   /** Generate a presigned GET URL for direct client download. */
@@ -387,6 +425,12 @@ export class S3Storage implements StorageBackend {
     return getSignedUrl(this.client, command, {
       expiresIn: expiresInSec ?? this.presignedExpiry,
     });
+  }
+
+  /** Get the public download URL for an object. */
+  getPublicDownloadUrl(id: string): string | null {
+    if (!this.publicUrl) return null;
+    return `${this.publicUrl}/${this.key(id)}`;
   }
 
   /** Abort a multipart upload in progress. */
