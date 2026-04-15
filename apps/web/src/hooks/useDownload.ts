@@ -13,7 +13,7 @@ import {
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
-import { isSafari, SAFARI_BIG_SIZE } from "@/lib/utils";
+import { isSafari, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
@@ -28,6 +28,7 @@ export type DownloadPhase =
 interface DownloadState {
   phase: DownloadPhase;
   progress: number;
+  speed: string | null;
   error: string | null;
   info: api.UploadInfo | null;
   metadata: FileMetadata | null;
@@ -39,6 +40,7 @@ export function useDownload() {
   const [state, setState] = useState<DownloadState>({
     phase: "idle",
     progress: 0,
+    speed: null,
     error: null,
     info: null,
     metadata: null,
@@ -148,9 +150,30 @@ export function useDownload() {
           ...s,
           phase: "downloading",
           progress: 0,
+          speed: null,
           metadata,
           error: null,
         }));
+
+        // Speed calculation helper - shared across all download tiers
+        let lastLoaded = 0;
+        let lastTime = performance.now();
+        const updateProgress = (progress: number, loaded: number) => {
+          const now = performance.now();
+          const elapsed = (now - lastTime) / 1000;
+          let speed: string | null = null;
+          if (elapsed >= 0.5) {
+            const bytesPerSec = (loaded - lastLoaded) / elapsed;
+            speed = `${formatBytes(bytesPerSec)}/s`;
+            lastLoaded = loaded;
+            lastTime = now;
+          }
+          setState((s) => ({
+            ...s,
+            progress,
+            ...(speed ? { speed } : {}),
+          }));
+        };
 
         // ── Safari: skip SW streaming (like Mozilla Send) ──────
         // Safari terminates Service Workers aggressively and buffers
@@ -192,7 +215,10 @@ export function useDownload() {
               filename,
               mimeType,
               info.size,
-              (progress) => setState((s) => ({ ...s, progress })),
+              (progress) => {
+                const loaded = Math.round((progress / 100) * info.size);
+                updateProgress(progress, loaded);
+              },
             );
             downloaded = true;
           }
@@ -219,10 +245,8 @@ export function useDownload() {
               new TransformStream<Uint8Array, Uint8Array>({
                 transform(chunk, controller) {
                   loaded += chunk.byteLength;
-                  setState((s) => ({
-                    ...s,
-                    progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-                  }));
+                  const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
+                  updateProgress(pct, loaded);
                   controller.enqueue(chunk);
                 },
               }),
@@ -251,10 +275,8 @@ export function useDownload() {
             new TransformStream<Uint8Array, Uint8Array>({
               transform(chunk, controller) {
                 loaded += chunk.byteLength;
-                setState((s) => ({
-                  ...s,
-                  progress: size > 0 ? Math.round((loaded / size) * 100) : 0,
-                }));
+                const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
+                updateProgress(pct, loaded);
                 controller.enqueue(chunk);
               },
             }),
@@ -304,6 +326,7 @@ export function useDownload() {
     setState({
       phase: "idle",
       progress: 0,
+      speed: null,
       error: null,
       info: null,
       metadata: null,

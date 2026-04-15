@@ -17,6 +17,7 @@ All notable changes to SkySend are documented here.
 - **server**: Logs storage mode on startup (filesystem path or S3 endpoint with public/presigned mode)
 - **server**: S3 connectivity test on startup - verifies bucket access, write, and delete permissions before accepting requests
 - **server**: Added `S3_PART_SIZE` and `S3_CONCURRENCY` environment variables for tuning S3 upload throughput
+- **web**: Download progress bar now shows real-time download speed (e.g. `42.5 MB/s`) alongside the percentage, matching the upload speed display
 
 ### � Bug Fixes
 - **web**: Upload progress bar now reflects actual end-to-end upload progress instead of encryption speed - progress updates after each chunk is fully uploaded (including server-to-S3 forwarding)

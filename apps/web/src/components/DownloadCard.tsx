@@ -21,6 +21,7 @@ interface DownloadCardProps {
   metadata: FileMetadata | null;
   phase: DownloadPhase;
   progress: number;
+  speed?: string | null;
   error: string | null;
   onDownload: () => void;
 }
@@ -30,6 +31,7 @@ export function DownloadCard({
   metadata,
   phase,
   progress,
+  speed,
   error,
   onDownload,
 }: DownloadCardProps) {
@@ -106,8 +108,9 @@ export function DownloadCard({
             <span className="text-sm font-medium">
               {t("download.downloading")}
             </span>
-            <span className="ml-auto text-sm text-muted-foreground">
-              {progress}%
+            <span className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
+              {speed && <span>{speed}</span>}
+              <span>{progress}%</span>
             </span>
           </div>
           <Progress value={progress} />
