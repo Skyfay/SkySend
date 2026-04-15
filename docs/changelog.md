@@ -2,11 +2,12 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.2.2
-*Release: In Progress*
+## v2.2.2 - Bug Fixes for Chunked Uploads in Brave and Edge
+*Released: April 15, 2026*
 
 ### 🐛 Bug Fixes
 - **server**: Chunk upload requests (`/upload/:id/chunk`) are now exempt from the global rate limiter - previously, uploading a large file would exceed the 60 requests/minute limit and cause 429 errors, breaking uploads entirely in production
+- **web**: Chunk upload body changed from `Blob` to `ArrayBuffer` - fixes uploads permanently stalling at 0% in Brave and Edge, where the browser opened HTTP/2 streams but never sent DATA frames for Blob bodies from Web Workers
 
 ### 🐳 Docker
 
