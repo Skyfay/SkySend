@@ -37,6 +37,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Added S3 CORS configuration guide with examples for Cloudflare R2, AWS S3, and MinIO
 - **docs**: Added S3 Docker Compose example with `S3_PUBLIC_URL` to self-hosting guide
 - **docs**: Updated data backups guide with S3 storage note
+- **docs**: Added S3 storage mention to README and docs homepage feature cards
 
 ### 🐳 Docker
 

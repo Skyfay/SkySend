@@ -41,6 +41,17 @@ The default options translate to:
 | `FILE_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,4,5,10,20,50,100` | Comma-separated list of selectable download limits. |
 | `FILE_DEFAULT_DOWNLOAD` | ❌ | `1` | Default download limit (must be one of `FILE_DOWNLOAD_OPTIONS`). |
 
+## File Upload Quota
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `FILE_UPLOAD_QUOTA_BYTES` | ❌ | `0` (unlimited) | Maximum file upload volume per user per window. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB`. |
+| `FILE_UPLOAD_QUOTA_WINDOW` | ❌ | `86400` | Quota time window in seconds (default: 24 hours). |
+
+::: info Privacy-Preserving Quotas
+Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+:::
+
 ## Note Settings
 
 | Variable | Required | Default | Description |
@@ -69,17 +80,6 @@ The default options translate to:
 | :--- | :---: | :--- | :--- |
 | `RATE_LIMIT_WINDOW` | ❌ | `60000` | Rate limit window in milliseconds. |
 | `RATE_LIMIT_MAX` | ❌ | `60` | Maximum requests per window per IP. |
-
-## File Upload Quota
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
-| `FILE_UPLOAD_QUOTA_BYTES` | ❌ | `0` (unlimited) | Maximum file upload volume per user per window. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB`. |
-| `FILE_UPLOAD_QUOTA_WINDOW` | ❌ | `86400` | Quota time window in seconds (default: 24 hours). |
-
-::: info Privacy-Preserving Quotas
-Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
-:::
 
 ## Storage Backend
 
