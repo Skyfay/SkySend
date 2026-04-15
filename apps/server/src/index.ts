@@ -141,8 +141,18 @@ app.onError((err, c) => {
 
 const api = new Hono();
 
-// Rate limiter only on API routes (not static assets)
-api.use("*", createRateLimiter(config));
+// Rate limiter on API routes (not static assets).
+// Chunk upload requests are exempt - they are already guarded by the upload
+// session, quota middleware, and per-session memory limits.  Counting every
+// 10 MB chunk against the global limit would exhaust the budget on a single
+// large file upload.
+const rateLimiter = createRateLimiter(config);
+api.use("*", async (c, next) => {
+  if (/^\/upload\/[^/]+\/chunk/.test(c.req.path)) {
+    return next();
+  }
+  return rateLimiter(c, next);
+});
 
 api.route("/config", configRoute);
 api.route("/health", healthRoute);
