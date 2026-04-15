@@ -37,7 +37,9 @@ export interface S3StorageConfig {
 interface MultipartSession {
   uploadId: string;
   parts: Array<{ PartNumber: number; ETag: string }>;
-  buffer: Uint8Array;
+  /** Buffered chunks waiting to reach partSize. Avoids repeated full-buffer copies. */
+  bufferChunks: Uint8Array[];
+  bufferSize: number;
   partNumber: number;
 }
 
@@ -157,7 +159,8 @@ export class S3Storage implements StorageBackend {
     this.multipartSessions.set(id, {
       uploadId: result.UploadId,
       parts: [],
-      buffer: new Uint8Array(0),
+      bufferChunks: [],
+      bufferSize: 0,
       partNumber: 1,
     });
   }
@@ -173,33 +176,38 @@ export class S3Storage implements StorageBackend {
       throw new Error(`No multipart session found for ${id}`);
     }
 
-    // Read entire chunk into memory
+    // Read incoming stream chunks (keep as-is, no extra copy)
     const reader = stream.getReader();
-    const chunks: Uint8Array[] = [];
     let bytesRead = 0;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(value);
+      session.bufferChunks.push(value);
+      session.bufferSize += value.byteLength;
       bytesRead += value.byteLength;
     }
 
-    // Append to session buffer
-    const newBuffer = new Uint8Array(session.buffer.length + bytesRead);
-    newBuffer.set(session.buffer, 0);
-    let offset = session.buffer.length;
-    for (const chunk of chunks) {
-      newBuffer.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    session.buffer = newBuffer;
-
     // Collect parts to upload (>= partSize each)
     const partsToUpload: Array<{ data: Uint8Array; partNumber: number }> = [];
-    while (session.buffer.length >= this.partSize) {
-      const partData = session.buffer.slice(0, this.partSize);
-      session.buffer = session.buffer.slice(this.partSize);
+    while (session.bufferSize >= this.partSize) {
+      // Concatenate only as much as needed for one part
+      const partData = new Uint8Array(this.partSize);
+      let offset = 0;
+      while (offset < this.partSize) {
+        const chunk = session.bufferChunks[0]!;
+        const needed = this.partSize - offset;
+        if (chunk.byteLength <= needed) {
+          partData.set(chunk, offset);
+          offset += chunk.byteLength;
+          session.bufferChunks.shift();
+        } else {
+          partData.set(chunk.subarray(0, needed), offset);
+          session.bufferChunks[0] = chunk.subarray(needed);
+          offset += needed;
+        }
+      }
+      session.bufferSize -= this.partSize;
       partsToUpload.push({ data: partData, partNumber: session.partNumber });
       session.partNumber++;
     }
@@ -239,14 +247,24 @@ export class S3Storage implements StorageBackend {
 
     try {
       // Upload remaining buffer as the last part (can be < 5MB)
-      if (session.buffer.length > 0) {
+      if (session.bufferSize > 0) {
+        // Concatenate remaining buffer chunks into a single Uint8Array
+        const remaining = new Uint8Array(session.bufferSize);
+        let offset = 0;
+        for (const chunk of session.bufferChunks) {
+          remaining.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        session.bufferChunks.length = 0;
+        session.bufferSize = 0;
+
         const result = await this.client.send(
           new UploadPartCommand({
             Bucket: this.bucket,
             Key: this.key(id),
             UploadId: session.uploadId,
             PartNumber: session.partNumber,
-            Body: session.buffer,
+            Body: remaining,
           }),
         );
 

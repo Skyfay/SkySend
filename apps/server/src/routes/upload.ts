@@ -211,7 +211,28 @@ export function createUploadRoute(storage: StorageBackend) {
     }
 
     try {
-      // Read the incoming stream into a Uint8Array
+      // ── Fast path: chunk arrives in order → stream directly to storage ──
+      if (chunkIndex === session.nextWriteIndex && session.pendingChunks.size === 0) {
+        session.nextWriteIndex++;
+
+        // Chain the write to guarantee no concurrent appendChunk calls
+        session.writePromise = session.writePromise.then(async () => {
+          const bytesAppended = await storage.appendChunk(id, body);
+          session.bytesWritten += bytesAppended;
+
+          if (session.bytesWritten > session.headers.contentLength) {
+            throw new Error(
+              `Chunk ${chunkIndex}: total bytes exceed declared content length`,
+            );
+          }
+        });
+
+        await session.writePromise;
+        return c.json({ bytesWritten: session.bytesWritten }, 200);
+      }
+
+      // ── Slow path: out-of-order chunk → buffer and flush in order ──
+      // Read the incoming stream into a Uint8Array for buffering
       const reader = body.getReader();
       const parts: Uint8Array[] = [];
       let totalBytes = 0;
@@ -221,6 +242,13 @@ export function createUploadRoute(storage: StorageBackend) {
         parts.push(value);
         totalBytes += value.byteLength;
       }
+
+      // Memory guard: reject if buffering too much out-of-order data
+      if (session.bufferedBytes + totalBytes > MAX_BUFFER_PER_SESSION) {
+        return c.json({ error: "Too many out-of-order chunks buffered" }, 429);
+      }
+
+      // Concatenate parts into a single buffer for storage
       const chunkData = new Uint8Array(totalBytes);
       let offset = 0;
       for (const part of parts) {
@@ -228,20 +256,11 @@ export function createUploadRoute(storage: StorageBackend) {
         offset += part.byteLength;
       }
 
-      // Memory guard: reject if buffering too much out-of-order data
-      if (
-        chunkIndex !== session.nextWriteIndex &&
-        session.bufferedBytes + totalBytes > MAX_BUFFER_PER_SESSION
-      ) {
-        return c.json({ error: "Too many out-of-order chunks buffered" }, 429);
-      }
-
-      // Store the chunk (may be in-order or out-of-order)
+      // Store the out-of-order chunk
       session.pendingChunks.set(chunkIndex, chunkData);
       session.bufferedBytes += totalBytes;
 
       // Flush all consecutive chunks starting from nextWriteIndex
-      // through the serialized write promise chain.
       while (session.pendingChunks.has(session.nextWriteIndex)) {
         const data = session.pendingChunks.get(session.nextWriteIndex)!;
         session.pendingChunks.delete(session.nextWriteIndex);
@@ -260,7 +279,6 @@ export function createUploadRoute(storage: StorageBackend) {
           const bytesAppended = await storage.appendChunk(id, stream);
           session.bytesWritten += bytesAppended;
 
-          // Safety check: don't exceed declared content length
           if (session.bytesWritten > session.headers.contentLength) {
             throw new Error(
               `Chunk ${writeIndex}: total bytes exceed declared content length`,
