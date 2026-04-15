@@ -47,6 +47,36 @@ UPLOAD_QUOTA_BYTES=10737418240  # 10 GB per user per day
 
 See [Environment Variables](/user-guide/configuration/environment-variables) for the complete reference.
 
+## S3 Storage Backend
+
+By default, SkySend stores files on the local filesystem. You can optionally use S3-compatible object storage for file uploads:
+
+```yaml
+services:
+  skysend:
+    build: .
+    restart: always
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - BASE_URL=https://send.example.com
+      - DATA_DIR=/data
+      - STORAGE_BACKEND=s3
+      - S3_BUCKET=skysend-uploads
+      - S3_REGION=auto
+      - S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+```
+
+::: tip
+When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database. Downloads bypass the server entirely via presigned URLs, reducing bandwidth and CPU usage.
+:::
+
+See [Environment Variables](/user-guide/configuration/environment-variables#storage-backend) for all S3 configuration options and provider examples.
+
 ## Data Persistence
 
 SkySend uses two separate volumes:

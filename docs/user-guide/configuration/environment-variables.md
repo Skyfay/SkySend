@@ -81,6 +81,48 @@ The default options translate to:
 Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
 :::
 
+## Storage Backend
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `STORAGE_BACKEND` | ❌ | `filesystem` | Storage backend to use. `filesystem` stores files locally, `s3` uses S3-compatible object storage. |
+| `S3_BUCKET` | ⚠️ | - | S3 bucket name. Required when `STORAGE_BACKEND=s3`. |
+| `S3_REGION` | ⚠️ | - | S3 region (e.g. `eu-central-1`). Required when `STORAGE_BACKEND=s3`. |
+| `S3_ENDPOINT` | ❌ | _(none)_ | Custom S3 endpoint URL. Required for non-AWS providers (R2, Hetzner, MinIO, etc.). Leave empty for AWS S3. |
+| `S3_ACCESS_KEY` | ⚠️ | - | S3 access key ID. Required when `STORAGE_BACKEND=s3`. |
+| `S3_SECRET_KEY` | ⚠️ | - | S3 secret access key. Required when `STORAGE_BACKEND=s3`. |
+| `S3_FORCE_PATH_STYLE` | ❌ | `false` | Use path-style URLs instead of virtual-hosted-style. Required for MinIO, Garage, and some self-hosted providers. |
+| `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. |
+
+::: info S3-Compatible Providers
+SkySend works with any S3-compatible storage provider: AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, Scaleway, and more. Just set the `S3_ENDPOINT` to your provider's endpoint URL.
+:::
+
+::: tip Example: Cloudflare R2
+```yaml
+environment:
+  STORAGE_BACKEND: s3
+  S3_BUCKET: skysend-uploads
+  S3_REGION: auto
+  S3_ENDPOINT: "https://<account-id>.r2.cloudflarestorage.com"
+  S3_ACCESS_KEY: your-access-key
+  S3_SECRET_KEY: your-secret-key
+```
+:::
+
+::: tip Example: MinIO (Self-Hosted)
+```yaml
+environment:
+  STORAGE_BACKEND: s3
+  S3_BUCKET: skysend-uploads
+  S3_REGION: us-east-1
+  S3_ENDPOINT: "https://minio.example.com:9000"
+  S3_ACCESS_KEY: your-access-key
+  S3_SECRET_KEY: your-secret-key
+  S3_FORCE_PATH_STYLE: "true"
+```
+:::
+
 ## Branding
 
 | Variable | Required | Default | Description |
@@ -131,6 +173,8 @@ SkySend validates all environment variables on startup using Zod:
 - `FILE_MAX_SIZE` must be a valid byte size string
 - `NOTE_MAX_SIZE` must be a valid byte size string
 - `BASE_URL` must be a valid URL (trailing slashes are stripped automatically)
+- When `STORAGE_BACKEND=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` are required
+- `S3_ENDPOINT` must be a valid URL when set
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
 - `CUSTOM_PRIVACY` must be a valid URL

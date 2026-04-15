@@ -20,6 +20,13 @@ All notable changes to SkySend are documented here.
 ### 🎨 Improvements
 - **server**: Introduced `StorageBackend` interface with adapter pattern for pluggable storage implementations
 
+### 📝 Documentation
+- **docs**: Added S3 storage backend section to environment variables reference with configuration table and provider examples (R2, MinIO)
+- **docs**: Added S3 variable definitions to developer environment reference (`STORAGE_BACKEND`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`)
+- **docs**: Updated architecture diagram and data storage section to reflect S3 backend and presigned URL download flow
+- **docs**: Added S3 Docker Compose example to self-hosting guide
+- **docs**: Updated data backups guide with S3 storage note
+
 ### 🐳 Docker
 
 - **Image**: `ghcr.io/skyfay/skysend:v2.2.0`
