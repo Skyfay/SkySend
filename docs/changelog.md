@@ -2,7 +2,7 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.2.3
+## v2.2.3 - Critical Bug Fixes for Chunked Uploads in HTTP/2 Proxied Environments
 *Released: April 15, 2026*
 
 - **server**: Fixed rate limiter path matching - the regex anchor (`^`) prevented chunk requests from being recognized through the `/api` sub-router, causing 429 errors despite the exemption
