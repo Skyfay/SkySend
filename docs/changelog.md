@@ -3,7 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## v2.2.0 - S3 Storage Backend
-*Release: In Progress*
+*Released: April 15, 2026*
 
 ### ✨ Features
 - **server**: Added S3-compatible storage backend as alternative to local filesystem storage
