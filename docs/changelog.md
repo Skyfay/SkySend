@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.2.2 - Bug Fixes for Chunked Uploads in Brave and Edge
+*Released: April 15, 2026*
+
+### 🐛 Bug Fixes
+- **server**: Chunk upload requests (`/upload/:id/chunk`) are now exempt from the global rate limiter - previously, uploading a large file would exceed the 60 requests/minute limit and cause 429 errors, breaking uploads entirely in production
+- **web**: Chunk upload body changed from `Blob` to `ArrayBuffer` - fixes uploads permanently stalling at 0% in Brave and Edge, where the browser opened HTTP/2 streams but never sent DATA frames for Blob bodies from Web Workers
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.2.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.2.1 - Parallel Chunk Uploads and Performance Improvements
 *Released: April 15, 2026*
 
@@ -12,7 +26,7 @@ All notable changes to SkySend are documented here.
 - **server**: Optimized S3 multipart upload buffering to avoid full-buffer reallocation on every chunk append
 - **server**: S3 part uploads now run as a concurrent pool with smooth backpressure - waits for one upload slot to free up instead of draining everything, giving consistent throughput instead of burst-stop cycles
 
-### 📚 Documentation
+### 📝 Documentation
 - **docs**: Updated architecture diagram with chunked upload flow (init, parallel chunks with index, finalize)
 - **docs**: Added chunked upload API documentation (init, chunk, finalize endpoints) to developer guide
 - **docs**: Added chunked upload endpoints to API overview table
