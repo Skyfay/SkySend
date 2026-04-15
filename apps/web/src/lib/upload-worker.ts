@@ -196,12 +196,12 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // Active upload promises, removed on completion
     const active: Array<Promise<void>> = [];
 
-    const uploadChunk = async (data: Uint8Array, index: number) => {
+    const uploadChunk = async (data: Blob, index: number) => {
       const res = await fetch(
         `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
         {
           method: "POST",
-          body: data.buffer as ArrayBuffer,
+          body: data,
         },
       );
       if (!res.ok) {
@@ -221,22 +221,14 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
       // When we have enough data, upload a chunk
       if (chunkSize >= CHUNK_UPLOAD_SIZE) {
-        // Concatenate parts into a single Uint8Array instead of a Blob.
-        // Brave and Edge stall on HTTP/2 POST with Blob bodies from Web Workers
-        // because the internal Blob-to-stream conversion never sends DATA frames.
-        const combined = new Uint8Array(chunkSize);
-        let off = 0;
-        for (const part of chunkParts) {
-          combined.set(part, off);
-          off += part.byteLength;
-        }
+        const blob = new Blob(chunkParts as unknown as BlobPart[]);
         chunkParts = [];
         const uploadedChunkSize = chunkSize;
         chunkSize = 0;
         const currentIndex = chunkIndex++;
 
         // Start upload (non-blocking) with progress tracking
-        const p = uploadChunk(combined, currentIndex).then(() => {
+        const p = uploadChunk(blob, currentIndex).then(() => {
           loaded += uploadedChunkSize;
           post({ type: "progress", loaded, total: encryptedSize });
         });
@@ -260,18 +252,13 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     // Upload remaining data
     if (chunkSize > 0) {
-      const combined = new Uint8Array(chunkSize);
-      let off = 0;
-      for (const part of chunkParts) {
-        combined.set(part, off);
-        off += part.byteLength;
-      }
+      const blob = new Blob(chunkParts as unknown as BlobPart[]);
       const uploadedChunkSize = chunkSize;
       chunkParts = [];
       chunkSize = 0;
       const currentIndex = chunkIndex++;
 
-      const p = uploadChunk(combined, currentIndex).then(() => {
+      const p = uploadChunk(blob, currentIndex).then(() => {
         loaded += uploadedChunkSize;
         post({ type: "progress", loaded, total: encryptedSize });
       });

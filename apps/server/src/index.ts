@@ -148,7 +148,7 @@ const api = new Hono();
 // large file upload.
 const rateLimiter = createRateLimiter(config);
 api.use("*", async (c, next) => {
-  if (/^\/upload\/[^/]+\/chunk/.test(c.req.path)) {
+  if (/\/upload\/[^/]+\/chunk/.test(c.req.path)) {
     return next();
   }
   return rateLimiter(c, next);

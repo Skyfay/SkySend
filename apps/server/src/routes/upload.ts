@@ -211,28 +211,11 @@ export function createUploadRoute(storage: StorageBackend) {
     }
 
     try {
-      // ── Fast path: chunk arrives in order → stream directly to storage ──
-      if (chunkIndex === session.nextWriteIndex && session.pendingChunks.size === 0) {
-        session.nextWriteIndex++;
-
-        // Chain the write to guarantee no concurrent appendChunk calls
-        session.writePromise = session.writePromise.then(async () => {
-          const bytesAppended = await storage.appendChunk(id, body);
-          session.bytesWritten += bytesAppended;
-
-          if (session.bytesWritten > session.headers.contentLength) {
-            throw new Error(
-              `Chunk ${chunkIndex}: total bytes exceed declared content length`,
-            );
-          }
-        });
-
-        await session.writePromise;
-        return c.json({ bytesWritten: session.bytesWritten }, 200);
-      }
-
-      // ── Slow path: out-of-order chunk → buffer and flush in order ──
-      // Read the incoming stream into a Uint8Array for buffering
+      // ── Always consume the request body immediately ──────────────────
+      // With parallel uploads over HTTP/2 through proxies (Traefik, Caddy),
+      // deferring body reads causes flow-control deadlocks: the proxy waits
+      // to forward the body, but the server isn't reading it because it's
+      // queued behind another write.  Reading into memory first avoids this.
       const reader = body.getReader();
       const parts: Uint8Array[] = [];
       let totalBytes = 0;
@@ -248,7 +231,7 @@ export function createUploadRoute(storage: StorageBackend) {
         return c.json({ error: "Too many out-of-order chunks buffered" }, 429);
       }
 
-      // Concatenate parts into a single buffer for storage
+      // Concatenate parts into a single buffer
       const chunkData = new Uint8Array(totalBytes);
       let offset = 0;
       for (const part of parts) {
@@ -256,7 +239,7 @@ export function createUploadRoute(storage: StorageBackend) {
         offset += part.byteLength;
       }
 
-      // Store the out-of-order chunk
+      // Store the chunk (may be in-order or out-of-order)
       session.pendingChunks.set(chunkIndex, chunkData);
       session.bufferedBytes += totalBytes;
 

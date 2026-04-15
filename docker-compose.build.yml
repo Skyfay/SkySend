@@ -4,10 +4,10 @@ services:
     build: .
     container_name: skysend-test
     restart: always
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
-      - BASE_URL=http://localhost:3000
+      - BASE_URL=https://localhost
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
       - FILE_MAX_SIZE=10GB
@@ -27,7 +27,18 @@ services:
       - CUSTOM_LEGAL=https://skysend.ch
       - CUSTOM_LINK_URL=https://skysend.ch
       - CUSTOM_LINK_NAME=Build
-      - RATE_LIMIT_MAX=600
+      - TRUST_PROXY=true
     volumes:
       - ./test/data:/data
       - ./test/uploads:/uploads
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: skysend-proxy
+    restart: always
+    ports:
+      - "443:443"
+      - "80:80"
+    command: caddy reverse-proxy --from localhost --to skysend:3000
+    depends_on:
+      - skysend

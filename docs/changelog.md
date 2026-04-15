@@ -2,6 +2,19 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.2.3
+*Released: April 15, 2026*
+
+- **server**: Fixed rate limiter path matching - the regex anchor (`^`) prevented chunk requests from being recognized through the `/api` sub-router, causing 429 errors despite the exemption
+- **server**: Fixed HTTP/2 flow-control deadlock that caused uploads to stall at 0-1% in Chrome, Firefox, Brave, and Edge through reverse proxies - the server now reads each chunk body immediately instead of deferring reads in a promise chain, preventing proxy flow-control backpressure from blocking the connection
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.2.3`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.2.2 - Bug Fixes for Chunked Uploads in Brave and Edge
 *Released: April 15, 2026*
 
