@@ -1,6 +1,6 @@
 {
   "name": "@skysend/server",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -35,6 +35,9 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1030.0",
+    "@aws-sdk/lib-storage": "^3.1030.0",
+    "@aws-sdk/s3-request-presigner": "^3.1030.0",
     "@hono/node-server": "^1.19.13",
     "@skysend/crypto": "workspace:*",
     "better-sqlite3": "^12.8.0",

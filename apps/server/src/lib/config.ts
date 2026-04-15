@@ -195,6 +195,31 @@ const configSchema = z.object({
     .optional(),
 
   CUSTOM_LINK_NAME: z.string().max(50).optional(),
+
+  // --- Storage backend configuration ---
+
+  STORAGE_BACKEND: z
+    .enum(["filesystem", "s3"])
+    .default("filesystem"),
+
+  // --- S3 configuration (only when STORAGE_BACKEND=s3) ---
+
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_ENDPOINT: z.string().url("S3_ENDPOINT must be a valid URL").optional(),
+  S3_ACCESS_KEY: z.string().optional(),
+  S3_SECRET_KEY: z.string().optional(),
+
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+
+  S3_PRESIGNED_EXPIRY: z
+    .string()
+    .default("300")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
 });
 
 type RawConfig = z.infer<typeof configSchema>;
@@ -243,6 +268,22 @@ export function loadConfig(): Config {
     if (!_config.NOTE_VIEW_OPTIONS.includes(_config.NOTE_DEFAULT_VIEWS)) {
       throw new Error(
         `NOTE_DEFAULT_VIEWS (${_config.NOTE_DEFAULT_VIEWS}) must be one of NOTE_VIEW_OPTIONS (${_config.NOTE_VIEW_OPTIONS.join(", ")})`
+      );
+    }
+  }
+
+  // Cross-field validation - S3 storage
+  if (_config.STORAGE_BACKEND === "s3") {
+    const required: Array<[string, unknown]> = [
+      ["S3_BUCKET", _config.S3_BUCKET],
+      ["S3_REGION", _config.S3_REGION],
+      ["S3_ACCESS_KEY", _config.S3_ACCESS_KEY],
+      ["S3_SECRET_KEY", _config.S3_SECRET_KEY],
+    ];
+    const missing = required.filter(([, v]) => !v).map(([k]) => k);
+    if (missing.length > 0) {
+      throw new Error(
+        `STORAGE_BACKEND=s3 requires: ${missing.join(", ")}`,
       );
     }
   }

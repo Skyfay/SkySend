@@ -2,6 +2,31 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.2.0 - S3 Storage Backend
+*Release: In Progress*
+
+### ✨ Features
+- **server**: Added S3-compatible storage backend as alternative to local filesystem storage
+- **server**: Added `STORAGE_BACKEND` environment variable to switch between `filesystem` (default) and `s3` storage
+- **server**: Added S3 configuration via environment variables (`S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`)
+- **server**: Downloads in S3 mode use presigned URLs for direct client-to-S3 transfers, reducing server bandwidth and CPU load
+- **server**: Uploads in S3 mode stream directly to S3 via multipart upload without disk buffering on the server
+- **web**: Client download logic transparently handles both direct file streams (filesystem) and presigned URL redirects (S3)
+- **server**: Supports all S3-compatible providers (AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, and more) via custom endpoint configuration
+
+### 🔒 Security
+- **server**: CSP `connect-src` header is dynamically extended to allow client fetches to the configured S3 endpoint
+
+### 🎨 Improvements
+- **server**: Introduced `StorageBackend` interface with adapter pattern for pluggable storage implementations
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.2.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.1.0 - General UI and Documentation Improvements
 *Released: April 14, 2026*
 

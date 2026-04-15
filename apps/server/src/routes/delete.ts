@@ -4,9 +4,9 @@ import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { ownerMiddleware } from "../middleware/auth.js";
 import type { Upload } from "../db/schema.js";
-import type { FileStorage } from "../storage/filesystem.js";
+import type { StorageBackend } from "../storage/types.js";
 
-export function createDeleteRoute(storage: FileStorage) {
+export function createDeleteRoute(storage: StorageBackend) {
   const route = new Hono<{
     Variables: { upload: Upload };
   }>();
