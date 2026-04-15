@@ -5,16 +5,18 @@ SkySend follows a simple client-server architecture with end-to-end encryption.
 ## High-Level Architecture
 
 ```
-+-------------------+          +-------------------+
-|    Browser (SPA)  |  HTTPS   |   Hono Server     |
-|                   | <------> |                   |
-|  React + Crypto   |          |  REST API         |
-|  fflate (zip)     |          |  SQLite (Drizzle) |
-|  IndexedDB        |          |  Filesystem       |
-+-------------------+          +-------------------+
++-------------------+          +-------------------+          +-------------------+
+|    Browser (SPA)  |  HTTPS   |   Hono Server     |          |   S3 / Filesystem |
+|                   | <------> |                   | <------> |                   |
+|  React + Crypto   |          |  REST API         |          |  Encrypted Blobs  |
+|  fflate (zip)     |   or     |  SQLite (Drizzle) |          |                   |
+|  IndexedDB        | <------> |  Storage Adapter  |          |                   |
++-------------------+  S3 URL  +-------------------+          +-------------------+
 ```
 
 The browser handles all cryptographic operations. The server stores encrypted blobs and metadata without any knowledge of the plaintext content.
+
+When using S3 storage, downloads bypass the server via presigned URLs - the client fetches the encrypted blob directly from S3 after the server has verified auth and counted the download.
 
 ## Upload Flow
 
@@ -55,7 +57,8 @@ Client                                          Server
 6. Select download strategy (see below)
 7. GET /api/download/:id -------------->  Stream encrypted blob
    (X-Auth-Token header)                   Increment download count
-                                     <----  Encrypted stream
+                                     <----  Encrypted stream (filesystem)
+                                           OR presigned S3 URL (S3 backend)
 8. Decrypt stream (AES-256-GCM ECE)
 9. Save to disk via browser mechanism
 ```
@@ -173,7 +176,10 @@ apps/server/src/
     index.ts            # Database connection + pragmas
     migrations/         # SQL migration files
   storage/
-    filesystem.ts       # File read/write/delete with path traversal protection
+    types.ts          # StorageBackend interface (adapter pattern)
+    index.ts          # Storage factory (creates filesystem or S3 backend)
+    filesystem.ts     # File read/write/delete with path traversal protection
+    s3.ts             # S3-compatible storage (AWS, R2, Hetzner, MinIO, etc.)
   lib/
     config.ts           # Zod-validated environment variables
     cleanup.ts          # Expired upload cleanup job
@@ -242,7 +248,9 @@ apps/web/src/
 ### Server-Side
 
 - **SQLite database** (`data/skysend.db`) - Upload metadata, tokens, encrypted metadata, and encrypted note content
-- **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Notes are stored entirely in the database.
+- **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Used when `STORAGE_BACKEND=filesystem` (default).
+- **S3-compatible storage** - Encrypted file blobs stored as `<uuid>.bin` objects. Used when `STORAGE_BACKEND=s3`. Downloads use presigned URLs for direct client-to-S3 transfers.
+- Notes are stored entirely in the database regardless of storage backend.
 
 ### Client-Side
 

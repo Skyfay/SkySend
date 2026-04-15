@@ -5,9 +5,9 @@ import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { Upload } from "../db/schema.js";
-import type { FileStorage } from "../storage/filesystem.js";
+import type { StorageBackend } from "../storage/types.js";
 
-export function createDownloadRoute(storage: FileStorage) {
+export function createDownloadRoute(storage: StorageBackend) {
   const route = new Hono<{
     Variables: { upload: Upload };
   }>();
@@ -52,7 +52,27 @@ export function createDownloadRoute(storage: FileStorage) {
       return c.json({ error: "Upload no longer available" }, 410);
     }
 
-    // Stream the file
+    // S3 backend with public URL: return direct URL
+    const publicUrl = storage.getPublicDownloadUrl(upload.id);
+    if (publicUrl) {
+      return c.json({
+        url: publicUrl,
+        size: upload.size,
+        fileCount: upload.fileCount,
+      });
+    }
+
+    // S3 backend with presigned URL: generate signed URL
+    if (storage.supportsPresignedUrls()) {
+      const url = await storage.getPresignedDownloadUrl(upload.id);
+      return c.json({
+        url,
+        size: upload.size,
+        fileCount: upload.fileCount,
+      });
+    }
+
+    // Filesystem backend: stream the file directly
     const nodeStream = storage.createReadStream(upload.id);
     const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 

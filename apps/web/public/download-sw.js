@@ -132,17 +132,37 @@ async function handleDownload(config, downloadId, streamDone) {
 
   const fileKey = await deriveFileKey(secret, salt);
 
-  const response = await fetch(url, {
+  // Step 1: Fetch from SkySend API (handles auth + download counting)
+  const apiResponse = await fetch(url, {
     headers: { "X-Auth-Token": authToken },
   });
 
-  if (!response.ok) {
-    broadcast({ type: "dl-error", downloadId, error: `HTTP ${response.status}` });
+  if (!apiResponse.ok) {
+    broadcast({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
     streamDone();
-    return new Response(`Download failed: ${response.status}`, { status: 502 });
+    return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
   }
 
-  const totalSize = size || parseInt(response.headers.get("Content-Length") || "0", 10);
+  // Step 2: Check if the response is a presigned URL (S3 backend) or a direct stream
+  let response;
+  let totalSize = size;
+  const contentType = apiResponse.headers.get("Content-Type") || "";
+
+  if (contentType.includes("application/json")) {
+    // S3 backend: parse presigned URL and fetch from S3 directly
+    const data = await apiResponse.json();
+    totalSize = data.size || size;
+    response = await fetch(data.url);
+    if (!response.ok) {
+      broadcast({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
+      streamDone();
+      return new Response(`S3 download failed: ${response.status}`, { status: 502 });
+    }
+  } else {
+    // Filesystem backend: use the stream directly
+    response = apiResponse;
+    totalSize = totalSize || parseInt(response.headers.get("Content-Length") || "0", 10);
+  }
 
   const headers = new Headers({
     "Content-Type": mimeType || "application/octet-stream",

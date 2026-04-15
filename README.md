@@ -76,6 +76,12 @@ Inspired by [timvisee/send](https://github.com/timvisee/send) (the community for
 - **Filter & Manage** - filter by files or notes, re-copy share links, or delete entries
 - **Auto-Cleanup** - expired entries removed automatically
 
+### ☁️ S3 Storage Support
+
+- **S3-Compatible** - optional backend for Cloudflare R2, AWS S3, MinIO, Hetzner, Wasabi, and more
+- **Direct Downloads** - serve files via public URL or presigned URLs
+- **Tunable Performance** - configurable part size and upload concurrency
+
 ### 🐳 Docker Ready
 
 - **Single Container** - deploy with `docker compose up -d`

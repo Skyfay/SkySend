@@ -5,7 +5,7 @@ import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
 import { fromBase64url, SALT_LENGTH } from "@skysend/crypto";
-import type { FileStorage } from "../storage/filesystem.js";
+import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
 import type { Config } from "../lib/config.js";
 
@@ -93,7 +93,7 @@ function validateUploadHeaders(
   return null;
 }
 
-export function createUploadRoute(storage: FileStorage) {
+export function createUploadRoute(storage: StorageBackend) {
   const route = new Hono<{ Variables: QuotaVariables }>();
 
   // ── In-memory tracker for chunked uploads ────────
@@ -112,7 +112,7 @@ export function createUploadRoute(storage: FileStorage) {
     for (const [id, session] of pendingSessions) {
       if (now - session.createdAt > SESSION_TTL_MS) {
         pendingSessions.delete(id);
-        storage.delete(id).catch(() => {});
+        storage.abortChunkedUpload(id).catch(() => {});
       }
     }
   }, 10 * 60 * 1000).unref();
@@ -192,14 +192,14 @@ export function createUploadRoute(storage: FileStorage) {
       // Safety check: don't exceed declared content length
       if (session.bytesWritten > session.headers.contentLength) {
         pendingSessions.delete(id);
-        await storage.delete(id).catch(() => {});
+        await storage.abortChunkedUpload(id).catch(() => {});
         return c.json({ error: "Total bytes exceed declared content length" }, 400);
       }
 
       return c.json({ bytesWritten: session.bytesWritten }, 200);
     } catch (err) {
       pendingSessions.delete(id);
-      await storage.delete(id).catch(() => {});
+      await storage.abortChunkedUpload(id).catch(() => {});
       throw err;
     }
   });
@@ -220,11 +220,19 @@ export function createUploadRoute(storage: FileStorage) {
 
     // Verify total bytes
     if (session.bytesWritten !== headers.contentLength) {
-      await storage.delete(id).catch(() => {});
+      await storage.abortChunkedUpload(id).catch(() => {});
       return c.json(
         { error: "Body size does not match declared content length" },
         400,
       );
+    }
+
+    // Finalize the storage backend (completes S3 multipart upload, no-op for filesystem)
+    try {
+      await storage.finalizeChunkedUpload(id);
+    } catch (err) {
+      await storage.abortChunkedUpload(id).catch(() => {});
+      throw err;
     }
 
     // Decode password salt if present

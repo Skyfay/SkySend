@@ -147,6 +147,7 @@ export function DownloadPage() {
                 metadata={downloadHook.metadata}
                 phase={downloadHook.phase}
                 progress={downloadHook.progress}
+                speed={downloadHook.speed}
                 error={downloadHook.error}
                 onDownload={handleDownload}
               />

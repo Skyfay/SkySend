@@ -41,6 +41,17 @@ The default options translate to:
 | `FILE_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,4,5,10,20,50,100` | Comma-separated list of selectable download limits. |
 | `FILE_DEFAULT_DOWNLOAD` | ❌ | `1` | Default download limit (must be one of `FILE_DOWNLOAD_OPTIONS`). |
 
+## File Upload Quota
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `FILE_UPLOAD_QUOTA_BYTES` | ❌ | `0` (unlimited) | Maximum file upload volume per user per window. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB`. |
+| `FILE_UPLOAD_QUOTA_WINDOW` | ❌ | `86400` | Quota time window in seconds (default: 24 hours). |
+
+::: info Privacy-Preserving Quotas
+Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+:::
+
 ## Note Settings
 
 | Variable | Required | Default | Description |
@@ -70,15 +81,77 @@ The default options translate to:
 | `RATE_LIMIT_WINDOW` | ❌ | `60000` | Rate limit window in milliseconds. |
 | `RATE_LIMIT_MAX` | ❌ | `60` | Maximum requests per window per IP. |
 
-## File Upload Quota
+## Storage Backend
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `FILE_UPLOAD_QUOTA_BYTES` | ❌ | `0` (unlimited) | Maximum file upload volume per user per window. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB`. |
-| `FILE_UPLOAD_QUOTA_WINDOW` | ❌ | `86400` | Quota time window in seconds (default: 24 hours). |
+| `STORAGE_BACKEND` | ❌ | `filesystem` | Storage backend to use. `filesystem` stores files locally, `s3` uses S3-compatible object storage. |
+| `S3_BUCKET` | ⚠️ | - | S3 bucket name. Required when `STORAGE_BACKEND=s3`. |
+| `S3_REGION` | ⚠️ | - | S3 region (e.g. `eu-central-1`). Required when `STORAGE_BACKEND=s3`. |
+| `S3_ENDPOINT` | ❌ | _(none)_ | Custom S3 endpoint URL. Required for non-AWS providers (R2, Hetzner, MinIO, etc.). Leave empty for AWS S3. |
+| `S3_ACCESS_KEY` | ⚠️ | - | S3 access key ID. Required when `STORAGE_BACKEND=s3`. |
+| `S3_SECRET_KEY` | ⚠️ | - | S3 secret access key. Required when `STORAGE_BACKEND=s3`. |
+| `S3_FORCE_PATH_STYLE` | ❌ | `false` | Use path-style URLs instead of virtual-hosted-style. Required for MinIO, Garage, and some self-hosted providers. |
+| `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. Only used when `S3_PUBLIC_URL` is not set. |
+| `S3_PUBLIC_URL` | ❌ | _(none)_ | Public base URL for downloading files (e.g. `https://cdn.example.com`). When set, downloads use direct URLs instead of presigned URLs - simpler and avoids CORS issues. Recommended for R2 custom domains and other publicly accessible buckets. |
+| `S3_PART_SIZE` | ❌ | `25MB` | Size of each S3 multipart upload part. Larger values reduce round-trips but use more memory. Minimum is `5MB` (S3 requirement). |
+| `S3_CONCURRENCY` | ❌ | `4` | Number of S3 parts uploaded in parallel. Higher values improve throughput but use more memory and bandwidth. Range: 1-16. |
 
-::: info Privacy-Preserving Quotas
-Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+::: info S3-Compatible Providers
+SkySend works with any S3-compatible storage provider: AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, Scaleway, and more. Just set the `S3_ENDPOINT` to your provider's endpoint URL.
+:::
+
+::: tip Example: Cloudflare R2
+```yaml
+environment:
+  STORAGE_BACKEND: s3
+  S3_BUCKET: skysend-uploads
+  S3_REGION: auto
+  S3_ENDPOINT: "https://<account-id>.r2.cloudflarestorage.com"
+  S3_ACCESS_KEY: your-access-key
+  S3_SECRET_KEY: your-secret-key
+  S3_PUBLIC_URL: "https://cdn.example.com"  # R2 custom domain (recommended)
+```
+:::
+
+::: tip Example: MinIO (Self-Hosted)
+```yaml
+environment:
+  STORAGE_BACKEND: s3
+  S3_BUCKET: skysend-uploads
+  S3_REGION: us-east-1
+  S3_ENDPOINT: "https://minio.example.com:9000"
+  S3_ACCESS_KEY: your-access-key
+  S3_SECRET_KEY: your-secret-key
+  S3_FORCE_PATH_STYLE: "true"
+```
+:::
+
+::: warning S3 CORS Configuration
+When using S3 storage, your S3 bucket needs a **CORS policy** configured at your provider to allow browser downloads. Without it, downloads will fail with `No 'Access-Control-Allow-Origin' header` errors. The policy must allow `GET` and `HEAD` methods.
+
+**Cloudflare R2:** Go to **R2** > your bucket > **Settings** > **CORS Policy** and add:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "https://skysend.example.com"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "HEAD"
+    ]
+  }
+]
+```
+
+**AWS S3:** Go to your bucket > **Permissions** > **CORS configuration**.
+
+**MinIO:** Use `mc admin config set` or the MinIO Console.
+
+Replace `https://your-skysend-domain.com` with your actual SkySend URL. For local development, add `http://localhost:5173`.
 :::
 
 ## Branding
@@ -131,6 +204,8 @@ SkySend validates all environment variables on startup using Zod:
 - `FILE_MAX_SIZE` must be a valid byte size string
 - `NOTE_MAX_SIZE` must be a valid byte size string
 - `BASE_URL` must be a valid URL (trailing slashes are stripped automatically)
+- When `STORAGE_BACKEND=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` are required
+- `S3_ENDPOINT` must be a valid URL when set
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
 - `CUSTOM_PRIVACY` must be a valid URL

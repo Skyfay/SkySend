@@ -34,7 +34,7 @@ features:
     details: Upload multiple files or entire folders. Files are zipped client-side with fflate before encryption - the server sees only one encrypted blob.
   - icon: 📝
     title: Encrypted Notes
-    details: Share text, passwords, code, Markdown, or SSH keys with end-to-end encryption. Includes syntax highlighting, password generator, SSH key generation, burn-after-reading, view limits, and password protection.
+    details: Share text, passwords, code, Markdown, or SSH keys - all end-to-end encrypted. Supports burn-after-reading, view limits, and password protection.
   - icon: ⏱️
     title: Automatic Expiry
     details: Uploads and notes expire automatically after a configurable time or download/view count. No data lingers on the server.
@@ -44,6 +44,9 @@ features:
   - icon: 🛠️
     title: Admin CLI
     details: Manage uploads, view statistics, trigger cleanup, and inspect configuration from the command line inside the container.
+  - icon: ☁️
+    title: S3 Storage Support
+    details: Optional S3-compatible storage backend for Cloudflare R2, AWS S3, MinIO, and more. Serve files via public URL or presigned URLs.
   - icon: 🐳
     title: Docker Ready
     details: Multi-arch images (AMD64/ARM64), built-in health checks, graceful shutdown, and configurable PUID/PGID.

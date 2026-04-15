@@ -309,6 +309,110 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Max 50 characters |
 | Description | Display text for the custom footer link defined by `CUSTOM_LINK_URL`. Both variables must be set for the link to appear. |
 
+### STORAGE_BACKEND
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `filesystem` |
+| Allowed values | `filesystem`, `s3` |
+| Description | Storage backend for encrypted upload files. `filesystem` stores files on the local disk. `s3` uses S3-compatible object storage with presigned download URLs. |
+
+### S3_BUCKET
+
+| Property | Value |
+| --- | --- |
+| Required | When `STORAGE_BACKEND=s3` |
+| Type | String |
+| Default | - |
+| Description | S3 bucket name for upload storage |
+
+### S3_REGION
+
+| Property | Value |
+| --- | --- |
+| Required | When `STORAGE_BACKEND=s3` |
+| Type | String |
+| Default | - |
+| Description | S3 region (e.g. `eu-central-1`, `auto` for R2) |
+
+### S3_ENDPOINT
+
+| Property | Value |
+| --- | --- |
+| Required | No (required for non-AWS providers) |
+| Type | URL |
+| Default | - (uses AWS S3 default) |
+| Validation | Must be a valid URL |
+| Description | Custom S3 endpoint for non-AWS providers. Examples: `https://<id>.r2.cloudflarestorage.com` (R2), `https://fsn1.your-objectstorage.com` (Hetzner), `https://minio.example.com:9000` (MinIO) |
+
+### S3_ACCESS_KEY
+
+| Property | Value |
+| --- | --- |
+| Required | When `STORAGE_BACKEND=s3` |
+| Type | String |
+| Default | - |
+| Description | S3 access key ID |
+
+### S3_SECRET_KEY
+
+| Property | Value |
+| --- | --- |
+| Required | When `STORAGE_BACKEND=s3` |
+| Type | String |
+| Default | - |
+| Description | S3 secret access key |
+
+### S3_FORCE_PATH_STYLE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Boolean |
+| Default | `false` |
+| Description | Use path-style URLs (`https://endpoint/bucket/key`) instead of virtual-hosted-style (`https://bucket.endpoint/key`). Required for MinIO, Garage, and some self-hosted S3 providers. |
+
+### S3_PRESIGNED_EXPIRY
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer (seconds) |
+| Default | `300` |
+| Description | TTL for presigned download URLs. S3 validates the signature only at the start of the download - a download that starts within the TTL will complete even if it takes longer. Only used when `S3_PUBLIC_URL` is not set. |
+
+### S3_PUBLIC_URL
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | _(none)_ |
+| Description | Public base URL for downloading files directly (e.g. `https://cdn.example.com`). When set, downloads use `{S3_PUBLIC_URL}/{id}.bin` instead of presigned URLs. Recommended for Cloudflare R2 custom domains and other publicly accessible buckets. Since files are E2E encrypted, public access to the raw ciphertext is safe. |
+
+### S3_PART_SIZE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Byte size (e.g. `25MB`, `50MB`) |
+| Default | `25MB` |
+| Minimum | `5MB` |
+| Maximum | `5GB` |
+| Description | Size of each S3 multipart upload part. Larger values reduce the number of API round-trips but increase memory usage per upload. The S3 protocol requires at least 5MB per part (except the final part). Increase this if you have high bandwidth and want faster uploads. |
+
+### S3_CONCURRENCY
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `4` |
+| Range | 1-16 |
+| Description | Number of S3 multipart upload parts uploaded in parallel. Higher values improve throughput by overlapping network transfers, but increase memory and bandwidth usage. Good starting values: `4` for most setups, `8` for high-bandwidth connections. |
+
 ### PUID
 
 | Property | Value |
@@ -336,6 +440,9 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 - `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS` (only validated when file service is enabled)
 - `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC` (only validated when note service is enabled)
 - `NOTE_DEFAULT_VIEWS` must be included in `NOTE_VIEW_OPTIONS` (only validated when note service is enabled)
+- When `STORAGE_BACKEND=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` are required
+- `S3_ENDPOINT` must be a valid URL when set
+- `S3_PUBLIC_URL` must be a valid URL when set
 - `PORT` must be between 1 and 65535
 - `FILE_MAX_SIZE` must be a valid byte size string with a recognized unit
 - `NOTE_MAX_SIZE` must be a valid byte size string with a recognized unit

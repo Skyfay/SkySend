@@ -20,7 +20,11 @@ data/
 | File | Contents |
 | --- | --- |
 | `skysend.db` | Upload metadata: IDs, tokens, salt, encrypted metadata, expiry times, download counts |
-| `uploads/*.bin` | Encrypted file payloads (AES-256-GCM ciphertext) |
+| `uploads/*.bin` | Encrypted file payloads (AES-256-GCM ciphertext). Only present when using filesystem storage. |
+
+::: tip S3 Storage
+When using `STORAGE_BACKEND=s3`, encrypted files are stored in your S3 bucket instead of the local `uploads/` directory. You only need to back up the `data/` directory (SQLite database). The S3 bucket should be backed up separately using your provider's tools.
+:::
 
 ::: info Zero Knowledge
 The database contains only encrypted metadata and hashed tokens. No plaintext file content or file names are stored on the server. Even with full access to the data directory, an attacker cannot read the uploaded files without the share link.

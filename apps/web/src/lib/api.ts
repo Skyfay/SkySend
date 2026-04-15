@@ -197,6 +197,22 @@ export async function downloadFile(
       (data as { error?: string }).error ?? "Download failed",
     );
   }
+
+  // S3 backend returns JSON with a presigned URL
+  const contentType = res.headers.get("Content-Type") ?? "";
+  if (contentType.includes("application/json")) {
+    const data = (await res.json()) as { url: string; size: number; fileCount: number };
+    const s3Res = await fetch(data.url);
+    if (!s3Res.ok) throw new ApiError(s3Res.status, "S3 download failed");
+    if (!s3Res.body) throw new Error("No response body from S3");
+    return {
+      stream: s3Res.body,
+      size: data.size,
+      fileCount: data.fileCount,
+    };
+  }
+
+  // Filesystem backend returns the stream directly
   if (!res.body) throw new Error("No response body");
 
   return {

@@ -205,23 +205,31 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
       chunkParts.push(value);
       chunkSize += value.byteLength;
-      loaded += value.byteLength;
-      post({ type: "progress", loaded, total: encryptedSize });
 
       // When we have enough data, upload a chunk
       if (chunkSize >= CHUNK_UPLOAD_SIZE) {
         const blob = new Blob(chunkParts as unknown as BlobPart[]);
         chunkParts = [];
+        const uploadedChunkSize = chunkSize;
         chunkSize = 0;
         await uploadChunk(blob);
+        // Report progress after the chunk has been fully uploaded
+        // (including server -> S3 forwarding). This ensures the bar
+        // reflects actual end-to-end progress, not just encryption speed.
+        loaded += uploadedChunkSize;
+        post({ type: "progress", loaded, total: encryptedSize });
       }
     }
 
     // Upload remaining data
     if (chunkSize > 0) {
       const blob = new Blob(chunkParts as unknown as BlobPart[]);
+      const uploadedChunkSize = chunkSize;
       chunkParts = [];
+      chunkSize = 0;
       await uploadChunk(blob);
+      loaded += uploadedChunkSize;
+      post({ type: "progress", loaded, total: encryptedSize });
     }
 
     // Finalize the upload

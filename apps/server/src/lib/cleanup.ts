@@ -1,13 +1,13 @@
 import { lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { notes, uploads } from "../db/schema.js";
-import type { FileStorage } from "../storage/filesystem.js";
+import type { StorageBackend } from "../storage/types.js";
 
 /**
  * Delete expired uploads and uploads that have reached their download limit.
  * Returns the number of deleted records.
  */
-export async function runCleanup(storage: FileStorage): Promise<number> {
+export async function runCleanup(storage: StorageBackend): Promise<number> {
   const db = getDb();
   const now = new Date();
 
@@ -69,7 +69,7 @@ export async function runCleanup(storage: FileStorage): Promise<number> {
  * Returns a function to stop the job.
  */
 export function startCleanupJob(
-  storage: FileStorage,
+  storage: StorageBackend,
   intervalSec: number,
 ): () => void {
   const intervalMs = intervalSec * 1000;

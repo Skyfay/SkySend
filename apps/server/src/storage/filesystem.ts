@@ -3,6 +3,7 @@ import { mkdir, unlink, stat, access, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import type { StorageBackend } from "./types.js";
 
 /**
  * Filesystem-based storage layer for encrypted upload blobs.
@@ -10,7 +11,7 @@ import { pipeline } from "node:stream/promises";
  * Files are stored as: <dataDir>/uploads/<id>.bin
  * This keeps the flat structure simple and avoids nested directories.
  */
-export class FileStorage {
+export class FileStorage implements StorageBackend {
   private readonly uploadsDir: string;
 
   constructor(uploadsDir: string) {
@@ -120,5 +121,30 @@ export class FileStorage {
   async clear(): Promise<void> {
     await rm(this.uploadsDir, { recursive: true, force: true });
     await this.init();
+  }
+
+  /** Finalize a chunked upload. No-op for filesystem. */
+  async finalizeChunkedUpload(_id: string): Promise<void> {
+    // Filesystem writes are already finalized on each appendChunk call
+  }
+
+  /** Filesystem does not support presigned URLs. */
+  supportsPresignedUrls(): boolean {
+    return false;
+  }
+
+  /** Not supported - returns null. */
+  async getPresignedDownloadUrl(_id: string, _expiresInSec?: number): Promise<string | null> {
+    return null;
+  }
+
+  /** Abort a chunked upload by deleting the partial file. */
+  async abortChunkedUpload(id: string): Promise<void> {
+    await this.delete(id);
+  }
+
+  /** Filesystem does not support public download URLs. */
+  getPublicDownloadUrl(_id: string): string | null {
+    return null;
   }
 }
