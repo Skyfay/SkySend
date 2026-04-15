@@ -12,6 +12,11 @@ All notable changes to SkySend are documented here.
 - **server**: Optimized S3 multipart upload buffering to avoid full-buffer reallocation on every chunk append
 - **server**: S3 part uploads now run as a concurrent pool with smooth backpressure - waits for one upload slot to free up instead of draining everything, giving consistent throughput instead of burst-stop cycles
 
+### 📚 Documentation
+- **docs**: Updated architecture diagram with chunked upload flow (init, parallel chunks with index, finalize)
+- **docs**: Added chunked upload API documentation (init, chunk, finalize endpoints) to developer guide
+- **docs**: Added chunked upload endpoints to API overview table
+
 ### 🐳 Docker
 
 - **Image**: `ghcr.io/skyfay/skysend:v2.2.1`

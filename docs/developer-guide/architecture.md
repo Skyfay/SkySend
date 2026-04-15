@@ -27,16 +27,27 @@ Client                                          Server
 2. Derive fileKey, metaKey, authKey (HKDF)
 3. Compute authToken, ownerToken
 4. If multi-file: zip with fflate
-5. Encrypt payload (streaming AES-256-GCM)
-6. POST /api/upload (stream) ------------>  Store encrypted blob
-                                            Create DB record
-                                     <----  Return { id, url }
-7. Encrypt metadata (names, types)
-8. POST /api/meta/:id ----------------->  Store encrypted metadata
-                                     <----  200 OK
-9. Build share link: baseUrl/#secret
-10. Store in IndexedDB (local history)
+5. POST /api/upload/init ------------>  Validate headers
+   (headers: auth, salt, limits)        Create empty storage entry
+                                 <----  Return { id }
+6. Encrypt payload (streaming AES-256-GCM)
+   Split into 10 MB chunks
+7. POST /api/upload/:id/chunk ------>  Buffer + write to storage
+   ?index=0  (up to 3 parallel)        (in-order reassembly)
+   ?index=1                      <---- 200 { bytesWritten }
+   ?index=2
+   ...
+8. POST /api/upload/:id/finalize -->  Verify total bytes match
+   (X-Owner-Token header)             Create DB record
+                                 <---- 200 OK
+9. Encrypt metadata (names, types)
+10. POST /api/meta/:id ------------->  Store encrypted metadata
+                                 <---- 200 OK
+11. Build share link: baseUrl/#secret
+12. Store in IndexedDB (local history)
 ```
+
+Chunks are uploaded in parallel (up to 3 concurrent) with a chunk index query parameter. The server buffers out-of-order chunks in memory and writes them sequentially to the storage backend. This avoids HTTP/2 head-of-line blocking in Chromium-based browsers through reverse proxies.
 
 ## Download Flow
 
