@@ -16,6 +16,9 @@ http://localhost:3000/api
 | --- | --- | --- | --- |
 | `GET` | `/api/config` | Server configuration (limits) | - |
 | `POST` | `/api/upload` | Upload encrypted file stream | - |
+| `POST` | `/api/upload/init` | Initialize chunked upload session | - |
+| `POST` | `/api/upload/:id/chunk` | Append chunk (with `?index=N`) | - |
+| `POST` | `/api/upload/:id/finalize` | Finalize chunked upload | Owner Token |
 | `POST` | `/api/meta/:id` | Save encrypted metadata | Owner Token |
 | `GET` | `/api/info/:id` | Upload info (size, expiry, downloads) | - |
 | `GET` | `/api/download/:id` | Download encrypted file stream | Auth Token |
