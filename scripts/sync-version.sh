@@ -88,7 +88,7 @@ insert_changelog() {
       '',
       '### 🐳 Docker',
       '',
-      '- **Image**: \\\`ghcr.io/skyfay/skysend:v' + version + '\\\`',
+      '- **Image**: \\\`skyfay/skysend:v' + version + '\\\`',
       '- **Also tagged as**: ' + tagAliases,
       '- **Platforms**: linux/amd64, linux/arm64',
       '',

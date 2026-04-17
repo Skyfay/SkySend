@@ -118,6 +118,17 @@ const configSchema = z.object({
     })
     .pipe(z.number().int().min(0)),
 
+  FILE_UPLOAD_WS: z
+    .string()
+    .default("true")
+    .transform((v) => v.toLowerCase() !== "false"),
+
+  FILE_UPLOAD_WS_MAX_BUFFER: z
+    .string()
+    .default("16MB")
+    .transform((v) => parseByteSize(v))
+    .pipe(z.number().int().min(1024 * 1024, "FILE_UPLOAD_WS_MAX_BUFFER must be at least 1MB")),
+
   // --- Note-specific configuration ---
 
   NOTE_MAX_SIZE: z

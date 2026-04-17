@@ -48,6 +48,8 @@ describe("config", () => {
       expect(config.NOTE_VIEW_OPTIONS).toEqual([0, 1, 2, 3, 5, 10, 20, 50, 100]);
       expect(config.NOTE_DEFAULT_VIEWS).toBe(0);
       expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+      expect(config.FILE_UPLOAD_WS).toBe(true);
+      expect(config.FILE_UPLOAD_WS_MAX_BUFFER).toBe(16 * 1024 * 1024);
     });
   });
 

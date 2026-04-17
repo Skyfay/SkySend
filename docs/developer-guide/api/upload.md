@@ -174,6 +174,55 @@ POST /api/upload/:id/finalize  →  200 { id, url }
 POST /api/meta/:id             →  200 { ok }
 ```
 
+## WebSocket /api/upload/ws
+
+Primary upload transport.  Streams the encrypted payload over a single persistent WebSocket connection, avoiding the HTTP/2 multiplexing bottleneck that reverse proxies (Traefik, Nginx) impose on many parallel `POST /api/upload/:id/chunk` requests.
+
+Controlled by the `FILE_UPLOAD_WS` environment variable (default `true`). When disabled, or when the WebSocket handshake fails for any reason, clients automatically fall back to the HTTP chunked upload flow described above.
+
+### Protocol
+
+1. **Client** opens `wss://<host>/api/upload/ws`.
+2. **Client → Server** (text frame, JSON):
+
+   ```json
+   {
+     "type": "init",
+     "headers": {
+       "authToken": "…", "ownerToken": "…", "salt": "…",
+       "maxDownloads": "3", "expireSec": "3600", "fileCount": "1",
+       "contentLength": "12345", "hasPassword": "false"
+     }
+   }
+   ```
+
+   All header values are strings, matching the HTTP upload headers one-to-one. Password-protected uploads additionally include `passwordSalt` and `passwordAlgo`. The server validates the payload identically to the HTTP `POST /api/upload/init` endpoint.
+3. **Server → Client** (text, JSON): `{"type":"ready","id":"<uuid>"}`.
+4. **Client → Server** (binary frames): contiguous slices of ciphertext. WebSocket guarantees frame ordering on a single connection, so no per-frame index is required. Total bytes must equal `contentLength`.
+5. **Client → Server** (text, JSON): `{"type":"finalize"}`.
+6. **Server → Client** (text, JSON): `{"type":"done","id":"<uuid>"}`, followed by close code `1000`.
+
+Errors are reported as `{"type":"error","message":"…"}` followed by a non-1000 close code:
+
+| Close code | Cause |
+| --- | --- |
+| `1002` | Protocol violation (e.g. binary frame after finalize) |
+| `1003` | Unsupported data type (e.g. non-JSON control frame) |
+| `1008` | Header validation, size mismatch, or quota violation |
+| `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER` |
+| `1011` | Internal server error |
+
+### Client Fallback
+
+Clients should treat the following as fallback triggers (retry via HTTP chunks using the same encrypted stream):
+
+- WebSocket `error` event before `ready`
+- WebSocket `close` event with a non-1000 code before `ready`
+- Handshake timeout (recommended: 10 s)
+- Initial `{"type":"error"}` response to `init`
+
+Once the client has begun sending binary frames the encrypted stream has been consumed; failures after that point are fatal and must be surfaced to the user.
+
 ## POST /api/meta/:id
 
 Save encrypted metadata (file names, types, sizes) for an upload.

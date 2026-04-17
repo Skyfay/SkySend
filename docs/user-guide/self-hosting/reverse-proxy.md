@@ -43,7 +43,22 @@ server {
 
         # Required for streaming downloads
         proxy_buffering off;
+
+        # Required for the WebSocket upload transport (FILE_UPLOAD_WS)
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        # Keep long-running WebSocket uploads from timing out.
+        # Adjust to the largest expected upload duration.
+        proxy_read_timeout  3600s;
+        proxy_send_timeout  3600s;
     }
+}
+
+# Map required to select the correct Connection header for WebSocket upgrade.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
 }
 
 server {
@@ -57,6 +72,8 @@ server {
 - `client_max_body_size` must match your `MAX_FILE_SIZE` setting
 - `proxy_request_buffering off` is required for streaming uploads
 - `proxy_buffering off` is required for streaming downloads
+- The `Upgrade` / `Connection` headers and the `$connection_upgrade` map are required for the WebSocket upload transport (`FILE_UPLOAD_WS`, default on)
+- `proxy_read_timeout` / `proxy_send_timeout` must be larger than the longest expected upload or Nginx will close the WebSocket mid-upload
 :::
 
 ## Traefik
@@ -81,6 +98,23 @@ services:
       - "traefik.http.routers.skysend.tls.certresolver=letsencrypt"
       - "traefik.http.services.skysend.loadbalancer.server.port=3000"
 ```
+
+::: tip Traefik and the WebSocket upload transport
+Traefik forwards WebSocket upgrade requests automatically, so no extra labels are required to use the WebSocket upload transport (`FILE_UPLOAD_WS`, enabled by default). However the upload must finish within the Traefik idle timeouts. For long uploads on slow connections, raise the entrypoint read/write timeouts in your static configuration:
+
+```yaml
+entryPoints:
+  websecure:
+    address: ":443"
+    transport:
+      respondingTimeouts:
+        readTimeout: 3600s
+        writeTimeout: 3600s
+        idleTimeout: 3600s
+```
+
+If the upgrade fails (for example because a middleware strips the `Upgrade` header), clients automatically fall back to the HTTP chunked upload.
+:::
 
 ## Trust Proxy
 

@@ -149,6 +149,32 @@ export function createUploadQuota(config: Config) {
   }
 
   /**
+   * Pre-flight quota check for non-HTTP transports (e.g. WebSocket uploads).
+   * Returns { ok: true, hashedIp } when the upload may proceed.  When quota
+   * is disabled, hashedIp is null and no quota tracking is expected.
+   */
+  function check(
+    ip: string,
+    contentLength: number,
+  ): { ok: true; hashedIp: string | null } | { ok: false; reason: string } {
+    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
+      return { ok: true, hashedIp: null };
+    }
+    const hashedIp = hashIp(ip);
+    const entry = getOrCreateEntry(hashedIp);
+    if (entry.bytesUsed >= config.FILE_UPLOAD_QUOTA_BYTES) {
+      return { ok: false, reason: "Upload quota exceeded. Try again later." };
+    }
+    if (
+      contentLength > 0 &&
+      entry.bytesUsed + contentLength > config.FILE_UPLOAD_QUOTA_BYTES
+    ) {
+      return { ok: false, reason: "File size exceeds remaining quota." };
+    }
+    return { ok: true, hashedIp };
+  }
+
+  /**
    * Get quota status for a given Hono context (uses client IP).
    */
   function getStatus(c: Context): QuotaStatus {
@@ -168,5 +194,5 @@ export function createUploadQuota(config: Config) {
     };
   }
 
-  return { middleware, recordUsage, getStatus };
+  return { middleware, recordUsage, getStatus, check };
 }

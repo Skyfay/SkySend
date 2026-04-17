@@ -58,6 +58,8 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | :--- | :---: | :--- | :--- |
 | `FILE_UPLOAD_CONCURRENT_CHUNKS` | ❌ | `3` | Number of parallel chunk uploads per session (1-20). Increase to improve upload speed in Chromium browsers (Chrome, Edge, Brave) through HTTP/2 reverse proxies. |
 | `FILE_UPLOAD_SPEED_LIMIT` | ❌ | `0` (unlimited) | Maximum upload speed per session in bytes per second. `0` disables the limit. Supports units: `B`, `KB`, `MB`, `GB` (e.g. `100MB` for 100 MB/s). |
+| `FILE_UPLOAD_WS` | ❌ | `true` | Enable the WebSocket upload transport. Uploads are streamed over a single persistent connection, bypassing HTTP/2 multiplexing bottlenecks in reverse proxies (Traefik, Nginx) and significantly improving upload speed in Chromium browsers. Clients automatically fall back to HTTP chunked uploads when the WebSocket handshake fails. Set to `false` in environments where WebSockets are blocked or terminated. |
+| `FILE_UPLOAD_WS_MAX_BUFFER` | ❌ | `16MB` | Maximum bytes the server may buffer per WebSocket upload session before aborting it. Only relevant when the storage backend cannot keep up with the incoming frame rate. Supports units: `B`, `KB`, `MB`, `GB`. Minimum `1MB`. |
 
 ## Note Settings
 
