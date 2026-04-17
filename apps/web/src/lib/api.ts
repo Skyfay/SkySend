@@ -14,6 +14,7 @@ const configResponseSchema = z.object({
   fileUploadQuotaBytes: z.number(),
   fileUploadQuotaWindow: z.number(),
   fileUploadConcurrentChunks: z.number(),
+  fileUploadSpeedLimit: z.number().optional().default(0),
   fileUploadWs: z.boolean().optional().default(false),
   // Note configuration
   noteMaxSize: z.number(),

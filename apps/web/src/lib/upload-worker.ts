@@ -126,6 +126,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // Pre-flight: verify server is reachable before starting
     let maxConcurrentUploads = 3; // fallback default
     let wsEnabled = false;
+    let speedLimit = 0; // bytes/sec, 0 = unlimited
     try {
       const healthRes = await fetch(`${apiBase}/api/config`);
       if (!healthRes.ok) {
@@ -134,11 +135,15 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       const serverConfig = await healthRes.json() as {
         fileUploadConcurrentChunks?: number;
         fileUploadWs?: boolean;
+        fileUploadSpeedLimit?: number;
       };
       if (typeof serverConfig.fileUploadConcurrentChunks === "number" && serverConfig.fileUploadConcurrentChunks > 0) {
         maxConcurrentUploads = serverConfig.fileUploadConcurrentChunks;
       }
       wsEnabled = serverConfig.fileUploadWs === true;
+      if (typeof serverConfig.fileUploadSpeedLimit === "number" && serverConfig.fileUploadSpeedLimit > 0) {
+        speedLimit = serverConfig.fileUploadSpeedLimit;
+      }
     } catch (e) {
       throw new Error(
         `Server unreachable at ${apiBase || "(same-origin)"}: ${e instanceof Error ? e.message : String(e)}`,
@@ -220,6 +225,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         },
         encryptedStream,
         encryptedSize,
+        speedLimit,
         post,
       });
     } else {
@@ -480,11 +486,13 @@ interface WsUploadOpts {
   headers: WsInitHeaders;
   encryptedStream: ReadableStream<Uint8Array>;
   encryptedSize: number;
+  /** Server-configured speed limit in bytes/sec.  0 = unlimited. */
+  speedLimit: number;
   post: (m: UploadWorkerMessage) => void;
 }
 
 async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
-  const { ws, headers, encryptedStream, encryptedSize, post } = opts;
+  const { ws, headers, encryptedStream, encryptedSize, speedLimit, post } = opts;
 
   const FRAME_SIZE = 256 * 1024; // 256 KB per WebSocket frame
   const HIGH_WATER = 8 * 1024 * 1024; // pause sending above this
@@ -557,6 +565,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
     const reader = encryptedStream.getReader();
     let loaded = 0;
     let carry: Uint8Array | null = null;
+    const sendStartedAt = Date.now();
 
     const drain = async () => {
       while (ws.bufferedAmount > LOW_WATER) {
@@ -568,6 +577,17 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
     const sendFrame = async (frame: Uint8Array) => {
       if (fatalError) throw fatalError;
       if (ws.bufferedAmount > HIGH_WATER) await drain();
+
+      // Speed limit: pause if sending faster than the server allows.
+      if (speedLimit > 0 && loaded > 0) {
+        const elapsedMs = Date.now() - sendStartedAt;
+        const expectedMs = (loaded / speedLimit) * 1000;
+        const delayMs = expectedMs - elapsedMs;
+        if (delayMs > 1) {
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
+
       // Copy into a fresh ArrayBuffer to satisfy strict BufferSource typing
       // (the source may be a view over a SharedArrayBuffer-typed buffer).
       const frameCopy = new Uint8Array(frame.byteLength);

@@ -20,6 +20,45 @@ When using S3 storage, downloads bypass the server via presigned URLs - the clie
 
 ## Upload Flow
 
+SkySend supports two upload transports. The WebSocket transport is the primary path (lower overhead, single persistent connection). If the WebSocket handshake fails (proxy blocks upgrade, server has `FILE_UPLOAD_WS=false`, timeout), the client falls back to HTTP chunked uploads automatically. Both transports carry identical ciphertext - encryption happens before the transport decision.
+
+### WebSocket Transport (Primary)
+
+```
+Client                                          Server
+------                                          ------
+1. Generate secret (32 bytes)
+2. Derive fileKey, metaKey, authKey (HKDF)
+3. Compute authToken, ownerToken
+4. If multi-file: zip with fflate
+5. WS connect /api/upload/ws -------->  Validate Origin header
+6. Send JSON { type: "init",            Validate headers (shared schema)
+     headers: auth, salt, limits }       Check quota
+                                         Create empty storage entry
+                                  <----  { type: "ready", id }
+7. Encrypt payload (streaming AES-256-GCM)
+   Send binary frames (256 KB each)     Buffer + flush to storage (4 MB)
+   Client-side backpressure via          Verify bytes <= contentLength
+   bufferedAmount high/low water
+   Client-side speed limit throttle
+   ...
+8. Send JSON { type: "finalize" } --->  Verify total bytes == contentLength
+                                         Flush remaining buffer
+                                         Create DB record
+                                         Record quota
+                                  <----  { type: "done", id }
+                                         Close 1000
+9. Encrypt metadata (names, types)
+10. POST /api/meta/:id ------------->  Store encrypted metadata
+                                 <---- 200 OK
+11. Build share link: baseUrl/#secret
+12. Store in IndexedDB (local history)
+```
+
+Speed limiting for WebSocket uploads is enforced client-side. The server exposes `FILE_UPLOAD_SPEED_LIMIT` via `/api/config` and the client throttles its frame send rate accordingly. Server-side delays in `onMessage` cannot create backpressure because the `ws` library delivers frames independently of async handler state.
+
+### HTTP Chunked Transport (Fallback)
+
 ```
 Client                                          Server
 ------                                          ------
@@ -33,9 +72,9 @@ Client                                          Server
 6. Encrypt payload (streaming AES-256-GCM)
    Split into 10 MB chunks
 7. POST /api/upload/:id/chunk ------>  Buffer + write to storage
-   ?index=0  (up to 3 parallel)        (in-order reassembly)
+   ?index=0  (up to N parallel)        (in-order reassembly)
    ?index=1                      <---- 200 { bytesWritten }
-   ?index=2
+   ?index=2                            Speed limit: delay response
    ...
 8. POST /api/upload/:id/finalize -->  Verify total bytes match
    (X-Owner-Token header)             Create DB record
@@ -47,7 +86,7 @@ Client                                          Server
 12. Store in IndexedDB (local history)
 ```
 
-Chunks are uploaded in parallel (up to 3 concurrent) with a chunk index query parameter. The server buffers out-of-order chunks in memory and writes them sequentially to the storage backend. This avoids HTTP/2 head-of-line blocking in Chromium-based browsers through reverse proxies.
+HTTP chunks are uploaded in parallel (up to `FILE_UPLOAD_CONCURRENT_CHUNKS`, default 3) with a chunk index query parameter. The server buffers out-of-order chunks in memory and writes them sequentially to the storage backend. Speed limiting works server-side by delaying the HTTP response - the client waits for the response before sending the next chunk.
 
 ## Download Flow
 
@@ -164,7 +203,8 @@ apps/server/src/
   index.ts              # Entry point, middleware, routes, graceful shutdown
   types.ts              # Shared TypeScript types
   routes/
-    upload.ts           # POST /api/upload     - Streaming upload
+    upload.ts           # POST /api/upload     - HTTP chunked upload (fallback)
+    upload-ws.ts        # WS   /api/upload/ws  - WebSocket upload (primary)
     download.ts         # GET  /api/download   - Streaming download
     meta.ts             # POST /api/meta       - Save encrypted metadata
     info.ts             # GET  /api/info       - Public upload info
@@ -194,6 +234,7 @@ apps/server/src/
   lib/
     config.ts           # Zod-validated environment variables
     cleanup.ts          # Expired upload cleanup job
+    upload-validation.ts # Shared upload header validation (HTTP + WS)
 ```
 
 ## Frontend Architecture
@@ -236,6 +277,7 @@ apps/web/src/
     opfs-download.ts    # OPFS probe, SW stream, download triggers
     opfs-worker.ts      # Web Worker: fetch + decrypt + OPFS write
     upload-store.ts     # IndexedDB operations
+    upload-worker.ts    # Web Worker: encrypt + upload (WS primary, HTTP fallback)
     zip.ts              # Client-side zip/unzip (fflate)
     utils.ts            # Utility functions
   public/

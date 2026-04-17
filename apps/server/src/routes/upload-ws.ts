@@ -125,8 +125,23 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
       const config = getConfig();
       const ip = getClientIp(c, config.TRUST_PROXY);
 
+      // Defence-in-depth: validate Origin on the upgrade request.
+      // The CORS middleware sets headers but cannot block a WS upgrade,
+      // so we check manually to prevent cross-site quota-waste attacks.
+      const origin = c.req.header("origin") ?? "";
+      const allowed = [config.BASE_URL, ...config.CORS_ORIGINS];
+      const originAllowed = origin === "" || allowed.includes(origin);
+
       return {
+        onOpen: (_evt, ws) => {
+          if (!originAllowed) {
+            sendJson(ws, { type: "error", message: "Origin not allowed" });
+            try { ws.close(1008, "Origin not allowed"); } catch { /* ignore */ }
+          }
+        },
+
         onMessage: async (evt, ws) => {
+          if (!originAllowed) return;
           const data = evt.data;
           let session = sessions.get(ws);
 
@@ -350,19 +365,12 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
               });
           }
 
-          // Speed limit - throttle further receipt by awaiting a short delay
-          // before returning.  The browser's ws.bufferedAmount will then grow
-          // which, combined with client-side high/low water marks, creates
-          // natural backpressure.
-          const speedLimit = config.FILE_UPLOAD_SPEED_LIMIT;
-          if (speedLimit > 0 && session.bytesReceived > 0) {
-            const elapsedMs = Date.now() - session.firstFrameAt;
-            const expectedMs = (session.bytesReceived / speedLimit) * 1000;
-            const delayMs = expectedMs - elapsedMs;
-            if (delayMs > 0) {
-              await new Promise((resolve) => setTimeout(resolve, delayMs));
-            }
-          }
+          // Note: Speed limiting for WebSocket uploads is enforced
+          // client-side.  Server-side delays in onMessage do not create
+          // backpressure because the ws library delivers frames as they
+          // arrive regardless of async handler state.  The speed limit
+          // value is exposed via /api/config so the client can throttle
+          // its send rate.  See uploadViaWebSocket in upload-worker.ts.
         },
 
         onClose: async (_evt, ws) => {

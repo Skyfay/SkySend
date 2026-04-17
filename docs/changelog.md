@@ -11,10 +11,14 @@ All notable changes to SkySend are documented here.
 - **server**: Added `FILE_UPLOAD_WS_MAX_BUFFER` environment variable (default: `16MB`) to cap the per-session server receive buffer for WebSocket uploads
 - **web**: Upload worker now uses the WebSocket transport as the primary upload path and automatically falls back to the existing HTTP chunked upload when the handshake fails, is blocked, or times out (10 s)
 
+### 🔒 Security
+- **server**: Added `Origin` header validation on WebSocket upgrade requests to prevent cross-site WebSocket hijacking (defence-in-depth, not exploitable due to token requirements)
+
 ### 📝 Documentation
 - **docs**: Added `FILE_UPLOAD_WS` and `FILE_UPLOAD_WS_MAX_BUFFER` to the user-guide environment variables page and the developer-guide environment reference
 - **docs**: Documented the WebSocket upload protocol in the upload API reference, including message shapes, close codes, and client fallback triggers
 - **docs**: Added Nginx and Traefik configuration snippets for the WebSocket upload transport in the reverse-proxy guide
+- **docs**: Updated developer-guide architecture to document both WebSocket (primary) and HTTP chunked (fallback) upload transports with flow diagrams
 
 ### 🐳 Docker
 
