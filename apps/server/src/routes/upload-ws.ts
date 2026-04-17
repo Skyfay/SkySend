@@ -54,10 +54,14 @@ interface Session {
   /** Buffered frames waiting to be flushed to storage. */
   buffer: Uint8Array[];
   bufferSize: number;
+  /** Bytes currently being written to storage (in-flight flushes). */
+  pendingWriteSize: number;
   /** Serialised write chain - guarantees sequential appendChunk calls. */
   writePromise: Promise<void>;
   /** Set when the receive buffer exceeds the configured cap. */
   backpressureError: Error | null;
+  /** Whether the underlying TCP socket is paused for backpressure. */
+  paused: boolean;
 }
 
 export interface UploadWsRouteDeps {
@@ -75,27 +79,62 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
 
   const sessions = new WeakMap<WSContext, Session>();
 
-  async function flushBuffer(session: Session): Promise<void> {
-    if (session.bufferSize === 0) return;
-    const chunks = session.buffer;
-    const total = session.bufferSize;
-    session.buffer = [];
-    session.bufferSize = 0;
-
-    const combined = new Uint8Array(total);
-    let offset = 0;
-    for (const c of chunks) {
-      combined.set(c, offset);
-      offset += c.byteLength;
+  /**
+   * Flush pre-detached chunks to storage.
+   * The caller must detach the buffer synchronously and pass the chunks here
+   * so that new frames accumulate into a fresh buffer while this write is
+   * in-flight.  This is critical for slow backends (S3) where appendChunk
+   * involves network I/O.
+   */
+  async function flushChunks(
+    session: Session,
+    chunks: Uint8Array[],
+    total: number,
+  ): Promise<void> {
+    if (total === 0) return;
+    // Skip write if the session was already closed/aborted.
+    if (session.stage === "closed") {
+      session.pendingWriteSize -= total;
+      return;
     }
+    try {
+      const combined = new Uint8Array(total);
+      let offset = 0;
+      for (const c of chunks) {
+        combined.set(c, offset);
+        offset += c.byteLength;
+      }
 
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(combined);
-        controller.close();
-      },
-    });
-    await storage.appendChunk(session.id, stream);
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(combined);
+          controller.close();
+        },
+      });
+      await storage.appendChunk(session.id, stream);
+    } finally {
+      session.pendingWriteSize -= total;
+    }
+  }
+
+  /**
+   * Pause the underlying TCP socket to stop frame delivery.
+   * Uses the raw ws.WebSocket from @hono/node-ws which exposes
+   * pause()/resume() for stream-level backpressure.
+   */
+  function pauseSocket(ws: WSContext): void {
+    try {
+      const raw = ws.raw as { pause?: () => void } | undefined;
+      raw?.pause?.();
+    } catch { /* not all adapters support this */ }
+  }
+
+  /** Resume a previously paused socket. */
+  function resumeSocket(ws: WSContext): void {
+    try {
+      const raw = ws.raw as { resume?: () => void } | undefined;
+      raw?.resume?.();
+    } catch { /* ignore */ }
   }
 
   function sendJson(ws: WSContext, payload: Record<string, unknown>): void {
@@ -110,6 +149,11 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
     sendJson(ws, { type: "error", message });
     if (session && session.stage !== "closed") {
       session.stage = "closed";
+      // Resume socket if paused so the close frame can be sent.
+      if (session.paused) {
+        session.paused = false;
+        resumeSocket(ws);
+      }
       storage.abortChunkedUpload(session.id).catch(() => {});
     }
     try {
@@ -208,8 +252,10 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
               firstFrameAt: 0,
               buffer: [],
               bufferSize: 0,
+              pendingWriteSize: 0,
               writePromise: Promise.resolve(),
               backpressureError: null,
+              paused: false,
             };
             sessions.set(ws, session);
             sendJson(ws, { type: "ready", id });
@@ -243,8 +289,16 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
               // Wait for all pending writes to complete, then flush remainder.
               await session.writePromise;
               if (session.backpressureError) throw session.backpressureError;
-              session.writePromise = session.writePromise.then(() => flushBuffer(session!));
-              await session.writePromise;
+
+              // Flush any remaining buffered data.
+              if (session.bufferSize > 0) {
+                const remaining = session.buffer;
+                const remainingSize = session.bufferSize;
+                session.buffer = [];
+                session.bufferSize = 0;
+                session.pendingWriteSize += remainingSize;
+                await flushChunks(session, remaining, remainingSize);
+              }
 
               if (session.bytesReceived !== session.headers.contentLength) {
                 await storage.abortChunkedUpload(session.id).catch(() => {});
@@ -346,22 +400,56 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
           session.bufferSize += frame.byteLength;
           session.bytesReceived += frame.byteLength;
 
-          if (session.bufferSize > config.FILE_UPLOAD_WS_MAX_BUFFER) {
-            session.backpressureError = new Error(
-              "Receive buffer exceeded FILE_UPLOAD_WS_MAX_BUFFER",
-            );
-            fail(ws, session, session.backpressureError.message, 1009);
-            return;
+          // ── Backpressure ───────────────────────────────
+          // The ws library delivers frames regardless of whether our
+          // async onMessage handler has resolved.  For slow backends
+          // (S3), data arrives far faster than we can write.  We use
+          // TCP-level backpressure by pausing the raw socket when
+          // memory usage is high and resuming when it drops.
+          const totalMemory = session.bufferSize + session.pendingWriteSize;
+          const maxBuffer = config.FILE_UPLOAD_WS_MAX_BUFFER;
+
+          // Pause the socket when we've buffered too much.
+          if (!session.paused && totalMemory > maxBuffer * 0.75) {
+            session.paused = true;
+            pauseSocket(ws);
           }
 
           if (session.bufferSize >= FLUSH_THRESHOLD) {
+            // Detach the buffer synchronously so new frames accumulate
+            // into a fresh array while the (potentially slow) storage
+            // write is in flight.  This is critical for S3 backends
+            // where appendChunk involves network I/O.
+            const chunksToFlush = session.buffer;
+            const sizeToFlush = session.bufferSize;
+            session.buffer = [];
+            session.bufferSize = 0;
+            session.pendingWriteSize += sizeToFlush;
+
             const sessionRef = session;
+            const wsRef = ws;
+            const resumeThreshold = maxBuffer * 0.5;
             sessionRef.writePromise = sessionRef.writePromise
-              .then(() => flushBuffer(sessionRef))
+              .then(() => flushChunks(sessionRef, chunksToFlush, sizeToFlush))
+              .then(() => {
+                // Resume socket once memory pressure has eased.
+                if (sessionRef.paused) {
+                  const current = sessionRef.bufferSize + sessionRef.pendingWriteSize;
+                  if (current < resumeThreshold) {
+                    sessionRef.paused = false;
+                    resumeSocket(wsRef);
+                  }
+                }
+              })
               .catch((err) => {
-                sessionRef.backpressureError =
-                  err instanceof Error ? err : new Error(String(err));
-                throw err;
+                // Store the error for the finalize handler to detect.
+                // Do NOT re-throw: that would create an unhandled rejection
+                // and crash Node.js when the writePromise chain continues
+                // after an abort.
+                if (sessionRef.stage !== "closed") {
+                  sessionRef.backpressureError =
+                    err instanceof Error ? err : new Error(String(err));
+                }
               });
           }
 
