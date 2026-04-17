@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.3.0
-*Release: In Progress*
+## v2.3.0 - WebSocket Upload Transport for Improved Performance in Proxied Environments
+*Released: April 17, 2026*
 
 ### ✨ Features
 - **server**: Added a WebSocket upload transport at `/api/upload/ws` that streams the encrypted payload over a single persistent connection, eliminating the HTTP/2 multiplexing bottleneck that reverse proxies (Traefik, Nginx) impose on parallel chunk uploads
@@ -22,7 +22,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.3.0`
+- **Image**: `skyfay/skysend:v2.3.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
