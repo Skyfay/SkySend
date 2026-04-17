@@ -1,6 +1,7 @@
 import { Hono, type Context, type Next } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
+import { createNodeWebSocket } from "@hono/node-ws";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
@@ -17,6 +18,7 @@ import type { QuotaVariables } from "./types.js";
 // Routes
 import { configRoute } from "./routes/config.js";
 import { createUploadRoute } from "./routes/upload.js";
+import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { metaRoute } from "./routes/meta.js";
 import { infoRoute } from "./routes/info.js";
 import { createDownloadRoute } from "./routes/download.js";
@@ -56,6 +58,7 @@ const stopCleanup = startCleanupJob(storage, config.CLEANUP_INTERVAL);
 // ── App Setup ──────────────────────────────────────────
 
 const app = new Hono();
+const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
 
 // Build CSP connect-src based on storage backend
 const connectSrc: string[] = ["'self'"];
@@ -151,6 +154,9 @@ api.use("*", async (c, next) => {
   if (/\/upload\/[^/]+\/chunk/.test(c.req.path)) {
     return next();
   }
+  if (c.req.path.endsWith("/upload/ws")) {
+    return next();
+  }
   return rateLimiter(c, next);
 });
 
@@ -194,6 +200,16 @@ uploadWithQuota.use("*", async (c, next) => {
 });
 uploadWithQuota.route("/", uploadRoute);
 api.route("/upload", uploadWithQuota);
+
+// WebSocket upload transport (primary path when FILE_UPLOAD_WS=true)
+if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+  const uploadWsRoute = createUploadWsRoute({
+    storage,
+    upgradeWebSocket,
+    quota: { check: quota.check, record: quota.recordUsage },
+  });
+  api.route("/upload/ws", uploadWsRoute);
+}
 
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
@@ -258,6 +274,11 @@ const server = serve(
 const nodeServer = server as unknown as import("node:http").Server;
 nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;
+
+// Attach the WebSocket adapter so /api/upload/ws can accept upgrade requests.
+if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+  injectWebSocket(nodeServer);
+}
 nodeServer.timeout = 0;
 
 // ── Graceful Shutdown ──────────────────────────────────

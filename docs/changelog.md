@@ -2,6 +2,27 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.3.0
+*Release: In Progress*
+
+### ✨ Features
+- **server**: Added a WebSocket upload transport at `/api/upload/ws` that streams the encrypted payload over a single persistent connection, eliminating the HTTP/2 multiplexing bottleneck that reverse proxies (Traefik, Nginx) impose on parallel chunk uploads
+- **server**: Added `FILE_UPLOAD_WS` environment variable (default: `true`) to enable or disable the WebSocket upload transport
+- **server**: Added `FILE_UPLOAD_WS_MAX_BUFFER` environment variable (default: `16MB`) to cap the per-session server receive buffer for WebSocket uploads
+- **web**: Upload worker now uses the WebSocket transport as the primary upload path and automatically falls back to the existing HTTP chunked upload when the handshake fails, is blocked, or times out (10 s)
+
+### 📝 Documentation
+- **docs**: Added `FILE_UPLOAD_WS` and `FILE_UPLOAD_WS_MAX_BUFFER` to the user-guide environment variables page and the developer-guide environment reference
+- **docs**: Documented the WebSocket upload protocol in the upload API reference, including message shapes, close codes, and client fallback triggers
+- **docs**: Added Nginx and Traefik configuration snippets for the WebSocket upload transport in the reverse-proxy guide
+
+### 🐳 Docker
+
+- **Image**: `ghcr.io/skyfay/skysend:v2.3.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.2.4 - Max Concurrent Chunk Uploads and Speed Limit Configuration
 *Released: April 15, 2026*
 
@@ -16,7 +37,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.2.4`
+- **Image**: `skyfay/skysend:v2.2.4`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -29,7 +50,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.2.3`
+- **Image**: `skyfay/skysend:v2.2.3`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -43,7 +64,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.2.2`
+- **Image**: `skyfay/skysend:v2.2.2`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -65,7 +86,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.2.1`
+- **Image**: `skyfay/skysend:v2.2.1`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -109,7 +130,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.2.0`
+- **Image**: `skyfay/skysend:v2.2.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -137,7 +158,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.1.0`
+- **Image**: `skyfay/skysend:v2.1.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -204,7 +225,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v2.0.0`
+- **Image**: `skyfay/skysend:v2.0.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -220,7 +241,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v1.0.2`
+- **Image**: `skyfay/skysend:v1.0.2`
 - **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64
 
@@ -238,7 +259,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `ghcr.io/skyfay/skysend:v1.0.1`
+- **Image**: `skyfay/skysend:v1.0.1`
 - **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64
 

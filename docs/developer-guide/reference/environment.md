@@ -165,6 +165,25 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | `0` (unlimited) |
 | Description | Maximum upload throughput per session. `0` disables the limit. Supports raw bytes or units: `B`, `KB`, `MB`, `GB` (e.g. `100MB` for 100 MB/s). The server delays chunk responses to enforce the limit |
 
+### FILE_UPLOAD_WS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Boolean |
+| Default | `true` |
+| Description | Enable the WebSocket upload transport at `/api/upload/ws`. Clients prefer WebSocket and fall back to HTTP chunked uploads automatically if the handshake fails. Set to `false` to disable the endpoint entirely |
+
+### FILE_UPLOAD_WS_MAX_BUFFER
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Byte size string |
+| Default | `16MB` |
+| Minimum | `1MB` |
+| Description | Maximum bytes the server buffers in memory per WebSocket upload session before aborting it with close code `1009`. Only relevant when the storage backend falls behind the incoming frame rate |
+
 ### NOTE_MAX_SIZE
 
 | Property | Value |
