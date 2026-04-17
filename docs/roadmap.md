@@ -12,11 +12,8 @@ This page outlines planned features and improvements for SkySend. Features are s
 
 ## Planned
 
-### WebSocket Upload Transport
-- WebSocket-based upload path for continuous streaming without HTTP request-response overhead
-- Eliminates Chromium HTTP/2 multiplexing bottleneck through reverse proxies (Traefik, Nginx)
-- Expected to bring Chromium upload speed from ~50-60 MB/s to ~200+ MB/s through proxies
-- HTTP chunked uploads remain as automatic fallback when WebSocket is unavailable
+### Limits
+- Download Speed Limit for filesystem (s3 does not need this)
 
 ### Load Argon2id WASM in Frontend
 - Integrate Argon2id WASM for password protection in the browser

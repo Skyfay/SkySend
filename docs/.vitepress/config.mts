@@ -59,6 +59,7 @@ export default defineConfig({
         text: 'Resources',
         items: [
           { text: 'Screenshots', link: '/screenshots' },
+          { text: 'Benchmarks', link: '/benchmarks' },
           { text: 'Changelog', link: '/changelog' },
           { text: 'Roadmap', link: '/roadmap' },
           { text: 'GitHub', link: 'https://github.com/Skyfay/SkySend' }
@@ -149,7 +150,8 @@ export default defineConfig({
           items: [
             { text: 'Database Schema', link: '/developer-guide/reference/schema' },
             { text: 'Environment Variables', link: '/developer-guide/reference/environment' },
-            { text: 'Testing Guide', link: '/developer-guide/reference/testing' }
+            { text: 'Testing Guide', link: '/developer-guide/reference/testing' },
+            { text: 'Benchmarks', link: '/benchmarks' }
           ]
         }
       ]
