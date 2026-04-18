@@ -5,7 +5,7 @@
 <h1 align="center">SkySend</h1>
 
 <p align="center">
-  <strong>Minimalist, end-to-end encrypted, self-hostable file and note sharing service.</strong>
+  <strong>End-to-end encrypted, self-hostable file and note sharing service built for speed and security.</strong>
 </p>
 
 <p align="center">
@@ -31,11 +31,13 @@
 
 ### What is SkySend?
 
-SkySend is a minimalist, self-hostable file and note sharing service with end-to-end encryption. Files and notes are encrypted entirely in the browser using AES-256-GCM before they ever reach the server - the server stores only encrypted blobs and never has access to the decryption key.
+SkySend is a minimalist, self-hostable file and note sharing service with end-to-end encryption. Files and notes are encrypted entirely in the browser using AES-256-GCM before they ever reach the server - the server stores only encrypted blobs and never has access to the decryption key. No accounts, no tracking, no analytics just Open Source.
 
-No accounts required. No telemetry. No external dependencies. Upload a file, share a note, get a link. Links expire automatically after a configurable time or number of downloads/views.
+This Project is community ready to get self hosted and for those who don't want or could not host their own instance, there are public instances available. If you want to make the internet safer, you can host your own instance and add it to the public instances list by creating a Issue with your instance details or a PR [Instances List](https://github.com/Skyfay/SkySend/blob/main/docs/public/instances.json).
 
-Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send), SkySend is built from scratch with higher security standards and a minimal, maintainable codebase.
+Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send) and [PrivateBin](https://privatebin.info/), SkySend is built from scratch with higher security standards, more features, and a minimal, maintainable codebase.
+
+We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern security practices to create a fast, secure, and user-friendly experience. Check out our [Benchmarks](https://docs.skysend.ch/benchmarks).
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/screenshots/overview.png" alt="SkySend Screenshot" width="800">
