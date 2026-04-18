@@ -8,9 +8,12 @@ These numbers reflect encrypted upload speed including client-side AES-256-GCM e
 
 ## Test Environment
 
+As we want to provide realistic benchmarks, we tested with Connection over Internet with non optimized network conditions. This was not a Lab environment with direct connection between client and server and not a data center environment. The server was hosted on a virtual linux machine (Proxmox) about 40km away from the client over public internet. The Client was Macos which has limited network performance compared to a Linux machine, but this is more realistic for the average user.
+
 | Parameter | Value |
 |---|---|
 | **Server** | Linux, 10 Gbit/s network |
+| **Client** | MacOS, 10 Gbit/s network |
 | **Reverse Proxy** | Traefik v3 (TLS termination) |
 | **Upload Speed Limit** | None (`FILE_UPLOAD_SPEED_LIMIT=0`) |
 | **SkySend Version** | v2.3.0 |
@@ -69,4 +72,4 @@ Upload speeds depend heavily on:
 - **CPU speed** on both client (encryption) and server (I/O)
 - **Storage backend** (local SSD vs. S3-compatible)
 
-The numbers above represent a best-case scenario on a fast network. Your results will vary.
+The numbers above represent a best-case scenario in real world conditions. Your results will vary.
