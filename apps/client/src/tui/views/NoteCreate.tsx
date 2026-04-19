@@ -25,7 +25,7 @@ type Phase =
   // Password note
   | "pw-list" | "pw-label" | "pw-value-choice" | "pw-value-input" | "pw-gen-length"
   // SSH Key
-  | "ssh-source" | "ssh-algo" | "ssh-comment" | "ssh-passphrase" | "ssh-generating" | "ssh-file";
+  | "ssh-source" | "ssh-algo" | "ssh-comment" | "ssh-passphrase" | "ssh-generating" | "ssh-file" | "ssh-share";
 
 interface PasswordEntry {
   label: string;
@@ -56,6 +56,8 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
 
   // SSH key state
   const [sshAlgo, setSshAlgo] = useState<"ed25519" | "rsa">("ed25519");
+  const [sshParts, setSshParts] = useState<{ publicKey: string; privateKey: string; passphrase?: string }>({ publicKey: "", privateKey: "" });
+  const [sshShare, setSshShare] = useState<{ pub: boolean; priv: boolean; pass: boolean }>({ pub: true, priv: true, pass: true });
 
   const setContentAndProceed = useCallback((noteContent: string) => {
     if (new TextEncoder().encode(noteContent).byteLength > config.noteMaxSize) {
@@ -367,9 +369,9 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
                 } else {
                   keyPair = await generateRSAKeyPair(4096, comment || undefined, passphrase);
                 }
-                const parts: string[] = [keyPair.publicKey, keyPair.privateKey];
-                if (passphrase) parts.push(`Passphrase: ${passphrase}`);
-                setContentAndProceed(parts.join("\n\n"));
+                setSshParts({ publicKey: keyPair.publicKey, privateKey: keyPair.privateKey, passphrase });
+                setSshShare({ pub: true, priv: true, pass: !!passphrase });
+                setPhase("ssh-share");
               } catch (err) {
                 setErrorMsg(err instanceof Error ? err.message : String(err));
                 setPhase("error");
@@ -402,7 +404,16 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
               setPhase("error");
               return;
             }
-            setContentAndProceed(fileContent);
+            // Parse parts from file
+            const privMatch = fileContent.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
+            const passMatch = fileContent.match(/^Passphrase: (.+)$/m);
+            let pubKey = fileContent;
+            if (privMatch?.[1]) pubKey = pubKey.replace(privMatch[1], "");
+            if (passMatch?.[1]) pubKey = pubKey.replace(`Passphrase: ${passMatch[1]}`, "");
+            pubKey = pubKey.trim();
+            setSshParts({ publicKey: pubKey, privateKey: privMatch?.[1] ?? "", passphrase: passMatch?.[1] });
+            setSshShare({ pub: !!pubKey, priv: !!privMatch, pass: !!passMatch });
+            setPhase("ssh-share");
           } catch (err) {
             setErrorMsg(err instanceof Error ? err.message : String(err));
             setPhase("error");
@@ -410,6 +421,45 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         }}
         onCancel={() => setPhase("ssh-source")}
       />
+    );
+  }
+
+  if (phase === "ssh-share") {
+    const hasPub = sshParts.publicKey.length > 0;
+    const hasPriv = sshParts.privateKey.length > 0;
+    const hasPass = !!sshParts.passphrase;
+    const anySelected = (hasPub && sshShare.pub) || (hasPriv && sshShare.priv) || (hasPass && sshShare.pass);
+
+    const items: Array<SelectItem<string>> = [];
+    if (hasPub) items.push({ label: `[${sshShare.pub ? "x" : " "}] Public Key`, value: "pub" });
+    if (hasPriv) items.push({ label: `[${sshShare.priv ? "x" : " "}] Private Key`, value: "priv" });
+    if (hasPass) items.push({ label: `[${sshShare.pass ? "x" : " "}] Passphrase`, value: "pass" });
+    if (anySelected) items.push({ label: "Done", value: "done" });
+
+    return (
+      <Box flexDirection="column" paddingX={1}>
+        <Box marginBottom={1}><Text bold>Share selection</Text></Box>
+        <Text dimColor>Toggle which parts to include in the note</Text>
+        <Box marginTop={1}>
+          <SelectList
+            items={items}
+            onSelect={(val) => {
+              if (val === "pub") { setSshShare((s) => ({ ...s, pub: !s.pub })); return; }
+              if (val === "priv") { setSshShare((s) => ({ ...s, priv: !s.priv })); return; }
+              if (val === "pass") { setSshShare((s) => ({ ...s, pass: !s.pass })); return; }
+              if (val === "done") {
+                const parts: string[] = [];
+                if (sshShare.pub && hasPub) parts.push(sshParts.publicKey);
+                if (sshShare.priv && hasPriv) parts.push(sshParts.privateKey);
+                if (sshShare.pass && hasPass) parts.push(`Passphrase: ${sshParts.passphrase}`);
+                if (parts.length === 0) return;
+                setContentAndProceed(parts.join("\n\n"));
+              }
+            }}
+            onCancel={() => setPhase("ssh-source")}
+          />
+        </Box>
+      </Box>
     );
   }
 
