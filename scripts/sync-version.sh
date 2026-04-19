@@ -16,6 +16,7 @@ PACKAGE_FILES=(
   "$ROOT_DIR/apps/server/package.json"
   "$ROOT_DIR/apps/web/package.json"
   "$ROOT_DIR/apps/cli/package.json"
+  "$ROOT_DIR/apps/client/package.json"
   "$ROOT_DIR/packages/crypto/package.json"
   "$ROOT_DIR/docs/package.json"
 )
@@ -47,6 +48,14 @@ sync_files() {
       echo "  ✓ ${PKG#$ROOT_DIR/}"
     fi
   done
+
+  # Sync client version.ts (embedded in compiled binary)
+  local VERSION_TS="$ROOT_DIR/apps/client/src/version.ts"
+  cat > "$VERSION_TS" <<EOF
+// Auto-synced by scripts/sync-version.sh - do not edit manually
+export const APP_VERSION = "$VERSION";
+EOF
+  echo "  ✓ apps/client/src/version.ts"
 }
 
 # ── Insert changelog block for new version ────────────────────────

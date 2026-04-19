@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "skysend": "./dist/index.js"
+    "skysend-cli": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",

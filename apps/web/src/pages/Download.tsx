@@ -17,6 +17,7 @@ import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
 import { useDownload } from "@/hooks/useDownload";
+import { hashWasmArgon2 } from "@/lib/argon2";
 
 export function DownloadPage() {
   const { t } = useTranslation();
@@ -104,11 +105,11 @@ export function DownloadPage() {
 
   const handlePasswordSubmit = (pw: string) => {
     setPasswordInput(pw);
-    downloadHook.download(id, secret, pw);
+    downloadHook.download(id, secret, pw, hashWasmArgon2);
   };
 
   const handleDownload = () => {
-    downloadHook.download(id, secret, passwordInput);
+    downloadHook.download(id, secret, passwordInput, hashWasmArgon2);
   };
 
   return (

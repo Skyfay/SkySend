@@ -214,16 +214,107 @@ jobs:
           repository: skyfay/skysend
           readme-filepath: README.md
 
+  # ── Build CLI binaries ───────────────────────────────────────
+  cli-binaries:
+    name: Build CLI (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    needs: validate
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+            bun-target: bun-linux-x64
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            bun-target: bun-linux-arm64
+          - target: darwin-x64
+            runner: macos-latest
+            bun-target: bun-darwin-x64
+          - target: darwin-arm64
+            runner: macos-latest
+            bun-target: bun-darwin-arm64
+          - target: windows-x64
+            runner: windows-latest
+            bun-target: bun-windows-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm --filter @skysend/crypto build && pnpm --filter @skysend/client build
+
+      - name: Compile binary
+        run: pnpm --filter @skysend/client build:${{ matrix.target }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: mv apps/client/dist/skysend apps/client/dist/skysend-${{ matrix.target }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: mv apps/client/dist/skysend.exe apps/client/dist/skysend-${{ matrix.target }}.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.target }}
+          path: apps/client/dist/skysend-${{ matrix.target }}*
+          retention-days: 1
+
+  # ── Prepare CLI release assets ──────────────────────────────
+  cli-assets:
+    name: Prepare CLI Assets
+    runs-on: ubuntu-latest
+    needs: cli-binaries
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cli-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum skysend-* > checksums.txt && cat checksums.txt
+
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-release-assets
+          path: |
+            skysend-*
+            checksums.txt
+          retention-days: 1
+
   # ── Create GitHub Release ───────────────────────────────────
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: manifest
+    needs: [manifest, cli-assets]
     permissions:
       contents: write
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Download CLI assets
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-release-assets
+          path: release-assets
 
       - name: Extract Release Notes from Changelog
         run: |
@@ -249,4 +340,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: release_notes.md
+          files: release-assets/*
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-dev') }}

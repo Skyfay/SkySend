@@ -44,6 +44,9 @@ features:
   - icon: 🛠️
     title: Admin CLI
     details: Manage uploads, view statistics, trigger cleanup, and inspect configuration from the command line inside the container.
+  - icon: 💻
+    title: CLI Client
+    details: Upload and download files from the terminal with full E2E encryption. Pre-built binaries for Linux, macOS, and Windows with self-update support.
   - icon: ☁️
     title: S3 Storage Support
     details: Optional S3-compatible storage backend for Cloudflare R2, AWS S3, MinIO, and more. Serve files via public URL or presigned URLs.
@@ -96,6 +99,30 @@ docker run -d --name skysend -p 3000:3000 \
 :::
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## CLI Client
+
+Upload and download files from the terminal with end-to-end encryption:
+
+::: code-group
+
+```bash [Linux / macOS]
+curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+```
+
+```powershell [Windows (PowerShell)]
+irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+```
+
+:::
+
+```bash
+skysend config set-server https://your-instance.com
+skysend upload ./document.pdf
+skysend download https://your-instance.com/file/abc123#secret
+```
+
+See the full [CLI Client documentation](/user-guide/client-cli/) for all commands and options.
 
 ## 💬 Community & Support
 

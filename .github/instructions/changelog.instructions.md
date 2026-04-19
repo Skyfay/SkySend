@@ -20,6 +20,7 @@ Use these scopes to indicate which part of the monorepo is affected:
 |---|---|
 | `server` | Backend API, database, storage, middleware (`apps/server`) |
 | `web` | Frontend UI, components, hooks, pages (`apps/web`) |
+| `client` | CLI client binary (`apps/client`) |
 | `cli` | Admin CLI commands (`apps/cli`) |
 | `crypto` | Crypto library - encryption, key derivation (`packages/crypto`) |
 | `docs` | Documentation site (`docs/`) |

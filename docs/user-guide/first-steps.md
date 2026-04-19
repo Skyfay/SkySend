@@ -93,3 +93,26 @@ Navigate to **My Uploads** to:
 ::: info Browser-Local Data
 Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire.
 :::
+
+## Upload from the Terminal
+
+SkySend also provides a CLI client for uploading and downloading files from the terminal. It uses the same end-to-end encryption as the web interface.
+
+```bash
+# Install (Linux/macOS)
+curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+
+# Set your server
+skysend config set-server https://your-instance.com
+
+# Upload a file
+skysend upload ./document.pdf
+
+# Download a file
+skysend download https://your-instance.com/file/abc123#secret
+
+# Create a note
+skysend note "Secret message" --expires 1h
+```
+
+See the full [CLI Client documentation](/user-guide/client-cli/) for all commands and options.

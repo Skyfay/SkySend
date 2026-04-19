@@ -12,9 +12,17 @@ SkySend follows a simple client-server architecture with end-to-end encryption.
 |  fflate (zip)     |   or     |  SQLite (Drizzle) |          |                   |
 |  IndexedDB        | <------> |  Storage Adapter  |          |                   |
 +-------------------+  S3 URL  +-------------------+          +-------------------+
+                                        ^
++-------------------+                   |
+|    CLI Client     |  HTTPS / WS       |
+|                   | ------------------+
+|  Commander.js     |
+|  Crypto + fflate  |
+|  Bun compile      |
++-------------------+
 ```
 
-The browser handles all cryptographic operations. The server stores encrypted blobs and metadata without any knowledge of the plaintext content.
+The browser and CLI client both handle all cryptographic operations. The server stores encrypted blobs and metadata without any knowledge of the plaintext content.
 
 When using S3 storage, downloads bypass the server via presigned URLs - the client fetches the encrypted blob directly from S3 after the server has verified auth and counted the download.
 
@@ -190,11 +198,13 @@ Notes support five content types, each with a dedicated UI:
        +-----> @skysend/server  (imports crypto for validation)
        |
        +-----> @skysend/web     (imports crypto for encryption/decryption)
+       |
+       +-----> @skysend/client  (imports crypto for encryption/decryption)
 
 @skysend/cli       (accesses server database directly)
 ```
 
-The `@skysend/crypto` package is the foundation. It is used by both the server (for token validation) and the web frontend (for encryption/decryption).
+The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line).
 
 ## Server Architecture
 
@@ -295,6 +305,35 @@ apps/web/src/
     it.json             # Italian translations
     pl.json             # Polish translations
 ```
+
+## CLI Client Architecture
+
+```
+apps/client/src/
+  index.ts              # Entry point (Commander.js program)
+  commands/
+    upload.ts           # skysend upload - file upload with E2E encryption
+    download.ts         # skysend download - file download and decryption
+    note.ts             # skysend note - create encrypted notes
+    note-view.ts        # skysend note:view - view encrypted notes
+    config.ts           # skysend config - manage client configuration
+    delete.ts           # skysend delete - delete uploads/notes
+    update.ts           # skysend update - self-update from GitHub Releases
+  lib/
+    api.ts              # API client (all server endpoints)
+    auth.ts             # Key generation, derivation, password handling
+    config.ts           # Config file management (~/.config/skysend/)
+    errors.ts           # ApiError class
+    progress.ts         # Terminal progress bar, formatting, password prompt
+    url.ts              # Share URL parsing and building
+```
+
+The CLI client uses the same `@skysend/crypto` library and the same API endpoints as the web frontend. Key differences:
+
+- **Argon2id**: Uses `hash-wasm` (pure WASM) instead of the browser WASM loader
+- **Transport**: WebSocket primary with HTTP chunked fallback (same as web)
+- **Storage**: Writes directly to the filesystem instead of browser download mechanisms
+- **Distribution**: Compiled to a single binary with [Bun](https://bun.sh/) for each target platform
 
 ## Data Storage
 

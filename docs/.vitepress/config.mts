@@ -104,6 +104,14 @@ export default defineConfig({
           ]
         },
         {
+          text: 'CLI Client',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/user-guide/client-cli/' },
+            { text: 'Commands', link: '/user-guide/client-cli/commands' }
+          ]
+        },
+        {
           text: 'Security',
           collapsed: false,
           items: [
