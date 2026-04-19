@@ -18,7 +18,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN pnpm build
+RUN pnpm --filter @skysend/crypto --filter @skysend/server --filter @skysend/web --filter @skysend/cli build
 
 # ── Stage 3: Production ────────────────────────────────
 FROM base AS deploy

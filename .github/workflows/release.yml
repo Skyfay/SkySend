@@ -113,7 +113,7 @@ jobs:
   manifest:
     name: Create Manifests
     runs-on: ubuntu-latest
-    needs: build-verification
+    needs: [build-verification, cli-assets]
     environment:
       name: ${{ contains(github.ref_name, '-dev') && 'dev' || contains(github.ref_name, '-beta') && 'beta' || 'production' }}
       url: https://github.com/skyfay/skysend/pkgs/container/skysend

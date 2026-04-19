@@ -25,6 +25,7 @@
     "node": ">=24",
     "pnpm": ">=9"
   },
+  "packageManager": "pnpm@10.29.3",
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
