@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useInput } from "ink";
 import { fetchInfo, fetchNoteInfo, deleteUpload, deleteNote } from "../../lib/api.js";
 import {
   getUploads, getNotes, removeUpload, removeNote, cleanupExpired,
@@ -81,6 +81,12 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
 
   const uploads = getUploads().filter((u) => u.server === server);
   const notes = getNotes().filter((n) => n.server === server);
+
+  const isEmpty = uploads.length === 0 && notes.length === 0;
+
+  useInput((_input, key) => {
+    if (key.escape) onBack();
+  }, { isActive: phase === "list" && isEmpty });
 
   const showUpload = useCallback(async (upload: StoredUpload) => {
     setSelectedUpload(upload);
