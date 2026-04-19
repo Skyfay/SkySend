@@ -22,6 +22,7 @@ import { ProgressBar } from "../components/ProgressBar.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
 import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
+import { uploadWsTransport } from "../../lib/ws-upload.js";
 
 type Phase =
   | "file-select"
@@ -114,6 +115,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const [shareUrl, setShareUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showQR, setShowQR] = useState(false);
+  const [transport, setTransport] = useState<"WebSocket" | "HTTP chunked">("HTTP chunked");
 
   const totalSize = files.reduce((sum, f) => {
     try { return sum + fs.statSync(f).size; } catch { return sum; }
@@ -149,7 +151,6 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
       const creds = await prepareUpload(password);
       const encryptedStream = plaintextStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
       const encryptedSize = calculateEncryptedSize(plaintextSize);
-      const startTime = Date.now();
 
       const headers: Record<string, string> = {
         "X-Auth-Token": creds.authTokenB64,
@@ -166,18 +167,9 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         headers["X-Password-Algo"] = creds.passwordAlgo;
       }
 
-      // HTTP chunked upload
-      const CHUNK_SIZE = 10 * 1024 * 1024;
-      const { id: uploadId } = await uploadInit(server, headers);
-      const reader = encryptedStream.getReader();
-      let loaded = 0;
-      let chunkParts: Uint8Array[] = [];
-      let chunkSize = 0;
-      let chunkIdx = 0;
-
-      const sendChunk = async (data: Uint8Array, index: number) => {
-        await uploadChunk(server, uploadId, index, data);
-        loaded += data.byteLength;
+      // Upload with progress tracking
+      const startTime = Date.now();
+      const onProgress = (loaded: number) => {
         const elapsed = (Date.now() - startTime) / 1000;
         const speed = elapsed > 0 ? loaded / elapsed : 0;
         setProgress({
@@ -187,22 +179,98 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         });
       };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunkParts.push(value);
-        chunkSize += value.byteLength;
-        if (chunkSize >= CHUNK_SIZE) {
-          await sendChunk(concatChunks(chunkParts), chunkIdx++);
-          chunkParts = [];
-          chunkSize = 0;
-        }
-      }
-      if (chunkSize > 0) {
-        await sendChunk(concatChunks(chunkParts), chunkIdx++);
-      }
+      let uploadId: string;
 
-      await uploadFinalize(server, uploadId, creds.ownerTokenB64);
+      if (config.fileUploadWs) {
+        try {
+          setTransport("WebSocket");
+          const result = await uploadWsTransport(
+            server, headers, encryptedStream, encryptedSize,
+            config.fileUploadSpeedLimit ?? 0, onProgress,
+          );
+          uploadId = result.id;
+        } catch {
+          // WS failed - recreate stream for HTTP fallback
+          setTransport("HTTP chunked");
+          let retryCleanup: (() => void) | undefined;
+          let retryStream: ReadableStream<Uint8Array>;
+          if (isMulti) {
+            const retryZip = await createZipStream(files);
+            retryStream = retryZip.stream;
+            retryCleanup = retryZip.cleanup;
+            // Old zip already cleaned up in finally, track new one
+            zipCleanup = retryCleanup;
+          } else {
+            retryStream = createFileStream(files[0]!);
+          }
+          const retryEncStream = retryStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
+
+          const CHUNK_SIZE = 10 * 1024 * 1024;
+          const { id: httpId } = await uploadInit(server, headers);
+          const reader = retryEncStream.getReader();
+          let loaded = 0;
+          let chunkParts: Uint8Array[] = [];
+          let chunkSize = 0;
+          let chunkIdx = 0;
+
+          const sendChunk = async (data: Uint8Array, index: number) => {
+            await uploadChunk(server, httpId, index, data);
+            loaded += data.byteLength;
+            onProgress(loaded);
+          };
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunkParts.push(value);
+            chunkSize += value.byteLength;
+            if (chunkSize >= CHUNK_SIZE) {
+              await sendChunk(concatChunks(chunkParts), chunkIdx++);
+              chunkParts = [];
+              chunkSize = 0;
+            }
+          }
+          if (chunkSize > 0) {
+            await sendChunk(concatChunks(chunkParts), chunkIdx++);
+          }
+
+          await uploadFinalize(server, httpId, creds.ownerTokenB64);
+          uploadId = httpId;
+        }
+      } else {
+        setTransport("HTTP chunked");
+        const CHUNK_SIZE = 10 * 1024 * 1024;
+        const { id: httpId } = await uploadInit(server, headers);
+        const reader = encryptedStream.getReader();
+        let loaded = 0;
+        let chunkParts: Uint8Array[] = [];
+        let chunkSize = 0;
+        let chunkIdx = 0;
+
+        const sendChunk = async (data: Uint8Array, index: number) => {
+          await uploadChunk(server, httpId, index, data);
+          loaded += data.byteLength;
+          onProgress(loaded);
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunkParts.push(value);
+          chunkSize += value.byteLength;
+          if (chunkSize >= CHUNK_SIZE) {
+            await sendChunk(concatChunks(chunkParts), chunkIdx++);
+            chunkParts = [];
+            chunkSize = 0;
+          }
+        }
+        if (chunkSize > 0) {
+          await sendChunk(concatChunks(chunkParts), chunkIdx++);
+        }
+
+        await uploadFinalize(server, httpId, creds.ownerTokenB64);
+        uploadId = httpId;
+      }
 
       // Save metadata
       const metadata: FileMetadata = isMulti
@@ -404,7 +472,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           <Text><Text dimColor>Files:     </Text>{files.length} ({formatBytes(totalSize)})</Text>
           <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
           <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
-          <Text><Text dimColor>Transport: </Text>HTTP chunked</Text>
+          <Text><Text dimColor>Transport: </Text>{transport}</Text>
           {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
         </Box>
         {showQR && (
