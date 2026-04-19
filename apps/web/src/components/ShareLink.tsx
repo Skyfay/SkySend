@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ShareLinkProps {
   link: string;
+  averageSpeed?: string | null;
   onNewUpload: () => void;
 }
 
-export function ShareLink({ link, onNewUpload }: ShareLinkProps) {
+export function ShareLink({ link, averageSpeed, onNewUpload }: ShareLinkProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
@@ -40,6 +41,11 @@ export function ShareLink({ link, onNewUpload }: ShareLinkProps) {
         <CardTitle className="flex items-center gap-2 text-lg text-success">
           <Check className="h-5 w-5" />
           {t("upload.uploadComplete")}
+          {averageSpeed && (
+            <span className="ml-auto text-xs font-normal text-muted-foreground">
+              Ø {averageSpeed}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

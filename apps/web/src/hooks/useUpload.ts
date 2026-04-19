@@ -20,6 +20,7 @@ interface UploadState {
   phase: UploadPhase;
   progress: number;
   speed: string | null;
+  averageSpeed: string | null;
   shareLink: string | null;
   error: string | null;
   uploadId: string | null;
@@ -50,6 +51,7 @@ export function useUpload() {
     phase: "idle",
     progress: 0,
     speed: null,
+    averageSpeed: null,
     shareLink: null,
     error: null,
     uploadId: null,
@@ -63,6 +65,7 @@ export function useUpload() {
       phase: "idle",
       progress: 0,
       speed: null,
+      averageSpeed: null,
       shareLink: null,
       error: null,
       uploadId: null,
@@ -76,6 +79,7 @@ export function useUpload() {
       phase: "idle",
       progress: 0,
       speed: null,
+      averageSpeed: null,
       shareLink: null,
       error: null,
       uploadId: null,
@@ -145,6 +149,8 @@ export function useUpload() {
       // Speed calculation state
       let lastLoaded = 0;
       let lastTime = performance.now();
+      let uploadStartTime = 0;
+      let uploadTotalBytes = 0;
 
       const result = await new Promise<{
         id: string;
@@ -158,6 +164,9 @@ export function useUpload() {
               // Reset speed tracking on phase change
               lastLoaded = 0;
               lastTime = performance.now();
+              if (msg.phase === "uploading") {
+                uploadStartTime = performance.now();
+              }
               setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
               break;
             case "progress": {
@@ -179,6 +188,7 @@ export function useUpload() {
                 ),
                 ...(speed ? { speed } : {}),
               }));
+              uploadTotalBytes = msg.total;
               break;
             }
             case "done":
@@ -226,10 +236,20 @@ export function useUpload() {
         createdAt: new Date().toISOString(),
       });
 
+      // Calculate average upload speed
+      let averageSpeed: string | null = null;
+      if (uploadStartTime > 0 && uploadTotalBytes > 0) {
+        const totalSec = (performance.now() - uploadStartTime) / 1000;
+        if (totalSec > 0) {
+          averageSpeed = `${formatBytes(uploadTotalBytes / totalSec)}/s`;
+        }
+      }
+
       setState({
         phase: "done",
         progress: 100,
         speed: null,
+        averageSpeed,
         shareLink,
         error: null,
         uploadId: result.id,
