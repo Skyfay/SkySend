@@ -7,8 +7,8 @@ All notable changes to SkySend are documented here.
 
 ### ✨ Features
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
-- **cli**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
-- **cli**: Added `skysend update` command for self-updating the CLI binary from GitHub Releases with SHA-256 checksum verification
+- **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
+- **client**: Added `skysend update` command for self-updating the CLI binary from GitHub Releases with SHA-256 checksum verification
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
@@ -20,6 +20,8 @@ All notable changes to SkySend are documented here.
 
 ### 📝 Documentation
 - **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
+- **docs**: Added CLI client documentation - overview, installation guide (Linux/macOS/Windows), detailed command reference for all 7 commands (`upload`, `download`, `note`, `note:view`, `delete`, `config`, `update`)
+- **docs**: Updated README, docs homepage, getting started, installation, first steps, architecture, setup, and roadmap pages with CLI client information
 
 ### � CI/CD
 - **infra**: Added CLI binary build pipeline to release workflow - compiles Bun binaries for 5 targets (linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64) with SHA-256 checksums and attaches them to GitHub Releases

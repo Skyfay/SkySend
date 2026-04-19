@@ -29,6 +29,24 @@ This runs all workspaces in parallel:
 - **Web** (`apps/web`) - Vite dev server with HMR
 - **Docs** (`docs`) - VitePress dev server
 
+### CLI Client Development
+
+The CLI client is not started by `pnpm dev` since it is a command-line tool, not a server. To develop and test it:
+
+```bash
+# Run a command directly with tsx (no build needed)
+pnpm --filter @skysend/client run -- upload ./test-file.txt
+
+# Build TypeScript
+pnpm --filter @skysend/client build
+
+# Compile to binary (current platform)
+pnpm --filter @skysend/client build:compile
+
+# Compile for a specific target
+pnpm --filter @skysend/client build:darwin-arm64
+```
+
 ## Build
 
 Build all packages:
@@ -46,6 +64,7 @@ pnpm test
 Tests are written with Vitest. Each package has its own test directory:
 - `packages/crypto/tests/` - Crypto library tests
 - `apps/server/tests/` - Server tests
+- `apps/client/` - CLI client (use `pnpm --filter @skysend/client run` for manual testing)
 
 ## Linting & Formatting
 
@@ -92,6 +111,7 @@ All packages share a root `tsconfig.json` and ESLint configuration. Each package
 | `pnpm format` | Format with Prettier |
 | `pnpm format:check` | Check formatting |
 | `pnpm typecheck` | TypeScript type checking |
+| `pnpm --filter @skysend/client run -- <args>` | Run CLI client in dev mode |
 
 ## Code Conventions
 

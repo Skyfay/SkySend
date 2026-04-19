@@ -10,6 +10,7 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 | --- | --- | --- |
 | `@skysend/server` | `apps/server` | Hono-based REST API |
 | `@skysend/web` | `apps/web` | React SPA (Vite + Shadcn UI) |
+| `@skysend/client` | `apps/client` | CLI client binary (Bun compile) |
 | `@skysend/cli` | `apps/cli` | Admin CLI tool |
 | `@skysend/crypto` | `packages/crypto` | Shared encryption library |
 | `@skysend/docs` | `docs` | VitePress documentation |
@@ -21,6 +22,7 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 | Runtime | Node.js 24 LTS |
 | Backend | Hono |
 | Frontend | Vite + React 19 + Shadcn UI |
+| CLI Client | Commander.js + Bun compile |
 | ORM | Drizzle ORM |
 | Database | SQLite (via better-sqlite3) |
 | Crypto | Web Crypto API (native) |
