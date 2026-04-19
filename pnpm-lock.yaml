@@ -58,6 +58,28 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
 
+  apps/client:
+    dependencies:
+      '@skysend/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      commander:
+        specifier: ^13.1.0
+        version: 13.1.0
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
+      hash-wasm:
+        specifier: ^4.12.0
+        version: 4.12.0
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+
   apps/server:
     dependencies:
       '@aws-sdk/client-s3':
@@ -3491,6 +3513,9 @@ packages:
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
+
+  hash-wasm@4.12.0:
+    resolution: {integrity: sha512-+/2B2rYLb48I/evdOIhP+K/DD2ca2fgBjp6O+GBEnCDk2e4rpeXIK8GvIyRPjTezgmWn9gmKwkQjjx6BtqDHVQ==}
 
   hast-util-to-html@9.0.5:
     resolution: {integrity: sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==}
@@ -7843,6 +7868,8 @@ snapshots:
   graceful-fs@4.2.11: {}
 
   has-flag@4.0.0: {}
+
+  hash-wasm@4.12.0: {}
 
   hast-util-to-html@9.0.5:
     dependencies:

@@ -7,11 +7,15 @@ All notable changes to SkySend are documented here.
 
 ### ✨ Features
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
+- **cli**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
 - **web**: Multi-file ZIP creation moved from main thread into the upload worker, reducing peak memory usage by ~50% for large uploads
 - **web**: Average upload speed is now displayed on the share link page after upload completes
+
+### 🔄 Changed
+- **cli**: Renamed admin CLI binary from `skysend` to `skysend-cli` to avoid conflict with the new client binary (consistent with Docker and documentation)
 
 ### 📝 Documentation
 - **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
