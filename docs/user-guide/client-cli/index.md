@@ -22,8 +22,8 @@ All cryptographic operations use the same `@skysend/crypto` library as the web f
 | --- | --- | --- |
 | Linux | x86_64 (AMD64) | `skysend-linux-x64` |
 | Linux | ARM64 (aarch64) | `skysend-linux-arm64` |
-| macOS | Intel (x86_64) | `skysend-darwin-x64` |
-| macOS | Apple Silicon (ARM64) | `skysend-darwin-arm64` |
+| macOS | Intel (x86_64) | `skysend-macos-x64` |
+| macOS | Apple Silicon (ARM64) | `skysend-macos-arm64` |
 | Windows | x86_64 (AMD64) | `skysend-windows-x64.exe` |
 
 Binaries are compiled with [Bun](https://bun.sh/) and published as GitHub Release assets.

@@ -44,7 +44,7 @@ pnpm --filter @skysend/client build
 pnpm --filter @skysend/client build:compile
 
 # Compile for a specific target
-pnpm --filter @skysend/client build:darwin-arm64
+pnpm --filter @skysend/client build:macos-arm64
 ```
 
 ## Build

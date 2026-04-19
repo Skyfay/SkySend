@@ -32,7 +32,7 @@ function getPlatform(): string {
   let osName: string;
   switch (platform) {
     case "linux":  osName = "linux"; break;
-    case "darwin": osName = "darwin"; break;
+    case "darwin": osName = "macos"; break;
     case "win32":  osName = "windows"; break;
     default: throw new Error(`Unsupported platform: ${platform}`);
   }

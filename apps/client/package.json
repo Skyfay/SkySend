@@ -11,10 +11,10 @@
     "build:compile": "bun build --compile --minify --external react-devtools-core src/index.ts --outfile dist/skysend",
     "build:linux-x64": "bun build --compile --minify --external react-devtools-core --target=bun-linux-x64 src/index.ts --outfile dist/skysend-linux-x64",
     "build:linux-arm64": "bun build --compile --minify --external react-devtools-core --target=bun-linux-arm64 src/index.ts --outfile dist/skysend-linux-arm64",
-    "build:darwin-x64": "bun build --compile --minify --external react-devtools-core --target=bun-darwin-x64 src/index.ts --outfile dist/skysend-darwin-x64",
-    "build:darwin-arm64": "bun build --compile --minify --external react-devtools-core --target=bun-darwin-arm64 src/index.ts --outfile dist/skysend-darwin-arm64",
+    "build:macos-x64": "bun build --compile --minify --external react-devtools-core --target=bun-darwin-x64 src/index.ts --outfile dist/skysend-macos-x64",
+    "build:macos-arm64": "bun build --compile --minify --external react-devtools-core --target=bun-darwin-arm64 src/index.ts --outfile dist/skysend-macos-arm64",
     "build:windows-x64": "bun build --compile --minify --external react-devtools-core --target=bun-windows-x64 src/index.ts --outfile dist/skysend-windows-x64.exe",
-    "build:all": "pnpm build:linux-x64 && pnpm build:linux-arm64 && pnpm build:darwin-x64 && pnpm build:darwin-arm64 && pnpm build:windows-x64",
+    "build:all": "pnpm build:linux-x64 && pnpm build:linux-arm64 && pnpm build:macos-x64 && pnpm build:macos-arm64 && pnpm build:windows-x64",
     "dev": "tsc --watch",
     "run": "tsx src/index.ts",
     "test": "vitest run --passWithNoTests"

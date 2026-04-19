@@ -20,7 +20,7 @@ detect_platform() {
 
   case "$OS" in
     Linux)  OS_NAME="linux" ;;
-    Darwin) OS_NAME="darwin" ;;
+    Darwin) OS_NAME="macos" ;;
     *)
       echo "Error: Unsupported operating system: $OS"
       exit 1
