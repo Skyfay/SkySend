@@ -66,6 +66,7 @@
     "uploading": "Encrypting & uploading...",
     "encryptingProgress": "Encrypting...",
     "processing": "Processing...",
+    "packing": "Packing files...",
     "uploadComplete": "Upload complete!",
     "shareLink": "Share this link",
     "shareLinkHint": "The encryption key is in the URL fragment - it never reaches the server.",

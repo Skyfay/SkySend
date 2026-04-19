@@ -66,6 +66,7 @@
     "uploading": "Crittografia e caricamento...",
     "encryptingProgress": "Crittografia...",
     "processing": "Elaborazione...",
+    "packing": "Preparazione dei file...",
     "uploadComplete": "Caricamento completato!",
     "shareLink": "Condividi questo link",
     "shareLinkHint": "La chiave di crittografia è nel frammento dell'URL - non raggiunge mai il server.",

@@ -29,14 +29,15 @@ import {
   PASSWORD_SALT_LENGTH,
   type FileMetadata,
 } from "@skysend/crypto";
+import { streamingZip } from "./zip";
 
 // ── Message Types ──────────────────────────────────────
 
 export interface UploadWorkerRequest {
   /** File to upload (single-file mode). */
   file?: File;
-  /** Pre-zipped data (multi-file mode). Transferred, not copied. */
-  zipData?: ArrayBuffer;
+  /** Files to zip and upload (multi-file mode). */
+  files?: File[];
   /** Master secret (32 bytes). Transferred. */
   secret: ArrayBuffer;
   /** HKDF salt (16 bytes). Transferred. */
@@ -103,8 +104,12 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     if (msg.file) {
       plaintextStream = msg.file.stream();
       plaintextSize = msg.file.size;
-    } else if (msg.zipData) {
-      const zipBytes = new Uint8Array(msg.zipData);
+    } else if (msg.files && msg.files.length > 0) {
+      // Streaming ZIP: read files one at a time, report byte-accurate progress
+      post({ type: "phase", phase: "zipping" });
+      const zipBytes = await streamingZip(msg.files, (bytesRead, totalBytes) => {
+        post({ type: "progress", loaded: bytesRead, total: totalBytes });
+      });
       plaintextSize = zipBytes.byteLength;
       let offset = 0;
       plaintextStream = new ReadableStream<Uint8Array>({

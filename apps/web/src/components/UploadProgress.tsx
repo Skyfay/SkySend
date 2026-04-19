@@ -12,11 +12,11 @@ interface UploadProgressProps {
 export function UploadProgress({ phase, progress, speed }: UploadProgressProps) {
   const { t } = useTranslation();
 
-  const isIndeterminate = phase === "zipping" || phase === "saving-meta";
+  const isIndeterminate = phase === "saving-meta";
 
   const label =
     phase === "zipping"
-      ? t("upload.processing")
+      ? t("upload.packing")
       : phase === "uploading"
         ? t("upload.uploading")
         : phase === "saving-meta"
@@ -29,7 +29,7 @@ export function UploadProgress({ phase, progress, speed }: UploadProgressProps) 
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
         <span className="text-sm font-medium">{label}</span>
         <span className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
-          {speed && phase === "uploading" && (
+          {speed && (phase === "uploading" || phase === "zipping") && (
             <span>{speed}</span>
           )}
           {!isIndeterminate && <span>{progress}%</span>}

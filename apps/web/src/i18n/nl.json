@@ -66,6 +66,7 @@
     "uploading": "Versleutelen en uploaden...",
     "encryptingProgress": "Versleutelen...",
     "processing": "Verwerken...",
+    "packing": "Bestanden inpakken...",
     "uploadComplete": "Upload voltooid!",
     "shareLink": "Deel deze link",
     "shareLinkHint": "De encryptiesleutel zit in het URL-fragment - deze bereikt nooit de server.",

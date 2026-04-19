@@ -66,6 +66,7 @@
     "uploading": "Salataan ja lähetetään...",
     "encryptingProgress": "Salataan...",
     "processing": "Käsitellään...",
+    "packing": "Pakataan tiedostoja...",
     "uploadComplete": "Lähetys valmis!",
     "shareLink": "Jaa tämä linkki",
     "shareLinkHint": "Salausavain on URL-fragmentissa - se ei koskaan saavuta palvelinta.",

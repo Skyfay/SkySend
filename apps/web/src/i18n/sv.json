@@ -66,6 +66,7 @@
     "uploading": "Krypterar och laddar upp...",
     "encryptingProgress": "Krypterar...",
     "processing": "Bearbetar...",
+    "packing": "Packar filer...",
     "uploadComplete": "Uppladdning klar!",
     "shareLink": "Dela denna länk",
     "shareLinkHint": "Krypteringsnyckeln finns i URL-fragmentet - den når aldrig servern.",

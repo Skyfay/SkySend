@@ -1,4 +1,4 @@
-import { zip, zipSync, unzipSync, type Zippable } from "fflate";
+import { zip, zipSync, unzipSync, Zip, ZipDeflate, type Zippable } from "fflate";
 
 export function zipFiles(
   files: { name: string; data: Uint8Array }[],
@@ -27,6 +27,62 @@ export function zipFilesAsync(
       else resolve(data);
     });
   });
+}
+
+/**
+ * Streaming ZIP creation that reads files one at a time via File.stream().
+ * Reports byte-accurate progress as files are read and compressed.
+ * Designed to run in a Web Worker to keep the main thread responsive.
+ *
+ * Memory usage: ~1x total compressed size (output buffer) + small read chunks,
+ * instead of ~2-3x with the batch approach that loads all files into RAM.
+ */
+export async function streamingZip(
+  files: File[],
+  onProgress: (bytesRead: number, totalBytes: number) => void,
+): Promise<Uint8Array> {
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  let bytesRead = 0;
+
+  // Collect compressed output chunks
+  const outputChunks: Uint8Array[] = [];
+  let outputSize = 0;
+
+  const zipper = new Zip((err, chunk, _final) => {
+    if (err) throw err;
+    outputChunks.push(chunk);
+    outputSize += chunk.length;
+  });
+
+  // Process files sequentially to minimize peak memory
+  for (const file of files) {
+    const name = file.webkitRelativePath || file.name;
+    const entry = new ZipDeflate(name, { level: 6 });
+    zipper.add(entry);
+
+    const reader = file.stream().getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        entry.push(new Uint8Array(0), true);
+        break;
+      }
+      entry.push(value);
+      bytesRead += value.byteLength;
+      onProgress(bytesRead, totalBytes);
+    }
+  }
+
+  zipper.end();
+
+  // Concatenate output chunks into a single Uint8Array
+  const result = new Uint8Array(outputSize);
+  let offset = 0;
+  for (const chunk of outputChunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
 }
 
 export function unzipFiles(
