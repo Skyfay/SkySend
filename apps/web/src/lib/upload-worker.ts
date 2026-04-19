@@ -107,20 +107,21 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     } else if (msg.files && msg.files.length > 0) {
       // Streaming ZIP: read files one at a time, report byte-accurate progress
       post({ type: "phase", phase: "zipping" });
-      const zipBytes = await streamingZip(msg.files, (bytesRead, totalBytes) => {
+      const zipResult = await streamingZip(msg.files, (bytesRead, totalBytes) => {
         post({ type: "progress", loaded: bytesRead, total: totalBytes });
       });
-      plaintextSize = zipBytes.byteLength;
-      let offset = 0;
+      plaintextSize = zipResult.totalSize;
+      // Stream from the chunks array without concatenating into a single buffer
+      // to avoid exceeding the ~2 GB contiguous ArrayBuffer limit.
+      let chunkIndex = 0;
       plaintextStream = new ReadableStream<Uint8Array>({
         pull(controller) {
-          if (offset >= zipBytes.length) {
+          if (chunkIndex >= zipResult.chunks.length) {
             controller.close();
             return;
           }
-          const end = Math.min(offset + 65536, zipBytes.length);
-          controller.enqueue(zipBytes.subarray(offset, end));
-          offset = end;
+          controller.enqueue(zipResult.chunks[chunkIndex]!);
+          chunkIndex++;
         },
       });
     } else {

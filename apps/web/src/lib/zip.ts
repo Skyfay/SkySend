@@ -29,18 +29,23 @@ export function zipFilesAsync(
   });
 }
 
+export interface StreamingZipResult {
+  chunks: Uint8Array[];
+  totalSize: number;
+}
+
 /**
  * Streaming ZIP creation that reads files one at a time via File.stream().
  * Reports byte-accurate progress as files are read and compressed.
  * Designed to run in a Web Worker to keep the main thread responsive.
  *
- * Memory usage: ~1x total compressed size (output buffer) + small read chunks,
- * instead of ~2-3x with the batch approach that loads all files into RAM.
+ * Returns an array of compressed chunks instead of a single buffer to avoid
+ * exceeding the browser's contiguous ArrayBuffer allocation limit (~2 GB).
  */
 export async function streamingZip(
   files: File[],
   onProgress: (bytesRead: number, totalBytes: number) => void,
-): Promise<Uint8Array> {
+): Promise<StreamingZipResult> {
   const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
   let bytesRead = 0;
 
@@ -75,14 +80,7 @@ export async function streamingZip(
 
   zipper.end();
 
-  // Concatenate output chunks into a single Uint8Array
-  const result = new Uint8Array(outputSize);
-  let offset = 0;
-  for (const chunk of outputChunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
+  return { chunks: outputChunks, totalSize: outputSize };
 }
 
 export function unzipFiles(
