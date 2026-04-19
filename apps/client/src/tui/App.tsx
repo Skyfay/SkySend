@@ -1,0 +1,200 @@
+import React, { useState, useCallback } from "react";
+import { Box, Text, useApp, useInput } from "ink";
+import { fetchConfig, fetchQuota } from "../lib/api.js";
+import type { View, AppState } from "./types.js";
+import { ThemeProvider, useAccent } from "./theme.js";
+import { Header } from "./components/Header.js";
+import { StatusBar } from "./components/StatusBar.js";
+import { ServerSelect } from "./views/ServerSelect.js";
+import { MainMenu } from "./views/MainMenu.js";
+import { UploadView } from "./views/Upload.js";
+import { DownloadView } from "./views/Download.js";
+import { NoteCreateView } from "./views/NoteCreate.js";
+import { NoteViewView } from "./views/NoteView.js";
+import { MyUploadsView } from "./views/MyUploads.js";
+import { SettingsView } from "./views/Settings.js";
+
+interface AppProps {
+  initialServer?: string;
+}
+
+export function App({ initialServer }: AppProps): React.ReactElement {
+  const [accentColor, setAccentColor] = useState<string | null>(null);
+  return (
+    <ThemeProvider color={accentColor}>
+      <AppInner initialServer={initialServer} setAccentColor={setAccentColor} />
+    </ThemeProvider>
+  );
+}
+
+function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor: (c: string | null) => void }): React.ReactElement {
+  const { exit } = useApp();
+  const accent = useAccent();
+  const [view, setView] = useState<View>(initialServer ? "menu" : "server-select");
+  const [appState, setAppState] = useState<AppState | null>(null);
+  const [loading, setLoading] = useState(initialServer ? true : false);
+  const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState("Loading...");
+
+  // Connect to a server
+  const connectToServer = useCallback(async (url: string, name: string) => {
+    setLoading(true);
+    setError(null);
+    setHint("Connecting to server...");
+    try {
+      const config = await fetchConfig(url);
+      let quota;
+      try { quota = await fetchQuota(url); } catch { /* optional */ }
+      setAppState({ server: url, serverName: name, config, quota });
+      setAccentColor(config.customColor);
+      setView("menu");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Auto-connect if initialServer provided
+  React.useEffect(() => {
+    if (initialServer && !appState) {
+      void connectToServer(initialServer, initialServer);
+    }
+  }, [initialServer, appState, connectToServer]);
+
+  const refreshQuota = useCallback(async () => {
+    if (!appState) return;
+    try {
+      const quota = await fetchQuota(appState.server);
+      setAppState((prev) => prev ? { ...prev, quota } : prev);
+    } catch { /* ignore */ }
+  }, [appState]);
+
+  const navigate = useCallback((target: View) => {
+    setError(null);
+    setView(target);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setError(null);
+    setView("menu");
+    void refreshQuota();
+  }, [refreshQuota]);
+
+  const switchServer = useCallback(() => {
+    setAppState(null);
+    setView("server-select");
+  }, []);
+
+  // Global Ctrl+C to exit
+  useInput((_input, key) => {
+    if (key.ctrl && _input === "c") {
+      exit();
+    }
+  });
+
+  if (loading) {
+    return (
+      <Box flexDirection="column">
+        <Box marginY={1} marginX={2}>
+          <Text color={accent}>⠋ </Text>
+          <Text>{hint}</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (error && !appState) {
+    return (
+      <Box flexDirection="column">
+        <Box marginY={1} marginX={2}>
+          <Text color="red">Error: {error}</Text>
+        </Box>
+        <Box marginX={2}>
+          <Text dimColor>Press Ctrl+C to exit</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box flexDirection="column">
+      {appState && view !== "server-select" && (
+        <Header appState={appState} />
+      )}
+
+      {error && (
+        <Box marginX={2}>
+          <Text color="red">Error: {error}</Text>
+        </Box>
+      )}
+
+      <Box flexDirection="column" flexGrow={1}>
+        {view === "server-select" && (
+          <ServerSelect
+            onSelect={connectToServer}
+            onExit={() => exit()}
+          />
+        )}
+
+        {view === "menu" && appState && (
+          <MainMenu
+            appState={appState}
+            onNavigate={navigate}
+            onSwitchServer={switchServer}
+            onExit={() => exit()}
+          />
+        )}
+
+        {view === "upload" && appState && (
+          <UploadView
+            appState={appState}
+            onBack={handleBack}
+            onError={setError}
+          />
+        )}
+
+        {view === "download" && appState && (
+          <DownloadView
+            appState={appState}
+            onBack={handleBack}
+            onError={setError}
+          />
+        )}
+
+        {view === "note-create" && appState && (
+          <NoteCreateView
+            appState={appState}
+            onBack={handleBack}
+            onError={setError}
+          />
+        )}
+
+        {view === "note-view" && appState && (
+          <NoteViewView
+            appState={appState}
+            onBack={handleBack}
+            onError={setError}
+          />
+        )}
+
+        {view === "my-uploads" && appState && (
+          <MyUploadsView
+            appState={appState}
+            onBack={handleBack}
+            onError={setError}
+          />
+        )}
+
+        {view === "settings" && (
+          <SettingsView
+            onBack={handleBack}
+            onServerChange={switchServer}
+          />
+        )}
+      </Box>
+
+      <StatusBar view={view} />
+    </Box>
+  );
+}

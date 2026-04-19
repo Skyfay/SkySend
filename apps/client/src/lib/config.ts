@@ -2,8 +2,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 
+export interface ServerEntry {
+  name: string;
+  url: string;
+}
+
 interface ClientConfig {
   server?: string;
+  servers?: ServerEntry[];
+  defaultServer?: string;
 }
 
 function getConfigDir(): string {
@@ -62,4 +69,51 @@ export function resolveServer(flagValue?: string): string {
 
 export function getConfigFilePath(): string {
   return getConfigPath();
+}
+
+// ── Multi-Server Management ────────────────────────────
+
+export function getServers(): ServerEntry[] {
+  const config = loadConfig();
+  const servers = config.servers ?? [];
+  // Migrate legacy single-server config
+  if (servers.length === 0 && config.server) {
+    const entry: ServerEntry = { name: "Default", url: config.server };
+    servers.push(entry);
+    saveConfig({ ...config, servers, defaultServer: config.server });
+  }
+  return servers;
+}
+
+export function addServer(name: string, url: string): void {
+  const config = loadConfig();
+  const servers = config.servers ?? [];
+  const normalized = url.replace(/\/+$/, "");
+  if (servers.some((s) => s.url === normalized)) {
+    throw new Error(`Server already exists: ${normalized}`);
+  }
+  servers.push({ name, url: normalized });
+  const updates: ClientConfig = { ...config, servers };
+  if (!updates.defaultServer) updates.defaultServer = normalized;
+  saveConfig(updates);
+}
+
+export function removeServer(url: string): void {
+  const config = loadConfig();
+  const servers = (config.servers ?? []).filter((s) => s.url !== url);
+  const updates: ClientConfig = { ...config, servers };
+  if (config.defaultServer === url) {
+    updates.defaultServer = servers[0]?.url;
+  }
+  saveConfig(updates);
+}
+
+export function setDefaultServer(url: string): void {
+  const config = loadConfig();
+  saveConfig({ ...config, defaultServer: url.replace(/\/+$/, "") });
+}
+
+export function getDefaultServer(): string | undefined {
+  const config = loadConfig();
+  return config.defaultServer ?? config.server;
 }

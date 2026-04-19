@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatBytes, formatTimeRemaining } from "@/lib/utils";
 import type { UploadInfo } from "@/lib/api";
 import type { FileMetadata } from "@skysend/crypto";
@@ -64,13 +65,15 @@ export function DownloadCard({
                   <p className="font-medium">
                     {t("myUploads.files", { count: metadata.files.length })}
                   </p>
-                  <ul className="mt-1 max-h-32 space-y-0.5 overflow-y-auto text-sm text-muted-foreground">
-                    {metadata.files.map((f, i) => (
-                      <li key={i} className="truncate">
-                        {f.name} ({formatBytes(f.size)})
-                      </li>
-                    ))}
-                  </ul>
+                  <ScrollArea className="mt-1 max-h-32">
+                    <ul className="space-y-0.5 text-sm text-muted-foreground">
+                      {metadata.files.map((f, i) => (
+                        <li key={i} className="truncate">
+                          {f.name} ({formatBytes(f.size)})
+                        </li>
+                      ))}
+                    </ul>
+                  </ScrollArea>
                 </div>
               ) : (
                 <p className="text-muted-foreground">{t("download.encryptedFile")}</p>
