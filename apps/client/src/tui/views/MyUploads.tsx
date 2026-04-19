@@ -10,6 +10,7 @@ import { formatBytes } from "../../lib/progress.js";
 import { SelectList, type SelectItem } from "../components/SelectList.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
+import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 
 type Phase = "list" | "upload-detail" | "note-detail" | "confirm-delete";
 
@@ -69,6 +70,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
   const [liveNote, setLiveNote] = useState<LiveNoteInfo | null>(null);
   const [cleanupMsg, setCleanupMsg] = useState("");
   const [, setRefreshKey] = useState(0);
+  const [showQR, setShowQR] = useState(false);
 
   // Cleanup on mount
   useEffect(() => {
@@ -188,6 +190,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
         ]
       : [
           { label: "Copy URL (print)", value: "url" },
+          { label: showQR ? "Hide QR code" : "Show QR code", value: "qr" },
           { label: "Delete from server", value: "delete" },
           { label: "Remove from history", value: "remove" },
           { label: "Back", value: "back" },
@@ -223,12 +226,19 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
           )}
           <Text><Text dimColor>URL:       </Text><Text color={accent}>{u.url}</Text></Text>
         </Box>
+        {showQR && (
+          <Box marginTop={1} marginLeft={2}>
+            <QRCodeDisplay url={u.url} />
+          </Box>
+        )}
         <Box marginTop={1}>
           <SelectList
             items={items}
             onSelect={async (val) => {
               if (val === "url") {
                 process.stdout.write(u.url + "\n");
+              } else if (val === "qr") {
+                setShowQR((v) => !v);
               } else if (val === "delete") {
                 try {
                   await deleteUpload(u.server, u.id, u.ownerToken);
@@ -243,9 +253,11 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
               } else if (val === "remove") {
                 removeUpload(u.id);
                 setPhase("list");
+                setShowQR(false);
                 setRefreshKey((k) => k + 1);
               } else {
                 setPhase("list");
+                setShowQR(false);
               }
             }}
           />
@@ -265,6 +277,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
         ]
       : [
           { label: "Copy URL (print)", value: "url" },
+          { label: showQR ? "Hide QR code" : "Show QR code", value: "qr" },
           { label: "Delete from server", value: "delete" },
           { label: "Remove from history", value: "remove" },
           { label: "Back", value: "back" },
@@ -299,12 +312,19 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
           )}
           <Text><Text dimColor>URL:       </Text><Text color={accent}>{n.url}</Text></Text>
         </Box>
+        {showQR && (
+          <Box marginTop={1} marginLeft={2}>
+            <QRCodeDisplay url={n.url} />
+          </Box>
+        )}
         <Box marginTop={1}>
           <SelectList
             items={items}
             onSelect={async (val) => {
               if (val === "url") {
                 process.stdout.write(n.url + "\n");
+              } else if (val === "qr") {
+                setShowQR((v) => !v);
               } else if (val === "delete") {
                 try {
                   await deleteNote(n.server, n.id, n.ownerToken);
@@ -319,9 +339,11 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
               } else if (val === "remove") {
                 removeNote(n.id);
                 setPhase("list");
+                setShowQR(false);
                 setRefreshKey((k) => k + 1);
               } else {
                 setPhase("list");
+                setShowQR(false);
               }
             }}
           />
