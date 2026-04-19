@@ -185,6 +185,9 @@ importers:
       flag-icons:
         specifier: ^7.5.0
         version: 7.5.0
+      hash-wasm:
+        specifier: ^4.12.0
+        version: 4.12.0
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1

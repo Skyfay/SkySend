@@ -8,12 +8,11 @@ All notable changes to SkySend are documented here.
 ### ✨ Features
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
-- **client**: Added `skysend update` command for self-updating the CLI binary from GitHub Releases with SHA-256 checksum verification
-- **client**: Added `skysend interactive` command with menu-driven TUI mode - displays server config (limits, quota, services), interactive file picker, expiry/download selection, and note creation with type selection - launches automatically when running `skysend` without a subcommand
+- **web**: Added Argon2id password KDF support to the web frontend and upload worker using hash-wasm, enabling cross-compatibility with CLI password-protected uploads
 
 ### 🐛 Bug Fixes
-- **client**: Fixed process hanging after upload/download completion by adding explicit exit after command execution
 - **web**: Fixed WebSocket upload failing through Vite dev proxy by enabling `ws: true` on the API proxy config
+- **web**: Fixed password-protected files uploaded via CLI being undecryptable in the web frontend - the web was missing the Argon2id KDF implementation and always fell back to PBKDF2
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
@@ -28,11 +27,11 @@ All notable changes to SkySend are documented here.
 - **docs**: Added CLI client documentation - overview, installation guide (Linux/macOS/Windows), detailed command reference for all 7 commands (`upload`, `download`, `note`, `note:view`, `delete`, `config`, `update`)
 - **docs**: Updated README, docs homepage, getting started, installation, first steps, architecture, setup, and roadmap pages with CLI client information
 
-### � CI/CD
+### 🔧 CI/CD
 - **infra**: Added CLI binary build pipeline to release workflow - compiles Bun binaries for 5 targets (linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64) with SHA-256 checksums and attaches them to GitHub Releases
 - **infra**: Added install scripts for Linux/macOS (`install.sh`) and Windows (`install.ps1`) with automatic platform detection and checksum verification
 
-### �🐳 Docker
+### 🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.4.0`
 - **Also tagged as**: `latest`, `v2`

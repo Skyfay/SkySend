@@ -378,8 +378,15 @@ skysend i [options]           # short alias
 - Displays server info: name, enabled services, max file size, upload quota
 - Menu with available actions based on server capabilities
 - **Upload file(s)**: interactive file path input, expiry selection, download count, password, confirmation before upload
+- **Download file**: enter a share URL, auto-detects password protection, choose save location
 - **Create note**: type selection (text, password, code, markdown, SSH key), content input (inline or from file with `@path`), expiry, max views, password
+- **My uploads**: browse upload and note history, view share URLs, delete from server or remove from local history
+- **Check for updates**: check and install newer CLI versions from GitHub Releases
 - Loops back to the menu after each action until you choose Exit
+
+### Upload History
+
+All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode.
 
 ### Example
 

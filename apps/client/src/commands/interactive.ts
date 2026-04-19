@@ -4,8 +4,10 @@ import type { Command } from "commander";
 import { select, input, confirm, password } from "@inquirer/prompts";
 import {
   createEncryptStream,
+  createDecryptStream,
   calculateEncryptedSize,
   encryptMetadata,
+  decryptMetadata,
   encryptNoteContent,
   toBase64url,
   type FileMetadata,
@@ -16,15 +18,23 @@ import {
 import { Zip, ZipDeflate } from "fflate";
 import {
   fetchConfig,
+  fetchInfo,
+  fetchNoteInfo,
+  fetchQuota,
+  downloadFile,
+  verifyPassword,
   uploadInit,
   uploadChunk,
   uploadFinalize,
   saveMeta,
   createNote,
+  deleteUpload,
+  deleteNote,
   type ServerConfig,
+  type QuotaStatus,
 } from "../lib/api.js";
-import { prepareUpload } from "../lib/auth.js";
-import { buildShareUrl } from "../lib/url.js";
+import { prepareUpload, prepareDownload } from "../lib/auth.js";
+import { buildShareUrl, parseShareUrl } from "../lib/url.js";
 import { resolveServer } from "../lib/config.js";
 import {
   formatBytes,
@@ -36,10 +46,21 @@ import {
   type ProgressState,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import {
+  addUpload,
+  addNote,
+  getUploads,
+  getNotes,
+  removeUpload,
+  removeNote,
+  cleanupExpired,
+  type StoredUpload,
+  type StoredNote,
+} from "../lib/history.js";
 
 // ── Helpers ────────────────────────────────────────────
 
-function printHeader(config: ServerConfig): void {
+function printHeader(config: ServerConfig, quota?: QuotaStatus): void {
   const title = config.customTitle || "SkySend";
   const line = "─".repeat(50);
   writeLine("");
@@ -52,7 +73,10 @@ function printHeader(config: ServerConfig): void {
   writeLine(`  Max file size:  ${formatBytes(config.fileMaxSize)}`);
   writeLine(`  Max files:      ${config.fileMaxFilesPerUpload}`);
 
-  if (config.fileUploadQuotaBytes > 0) {
+  if (quota?.enabled) {
+    const windowMin = Math.round(quota.window / 60);
+    writeLine(`  Upload quota:   ${formatBytes(quota.used)} / ${formatBytes(quota.limit)} (${formatBytes(quota.remaining)} remaining, resets every ${windowMin}min)`);
+  } else if (config.fileUploadQuotaBytes > 0) {
     const windowMin = Math.round(config.fileUploadQuotaWindow / 60);
     writeLine(`  Upload quota:   ${formatBytes(config.fileUploadQuotaBytes)} / ${windowMin}min`);
   }
@@ -321,6 +345,19 @@ async function interactiveUpload(server: string, config: ServerConfig): Promise<
 
   const shareUrl = buildShareUrl(server, "file", uploadResult.id, creds.effectiveSecretB64);
 
+  // Save to history
+  addUpload({
+    id: uploadResult.id,
+    server,
+    url: shareUrl,
+    ownerToken: creds.ownerTokenB64,
+    fileNames: files.map((f) => path.basename(f)),
+    totalSize: totalSize,
+    hasPassword: creds.hasPassword,
+    createdAt: new Date().toISOString(),
+    expireSec,
+  });
+
   writeLine("");
   writeLine(`Share URL: ${shareUrl}`);
   writeLine(`Files: ${files.length} | Size: ${formatBytes(totalSize)} | Expires: ${formatExpiry(expireSec)} | Downloads: ${maxDownloads}`);
@@ -428,10 +465,452 @@ async function interactiveNote(server: string, config: ServerConfig): Promise<vo
 
   const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
 
+  // Save to history
+  addNote({
+    id: result.id,
+    server,
+    url: shareUrl,
+    ownerToken: creds.ownerTokenB64,
+    contentType,
+    hasPassword: creds.hasPassword,
+    createdAt: new Date().toISOString(),
+    expireSec,
+  });
+
   writeLine("");
   writeLine(`Share URL: ${shareUrl}`);
   writeLine(`Type: ${contentType} | Expires: ${formatExpiry(expireSec)} | Views: ${maxViews}`);
   if (creds.hasPassword) writeLine("Password protected: yes");
+}
+
+// ── Download Flow ──────────────────────────────────────
+
+async function interactiveDownload(_server: string): Promise<void> {
+  const url = await input({
+    message: "Share URL:",
+    validate: (val) => {
+      if (!val.trim()) return "Enter a share URL";
+      try { parseShareUrl(val.trim()); return true; } catch { return "Invalid share URL"; }
+    },
+  });
+
+  const parsed = parseShareUrl(url.trim());
+  if (parsed.type !== "file") {
+    throw new Error("This URL is a note. Use 'View note' instead.");
+  }
+
+  writeLine("Fetching file info...");
+  const info = await fetchInfo(parsed.server, parsed.id);
+
+  let pw: string | undefined;
+  if (info.hasPassword) {
+    pw = await password({ message: "Password:", mask: "*" });
+    if (!pw) throw new Error("Password is required for this file");
+  }
+
+  writeLine("Deriving keys...");
+  const creds = await prepareDownload(
+    parsed.secret,
+    info.salt,
+    pw,
+    info.passwordSalt,
+    info.passwordAlgo,
+  );
+
+  if (info.hasPassword) {
+    const valid = await verifyPassword(parsed.server, parsed.id, creds.authTokenB64);
+    if (!valid) throw new Error("Invalid password");
+  }
+
+  let metadata: FileMetadata | undefined;
+  if (info.encryptedMeta && info.nonce) {
+    const ciphertext = new Uint8Array(Buffer.from(info.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
+    const iv = new Uint8Array(Buffer.from(info.nonce, "base64")) as Uint8Array<ArrayBuffer>;
+    metadata = await decryptMetadata(ciphertext, iv, creds.keys.metaKey);
+  }
+
+  const defaultName = metadata?.type === "single"
+    ? metadata.name
+    : metadata?.type === "archive"
+      ? "archive.zip"
+      : `download-${parsed.id}`;
+
+  const outputInput = await input({
+    message: "Save to:",
+    default: path.join(process.cwd(), defaultName),
+  });
+
+  const outputPath = path.resolve(outputInput.trim());
+  const dir = path.dirname(outputPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  writeLine(`Downloading to: ${outputPath}`);
+  const { stream } = await downloadFile(parsed.server, parsed.id, creds.authTokenB64);
+  const decryptedStream = stream.pipeThrough(createDecryptStream(creds.keys.fileKey));
+
+  const progressState: ProgressState = { loaded: 0, total: info.size, startTime: Date.now() };
+  const writer = fs.createWriteStream(outputPath);
+  const reader = decryptedStream.getReader();
+
+  let totalWritten = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    writer.write(value);
+    totalWritten += value.byteLength;
+    progressState.loaded = totalWritten;
+    writeProgress(renderProgress(progressState, "Downloading"));
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    writer.end(() => resolve());
+    writer.on("error", reject);
+  });
+
+  clearLine();
+  writeLine("Download complete.");
+  writeLine(`Saved: ${outputPath} (${formatBytes(totalWritten)})`);
+  if (metadata?.type === "archive") {
+    writeLine(`Archive contains ${metadata.files.length} files`);
+  }
+}
+
+// ── My Uploads Flow ────────────────────────────────────
+
+async function interactiveMyUploads(server: string): Promise<void> {
+  // Clean up locally expired entries across all servers
+  const cleaned = cleanupExpired();
+  if (cleaned.removedUploads > 0 || cleaned.removedNotes > 0) {
+    const parts: string[] = [];
+    if (cleaned.removedUploads > 0) parts.push(`${cleaned.removedUploads} upload(s)`);
+    if (cleaned.removedNotes > 0) parts.push(`${cleaned.removedNotes} note(s)`);
+    writeLine(`Cleaned ${parts.join(" and ")} (expired).`);
+  }
+
+  const uploads = getUploads().filter((u) => u.server === server);
+  const notes = getNotes().filter((n) => n.server === server);
+
+  if (uploads.length === 0 && notes.length === 0) {
+    writeLine("No uploads or notes in history.");
+    return;
+  }
+
+  const choices: Array<{ name: string; value: string }> = [];
+
+  for (const u of uploads) {
+    const age = formatAge(u.createdAt);
+    const names = u.fileNames.join(", ");
+    const label = `[File] ${names} (${formatBytes(u.totalSize)}) - ${age}`;
+    choices.push({ name: label, value: `upload:${u.id}` });
+  }
+
+  for (const n of notes) {
+    const age = formatAge(n.createdAt);
+    const label = `[Note] ${n.contentType} - ${age}`;
+    choices.push({ name: label, value: `note:${n.id}` });
+  }
+
+  choices.push({ name: "Back", value: "back" });
+
+  const selected = await select({ message: "Your uploads:", choices });
+  if (selected === "back") return;
+
+  const [type, id] = selected.split(":") as [string, string];
+
+  if (type === "upload") {
+    const upload = uploads.find((u) => u.id === id);
+    if (!upload) return;
+    await showUploadDetail(upload);
+  } else if (type === "note") {
+    const note = notes.find((n) => n.id === id);
+    if (!note) return;
+    await showNoteDetail(note);
+  }
+}
+
+async function showUploadDetail(upload: StoredUpload): Promise<void> {
+  writeLine("");
+  writeLine(`  ID:        ${upload.id}`);
+  writeLine(`  Files:     ${upload.fileNames.join(", ")}`);
+  writeLine(`  Size:      ${formatBytes(upload.totalSize)}`);
+  writeLine(`  Password:  ${upload.hasPassword ? "yes" : "no"}`);
+  writeLine(`  Created:   ${formatAge(upload.createdAt)}`);
+
+  // Fetch live info from server
+  try {
+    const info = await fetchInfo(upload.server, upload.id);
+    const remaining = info.maxDownloads - info.downloadCount;
+    const expiresAt = new Date(info.expiresAt);
+    const now = new Date();
+    const diffMs = expiresAt.getTime() - now.getTime();
+
+    writeLine(`  Downloads: ${info.downloadCount} / ${info.maxDownloads} (${remaining} remaining)`);
+    if (diffMs > 0) {
+      writeLine(`  Expires:   ${formatTimeRemaining(diffMs)}`);
+    } else {
+      writeLine(`  Expires:   expired`);
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      writeLine(`  Status:    deleted or expired on server`);
+      writeLine(`  URL:       ${upload.url}`);
+      writeLine("");
+      const action = await select({
+        message: "Action:",
+        choices: [
+          { name: "Remove from history", value: "remove" },
+          { name: "Back", value: "back" },
+        ],
+      });
+      if (action === "remove") {
+        removeUpload(upload.id);
+        writeLine("Removed from history.");
+      }
+      return;
+    }
+    writeLine(`  Status:    unable to fetch live info`);
+  }
+
+  writeLine(`  URL:       ${upload.url}`);
+  writeLine("");
+
+  const action = await select({
+    message: "Action:",
+    choices: [
+      { name: "Copy URL (print)", value: "url" },
+      { name: "Delete from server", value: "delete" },
+      { name: "Remove from history", value: "remove" },
+      { name: "Back", value: "back" },
+    ],
+  });
+
+  if (action === "url") {
+    writeLine(upload.url);
+  } else if (action === "delete") {
+    const ok = await confirm({ message: "Delete this upload from the server?" });
+    if (ok) {
+      await deleteUpload(upload.server, upload.id, upload.ownerToken);
+      removeUpload(upload.id);
+      writeLine("Deleted.");
+    }
+  } else if (action === "remove") {
+    removeUpload(upload.id);
+    writeLine("Removed from history.");
+  }
+}
+
+async function showNoteDetail(note: StoredNote): Promise<void> {
+  writeLine("");
+  writeLine(`  ID:        ${note.id}`);
+  writeLine(`  Type:      ${note.contentType}`);
+  writeLine(`  Password:  ${note.hasPassword ? "yes" : "no"}`);
+  writeLine(`  Created:   ${formatAge(note.createdAt)}`);
+
+  // Fetch live info from server
+  try {
+    const info = await fetchNoteInfo(note.server, note.id);
+    const remaining = info.maxViews - info.viewCount;
+    const expiresAt = new Date(info.expiresAt);
+    const now = new Date();
+    const diffMs = expiresAt.getTime() - now.getTime();
+
+    writeLine(`  Views:     ${info.viewCount} / ${info.maxViews} (${remaining} remaining)`);
+    if (diffMs > 0) {
+      writeLine(`  Expires:   ${formatTimeRemaining(diffMs)}`);
+    } else {
+      writeLine(`  Expires:   expired`);
+    }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      writeLine(`  Status:    deleted or expired on server`);
+      writeLine(`  URL:       ${note.url}`);
+      writeLine("");
+      const action = await select({
+        message: "Action:",
+        choices: [
+          { name: "Remove from history", value: "remove" },
+          { name: "Back", value: "back" },
+        ],
+      });
+      if (action === "remove") {
+        removeNote(note.id);
+        writeLine("Removed from history.");
+      }
+      return;
+    }
+    writeLine(`  Status:    unable to fetch live info`);
+  }
+
+  writeLine(`  URL:       ${note.url}`);
+  writeLine("");
+
+  const action = await select({
+    message: "Action:",
+    choices: [
+      { name: "Copy URL (print)", value: "url" },
+      { name: "Delete from server", value: "delete" },
+      { name: "Remove from history", value: "remove" },
+      { name: "Back", value: "back" },
+    ],
+  });
+
+  if (action === "url") {
+    writeLine(note.url);
+  } else if (action === "delete") {
+    const ok = await confirm({ message: "Delete this note from the server?" });
+    if (ok) {
+      await deleteNote(note.server, note.id, note.ownerToken);
+      removeNote(note.id);
+      writeLine("Deleted.");
+    }
+  } else if (action === "remove") {
+    removeNote(note.id);
+    writeLine("Removed from history.");
+  }
+}
+
+function formatTimeRemaining(ms: number): string {
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hours = Math.floor(min / 60);
+  const remMin = min % 60;
+  if (hours < 24) return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+}
+
+function formatAge(isoDate: string): string {
+  const ms = Date.now() - new Date(isoDate).getTime();
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ── Update Flow ────────────────────────────────────────
+
+async function interactiveUpdate(): Promise<void> {
+  const { fileURLToPath } = await import("node:url");
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const pkg = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "..", "package.json"), "utf-8"),
+  ) as { version: string };
+  const currentVersion = pkg.version;
+
+  writeLine(`Current version: v${currentVersion}`);
+  writeLine("Checking for updates...");
+
+  const res = await fetch(
+    "https://api.github.com/repos/skyfay/SkySend/releases/latest",
+    { headers: { "User-Agent": "skysend-cli", Accept: "application/vnd.github+json" } },
+  );
+  if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
+
+  const release = (await res.json()) as {
+    tag_name: string;
+    html_url: string;
+    assets: Array<{ name: string; browser_download_url: string }>;
+  };
+
+  const latestVersion = release.tag_name.replace(/^v/, "");
+  const compare = compareVersions(latestVersion, currentVersion);
+
+  if (compare <= 0) {
+    writeLine(`Already up to date (v${currentVersion}).`);
+    return;
+  }
+
+  writeLine(`New version available: v${latestVersion}`);
+  writeLine(`Release: ${release.html_url}`);
+
+  const ok = await confirm({ message: "Install update?" });
+  if (!ok) return;
+
+  const { platform, arch } = await import("node:os").then((os) => ({
+    platform: os.platform(),
+    arch: os.arch(),
+  }));
+
+  let osName: string;
+  switch (platform) {
+    case "linux":  osName = "linux"; break;
+    case "darwin": osName = "darwin"; break;
+    case "win32":  osName = "windows"; break;
+    default: throw new Error(`Unsupported platform: ${platform}`);
+  }
+
+  let archName: string;
+  switch (arch) {
+    case "x64":   archName = "x64"; break;
+    case "arm64": archName = "arm64"; break;
+    default: throw new Error(`Unsupported architecture: ${arch}`);
+  }
+
+  const platformStr = `${osName}-${archName}`;
+  const assetName = platformStr === "windows-x64" ? `skysend-${platformStr}.exe` : `skysend-${platformStr}`;
+  const asset = release.assets.find((a) => a.name === assetName);
+
+  if (!asset) throw new Error(`No binary found for ${platformStr}`);
+
+  writeLine(`Downloading ${assetName}...`);
+  const dlRes = await fetch(asset.browser_download_url, {
+    headers: { "User-Agent": "skysend-cli" },
+    redirect: "follow",
+  });
+  if (!dlRes.ok || !dlRes.body) throw new Error(`Download failed: ${dlRes.status}`);
+
+  const data = new Uint8Array(await dlRes.arrayBuffer());
+
+  // Verify checksum
+  const checksumAsset = release.assets.find((a) => a.name === "checksums.txt");
+  if (checksumAsset) {
+    try {
+      const csRes = await fetch(checksumAsset.browser_download_url, {
+        headers: { "User-Agent": "skysend-cli" },
+        redirect: "follow",
+      });
+      if (csRes.ok) {
+        const csText = await csRes.text();
+        const line = csText.split("\n").find((l) => l.includes(assetName));
+        if (line) {
+          const expected = line.split(/\s+/)[0]!;
+          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+          const actual = Array.from(new Uint8Array(hashBuffer))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          if (expected !== actual) throw new Error("Checksum mismatch! Aborting.");
+          writeLine("Checksum verified.");
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Checksum")) throw err;
+    }
+  }
+
+  const execPath = process.execPath;
+  const tmpPath = `${execPath}.update`;
+
+  fs.writeFileSync(tmpPath, data);
+  fs.chmodSync(tmpPath, 0o755);
+  fs.renameSync(tmpPath, execPath);
+  writeLine(`Updated to v${latestVersion}.`);
+}
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.replace(/^v/, "").split(".").map(Number);
+  const pb = b.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
 }
 
 // ── Main Menu ──────────────────────────────────────────
@@ -448,17 +927,26 @@ export function registerInteractiveCommand(program: Command): void {
 
         writeLine("Connecting to server...");
         const config = await fetchConfig(server);
-        printHeader(config);
+        let quota: QuotaStatus | undefined;
+        try {
+          quota = await fetchQuota(server);
+        } catch {
+          // Quota endpoint may not be available
+        }
+        printHeader(config, quota);
 
         while (true) {
           const choices: Array<{ name: string; value: string }> = [];
 
           if (config.enabledServices.includes("file")) {
             choices.push({ name: "Upload file(s)", value: "upload" });
+            choices.push({ name: "Download file", value: "download" });
           }
           if (config.enabledServices.includes("note")) {
             choices.push({ name: "Create note", value: "note" });
           }
+          choices.push({ name: "My uploads", value: "history" });
+          choices.push({ name: "Check for updates", value: "update" });
           choices.push({ name: "Exit", value: "exit" });
 
           const action = await select({
@@ -471,8 +959,14 @@ export function registerInteractiveCommand(program: Command): void {
           try {
             if (action === "upload") {
               await interactiveUpload(server, config);
+            } else if (action === "download") {
+              await interactiveDownload(server);
             } else if (action === "note") {
               await interactiveNote(server, config);
+            } else if (action === "history") {
+              await interactiveMyUploads(server);
+            } else if (action === "update") {
+              await interactiveUpdate();
             }
           } catch (err) {
             if (err instanceof ApiError) {

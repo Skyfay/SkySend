@@ -33,6 +33,7 @@ import {
   type ProgressState,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { addUpload } from "../lib/history.js";
 
 interface UploadOptions {
   server?: string;
@@ -545,6 +546,19 @@ export function registerUploadCommand(program: Command): void {
 
         // Build share URL
         const shareUrl = buildShareUrl(server, "file", uploadResult.id, creds.effectiveSecretB64);
+
+        // Save to history
+        addUpload({
+          id: uploadResult.id,
+          server,
+          url: shareUrl,
+          ownerToken: creds.ownerTokenB64,
+          fileNames: files.map((f) => path.basename(f)),
+          totalSize: files.reduce((sum, f) => sum + fs.statSync(f).size, 0),
+          hasPassword: creds.hasPassword,
+          createdAt: new Date().toISOString(),
+          expireSec,
+        });
 
         if (options.json) {
           console.log(JSON.stringify({

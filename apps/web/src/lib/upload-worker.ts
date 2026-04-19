@@ -28,8 +28,27 @@ import {
   randomBytes,
   PASSWORD_SALT_LENGTH,
   type FileMetadata,
+  type Argon2idHashFn,
 } from "@skysend/crypto";
+import { argon2id } from "hash-wasm";
 import { streamingZip } from "./zip";
+
+const hashWasmArgon2: Argon2idHashFn = async (
+  password: Uint8Array,
+  salt: Uint8Array,
+  params: { memory: number; iterations: number; parallelism: number; hashLength: number },
+): Promise<Uint8Array> => {
+  const result = await argon2id({
+    password,
+    salt,
+    parallelism: params.parallelism,
+    iterations: params.iterations,
+    memorySize: params.memory,
+    hashLength: params.hashLength,
+    outputType: "binary",
+  });
+  return new Uint8Array(result);
+};
 
 // ── Message Types ──────────────────────────────────────
 
@@ -92,6 +111,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       const { key: passwordKey, algorithm } = await deriveKeyFromPassword(
         msg.password,
         passwordSalt,
+        hashWasmArgon2,
       );
       passwordAlgo = algorithm;
       effectiveSecret = applyPasswordProtection(secret, passwordKey);

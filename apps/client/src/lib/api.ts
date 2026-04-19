@@ -75,6 +75,17 @@ const noteViewResponseSchema = z.object({
 
 export type NoteViewResponse = z.infer<typeof noteViewResponseSchema>;
 
+const quotaResponseSchema = z.object({
+  enabled: z.boolean(),
+  limit: z.number(),
+  used: z.number(),
+  remaining: z.number(),
+  resetsAt: z.string().nullable(),
+  window: z.number(),
+});
+
+export type QuotaStatus = z.infer<typeof quotaResponseSchema>;
+
 // ── Helpers ────────────────────────────────────────────
 
 async function handleResponse<T>(
@@ -101,6 +112,11 @@ function apiUrl(server: string, path: string): string {
 export async function fetchConfig(server: string): Promise<ServerConfig> {
   const res = await fetch(apiUrl(server, "/api/config"));
   return handleResponse(res, configResponseSchema);
+}
+
+export async function fetchQuota(server: string): Promise<QuotaStatus> {
+  const res = await fetch(apiUrl(server, "/api/quota"));
+  return handleResponse(res, quotaResponseSchema);
 }
 
 // ── Upload ─────────────────────────────────────────────

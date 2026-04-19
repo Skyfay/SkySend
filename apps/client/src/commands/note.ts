@@ -15,6 +15,7 @@ import {
   promptPassword,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { addNote } from "../lib/history.js";
 
 interface NoteOptions {
   server?: string;
@@ -108,6 +109,18 @@ export function registerNoteCommand(program: Command): void {
 
         // Build share URL
         const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
+
+        // Save to history
+        addNote({
+          id: result.id,
+          server,
+          url: shareUrl,
+          ownerToken: creds.ownerTokenB64,
+          contentType,
+          hasPassword: creds.hasPassword,
+          createdAt: new Date().toISOString(),
+          expireSec,
+        });
 
         if (options.json) {
           console.log(JSON.stringify({
