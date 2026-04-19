@@ -126,9 +126,8 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
-      - PUID=1000
-      - PGID=1000
       # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
 ```bash

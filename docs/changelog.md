@@ -2,6 +2,19 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.3.1
+*Release: In Progress*
+
+### 📝 Documentation
+- **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.3.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.3.0 - WebSocket Upload Transport for Improved Performance in Proxied Environments
 *Released: April 17, 2026*
 
