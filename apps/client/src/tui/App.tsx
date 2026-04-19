@@ -16,29 +16,31 @@ import { SettingsView } from "./views/Settings.js";
 
 interface AppProps {
   initialServer?: string;
+  initialView?: View;
+  initialNoteUrl?: string;
 }
 
-export function App({ initialServer }: AppProps): React.ReactElement {
+export function App({ initialServer, initialView, initialNoteUrl }: AppProps): React.ReactElement {
   const [accentColor, setAccentColor] = useState<string | null>(null);
   return (
     <ThemeProvider color={accentColor}>
-      <AppInner initialServer={initialServer} setAccentColor={setAccentColor} />
+      <AppInner initialServer={initialServer} initialView={initialView} initialNoteUrl={initialNoteUrl} setAccentColor={setAccentColor} />
     </ThemeProvider>
   );
 }
 
-function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor: (c: string | null) => void }): React.ReactElement {
+function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }: AppProps & { setAccentColor: (c: string | null) => void }): React.ReactElement {
   const { exit } = useApp();
   const accent = useAccent();
   const didAutoConnect = useRef(false);
-  const [view, setView] = useState<View>(initialServer ? "menu" : "server-select");
+  const [view, setView] = useState<View>(initialServer ? (initialView ?? "menu") : "server-select");
   const [appState, setAppState] = useState<AppState | null>(null);
   const [loading, setLoading] = useState(initialServer ? true : false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState("Loading...");
 
   // Connect to a server
-  const connectToServer = useCallback(async (url: string, name: string) => {
+  const connectToServer = useCallback(async (url: string, name: string, targetView?: View) => {
     setLoading(true);
     setError(null);
     setHint("Connecting to server...");
@@ -48,7 +50,7 @@ function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor
       try { quota = await fetchQuota(url); } catch { /* optional */ }
       setAppState({ server: url, serverName: name, config, quota });
       setAccentColor(config.customColor);
-      setView("menu");
+      setView(targetView ?? "menu");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -60,7 +62,7 @@ function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor
   React.useEffect(() => {
     if (initialServer && !appState && !didAutoConnect.current) {
       didAutoConnect.current = true;
-      void connectToServer(initialServer, initialServer);
+      void connectToServer(initialServer, initialServer, initialView);
     }
   }, [initialServer, appState, connectToServer]);
 
@@ -177,6 +179,7 @@ function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor
             appState={appState}
             onBack={handleBack}
             onError={setError}
+            initialUrl={initialNoteUrl}
           />
         )}
 

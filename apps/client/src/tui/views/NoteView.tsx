@@ -60,11 +60,12 @@ interface NoteViewViewProps {
   appState: AppState;
   onBack: () => void;
   onError: (msg: string) => void;
+  initialUrl?: string;
 }
 
-export function NoteViewView({ onBack }: NoteViewViewProps): React.ReactElement {
+export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.ReactElement {
   const accent = useAccent();
-  const [phase, setPhase] = useState<Phase>("url-input");
+  const [phase, setPhase] = useState<Phase>(initialUrl ? "loading" : "url-input");
   const [content, setContent] = useState("");
   const [contentType, setContentType] = useState("");
   const [viewCount, setViewCount] = useState(0);
@@ -74,6 +75,7 @@ export function NoteViewView({ onBack }: NoteViewViewProps): React.ReactElement 
 
   const [parsedUrl, setParsedUrl] = useState<ReturnType<typeof parseShareUrl> | null>(null);
   const [noteInfo, setNoteInfo] = useState<Awaited<ReturnType<typeof fetchNoteInfo>> | null>(null);
+  const didAutoLoad = React.useRef(false);
 
   const handleUrl = useCallback(async (inputUrl: string) => {
     try {
@@ -122,6 +124,14 @@ export function NoteViewView({ onBack }: NoteViewViewProps): React.ReactElement 
     setMaxViews(response.maxViews);
     setPhase("display");
   }, []);
+
+  // Auto-load when initialUrl is provided
+  React.useEffect(() => {
+    if (initialUrl && !didAutoLoad.current) {
+      didAutoLoad.current = true;
+      void handleUrl(initialUrl);
+    }
+  }, [initialUrl, handleUrl]);
 
   const handlePassword = useCallback(async (pw: string) => {
     try {
