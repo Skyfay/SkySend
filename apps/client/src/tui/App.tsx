@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import { fetchConfig, fetchQuota } from "../lib/api.js";
 import type { View, AppState } from "./types.js";
@@ -30,6 +30,7 @@ export function App({ initialServer }: AppProps): React.ReactElement {
 function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor: (c: string | null) => void }): React.ReactElement {
   const { exit } = useApp();
   const accent = useAccent();
+  const didAutoConnect = useRef(false);
   const [view, setView] = useState<View>(initialServer ? "menu" : "server-select");
   const [appState, setAppState] = useState<AppState | null>(null);
   const [loading, setLoading] = useState(initialServer ? true : false);
@@ -55,9 +56,10 @@ function AppInner({ initialServer, setAccentColor }: AppProps & { setAccentColor
     }
   }, []);
 
-  // Auto-connect if initialServer provided
+  // Auto-connect if initialServer provided (only once)
   React.useEffect(() => {
-    if (initialServer && !appState) {
+    if (initialServer && !appState && !didAutoConnect.current) {
+      didAutoConnect.current = true;
       void connectToServer(initialServer, initialServer);
     }
   }, [initialServer, appState, connectToServer]);
