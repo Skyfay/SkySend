@@ -66,6 +66,7 @@
     "uploading": "Verschlüsseln & Hochladen...",
     "encryptingProgress": "Verschlüsseln...",
     "processing": "Verarbeitung...",
+    "packing": "Dateien packen...",
     "uploadComplete": "Upload abgeschlossen!",
     "shareLink": "Diesen Link teilen",
     "shareLinkHint": "Der Schlüssel befindet sich im URL-Fragment - er erreicht niemals den Server.",

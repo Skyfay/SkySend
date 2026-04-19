@@ -29,14 +29,15 @@ import {
   PASSWORD_SALT_LENGTH,
   type FileMetadata,
 } from "@skysend/crypto";
+import { streamingZip } from "./zip";
 
 // ── Message Types ──────────────────────────────────────
 
 export interface UploadWorkerRequest {
   /** File to upload (single-file mode). */
   file?: File;
-  /** Pre-zipped data (multi-file mode). Transferred, not copied. */
-  zipData?: ArrayBuffer;
+  /** Files to zip and upload (multi-file mode). */
+  files?: File[];
   /** Master secret (32 bytes). Transferred. */
   secret: ArrayBuffer;
   /** HKDF salt (16 bytes). Transferred. */
@@ -103,19 +104,24 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     if (msg.file) {
       plaintextStream = msg.file.stream();
       plaintextSize = msg.file.size;
-    } else if (msg.zipData) {
-      const zipBytes = new Uint8Array(msg.zipData);
-      plaintextSize = zipBytes.byteLength;
-      let offset = 0;
+    } else if (msg.files && msg.files.length > 0) {
+      // Streaming ZIP: read files one at a time, report byte-accurate progress
+      post({ type: "phase", phase: "zipping" });
+      const zipResult = await streamingZip(msg.files, (bytesRead, totalBytes) => {
+        post({ type: "progress", loaded: bytesRead, total: totalBytes });
+      });
+      plaintextSize = zipResult.totalSize;
+      // Stream from the chunks array without concatenating into a single buffer
+      // to avoid exceeding the ~2 GB contiguous ArrayBuffer limit.
+      let chunkIndex = 0;
       plaintextStream = new ReadableStream<Uint8Array>({
         pull(controller) {
-          if (offset >= zipBytes.length) {
+          if (chunkIndex >= zipResult.chunks.length) {
             controller.close();
             return;
           }
-          const end = Math.min(offset + 65536, zipBytes.length);
-          controller.enqueue(zipBytes.subarray(offset, end));
-          offset = end;
+          controller.enqueue(zipResult.chunks[chunkIndex]!);
+          chunkIndex++;
         },
       });
     } else {

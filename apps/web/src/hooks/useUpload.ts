@@ -2,11 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import {
   generateSecret,
   generateSalt,
-  calculateEncryptedSize,
   type FileMetadata,
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
-import { zipFilesAsync } from "@/lib/zip";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
 import { formatBytes } from "@/lib/utils";
 
@@ -105,9 +103,6 @@ export function useUpload() {
       let metadata: FileMetadata;
       const fileNames: string[] = [];
 
-      // Prepare worker payload
-      let zipData: ArrayBuffer | undefined;
-
       if (files.length === 1) {
         const file = files[0]!;
         metadata = {
@@ -118,16 +113,6 @@ export function useUpload() {
         };
         fileNames.push(file.name);
       } else {
-        // Zip on main thread using fflate's built-in workers
-        setState((s) => ({ ...s, phase: "zipping", progress: 0 }));
-        const fileEntries = await Promise.all(
-          files.map(async (f) => ({
-            name: f.webkitRelativePath || f.name,
-            data: new Uint8Array(await f.arrayBuffer()),
-          })),
-        );
-        const zipped = await zipFilesAsync(fileEntries);
-        zipData = zipped.buffer as ArrayBuffer;
         metadata = {
           type: "archive",
           files: files.map((f) => ({
@@ -141,8 +126,9 @@ export function useUpload() {
         }
       }
 
-      // Spawn upload worker - encryption + upload run off the main thread
-      setState((s) => ({ ...s, phase: "uploading", progress: 0, speed: null }));
+      // Spawn upload worker - zipping (if multi-file), encryption + upload
+      // all run off the main thread.
+      setState((s) => ({ ...s, phase: files.length > 1 ? "zipping" : "uploading", progress: 0, speed: null }));
 
       const worker = new Worker(
         new URL("../lib/upload-worker.ts", import.meta.url),
@@ -155,18 +141,10 @@ export function useUpload() {
         secret.buffer as ArrayBuffer,
         salt.buffer as ArrayBuffer,
       ];
-      if (zipData) {
-        transferable.push(zipData);
-      }
 
       // Speed calculation state
       let lastLoaded = 0;
       let lastTime = performance.now();
-
-      const plaintextSize = zipData
-        ? zipData.byteLength
-        : files[0]!.size;
-      const encryptedSize = calculateEncryptedSize(plaintextSize);
 
       const result = await new Promise<{
         id: string;
@@ -177,7 +155,10 @@ export function useUpload() {
           const msg = e.data;
           switch (msg.type) {
             case "phase":
-              setState((s) => ({ ...s, phase: msg.phase as UploadPhase }));
+              // Reset speed tracking on phase change
+              lastLoaded = 0;
+              lastTime = performance.now();
+              setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
               break;
             case "progress": {
               const now = performance.now();
@@ -194,7 +175,7 @@ export function useUpload() {
                 ...s,
                 progress: Math.min(
                   99,
-                  Math.round((msg.loaded / encryptedSize) * 100),
+                  Math.round((msg.loaded / msg.total) * 100),
                 ),
                 ...(speed ? { speed } : {}),
               }));
@@ -215,7 +196,7 @@ export function useUpload() {
         worker.postMessage(
           {
             file: files.length === 1 ? files[0] : undefined,
-            zipData,
+            files: files.length > 1 ? files : undefined,
             secret: secret.buffer,
             salt: salt.buffer,
             maxDownloads,

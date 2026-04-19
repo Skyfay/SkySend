@@ -66,6 +66,7 @@
     "uploading": "Szyfrowanie i przesyłanie...",
     "encryptingProgress": "Szyfrowanie...",
     "processing": "Przetwarzanie...",
+    "packing": "Pakowanie plików...",
     "uploadComplete": "Przesyłanie zakończone!",
     "shareLink": "Udostępnij ten link",
     "shareLinkHint": "Klucz szyfrowania znajduje się we fragmencie URL - nigdy nie trafia na serwer.",
