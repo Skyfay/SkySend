@@ -8,6 +8,7 @@ All notable changes to SkySend are documented here.
 ### ✨ Features
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **cli**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
+- **cli**: Added `skysend update` command for self-updating the CLI binary from GitHub Releases with SHA-256 checksum verification
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
@@ -20,7 +21,11 @@ All notable changes to SkySend are documented here.
 ### 📝 Documentation
 - **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
 
-### 🐳 Docker
+### � CI/CD
+- **infra**: Added CLI binary build pipeline to release workflow - compiles Bun binaries for 5 targets (linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64) with SHA-256 checksums and attaches them to GitHub Releases
+- **infra**: Added install scripts for Linux/macOS (`install.sh`) and Windows (`install.ps1`) with automatic platform detection and checksum verification
+
+### �🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.4.0`
 - **Also tagged as**: `latest`, `v2`
