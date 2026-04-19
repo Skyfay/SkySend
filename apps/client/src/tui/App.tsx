@@ -56,7 +56,7 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setAccentColor]);
 
   // Auto-connect if initialServer provided (only once)
   React.useEffect(() => {
@@ -64,7 +64,7 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
       didAutoConnect.current = true;
       void connectToServer(initialServer, initialServer, initialView);
     }
-  }, [initialServer, appState, connectToServer]);
+  }, [initialServer, initialView, appState, connectToServer]);
 
   const refreshQuota = useCallback(async () => {
     if (!appState) return;

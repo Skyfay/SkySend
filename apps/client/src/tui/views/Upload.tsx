@@ -309,7 +309,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     } finally {
       zipCleanup?.();
     }
-  }, [files, password, maxDownloads, expireSec, server, totalSize]);
+  }, [files, password, maxDownloads, expireSec, server, totalSize, config.fileUploadSpeedLimit, config.fileUploadWs]);
 
   // Done / Error view - press any key to go back
   useInput((input, key) => {

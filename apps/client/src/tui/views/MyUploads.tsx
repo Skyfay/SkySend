@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
 import { fetchInfo, fetchNoteInfo, deleteUpload, deleteNote } from "../../lib/api.js";
 import {
@@ -68,18 +68,16 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
   const [selectedNote, setSelectedNote] = useState<StoredNote | null>(null);
   const [liveUpload, setLiveUpload] = useState<LiveUploadInfo | null>(null);
   const [liveNote, setLiveNote] = useState<LiveNoteInfo | null>(null);
-  const [cleanupMsg, setCleanupMsg] = useState("");
-  const [, setRefreshKey] = useState(0);
-  const [showQR, setShowQR] = useState(false);
-
-  // Cleanup on mount
-  useEffect(() => {
+  const [now] = useState(() => Date.now());
+  const [cleanupMsg] = useState(() => {
     const cleaned = cleanupExpired();
     const parts: string[] = [];
     if (cleaned.removedUploads > 0) parts.push(`${cleaned.removedUploads} upload(s)`);
     if (cleaned.removedNotes > 0) parts.push(`${cleaned.removedNotes} note(s)`);
-    if (parts.length > 0) setCleanupMsg(`Cleaned ${parts.join(" and ")} (expired)`);
-  }, []);
+    return parts.length > 0 ? `Cleaned ${parts.join(" and ")} (expired)` : "";
+  });
+  const [, setRefreshKey] = useState(0);
+  const [showQR, setShowQR] = useState(false);
 
   const uploads = getUploads().filter((u) => u.server === server);
   const notes = getNotes().filter((n) => n.server === server);
@@ -214,7 +212,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
               </Text>
               <Text>
                 <Text dimColor>Expires:   </Text>
-                {formatTimeRemaining(new Date(liveUpload.expiresAt).getTime() - Date.now())}
+                {formatTimeRemaining(new Date(liveUpload.expiresAt).getTime() - now)}
               </Text>
             </>
           )}
@@ -300,7 +298,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
               </Text>
               <Text>
                 <Text dimColor>Expires:   </Text>
-                {formatTimeRemaining(new Date(liveNote.expiresAt).getTime() - Date.now())}
+                {formatTimeRemaining(new Date(liveNote.expiresAt).getTime() - now)}
               </Text>
             </>
           )}

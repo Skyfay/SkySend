@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
@@ -26,16 +26,11 @@ export function FileExplorer({
 }: FileExplorerProps): React.ReactElement {
   const accent = useAccent();
   const [cwd, setCwd] = useState(initialDir ?? process.cwd());
-  const [entries, setEntries] = useState<FileEntry[]>([]);
-  const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState(false);
 
-  useEffect(() => {
-    const items = readDirFull(cwd, showHidden);
-    setEntries(items);
-    setCursor(0);
-  }, [cwd, showHidden]);
+  const entries = React.useMemo(() => readDirFull(cwd, showHidden), [cwd, showHidden]);
+  const [cursor, setCursor] = useState(0);
 
   const maxVisible = 18;
   const start = Math.max(0, Math.min(cursor - Math.floor(maxVisible / 2), entries.length + 1 - maxVisible));
@@ -61,6 +56,7 @@ export function FileExplorer({
     // Toggle hidden files
     if (input === "." && key.ctrl) {
       setShowHidden((h) => !h);
+      setCursor(0);
       return;
     }
 
@@ -90,13 +86,17 @@ export function FileExplorer({
       if (cursor === 0) {
         // Go up
         const parent = path.dirname(cwd);
-        if (parent !== cwd) setCwd(parent);
+        if (parent !== cwd) {
+          setCwd(parent);
+          setCursor(0);
+        }
         return;
       }
       const entry = entries[cursor - 1];
       if (!entry) return;
       if (entry.isDirectory) {
         setCwd(path.join(cwd, entry.name));
+        setCursor(0);
         return;
       }
       // Single file - select and confirm

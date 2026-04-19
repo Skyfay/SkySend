@@ -77,6 +77,28 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   const [noteInfo, setNoteInfo] = useState<Awaited<ReturnType<typeof fetchNoteInfo>> | null>(null);
   const didAutoLoad = React.useRef(false);
 
+  const loadNote = useCallback(async (
+    parsed: ReturnType<typeof parseShareUrl>,
+    info: Awaited<ReturnType<typeof fetchNoteInfo>>,
+    pw?: string,
+  ) => {
+    setPhase("loading");
+    const creds = await prepareDownload(
+      parsed.secret, info.salt, pw, info.passwordSalt, info.passwordAlgo,
+    );
+
+    const response = await viewNote(parsed.server, parsed.id, creds.authTokenB64);
+
+    const ct = new Uint8Array(Buffer.from(response.encryptedContent, "base64")) as Uint8Array<ArrayBuffer>;
+    const nonce = new Uint8Array(Buffer.from(response.nonce, "base64")) as Uint8Array<ArrayBuffer>;
+    const decrypted = await decryptNoteContent(ct, nonce, creds.keys.metaKey);
+
+    setContent(decrypted);
+    setViewCount(response.viewCount);
+    setMaxViews(response.maxViews);
+    setPhase("display");
+  }, []);
+
   const handleUrl = useCallback(async (inputUrl: string) => {
     try {
       const parsed = parseShareUrl(inputUrl.trim());
@@ -101,29 +123,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, []);
-
-  const loadNote = useCallback(async (
-    parsed: ReturnType<typeof parseShareUrl>,
-    info: Awaited<ReturnType<typeof fetchNoteInfo>>,
-    pw?: string,
-  ) => {
-    setPhase("loading");
-    const creds = await prepareDownload(
-      parsed.secret, info.salt, pw, info.passwordSalt, info.passwordAlgo,
-    );
-
-    const response = await viewNote(parsed.server, parsed.id, creds.authTokenB64);
-
-    const ct = new Uint8Array(Buffer.from(response.encryptedContent, "base64")) as Uint8Array<ArrayBuffer>;
-    const nonce = new Uint8Array(Buffer.from(response.nonce, "base64")) as Uint8Array<ArrayBuffer>;
-    const decrypted = await decryptNoteContent(ct, nonce, creds.keys.metaKey);
-
-    setContent(decrypted);
-    setViewCount(response.viewCount);
-    setMaxViews(response.maxViews);
-    setPhase("display");
-  }, []);
+  }, [loadNote]);
 
   // Auto-load when initialUrl is provided
   React.useEffect(() => {

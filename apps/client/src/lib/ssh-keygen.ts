@@ -4,7 +4,6 @@
 // Passphrase: PKCS#8 EncryptedPrivateKeyInfo (PBES2 / PBKDF2-SHA256 / AES-256-CBC)
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 interface CryptoKeyPairCompat { publicKey: CryptoKey; privateKey: CryptoKey; }
 interface JsonWebKeyCompat {
   n?: string; e?: string; d?: string; p?: string; q?: string; qi?: string;
