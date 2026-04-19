@@ -2,31 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.4.0
-*Release: In Progress*
+## v2.4.0 - CLI Client, PWA Support and ZIP creating improvements
+*Released: April 19, 2026*
 
 ### ✨ Features
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
 - **web**: Added Argon2id password KDF support to the web frontend and upload worker using hash-wasm, enabling cross-compatibility with CLI password-protected uploads
-- **client**: Added QR code display for share URLs after file upload and note creation (toggle with q key)
 
 ### 🐛 Bug Fixes
 - **web**: Fixed WebSocket upload failing through Vite dev proxy by enabling `ws: true` on the API proxy config
-- **web**: Fixed password-protected files uploaded via CLI being undecryptable in the web frontend - the web was missing the Argon2id KDF implementation and always fell back to PBKDF2
-- **client**: Fixed TUI note creation using standard base64 instead of base64url for encrypted content - notes created in the TUI were not decryptable by the web frontend
-- **client**: Fixed compiled binary crashing on startup due to `package.json` not being available on disk - version is now embedded at build time via `version.ts`
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
 - **web**: Multi-file ZIP creation moved from main thread into the upload worker, reducing peak memory usage by ~50% for large uploads
 - **web**: Average upload speed is now displayed on the share link page after upload completes
-- **client**: Upload done screen now shows the transport method (HTTP chunked)
-- **client**: Removed 4 unused dependencies (`@inquirer/prompts`, `ink-select-input`, `ink-spinner`, `ink-text-input`)
 
 ### 🔄 Changed
 - **cli**: Renamed admin CLI binary from `skysend` to `skysend-cli` to avoid conflict with the new client binary (consistent with Docker and documentation)
-- **client**: `note:view` command now launches the interactive TUI instead of a plain-text CLI output - provides password entry rendering, SSH key display, and save-to-file support
 
 ### 📝 Documentation
 - **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
