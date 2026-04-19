@@ -219,8 +219,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           } satisfies SingleFileMetadata;
 
       const encMeta = await encryptMetadata(metadata, creds.keys.metaKey);
-      const encryptedMeta = Buffer.from(encMeta.ciphertext).toString("base64");
-      const nonce = Buffer.from(encMeta.iv).toString("base64");
+      const encryptedMeta = toBase64url(encMeta.ciphertext);
+      const nonce = toBase64url(encMeta.iv);
       await saveMeta(server, uploadId, creds.ownerTokenB64, encryptedMeta, nonce);
 
       const url = buildShareUrl(server, "file", uploadId, creds.effectiveSecretB64);
@@ -404,6 +404,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           <Text><Text dimColor>Files:     </Text>{files.length} ({formatBytes(totalSize)})</Text>
           <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
           <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
+          <Text><Text dimColor>Transport: </Text>HTTP chunked</Text>
           {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
         </Box>
         {showQR && (

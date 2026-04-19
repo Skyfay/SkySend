@@ -78,8 +78,8 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       const encrypted = await encryptNoteContent(content, creds.keys.metaKey);
 
       const result = await createNote(server, {
-        encryptedContent: Buffer.from(encrypted.ciphertext).toString("base64"),
-        nonce: Buffer.from(encrypted.nonce).toString("base64"),
+        encryptedContent: toBase64url(encrypted.ciphertext),
+        nonce: toBase64url(encrypted.nonce),
         salt: toBase64url(creds.salt),
         ownerToken: creds.ownerTokenB64,
         authToken: creds.authTokenB64,

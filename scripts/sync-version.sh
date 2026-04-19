@@ -48,6 +48,14 @@ sync_files() {
       echo "  ✓ ${PKG#$ROOT_DIR/}"
     fi
   done
+
+  # Sync client version.ts (embedded in compiled binary)
+  local VERSION_TS="$ROOT_DIR/apps/client/src/version.ts"
+  cat > "$VERSION_TS" <<EOF
+// Auto-synced by scripts/sync-version.sh - do not edit manually
+export const APP_VERSION = "$VERSION";
+EOF
+  echo "  ✓ apps/client/src/version.ts"
 }
 
 # ── Insert changelog block for new version ────────────────────────

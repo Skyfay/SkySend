@@ -1,17 +1,11 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as os from "node:os";
-import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { writeLine } from "../lib/progress.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { APP_VERSION } from "../version.js";
 
 function getCurrentVersion(): string {
-  const pkg = JSON.parse(
-    fs.readFileSync(path.resolve(__dirname, "..", "..", "package.json"), "utf-8"),
-  ) as { version: string };
-  return pkg.version;
+  return APP_VERSION;
 }
 
 interface GithubRelease {

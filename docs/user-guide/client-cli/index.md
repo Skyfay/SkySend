@@ -127,6 +127,7 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 
 | Command | Description |
 | --- | --- |
+| `skysend` | Interactive menu-driven mode (recommended) |
 | `skysend upload <files...>` | Upload files with E2E encryption |
 | `skysend download <url>` | Download and decrypt a file |
 | `skysend note <text>` | Create an encrypted note |
@@ -136,7 +137,6 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 | `skysend config set-server <url>` | Set default server |
 | `skysend config reset` | Reset configuration |
 | `skysend update` | Self-update to latest version |
-| `skysend interactive` | Interactive menu-driven mode |
 | `skysend --version` | Show current version |
 | `skysend --help` | Show help |
 
