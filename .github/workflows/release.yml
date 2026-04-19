@@ -260,14 +260,6 @@ jobs:
       - name: Compile binary
         run: pnpm --filter @skysend/client build:${{ matrix.target }}
 
-      - name: Rename binary (Unix)
-        if: runner.os != 'Windows'
-        run: mv apps/client/dist/skysend apps/client/dist/skysend-${{ matrix.target }}
-
-      - name: Rename binary (Windows)
-        if: runner.os == 'Windows'
-        run: mv apps/client/dist/skysend.exe apps/client/dist/skysend-${{ matrix.target }}.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
