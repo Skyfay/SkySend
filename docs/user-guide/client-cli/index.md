@@ -12,6 +12,7 @@ The CLI client (`skysend`) lets you:
 - **View** encrypted notes from the terminal
 - **Delete** uploads and notes using the owner token
 - **Self-update** to the latest version from GitHub Releases
+- **Interactive mode** with menu-driven TUI - displays server config, limits, and quota
 
 All cryptographic operations use the same `@skysend/crypto` library as the web frontend - AES-256-GCM streaming encryption, HKDF-SHA256 key derivation, and Argon2id password protection.
 
@@ -135,6 +136,7 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 | `skysend config set-server <url>` | Set default server |
 | `skysend config reset` | Reset configuration |
 | `skysend update` | Self-update to latest version |
+| `skysend interactive` | Interactive menu-driven mode |
 | `skysend --version` | Show current version |
 | `skysend --help` | Show help |
 

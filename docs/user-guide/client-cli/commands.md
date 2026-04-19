@@ -355,6 +355,40 @@ Alternatively, re-run the install script.
 
 ---
 
+## interactive (default)
+
+Launch an interactive menu-driven mode. Fetches the server configuration and displays available options, limits, and quota information.
+
+This is the **default command** - running `skysend` without a subcommand launches interactive mode automatically.
+
+```bash
+skysend                       # launches interactive mode
+skysend interactive [options]
+skysend i [options]           # short alias
+```
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Server URL (overrides config) |
+
+### Features
+
+- Displays server info: name, enabled services, max file size, upload quota
+- Menu with available actions based on server capabilities
+- **Upload file(s)**: interactive file path input, expiry selection, download count, password, confirmation before upload
+- **Create note**: type selection (text, password, code, markdown, SSH key), content input (inline or from file with `@path`), expiry, max views, password
+- Loops back to the menu after each action until you choose Exit
+
+### Example
+
+```bash
+skysend interactive --server https://send.example.com
+```
+
+---
+
 ## Global Options
 
 These options are available on all commands:

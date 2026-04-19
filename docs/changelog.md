@@ -9,6 +9,11 @@ All notable changes to SkySend are documented here.
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
 - **client**: Added `skysend update` command for self-updating the CLI binary from GitHub Releases with SHA-256 checksum verification
+- **client**: Added `skysend interactive` command with menu-driven TUI mode - displays server config (limits, quota, services), interactive file picker, expiry/download selection, and note creation with type selection - launches automatically when running `skysend` without a subcommand
+
+### 🐛 Bug Fixes
+- **client**: Fixed process hanging after upload/download completion by adding explicit exit after command execution
+- **web**: Fixed WebSocket upload failing through Vite dev proxy by enabling `ws: true` on the API proxy config
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner

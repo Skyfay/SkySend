@@ -20,6 +20,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.4.1",
     "@skysend/crypto": "workspace:*",
     "commander": "^13.1.0",
     "fflate": "^0.8.2",
