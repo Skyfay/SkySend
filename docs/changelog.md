@@ -9,6 +9,7 @@ All notable changes to SkySend are documented here.
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
 - **web**: Added Argon2id password KDF support to the web frontend and upload worker using hash-wasm, enabling cross-compatibility with CLI password-protected uploads
+- **client**: Added QR code display for share URLs after file upload and note creation (toggle with q key)
 
 ### 🐛 Bug Fixes
 - **web**: Fixed WebSocket upload failing through Vite dev proxy by enabling `ws: true` on the API proxy config

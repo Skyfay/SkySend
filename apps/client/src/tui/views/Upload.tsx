@@ -21,6 +21,7 @@ import { TextPrompt } from "../components/TextPrompt.js";
 import { ProgressBar } from "../components/ProgressBar.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
+import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 
 type Phase =
   | "file-select"
@@ -112,6 +113,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const [packProgress, setPackProgress] = useState({ percent: 0, packed: 0, total: 0 });
   const [shareUrl, setShareUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showQR, setShowQR] = useState(false);
 
   const totalSize = files.reduce((sum, f) => {
     try { return sum + fs.statSync(f).size; } catch { return sum; }
@@ -242,7 +244,11 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   }, [files, password, maxDownloads, expireSec, server, totalSize]);
 
   // Done / Error view - press any key to go back
-  useInput((_input, key) => {
+  useInput((input, key) => {
+    if (phase === "done" && input === "q") {
+      setShowQR((v) => !v);
+      return;
+    }
     if ((phase === "done" || phase === "error") && (key.return || key.escape)) {
       onBack();
     }
@@ -400,8 +406,13 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
           {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
         </Box>
+        {showQR && (
+          <Box marginTop={1}>
+            <QRCodeDisplay url={shareUrl} />
+          </Box>
+        )}
         <Box marginTop={1}>
-          <Text dimColor>Press Enter or Esc to go back</Text>
+          <Text dimColor>q QR code  Enter/Esc back</Text>
         </Box>
       </Box>
     );

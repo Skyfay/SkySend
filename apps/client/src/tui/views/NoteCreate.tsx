@@ -15,6 +15,7 @@ import { MultiLineInput } from "../components/MultiLineInput.js";
 import { FileExplorer } from "../components/FileExplorer.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
+import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 
 type Phase =
   // Common
@@ -49,6 +50,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   const [password, setPassword] = useState<string | undefined>();
   const [shareUrl, setShareUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showQR, setShowQR] = useState(false);
 
   // Password note state
   const [pwEntries, setPwEntries] = useState<PasswordEntry[]>([]);
@@ -105,7 +107,11 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
     }
   }, [content, contentType, maxViews, expireSec, password, server]);
 
-  useInput((_input, key) => {
+  useInput((input, key) => {
+    if (phase === "done" && input === "q") {
+      setShowQR((v) => !v);
+      return;
+    }
     if ((phase === "done" || phase === "error") && (key.return || key.escape)) {
       onBack();
     }
@@ -531,7 +537,12 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
           <Text><Text dimColor>Views:     </Text>{maxViews}</Text>
           {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
         </Box>
-        <Box marginTop={1}><Text dimColor>Press Enter or Esc to go back</Text></Box>
+        {showQR && (
+          <Box marginTop={1}>
+            <QRCodeDisplay url={shareUrl} />
+          </Box>
+        )}
+        <Box marginTop={1}><Text dimColor>q QR code  Enter/Esc back</Text></Box>
       </Box>
     );
   }
