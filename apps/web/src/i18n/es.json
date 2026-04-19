@@ -66,6 +66,7 @@
     "uploading": "Cifrando y subiendo...",
     "encryptingProgress": "Cifrando...",
     "processing": "Procesando...",
+    "packing": "Empaquetando archivos...",
     "uploadComplete": "¡Subida completada!",
     "shareLink": "Compartir este enlace",
     "shareLinkHint": "La clave de cifrado está en el fragmento de la URL - nunca llega al servidor.",

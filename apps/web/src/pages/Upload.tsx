@@ -157,7 +157,7 @@ export function UploadPage() {
 
   // Show share link when done
   if (uploadHook.phase === "done" && uploadHook.shareLink) {
-    return <ShareLink link={uploadHook.shareLink} onNewUpload={handleNewUpload} />;
+    return <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload} />;
   }
 
   // Dedicated upload-in-progress view

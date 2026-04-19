@@ -1,8 +1,10 @@
 # Installation
 
-This guide covers how to install and run SkySend using Docker.
+This guide covers how to install and run SkySend using Docker, and how to install the CLI client for terminal usage.
 
-## Prerequisites
+## Server (Docker)
+
+### Prerequisites
 
 - Docker Engine 20.10+
 - Docker Compose v2+ (recommended)
@@ -98,6 +100,31 @@ Response:
 ```
 
 The health check runs every 30 seconds. Docker marks the container as `unhealthy` if 3 consecutive checks fail.
+
+## CLI Client
+
+The SkySend CLI client lets you upload and download files from the terminal with the same end-to-end encryption as the web interface. It is a standalone binary with no runtime dependencies.
+
+### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+```
+
+### Verify Installation
+
+```bash
+skysend --version
+skysend --help
+```
+
+See the full [CLI Client documentation](/user-guide/client-cli/) for setup, configuration, and all available commands.
 
 ## Next Steps
 

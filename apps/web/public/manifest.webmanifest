@@ -1,0 +1,21 @@
+{
+  "name": "SkySend",
+  "short_name": "SkySend",
+  "description": "End-to-end encrypted file sharing. No accounts, no tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

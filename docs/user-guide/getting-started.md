@@ -44,5 +44,6 @@ That's it. Only `BASE_URL` is required - see [Environment Variables](/user-guide
 
 - [Installation](/user-guide/installation) - Different ways to deploy SkySend
 - [First Steps](/user-guide/first-steps) - Upload your first file
+- [CLI Client](/user-guide/client-cli/) - Upload and download from the terminal
 - [Docker Setup](/user-guide/self-hosting/docker) - Detailed Docker configuration
 - [Configuration](/user-guide/configuration/environment-variables) - All environment variables

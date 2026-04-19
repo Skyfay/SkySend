@@ -19,7 +19,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}"],
+    files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,
     },
@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts"],
+    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts", "apps/client/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         ...globals.node,

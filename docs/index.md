@@ -44,6 +44,9 @@ features:
   - icon: 🛠️
     title: Admin CLI
     details: Manage uploads, view statistics, trigger cleanup, and inspect configuration from the command line inside the container.
+  - icon: 💻
+    title: CLI Client
+    details: Upload and download files from the terminal with full E2E encryption. Pre-built binaries for Linux, macOS, and Windows with self-update support.
   - icon: ☁️
     title: S3 Storage Support
     details: Optional S3-compatible storage backend for Cloudflare R2, AWS S3, MinIO, and more. Serve files via public URL or presigned URLs.
@@ -68,14 +71,6 @@ Get SkySend running in seconds with Docker:
 
 ::: code-group
 
-```bash [Docker Run]
-docker run -d --name skysend -p 3000:3000 \
-  -e BASE_URL=http://localhost:3000 \
-  -v "$(pwd)/data:/data" \
-  -v "$(pwd)/uploads:/uploads" \
-  skyfay/skysend:latest
-```
-
 ```yaml [Docker Compose]
 services:
   skysend:
@@ -89,11 +84,45 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
+      # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # There are a lot of customization options available, so make sure to check the documentation for more details.
+```
+
+```bash [Docker Run]
+docker run -d --name skysend -p 3000:3000 \
+  -e BASE_URL=http://localhost:3000 \
+  -v "$(pwd)/data:/data" \
+  -v "$(pwd)/uploads:/uploads" \
+  skyfay/skysend:latest
 ```
 
 :::
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## CLI Client
+
+Upload and download files from the terminal with end-to-end encryption:
+
+::: code-group
+
+```bash [Linux / macOS]
+curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+```
+
+```powershell [Windows (PowerShell)]
+irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+```
+
+:::
+
+```bash
+skysend config set-server https://your-instance.com
+skysend upload ./document.pdf
+skysend download https://your-instance.com/file/abc123#secret
+```
+
+See the full [CLI Client documentation](/user-guide/client-cli/) for all commands and options.
 
 ## 💬 Community & Support
 

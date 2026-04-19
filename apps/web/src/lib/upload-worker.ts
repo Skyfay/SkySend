@@ -28,15 +28,35 @@ import {
   randomBytes,
   PASSWORD_SALT_LENGTH,
   type FileMetadata,
+  type Argon2idHashFn,
 } from "@skysend/crypto";
+import { argon2id } from "hash-wasm";
+import { streamingZip } from "./zip";
+
+const hashWasmArgon2: Argon2idHashFn = async (
+  password: Uint8Array,
+  salt: Uint8Array,
+  params: { memory: number; iterations: number; parallelism: number; hashLength: number },
+): Promise<Uint8Array> => {
+  const result = await argon2id({
+    password,
+    salt,
+    parallelism: params.parallelism,
+    iterations: params.iterations,
+    memorySize: params.memory,
+    hashLength: params.hashLength,
+    outputType: "binary",
+  });
+  return new Uint8Array(result);
+};
 
 // ── Message Types ──────────────────────────────────────
 
 export interface UploadWorkerRequest {
   /** File to upload (single-file mode). */
   file?: File;
-  /** Pre-zipped data (multi-file mode). Transferred, not copied. */
-  zipData?: ArrayBuffer;
+  /** Files to zip and upload (multi-file mode). */
+  files?: File[];
   /** Master secret (32 bytes). Transferred. */
   secret: ArrayBuffer;
   /** HKDF salt (16 bytes). Transferred. */
@@ -91,6 +111,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       const { key: passwordKey, algorithm } = await deriveKeyFromPassword(
         msg.password,
         passwordSalt,
+        hashWasmArgon2,
       );
       passwordAlgo = algorithm;
       effectiveSecret = applyPasswordProtection(secret, passwordKey);
@@ -103,19 +124,24 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     if (msg.file) {
       plaintextStream = msg.file.stream();
       plaintextSize = msg.file.size;
-    } else if (msg.zipData) {
-      const zipBytes = new Uint8Array(msg.zipData);
-      plaintextSize = zipBytes.byteLength;
-      let offset = 0;
+    } else if (msg.files && msg.files.length > 0) {
+      // Streaming ZIP: read files one at a time, report byte-accurate progress
+      post({ type: "phase", phase: "zipping" });
+      const zipResult = await streamingZip(msg.files, (bytesRead, totalBytes) => {
+        post({ type: "progress", loaded: bytesRead, total: totalBytes });
+      });
+      plaintextSize = zipResult.totalSize;
+      // Stream from the chunks array without concatenating into a single buffer
+      // to avoid exceeding the ~2 GB contiguous ArrayBuffer limit.
+      let chunkIndex = 0;
       plaintextStream = new ReadableStream<Uint8Array>({
         pull(controller) {
-          if (offset >= zipBytes.length) {
+          if (chunkIndex >= zipResult.chunks.length) {
             controller.close();
             return;
           }
-          const end = Math.min(offset + 65536, zipBytes.length);
-          controller.enqueue(zipBytes.subarray(offset, end));
-          offset = end;
+          controller.enqueue(zipResult.chunks[chunkIndex]!);
+          chunkIndex++;
         },
       });
     } else {

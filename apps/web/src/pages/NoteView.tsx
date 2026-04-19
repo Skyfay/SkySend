@@ -18,6 +18,7 @@ import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { NoteContent } from "@/components/NoteContent";
 import { Button } from "@/components/ui/button";
 import { useNoteView } from "@/hooks/useNoteView";
+import { hashWasmArgon2 } from "@/lib/argon2";
 import { formatTimeRemaining } from "@/lib/utils";
 
 const CONTENT_TYPE_ICONS = {
@@ -103,7 +104,7 @@ export function NoteViewPage() {
   if (noteHook.phase === "needs-password") {
     const handlePasswordSubmit = (pw: string) => {
       setPasswordInput(pw);
-      noteHook.view(id, secret, pw);
+      noteHook.view(id, secret, pw, hashWasmArgon2);
     };
 
     return (
@@ -164,7 +165,7 @@ export function NoteViewPage() {
 
             <Button
               className="w-full"
-              onClick={() => noteHook.view(id, secret, passwordInput)}
+              onClick={() => noteHook.view(id, secret, passwordInput, hashWasmArgon2)}
             >
               {t("noteView.viewNote")}
             </Button>

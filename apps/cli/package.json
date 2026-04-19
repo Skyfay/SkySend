@@ -1,10 +1,10 @@
 {
   "name": "@skysend/cli",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
   "bin": {
-    "skysend": "./dist/index.js"
+    "skysend-cli": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",

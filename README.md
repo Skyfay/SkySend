@@ -92,6 +92,18 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 - **Configurable UID/GID** - `PUID`/`PGID` for proper volume permissions
 - **Graceful Shutdown** - handles SIGTERM cleanly
 
+### 💻 Client CLI
+
+- **Cross-platform** - pre-built binaries for Linux, macOS, and Windows (compiled with Bun)
+- **End-to-end encrypted** - same AES-256-GCM encryption as the web client
+- **`skysend upload <files...>`** - upload single or multiple files with progress bar
+- **`skysend download <url>`** - download and decrypt files
+- **`skysend note <text>`** - create encrypted notes (text, password, code, markdown, sshkey)
+- **`skysend note:view <url>`** - view encrypted notes
+- **`skysend update`** - self-update from GitHub Releases with checksum verification
+- **Scriptable** - `--json` flag for machine-readable output
+- **WebSocket & HTTP** - same dual transport as the web client
+
 ### 🛠️ Admin CLI
 
 - **`skysend-cli list`** - show active uploads
@@ -126,9 +138,8 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
-      - PUID=1000
-      - PGID=1000
       # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
 ```bash
@@ -138,6 +149,46 @@ docker compose up -d
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 📖 **Full installation guide**: [docs.skysend.ch/user-guide/getting-started](https://docs.skysend.ch/user-guide/getting-started)
+
+## 💻 Client CLI
+
+Upload and download files from the terminal with the same end-to-end encryption as the web interface.
+
+**Install (Linux/macOS):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+```
+
+**Install (Windows PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+```
+
+**Usage:**
+
+```bash
+# Set your server
+skysend config set-server https://your-instance.com
+
+# Upload a file
+skysend upload ./document.pdf
+
+# Upload with password and expiry
+skysend upload ./secret.zip --password --expires 1h --downloads 5
+
+# Download a file
+skysend download https://your-instance.com/file/abc123#secret
+
+# Create an encrypted note
+skysend note "This is a secret message" --type text --expires 24h
+
+# Self-update
+skysend update
+```
+
+📖 **Full CLI documentation**: [docs.skysend.ch/user-guide/client-cli](https://docs.skysend.ch/user-guide/client-cli/)
 
 ## 🔒 Security Design
 
@@ -161,6 +212,7 @@ The complete crypto design is publicly documented at [docs.skysend.ch/developer-
 | Runtime | Node.js 24 LTS |
 | Backend | Hono |
 | Frontend | Vite + React 19 + Shadcn UI |
+| CLI Client | Commander.js + Bun compile |
 | Database | SQLite (Drizzle ORM) |
 | Crypto | Web Crypto API + Argon2id (WASM) |
 | Validation | Zod |

@@ -66,6 +66,7 @@
     "uploading": "Chiffrement et téléversement...",
     "encryptingProgress": "Chiffrement...",
     "processing": "Traitement...",
+    "packing": "Empaquetage des fichiers...",
     "uploadComplete": "Envoi terminé !",
     "shareLink": "Partager ce lien",
     "shareLinkHint": "La clé de chiffrement est dans le fragment de l'URL - elle n'atteint jamais le serveur.",

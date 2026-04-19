@@ -2,11 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import {
   generateSecret,
   generateSalt,
-  calculateEncryptedSize,
   type FileMetadata,
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
-import { zipFilesAsync } from "@/lib/zip";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
 import { formatBytes } from "@/lib/utils";
 
@@ -22,6 +20,7 @@ interface UploadState {
   phase: UploadPhase;
   progress: number;
   speed: string | null;
+  averageSpeed: string | null;
   shareLink: string | null;
   error: string | null;
   uploadId: string | null;
@@ -52,6 +51,7 @@ export function useUpload() {
     phase: "idle",
     progress: 0,
     speed: null,
+    averageSpeed: null,
     shareLink: null,
     error: null,
     uploadId: null,
@@ -65,6 +65,7 @@ export function useUpload() {
       phase: "idle",
       progress: 0,
       speed: null,
+      averageSpeed: null,
       shareLink: null,
       error: null,
       uploadId: null,
@@ -78,6 +79,7 @@ export function useUpload() {
       phase: "idle",
       progress: 0,
       speed: null,
+      averageSpeed: null,
       shareLink: null,
       error: null,
       uploadId: null,
@@ -105,9 +107,6 @@ export function useUpload() {
       let metadata: FileMetadata;
       const fileNames: string[] = [];
 
-      // Prepare worker payload
-      let zipData: ArrayBuffer | undefined;
-
       if (files.length === 1) {
         const file = files[0]!;
         metadata = {
@@ -118,16 +117,6 @@ export function useUpload() {
         };
         fileNames.push(file.name);
       } else {
-        // Zip on main thread using fflate's built-in workers
-        setState((s) => ({ ...s, phase: "zipping", progress: 0 }));
-        const fileEntries = await Promise.all(
-          files.map(async (f) => ({
-            name: f.webkitRelativePath || f.name,
-            data: new Uint8Array(await f.arrayBuffer()),
-          })),
-        );
-        const zipped = await zipFilesAsync(fileEntries);
-        zipData = zipped.buffer as ArrayBuffer;
         metadata = {
           type: "archive",
           files: files.map((f) => ({
@@ -141,8 +130,9 @@ export function useUpload() {
         }
       }
 
-      // Spawn upload worker - encryption + upload run off the main thread
-      setState((s) => ({ ...s, phase: "uploading", progress: 0, speed: null }));
+      // Spawn upload worker - zipping (if multi-file), encryption + upload
+      // all run off the main thread.
+      setState((s) => ({ ...s, phase: files.length > 1 ? "zipping" : "uploading", progress: 0, speed: null }));
 
       const worker = new Worker(
         new URL("../lib/upload-worker.ts", import.meta.url),
@@ -155,18 +145,12 @@ export function useUpload() {
         secret.buffer as ArrayBuffer,
         salt.buffer as ArrayBuffer,
       ];
-      if (zipData) {
-        transferable.push(zipData);
-      }
 
       // Speed calculation state
       let lastLoaded = 0;
       let lastTime = performance.now();
-
-      const plaintextSize = zipData
-        ? zipData.byteLength
-        : files[0]!.size;
-      const encryptedSize = calculateEncryptedSize(plaintextSize);
+      let uploadStartTime = 0;
+      let uploadTotalBytes = 0;
 
       const result = await new Promise<{
         id: string;
@@ -177,7 +161,13 @@ export function useUpload() {
           const msg = e.data;
           switch (msg.type) {
             case "phase":
-              setState((s) => ({ ...s, phase: msg.phase as UploadPhase }));
+              // Reset speed tracking on phase change
+              lastLoaded = 0;
+              lastTime = performance.now();
+              if (msg.phase === "uploading") {
+                uploadStartTime = performance.now();
+              }
+              setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
               break;
             case "progress": {
               const now = performance.now();
@@ -194,10 +184,11 @@ export function useUpload() {
                 ...s,
                 progress: Math.min(
                   99,
-                  Math.round((msg.loaded / encryptedSize) * 100),
+                  Math.round((msg.loaded / msg.total) * 100),
                 ),
                 ...(speed ? { speed } : {}),
               }));
+              uploadTotalBytes = msg.total;
               break;
             }
             case "done":
@@ -215,7 +206,7 @@ export function useUpload() {
         worker.postMessage(
           {
             file: files.length === 1 ? files[0] : undefined,
-            zipData,
+            files: files.length > 1 ? files : undefined,
             secret: secret.buffer,
             salt: salt.buffer,
             maxDownloads,
@@ -245,10 +236,20 @@ export function useUpload() {
         createdAt: new Date().toISOString(),
       });
 
+      // Calculate average upload speed
+      let averageSpeed: string | null = null;
+      if (uploadStartTime > 0 && uploadTotalBytes > 0) {
+        const totalSec = (performance.now() - uploadStartTime) / 1000;
+        if (totalSec > 0) {
+          averageSpeed = `${formatBytes(uploadTotalBytes / totalSec)}/s`;
+        }
+      }
+
       setState({
         phase: "done",
         progress: 100,
         speed: null,
+        averageSpeed,
         shareLink,
         error: null,
         uploadId: result.id,

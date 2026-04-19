@@ -24,7 +24,8 @@
     { "path": "packages/crypto" },
     { "path": "apps/server" },
     { "path": "apps/web" },
-    { "path": "apps/cli" }
+    { "path": "apps/cli" },
+    { "path": "apps/client" }
   ],
   "exclude": ["node_modules", "dist", "build", "coverage"]
 }
