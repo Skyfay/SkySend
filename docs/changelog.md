@@ -2,8 +2,11 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.3.1
+## v2.4.0
 *Release: In Progress*
+
+### ✨ Features
+- **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 
 ### 🎨 Improvements
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
@@ -15,7 +18,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:v2.3.1`
+- **Image**: `skyfay/skysend:v2.4.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
