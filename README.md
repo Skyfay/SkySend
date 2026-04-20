@@ -157,13 +157,13 @@ Upload and download files from the terminal with the same end-to-end encryption 
 **Install (Linux/macOS):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+curl -fsSL https://skysend.ch/install.sh | sh
 ```
 
 **Install (Windows PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+irm https://skysend.ch/install.ps1 | iex
 ```
 
 **Usage:**

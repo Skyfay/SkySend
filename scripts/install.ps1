@@ -1,6 +1,6 @@
 # SkySend CLI installer for Windows.
 # Usage (PowerShell):
-#   irm https://raw.githubusercontent.com/skyfay/SkySend/main/scripts/install.ps1 | iex
+#   irm https://skysend.ch/install.ps1 | iex
 #
 # Options (environment variables):
 #   $env:INSTALL_DIR - installation directory (default: $HOME\.skysend\bin)

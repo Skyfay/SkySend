@@ -108,13 +108,13 @@ The SkySend CLI client lets you upload and download files from the terminal with
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+curl -fsSL https://skysend.ch/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+irm https://skysend.ch/install.ps1 | iex
 ```
 
 ### Verify Installation
