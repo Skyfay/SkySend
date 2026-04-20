@@ -323,7 +323,7 @@ export function registerUploadCommand(program: Command): void {
         let uploadResult: { id: string };
 
         // Try WebSocket first, fall back to HTTP chunks
-        const useWs = config.fileUploadWs && !options.noWs && getWebSocket();
+        const useWs = config.fileUploadWs && !options.noWs && getWebSocket(server);
         if (useWs) {
           try {
             uploadResult = await uploadWsTransport(

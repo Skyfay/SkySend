@@ -5,13 +5,13 @@ import * as os from "node:os";
 export interface ServerEntry {
   name: string;
   url: string;
+  websocket?: boolean;
 }
 
 interface ClientConfig {
   server?: string;
   servers?: ServerEntry[];
   defaultServer?: string;
-  websocket?: boolean;
 }
 
 function getConfigDir(): string {
@@ -119,12 +119,21 @@ export function getDefaultServer(): string | undefined {
   return config.defaultServer ?? config.server;
 }
 
-export function getWebSocket(): boolean {
+export function getWebSocket(serverUrl?: string): boolean {
   const config = loadConfig();
-  return config.websocket ?? true;
+  if (serverUrl) {
+    const entry = (config.servers ?? []).find((s) => s.url === serverUrl);
+    if (entry && entry.websocket !== undefined) return entry.websocket;
+  }
+  return true;
 }
 
-export function setWebSocket(enabled: boolean): void {
+export function setWebSocket(serverUrl: string, enabled: boolean): void {
   const config = loadConfig();
-  saveConfig({ ...config, websocket: enabled });
+  const servers = config.servers ?? [];
+  const entry = servers.find((s) => s.url === serverUrl);
+  if (entry) {
+    entry.websocket = enabled;
+    saveConfig({ ...config, servers });
+  }
 }

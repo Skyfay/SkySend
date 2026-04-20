@@ -182,7 +182,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
 
       let uploadId: string;
 
-      const useWs = config.fileUploadWs && getWebSocket();
+      const useWs = config.fileUploadWs && getWebSocket(server);
       if (useWs) {
         try {
           setTransport("WebSocket");

@@ -209,8 +209,9 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
           />
         )}
 
-        {view === "settings" && (
+        {view === "settings" && appState && (
           <SettingsView
+            appState={appState}
             onBack={handleBack}
             onServerChange={switchServer}
           />

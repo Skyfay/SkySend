@@ -270,6 +270,44 @@ skysend upload ./file.txt --json
 
 ---
 
+## ls
+
+List upload and note history stored locally on the client.
+
+```bash
+skysend ls [options]
+```
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Filter by server URL |
+| `-a, --all` | Show entries for all servers |
+| `--json` | Output as JSON |
+
+### Examples
+
+```bash
+# List history for the default server
+skysend ls
+
+# List history for all servers
+skysend ls --all
+
+# Filter by server
+skysend ls --server https://send.example.com
+
+# Get JSON output for scripting
+skysend ls --json
+```
+
+::: tip
+History is stored at `~/.config/skysend/history.json` and holds up to 100 uploads and 100 notes. Expired entries are automatically cleaned up.
+:::
+
+---
+
 ## config
 
 Manage client configuration.
@@ -280,7 +318,7 @@ Manage client configuration.
 skysend config
 ```
 
-Displays the config file path, the configured server URL, and the `SKYSEND_SERVER` environment variable (if set).
+Displays the config file path, the configured server URL, all registered servers with their per-server WebSocket status, and the `SKYSEND_SERVER` environment variable (if set).
 
 ### Set Server
 

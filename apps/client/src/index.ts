@@ -9,6 +9,7 @@ import { registerConfigCommand } from "./commands/config.js";
 import { registerDeleteCommand } from "./commands/delete.js";
 import { registerUpdateCommand } from "./commands/update.js";
 import { registerInteractiveCommand } from "./commands/interactive.js";
+import { registerLsCommand } from "./commands/ls.js";
 import { APP_VERSION } from "./version.js";
 
 const program = new Command()
@@ -23,6 +24,7 @@ registerNoteCommand(program);
 registerNoteViewCommand(program);
 registerConfigCommand(program);
 registerDeleteCommand(program);
+registerLsCommand(program);
 registerUpdateCommand(program);
 registerInteractiveCommand(program);
 

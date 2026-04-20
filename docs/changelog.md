@@ -2,15 +2,16 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.4.2
-*Release: In Progress*
+## v2.4.2 - WebSocket Upload Toggle and CLI History Command
+*Released: April 20, 2026*
 
 ### ✨ Features
-- **client**: Added WebSocket transport toggle - disable WebSocket uploads via `--no-ws` CLI flag, TUI Settings menu, or `\"websocket\": false` in config file
+- **client**: Added WebSocket transport toggle - disable WebSocket uploads via `--no-ws` CLI flag, TUI Settings menu, or `\"websocket\": false` in config file- **client**: Added `skysend ls` command to list upload and note history with age, expiry, and size - supports `--server`, `--all`, and `--json` flags
 
 ### 🎨 Improvements
 - **client**: Connection error screen now offers recovery options - press `s` to select another server or `r` to retry instead of requiring Ctrl+C exit
 - **client**: Connection errors now show a user-friendly message (`Server <url> is not reachable`) instead of the raw `fetch failed` error
+- **client**: `skysend config` now shows all registered servers with their per-server WebSocket status
 
 ### 📝 Documentation
 - **docs**: Added WebSocket transport configuration section to CLI client documentation
