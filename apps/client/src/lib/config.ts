@@ -5,6 +5,7 @@ import * as os from "node:os";
 export interface ServerEntry {
   name: string;
   url: string;
+  websocket?: boolean;
 }
 
 interface ClientConfig {
@@ -116,4 +117,23 @@ export function setDefaultServer(url: string): void {
 export function getDefaultServer(): string | undefined {
   const config = loadConfig();
   return config.defaultServer ?? config.server;
+}
+
+export function getWebSocket(serverUrl?: string): boolean {
+  const config = loadConfig();
+  if (serverUrl) {
+    const entry = (config.servers ?? []).find((s) => s.url === serverUrl);
+    if (entry && entry.websocket !== undefined) return entry.websocket;
+  }
+  return true;
+}
+
+export function setWebSocket(serverUrl: string, enabled: boolean): void {
+  const config = loadConfig();
+  const servers = config.servers ?? [];
+  const entry = servers.find((s) => s.url === serverUrl);
+  if (entry) {
+    entry.websocket = enabled;
+    saveConfig({ ...config, servers });
+  }
 }

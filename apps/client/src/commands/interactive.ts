@@ -6,7 +6,7 @@ import { resolveServer } from "../lib/config.js";
 
 export function registerInteractiveCommand(program: Command): void {
   program
-    .command("interactive", { isDefault: true })
+    .command("interactive", { isDefault: true, hidden: true })
     .alias("i")
     .description("Interactive TUI mode")
     .option("-s, --server <url>", "Server URL")

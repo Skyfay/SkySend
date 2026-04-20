@@ -4,6 +4,8 @@ import {
   saveConfig,
   resetConfig,
   getConfigFilePath,
+  getServers,
+  getWebSocket,
 } from "../lib/config.js";
 import { writeLine } from "../lib/progress.js";
 
@@ -23,6 +25,15 @@ export function registerConfigCommand(program: Command): void {
         writeLine(`Server: ${config.server}`);
       } else {
         writeLine("Server: (not set)");
+      }
+
+      const servers = getServers();
+      if (servers.length > 0) {
+        writeLine(`Servers: ${servers.length}`);
+        for (const s of servers) {
+          const ws = getWebSocket(s.url);
+          writeLine(`  ${s.name} (${s.url}) - WebSocket: ${ws ? "on" : "off"}`);
+        }
       }
 
       const env = process.env["SKYSEND_SERVER"];

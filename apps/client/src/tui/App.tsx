@@ -52,7 +52,12 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
       setAccentColor(config.customColor);
       setView(targetView ?? "menu");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "fetch failed" || msg.includes("ECONNREFUSED")) {
+        setError(`Server ${url} is not reachable`);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -95,6 +100,17 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
     if (key.ctrl && _input === "c") {
       exit();
     }
+    // Recovery from connection error: press s for server-select, r to retry
+    if (error && !appState) {
+      if (_input === "s") {
+        setError(null);
+        setView("server-select");
+      } else if (_input === "r" && initialServer) {
+        setError(null);
+        didAutoConnect.current = false;
+        void connectToServer(initialServer, initialServer, initialView);
+      }
+    }
   });
 
   if (loading) {
@@ -114,8 +130,10 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
         <Box marginY={1} marginX={2}>
           <Text color="red">Error: {error}</Text>
         </Box>
-        <Box marginX={2}>
-          <Text dimColor>Press Ctrl+C to exit</Text>
+        <Box marginX={2} gap={2}>
+          <Text dimColor>Press <Text bold>s</Text> to select server</Text>
+          {initialServer && <Text dimColor>Press <Text bold>r</Text> to retry</Text>}
+          <Text dimColor><Text bold>Ctrl+C</Text> exit</Text>
         </Box>
       </Box>
     );
@@ -191,8 +209,9 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
           />
         )}
 
-        {view === "settings" && (
+        {view === "settings" && appState && (
           <SettingsView
+            appState={appState}
             onBack={handleBack}
             onServerChange={switchServer}
           />

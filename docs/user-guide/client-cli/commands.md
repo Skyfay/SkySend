@@ -24,6 +24,7 @@ skysend upload <files...> [options]
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
 | `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
+| `--no-ws` | Disable WebSocket transport, use HTTP chunked upload |
 | `--json` | Output result as JSON |
 
 ### Examples
@@ -52,7 +53,7 @@ skysend upload ./data.csv --json
 
 - **Single file**: Uploaded as-is after encryption.
 - **Multiple files**: Automatically zipped with [fflate](https://github.com/101arrowz/fflate) before encryption. The recipient receives a `.zip` file.
-- **Transport**: Uses WebSocket transport (primary) with automatic fallback to HTTP chunked upload if the WebSocket handshake fails.
+- **Transport**: Uses WebSocket transport (primary) with automatic fallback to HTTP chunked upload if the WebSocket handshake fails. Use `--no-ws` to force HTTP chunked upload, or toggle it in Settings in interactive mode.
 - **Progress**: Displays a progress bar with speed and ETA.
 
 ### JSON Output
@@ -269,6 +270,44 @@ skysend upload ./file.txt --json
 
 ---
 
+## ls
+
+List upload and note history stored locally on the client.
+
+```bash
+skysend ls [options]
+```
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Filter by server URL |
+| `-a, --all` | Show entries for all servers |
+| `--json` | Output as JSON |
+
+### Examples
+
+```bash
+# List history for the default server
+skysend ls
+
+# List history for all servers
+skysend ls --all
+
+# Filter by server
+skysend ls --server https://send.example.com
+
+# Get JSON output for scripting
+skysend ls --json
+```
+
+::: tip
+History is stored at `~/.config/skysend/history.json` and holds up to 100 uploads and 100 notes. Expired entries are automatically cleaned up.
+:::
+
+---
+
 ## config
 
 Manage client configuration.
@@ -279,7 +318,7 @@ Manage client configuration.
 skysend config
 ```
 
-Displays the config file path, the configured server URL, and the `SKYSEND_SERVER` environment variable (if set).
+Displays the config file path, the configured server URL, all registered servers with their per-server WebSocket status, and the `SKYSEND_SERVER` environment variable (if set).
 
 ### Set Server
 
