@@ -11,6 +11,7 @@ interface ClientConfig {
   server?: string;
   servers?: ServerEntry[];
   defaultServer?: string;
+  websocket?: boolean;
 }
 
 function getConfigDir(): string {
@@ -116,4 +117,14 @@ export function setDefaultServer(url: string): void {
 export function getDefaultServer(): string | undefined {
   const config = loadConfig();
   return config.defaultServer ?? config.server;
+}
+
+export function getWebSocket(): boolean {
+  const config = loadConfig();
+  return config.websocket ?? true;
+}
+
+export function setWebSocket(enabled: boolean): void {
+  const config = loadConfig();
+  saveConfig({ ...config, websocket: enabled });
 }

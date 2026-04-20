@@ -94,6 +94,14 @@ You can also set the server per-command with `--server` or via the `SKYSEND_SERV
 skysend config
 ```
 
+### WebSocket Transport
+
+By default, the CLI uses WebSocket upload transport (if the server supports it) with automatic fallback to HTTP chunked upload. You can disable WebSocket in two ways:
+
+- **CLI flag**: `skysend upload ./file.pdf --no-ws`
+- **TUI Settings**: Toggle "WebSocket upload" in the interactive Settings menu
+- **Config file**: Set `"websocket": false` in `~/.config/skysend/config.json`
+
 ### Reset Config
 
 ```bash

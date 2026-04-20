@@ -4,6 +4,7 @@ import { SelectList, type SelectItem } from "../components/SelectList.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import {
   getServers, addServer, setDefaultServer, getDefaultServer,
+  getWebSocket, setWebSocket,
 } from "../../lib/config.js";
 
 interface SettingsViewProps {
@@ -80,9 +81,11 @@ export function SettingsView({ onBack }: SettingsViewProps): React.ReactElement 
   }
 
   // Menu
+  const wsEnabled = getWebSocket();
   const items: Array<SelectItem<string>> = [
     { label: "Add server", value: "add" },
     { label: "Manage servers", value: "manage", description: `${servers.length} server(s)` },
+    { label: `WebSocket upload: ${wsEnabled ? "On" : "Off"}`, value: "toggle-ws", description: wsEnabled ? "Using WebSocket transport" : "Using HTTP chunked transport" },
     { label: "Back", value: "back" },
   ];
 
@@ -94,6 +97,10 @@ export function SettingsView({ onBack }: SettingsViewProps): React.ReactElement 
         onSelect={(val) => {
           if (val === "add") setPhase("add-url");
           else if (val === "manage") setPhase("manage");
+          else if (val === "toggle-ws") {
+            setWebSocket(!wsEnabled);
+            setRefreshKey((k) => k + 1);
+          }
           else onBack();
         }}
         onCancel={onBack}

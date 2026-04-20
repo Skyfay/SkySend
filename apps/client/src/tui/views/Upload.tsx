@@ -23,6 +23,7 @@ import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
 import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 import { uploadWsTransport } from "../../lib/ws-upload.js";
+import { getWebSocket } from "../../lib/config.js";
 
 type Phase =
   | "file-select"
@@ -181,7 +182,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
 
       let uploadId: string;
 
-      if (config.fileUploadWs) {
+      const useWs = config.fileUploadWs && getWebSocket();
+      if (useWs) {
         try {
           setTransport("WebSocket");
           const result = await uploadWsTransport(

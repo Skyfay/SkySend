@@ -20,7 +20,7 @@ import {
 } from "../lib/api.js";
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
-import { resolveServer } from "../lib/config.js";
+import { resolveServer, getWebSocket } from "../lib/config.js";
 import {
   formatBytes,
   formatExpiry,
@@ -42,6 +42,7 @@ interface UploadOptions {
   downloads?: string;
   password?: boolean | string;
   json?: boolean;
+  noWs?: boolean;
 }
 
 async function uploadHttpTransport(
@@ -197,6 +198,7 @@ export function registerUploadCommand(program: Command): void {
     .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
     .option("-d, --downloads <count>", "Max download count")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
+    .option("--no-ws", "Disable WebSocket transport, use HTTP chunked upload")
     .option("--json", "Output as JSON")
     .action(async (files: string[], options: UploadOptions) => {
       try {
@@ -321,7 +323,8 @@ export function registerUploadCommand(program: Command): void {
         let uploadResult: { id: string };
 
         // Try WebSocket first, fall back to HTTP chunks
-        if (config.fileUploadWs) {
+        const useWs = config.fileUploadWs && !options.noWs && getWebSocket();
+        if (useWs) {
           try {
             uploadResult = await uploadWsTransport(
               server, headers, encryptedStream, encryptedSize,

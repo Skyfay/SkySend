@@ -2,6 +2,26 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.4.2
+*Release: In Progress*
+
+### ✨ Features
+- **client**: Added WebSocket transport toggle - disable WebSocket uploads via `--no-ws` CLI flag, TUI Settings menu, or `\"websocket\": false` in config file
+
+### 🎨 Improvements
+- **client**: Connection error screen now offers recovery options - press `s` to select another server or `r` to retry instead of requiring Ctrl+C exit
+- **client**: Connection errors now show a user-friendly message (`Server <url> is not reachable`) instead of the raw `fetch failed` error
+
+### 📝 Documentation
+- **docs**: Added WebSocket transport configuration section to CLI client documentation
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.4.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.4.1 - Bug Fixes for CLI Binary and Client install URL Shortening
 *Released: April 20, 2026*
 
