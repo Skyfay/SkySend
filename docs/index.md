@@ -107,11 +107,11 @@ Upload and download files from the terminal with end-to-end encryption:
 ::: code-group
 
 ```bash [Linux / macOS]
-curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+curl -fsSL https://skysend.ch/install.sh | sh
 ```
 
 ```powershell [Windows (PowerShell)]
-irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+irm https://skysend.ch/install.ps1 | iex
 ```
 
 :::

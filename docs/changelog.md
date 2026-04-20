@@ -2,6 +2,22 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.4.1 - Bug Fixes for CLI Binary and Client install URL Shortening
+*Released: April 20, 2026*
+
+### 🐛 Bug Fixes
+- **client**: Fixed `Cannot find package 'react-devtools-core'` runtime error when running compiled CLI binaries - replaced `--external` flag with a bundled no-op stub so Ink's optional devtools import resolves inside the binary
+
+### 📝 Documentation
+- **docs**: Shortened CLI install URLs from raw GitHub links to `skysend.ch/install.sh` and `skysend.ch/install.ps1` redirects across README, docs, and install scripts
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.4.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.4.0 - CLI Client, PWA Support and ZIP creating improvements
 *Released: April 19, 2026*
 

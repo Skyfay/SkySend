@@ -100,7 +100,7 @@ SkySend also provides a CLI client for uploading and downloading files from the 
 
 ```bash
 # Install (Linux/macOS)
-curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+curl -fsSL https://skysend.ch/install.sh | sh
 
 # Set your server
 skysend config set-server https://your-instance.com

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # SkySend CLI installer for Linux and macOS.
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/skyfay/SkySend/main/scripts/install.sh | sh
+#   curl -fsSL https://skysend.ch/install.sh | sh
 #
 # Options (environment variables):
 #   INSTALL_DIR   - installation directory (default: /usr/local/bin)

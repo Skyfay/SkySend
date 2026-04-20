@@ -35,14 +35,14 @@ Binaries are compiled with [Bun](https://bun.sh/) and published as GitHub Releas
 The install script automatically detects your OS and architecture, downloads the correct binary, verifies the SHA-256 checksum, and installs it to `/usr/local/bin`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+curl -fsSL https://skysend.ch/install.sh | sh
 ```
 
 To install a specific version or to a custom directory:
 
 ```bash
-VERSION=v2.4.0 curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
-INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.sh | sh
+VERSION=v2.4.0 curl -fsSL https://skysend.ch/install.sh | sh
+INSTALL_DIR=$HOME/.local/bin curl -fsSL https://skysend.ch/install.sh | sh
 ```
 
 ### Windows
@@ -50,7 +50,7 @@ INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/Skyfay
 Run in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+irm https://skysend.ch/install.ps1 | iex
 ```
 
 This installs `skysend.exe` to `~/.skysend/bin` and adds it to your user PATH. Restart your terminal for PATH changes to take effect.
@@ -58,7 +58,7 @@ This installs `skysend.exe` to `~/.skysend/bin` and adds it to your user PATH. R
 To install a specific version:
 
 ```powershell
-$env:VERSION="v2.4.0"; irm https://raw.githubusercontent.com/Skyfay/SkySend/main/scripts/install.ps1 | iex
+$env:VERSION="v2.4.0"; irm https://skysend.ch/install.ps1 | iex
 ```
 
 ### Manual Download
