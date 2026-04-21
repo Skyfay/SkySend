@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.4.3
-*Release: In Progress*
+## v2.4.3 - Codecov, Unit Test Improvements & Web Improvements
+*Released: April 21, 2026*
 
 ### ✨ Features
 - **client**: TUI "Manage servers" now supports adding, deleting, and setting a server as default via a server action sub-menu
