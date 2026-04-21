@@ -19,6 +19,7 @@ All notable changes to SkySend are documented here.
 ### 🔧 CI/CD
 - **infra**: Updated `validate.yml` test job to run with coverage and upload reports to Codecov via `codecov/codecov-action@v5`
 - **infra**: Added `codecov.yml` with project and patch coverage status checks
+- **crypto**: Added 14 new unit tests covering previously untested security-critical paths: `validateMetadata` error branches (invalid JSON, null payload, unknown type, malformed archive entries, negative sizes, empty names, missing MIME type), `deriveKeyFromPasswordArgon2` input validation, ECE decrypt stream "record too short" path, and exact error message matching for the nonce-missing guard. Coverage: 94% → 99.29% statements, 88% → 97.82% branches. Added `vitest.config.ts` to exclude the re-export barrel `src/index.ts` from coverage.
 
 ### 🐳 Docker
 

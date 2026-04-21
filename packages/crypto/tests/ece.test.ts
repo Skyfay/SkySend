@@ -239,7 +239,21 @@ describe("ECE streaming encryption/decryption", () => {
       collectStream(
         createReadableStream(new Uint8Array(5)).pipeThrough(createDecryptStream(fileKey)),
       ),
-    ).rejects.toThrow("empty");
+    ).rejects.toThrow("Encrypted stream is empty - missing nonce header");
+  });
+
+  it("should fail if ciphertext after nonce is too short to contain auth tag", async () => {
+    const fileKey = await getFileKey();
+
+    // 12-byte nonce header + 8 bytes of garbage: buffer.length (8) <= TAG_LENGTH (16)
+    const tooShort = new Uint8Array(NONCE_LENGTH + 8);
+    crypto.getRandomValues(tooShort);
+
+    await expect(
+      collectStream(
+        createReadableStream(tooShort).pipeThrough(createDecryptStream(fileKey)),
+      ),
+    ).rejects.toThrow("too short to contain auth tag");
   });
 });
 

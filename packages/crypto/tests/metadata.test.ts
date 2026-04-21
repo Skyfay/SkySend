@@ -7,6 +7,34 @@ import {
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
 
+/**
+ * Encrypts arbitrary JSON directly via Web Crypto, bypassing the type-safe
+ * encryptMetadata wrapper. Used to test validateMetadata error branches that
+ * are unreachable through the normal API.
+ */
+async function encryptRawJson(
+  data: unknown,
+  metaKey: CryptoKey,
+): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
+  const iv = crypto.getRandomValues(new Uint8Array(META_IV_LENGTH));
+  const encoded = new TextEncoder().encode(JSON.stringify(data));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, encoded);
+  return { ciphertext: new Uint8Array(ciphertext), iv };
+}
+
+/**
+ * Encrypts raw bytes directly via Web Crypto without JSON serialization.
+ * Used to produce ciphertext that decrypts to invalid JSON.
+ */
+async function encryptRawBytes(
+  bytes: Uint8Array,
+  metaKey: CryptoKey,
+): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
+  const iv = crypto.getRandomValues(new Uint8Array(META_IV_LENGTH));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, bytes);
+  return { ciphertext: new Uint8Array(ciphertext), iv };
+}
+
 async function getMetaKey(): Promise<CryptoKey> {
   const keys = await deriveKeys(generateSecret(), generateSalt());
   return keys.metaKey;
@@ -158,5 +186,128 @@ describe("metadata encryption/decryption", () => {
       mimeType: "text/plain",
     });
     expect(Object.keys(decrypted).sort()).toEqual(["mimeType", "name", "size", "type"]);
+  });
+});
+
+describe("validateMetadata - invalid shapes (via decryptMetadata)", () => {
+  it("should reject null (not an object)", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(null, metaKey);
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "not an object",
+    );
+  });
+
+  it("should reject a primitive string (not an object)", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson("just a string", metaKey);
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "not an object",
+    );
+  });
+
+  it("should reject single-file metadata with empty name", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "single", name: "", size: 100, mimeType: "text/plain" },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "missing or empty file name",
+    );
+  });
+
+  it("should reject single-file metadata with negative size", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "single", name: "file.txt", size: -1, mimeType: "text/plain" },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "invalid file size",
+    );
+  });
+
+  it("should reject archive metadata where files is not an array", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "archive", files: "not-an-array", totalSize: 0 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "files must be an array",
+    );
+  });
+
+  it("should reject archive metadata with null file entry", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "archive", files: [null], totalSize: 0 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "file entry must be an object",
+    );
+  });
+
+  it("should reject archive metadata with file entry having empty name", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "archive", files: [{ name: "", size: 100 }], totalSize: 100 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "file entry missing name",
+    );
+  });
+
+  it("should reject archive metadata with file entry having negative size", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "archive", files: [{ name: "photo.jpg", size: -1 }], totalSize: 0 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "file entry invalid size",
+    );
+  });
+
+  it("should reject archive metadata with negative totalSize", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "archive", files: [{ name: "photo.jpg", size: 100 }], totalSize: -1 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "invalid total size",
+    );
+  });
+
+  it("should reject metadata with unknown type", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson({ type: "video", url: "evil.com" }, metaKey);
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "unknown type",
+    );
+  });
+
+  it("should reject ciphertext that decrypts to invalid JSON", async () => {
+    const metaKey = await getMetaKey();
+    // Raw bytes that are not valid UTF-8 JSON
+    const enc = await encryptRawBytes(new Uint8Array([0xff, 0xfe, 0x00, 0x01]), metaKey);
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "invalid JSON",
+    );
+  });
+
+  it("should reject single-file metadata with missing mimeType", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      { type: "single", name: "file.txt", size: 100 },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "missing MIME type",
+    );
   });
 });
