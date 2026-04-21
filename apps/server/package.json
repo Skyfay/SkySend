@@ -30,6 +30,7 @@
     "build": "tsc && rm -rf dist/db/migrations && cp -r src/db/migrations dist/db/migrations",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

@@ -68,7 +68,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @skysend/crypto build
-      - run: pnpm test
+      - run: pnpm test:coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   docs-build:
     name: Docs Build

@@ -11,6 +11,13 @@ All notable changes to SkySend are documented here.
 ### 🐛 Bug Fixes
 - **web**: Fixed note view incorrectly showing "permanently deleted" warning for unlimited-view notes (`maxViews === 0`)
 
+### 🧪 Tests
+- **infra**: Added `@vitest/coverage-v8` and `test:coverage` scripts to `server`, `web`, `crypto`, and `client` packages for coverage report generation in LCOV format
+
+### 🔧 CI/CD
+- **infra**: Updated `validate.yml` test job to run with coverage and upload reports to Codecov via `codecov/codecov-action@v5`
+- **infra**: Added `codecov.yml` with project and patch coverage status checks
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.4.3`
