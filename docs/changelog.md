@@ -13,6 +13,8 @@ All notable changes to SkySend are documented here.
 
 ### 🧪 Tests
 - **infra**: Added `@vitest/coverage-v8` and `test:coverage` scripts to `server`, `web`, `crypto`, and `client` packages for coverage report generation in LCOV format
+- **web**: Added 57 unit tests across `lib/utils`, `lib/password-generator`, and `lib/upload-store` - covering formatting functions, `isSafari` detection, `generatePassword`/`calculateEntropy`, and full CRUD/sorting for IndexedDB upload and note storage (using an in-memory `idb-keyval` mock)
+- **client**: Added 93 unit tests across `lib/progress`, `lib/url`, `lib/password-generator`, `lib/config`, and `lib/history` - covering all formatting/parsing utilities, full `parseShareUrl`/`buildShareUrl` logic including edge cases, password generation, config file lifecycle with filesystem isolation via `tmpdir`, and history CRUD with expiry cleanup
 
 ### 🔧 CI/CD
 - **infra**: Updated `validate.yml` test job to run with coverage and upload reports to Codecov via `codecov/codecov-action@v5`
