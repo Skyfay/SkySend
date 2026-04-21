@@ -2,6 +2,19 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.4.3
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+- **web**: Fixed note view incorrectly showing "permanently deleted" warning for unlimited-view notes (`maxViews === 0`)
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.4.3`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.4.2 - WebSocket Upload Toggle and CLI History Command
 *Released: April 20, 2026*
 

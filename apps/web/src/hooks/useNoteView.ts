@@ -117,8 +117,8 @@ export function useNoteView() {
         // Decrypt
         const content = await decryptNoteContent(ciphertext, nonce, keys.metaKey);
 
-        // Check if this was the last allowed view
-        const isDestroyed = result.viewCount >= result.maxViews;
+        // Check if this was the last allowed view (maxViews === 0 means unlimited)
+        const isDestroyed = result.maxViews > 0 && result.viewCount >= result.maxViews;
 
         setState({
           phase: isDestroyed ? "destroyed" : "viewing",
