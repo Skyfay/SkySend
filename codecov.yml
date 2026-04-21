@@ -1,0 +1,26 @@
+comment:
+  require_changes: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+ignore:
+  - "**/dist/**"
+  - "**/node_modules/**"
+  - "**/tests/**"
+  - "**/*.test.ts"
+  - "**/*.config.ts"
+  - "**/stubs/**"
+  - "apps/cli/**"
+  - "docs/**"
+  - "scripts/**"
+  - "test/**"
+  - "workers/**"

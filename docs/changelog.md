@@ -2,6 +2,32 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.4.3 - Codecov, Unit Test Improvements & Web Improvements
+*Released: April 21, 2026*
+
+### ✨ Features
+- **client**: TUI "Manage servers" now supports adding, deleting, and setting a server as default via a server action sub-menu
+
+### 🐛 Bug Fixes
+- **web**: Fixed note view incorrectly showing "permanently deleted" warning for unlimited-view notes (`maxViews === 0`)
+
+### 🧪 Tests
+- **infra**: Added `@vitest/coverage-v8` and `test:coverage` scripts to `server`, `web`, `crypto`, and `client` packages for coverage report generation in LCOV format
+- **web**: Added 57 unit tests across `lib/utils`, `lib/password-generator`, and `lib/upload-store` - covering formatting functions, `isSafari` detection, `generatePassword`/`calculateEntropy`, and full CRUD/sorting for IndexedDB upload and note storage (using an in-memory `idb-keyval` mock)
+- **client**: Added 93 unit tests across `lib/progress`, `lib/url`, `lib/password-generator`, `lib/config`, and `lib/history` - covering all formatting/parsing utilities, full `parseShareUrl`/`buildShareUrl` logic including edge cases, password generation, config file lifecycle with filesystem isolation via `tmpdir`, and history CRUD with expiry cleanup
+
+### 🔧 CI/CD
+- **infra**: Updated `validate.yml` test job to run with coverage and upload reports to Codecov via `codecov/codecov-action@v5`
+- **infra**: Added `codecov.yml` with project and patch coverage status checks
+- **crypto**: Added 14 new unit tests covering previously untested security-critical paths: `validateMetadata` error branches (invalid JSON, null payload, unknown type, malformed archive entries, negative sizes, empty names, missing MIME type), `deriveKeyFromPasswordArgon2` input validation, ECE decrypt stream "record too short" path, and exact error message matching for the nonce-missing guard. Coverage: 94% → 99.29% statements, 88% → 97.82% branches. Added `vitest.config.ts` to exclude the re-export barrel `src/index.ts` from coverage.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.4.3`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.4.2 - WebSocket Upload Toggle and CLI History Command
 *Released: April 20, 2026*
 

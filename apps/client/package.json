@@ -1,6 +1,6 @@
 {
   "name": "@skysend/client",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "private": true,
   "type": "module",
   "bin": {
@@ -17,7 +17,8 @@
     "build:all": "pnpm build:linux-x64 && pnpm build:linux-arm64 && pnpm build:macos-x64 && pnpm build:macos-arm64 && pnpm build:windows-x64",
     "dev": "tsc --watch",
     "run": "tsx src/index.ts",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text --passWithNoTests"
   },
   "dependencies": {
     "@skysend/crypto": "workspace:*",

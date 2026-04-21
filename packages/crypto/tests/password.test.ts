@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveKeyFromPasswordPbkdf2,
   deriveKeyFromPassword,
+  deriveKeyFromPasswordArgon2,
   applyPasswordProtection,
   DERIVED_KEY_LENGTH,
   PASSWORD_SALT_LENGTH,
@@ -116,5 +117,32 @@ describe("applyPasswordProtection", () => {
     const zeroKey = new Uint8Array(DERIVED_KEY_LENGTH);
     const result = applyPasswordProtection(secret, zeroKey);
     expect(constantTimeEqual(result, secret)).toBe(true);
+  });
+});
+
+describe("deriveKeyFromPasswordArgon2", () => {
+  it("should reject wrong salt length", async () => {
+    const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
+    await expect(
+      deriveKeyFromPasswordArgon2("password", new Uint8Array(8), mockArgon2id),
+    ).rejects.toThrow("16 bytes");
+  });
+
+  it("should reject empty password", async () => {
+    const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
+    await expect(
+      deriveKeyFromPasswordArgon2("", randomBytes(PASSWORD_SALT_LENGTH), mockArgon2id),
+    ).rejects.toThrow("not be empty");
+  });
+
+  it("should return the key from the argon2id function", async () => {
+    const expectedKey = randomBytes(DERIVED_KEY_LENGTH);
+    const mockArgon2id = async () => expectedKey;
+    const result = await deriveKeyFromPasswordArgon2(
+      "my-password",
+      randomBytes(PASSWORD_SALT_LENGTH),
+      mockArgon2id,
+    );
+    expect(constantTimeEqual(result, expectedKey)).toBe(true);
   });
 });

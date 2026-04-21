@@ -3,7 +3,7 @@ import { Box, Text } from "ink";
 import { SelectList, type SelectItem } from "../components/SelectList.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import {
-  getServers, addServer, setDefaultServer, getDefaultServer,
+  getServers, addServer, removeServer, setDefaultServer, getDefaultServer,
   getWebSocket, setWebSocket,
 } from "../../lib/config.js";
 import type { AppState } from "../types.js";
@@ -14,13 +14,14 @@ interface SettingsViewProps {
   onServerChange: () => void;
 }
 
-type Phase = "menu" | "add-url" | "add-name" | "manage";
+type Phase = "menu" | "add-url" | "add-name" | "manage" | "server-actions";
 
 export function SettingsView({ appState, onBack }: SettingsViewProps): React.ReactElement {
   const [phase, setPhase] = useState<Phase>("menu");
   const [newUrl, setNewUrl] = useState("");
   const [, setRefreshKey] = useState(0);
   const [wsMessage, setWsMessage] = useState<string | null>(null);
+  const [selectedServerUrl, setSelectedServerUrl] = useState<string | null>(null);
   const servers = getServers();
   const defaultUrl = getDefaultServer();
 
@@ -66,21 +67,61 @@ export function SettingsView({ appState, onBack }: SettingsViewProps): React.Rea
       value: s.url,
       description: s.url,
     }));
+    items.push({ label: "Add server", value: "__add__" });
     items.push({ label: "Back", value: "__back__" });
 
     return (
       <Box flexDirection="column">
         <SelectList
           items={items}
-          title="Manage servers - Select to set as default, or remove"
+          title="Manage servers"
           onSelect={(url) => {
             if (url === "__back__") { setPhase("menu"); return; }
-            // Show sub-actions
-            setPhase("menu"); // For now, just set default
-            setDefaultServer(url);
-            setRefreshKey((k) => k + 1);
+            if (url === "__add__") { setPhase("add-url"); return; }
+            setSelectedServerUrl(url);
+            setPhase("server-actions");
           }}
           onCancel={() => setPhase("menu")}
+        />
+      </Box>
+    );
+  }
+
+  if (phase === "server-actions" && selectedServerUrl) {
+    const entry = servers.find((s) => s.url === selectedServerUrl);
+    const isDefault = selectedServerUrl === defaultUrl;
+    const isActive = selectedServerUrl === appState.server;
+
+    const items: Array<SelectItem<string>> = [];
+    if (!isDefault) {
+      items.push({ label: "Set as default", value: "set-default" });
+    }
+    items.push({
+      label: "Delete server",
+      value: "delete",
+      description: isActive ? "Currently connected" : undefined,
+    });
+    items.push({ label: "Back", value: "__back__" });
+
+    return (
+      <Box flexDirection="column">
+        <SelectList
+          items={items}
+          title={`Server: ${entry?.name ?? selectedServerUrl}`}
+          onSelect={(action) => {
+            if (action === "__back__") { setPhase("manage"); return; }
+            if (action === "set-default") {
+              setDefaultServer(selectedServerUrl);
+              setRefreshKey((k) => k + 1);
+              setPhase("manage");
+            } else if (action === "delete") {
+              removeServer(selectedServerUrl);
+              setSelectedServerUrl(null);
+              setRefreshKey((k) => k + 1);
+              setPhase("manage");
+            }
+          }}
+          onCancel={() => setPhase("manage")}
         />
       </Box>
     );
