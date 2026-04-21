@@ -5,6 +5,9 @@ All notable changes to SkySend are documented here.
 ## v2.4.3
 *Release: In Progress*
 
+### ✨ Features
+- **client**: TUI "Manage servers" now supports adding, deleting, and setting a server as default via a server action sub-menu
+
 ### 🐛 Bug Fixes
 - **web**: Fixed note view incorrectly showing "permanently deleted" warning for unlimited-view notes (`maxViews === 0`)
 
