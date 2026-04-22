@@ -69,10 +69,30 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @skysend/crypto build
       - run: pnpm test:coverage
-      - name: Upload coverage to Codecov
+      - name: Upload coverage - crypto
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/crypto/coverage/lcov.info
+          flags: crypto
+      - name: Upload coverage - server
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/server/coverage/lcov.info
+          flags: server
+      - name: Upload coverage - web
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/web/coverage/lcov.info
+          flags: web
+      - name: Upload coverage - client
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/client/coverage/lcov.info
+          flags: client
 
   docs-build:
     name: Docs Build

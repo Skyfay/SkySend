@@ -1,6 +1,28 @@
 comment:
   require_changes: true
 
+flag_management:
+  default_rules:
+    carryforward: true
+
+flags:
+  crypto:
+    paths:
+      - packages/crypto/src/
+    carryforward: true
+  server:
+    paths:
+      - apps/server/src/
+    carryforward: true
+  web:
+    paths:
+      - apps/web/src/
+    carryforward: true
+  client:
+    paths:
+      - apps/client/src/
+    carryforward: true
+
 coverage:
   status:
     project:
