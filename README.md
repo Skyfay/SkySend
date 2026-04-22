@@ -18,6 +18,8 @@
   <a href="https://github.com/Skyfay/SkySend/actions/workflows/release.yml"><img src="https://github.com/Skyfay/SkySend/actions/workflows/release.yml/badge.svg" alt="Release"></a>
   <a href="https://github.com/Skyfay/SkySend/commits"><img src="https://img.shields.io/github/last-commit/Skyfay/SkySend?color=%234B8BBE" alt="Last Commit"></a>
   <a href="https://discord.com/invite/YvgPyky"><img src="https://img.shields.io/discord/580801656707350529?label=Discord&color=%235865f2" alt="Discord"></a>
+  <a href="https://codecov.io/gh/Skyfay/SkySend"><img src="https://img.shields.io/codecov/c/github/Skyfay/SkySend?label=coverage" alt="Coverage"></a>
+  <a href="https://codecov.io/gh/Skyfay/SkySend"><img src="https://img.shields.io/codecov/c/github/Skyfay/SkySend?flag=crypto&label=crypto%20coverage" alt="Crypto Coverage"></a>
 </p>
 
 <p align="center">
