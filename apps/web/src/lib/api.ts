@@ -180,6 +180,7 @@ export async function verifyPassword(
     body: JSON.stringify({ authToken }),
   });
   if (res.status === 401) return false;
+  if (res.status === 429) throw new ApiError(429, "rate-limited");
   if (!res.ok) {
     throw new ApiError(res.status, "Password verification failed");
   }
@@ -334,6 +335,7 @@ export async function verifyNotePassword(
     body: JSON.stringify({ authToken }),
   });
   if (res.status === 401) return false;
+  if (res.status === 429) throw new ApiError(429, "rate-limited");
   if (!res.ok) {
     throw new ApiError(res.status, "Password verification failed");
   }

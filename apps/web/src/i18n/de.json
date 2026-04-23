@@ -91,6 +91,7 @@
     "passwordPlaceholder": "Passwort eingeben",
     "unlock": "Entsperren",
     "wrongPassword": "Falsches Passwort",
+    "tooManyAttempts": "Zu viele Fehlversuche. Bitte warte einige Minuten und versuche es erneut.",
     "download": "Herunterladen",
     "downloading": "Entschlüsseln und herunterladen...",
     "decrypting": "Entschlüsseln...",

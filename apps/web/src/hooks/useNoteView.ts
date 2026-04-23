@@ -134,6 +134,10 @@ export function useNoteView() {
           maxViews: result.maxViews,
         });
       } catch (err) {
+        if (err instanceof api.ApiError && err.status === 429) {
+          setState((s) => ({ ...s, phase: "needs-password", error: "rate-limited" }));
+          return;
+        }
         const message =
           err instanceof api.ApiError ? err.message : "Failed to view note";
         setState((s) => ({

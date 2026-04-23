@@ -18,6 +18,8 @@ All notable changes to SkySend are documented here.
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
 - **web**: Note uploads now use Argon2id for password key derivation - previously PBKDF2 was always used for notes due to a missing argument
 - **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
+- **server**: Added per-IP and per-resource password attempt lockout - after 10 failed attempts from the same IP on a specific upload or note, that IP is locked out from that resource for 15 minutes with a `Retry-After` header; IPs are stored as ephemeral HMAC-SHA256 hashes (never persisted); configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
+- **web**: Password prompt now shows a translated "too many attempts" message when the server returns 429 - previously the UI showed an untranslated generic error string and switched away from the password screen
 
 ### 🔧 CI/CD
 

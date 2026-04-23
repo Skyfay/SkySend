@@ -13,6 +13,7 @@ import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
+import { createPasswordLockout } from "./lib/password-lockout.js";
 import type { QuotaVariables } from "./types.js";
 
 // Routes
@@ -22,11 +23,11 @@ import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { metaRoute } from "./routes/meta.js";
 import { infoRoute } from "./routes/info.js";
 import { createDownloadRoute } from "./routes/download.js";
-import { passwordRoute } from "./routes/password.js";
+import { createPasswordRoute } from "./routes/password.js";
 import { createDeleteRoute } from "./routes/delete.js";
 import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
-import { noteRoute } from "./routes/note.js";
+import { createNoteRoute } from "./routes/note.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -151,6 +152,9 @@ const api = new Hono();
 // 10 MB chunk against the global limit would exhaust the budget on a single
 // large file upload.
 const rateLimiter = createRateLimiter(config);
+const passwordLockout = createPasswordLockout(config.PASSWORD_MAX_ATTEMPTS, config.PASSWORD_LOCKOUT_MS);
+const passwordRoute = createPasswordRoute(passwordLockout);
+const noteRoute = createNoteRoute(passwordLockout);
 api.use("*", async (c, next) => {
   if (/\/upload\/[^/]+\/chunk/.test(c.req.path)) {
     return next();

@@ -186,6 +186,20 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
+  /** Maximum failed password attempts before a resource is locked. */
+  PASSWORD_MAX_ATTEMPTS: z
+    .string()
+    .default("10")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
+  /** How long (ms) a resource stays locked after too many failed attempts. Default: 15 minutes. */
+  PASSWORD_LOCKOUT_MS: z
+    .string()
+    .default("900000")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
   UPLOADS_DIR: z.string().optional(),
 
   TRUST_PROXY: z

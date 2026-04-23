@@ -125,6 +125,7 @@ export async function prepareDownload(
         hashWasmArgon2,
       );
     } else {
+      // TODO: Remove "pbkdf2" branch once all pre-v2.4.4 uploads have expired (~ late 2026)
       const { key } = await deriveKeyFromPassword(password, passwordSalt);
       passwordKey = key;
     }

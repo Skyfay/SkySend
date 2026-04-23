@@ -316,6 +316,10 @@ export function useDownload() {
           setState((s) => ({ ...s, phase: "idle" }));
           return;
         }
+        if (err instanceof api.ApiError && err.status === 429) {
+          setState((s) => ({ ...s, phase: "needs-password", error: "rate-limited" }));
+          return;
+        }
         const message = err instanceof api.ApiError
           ? err.message
           : err instanceof Error

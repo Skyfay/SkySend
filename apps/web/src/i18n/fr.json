@@ -91,6 +91,7 @@
     "passwordPlaceholder": "Saisissez le mot de passe",
     "unlock": "Déverrouiller",
     "wrongPassword": "Mot de passe incorrect",
+    "tooManyAttempts": "Trop de tentatives échouées. Veuillez patienter quelques minutes avant de réessayer.",
     "download": "Télécharger",
     "downloading": "Déchiffrement et téléchargement...",
     "decrypting": "Déchiffrement...",

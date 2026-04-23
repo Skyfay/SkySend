@@ -77,6 +77,35 @@ When a quota is exceeded, the server returns `429 Too Many Requests` with a mess
 }
 ```
 
+## Password Attempt Lockout
+
+SkySend tracks failed password attempts per upload/note and per client IP. After too many failures, that specific IP is locked out from that specific resource for a configurable duration.
+
+This is intentionally per-resource, not per-IP globally: a user mis-typing a password cannot block others from accessing unrelated uploads, and a shared IP (corporate NAT, VPN) cannot trigger a lockout for a resource they have not tried.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PASSWORD_MAX_ATTEMPTS` | `10` | Failed attempts before lockout |
+| `PASSWORD_LOCKOUT_MS` | `900000` | Lockout duration in milliseconds (default: 15 minutes) |
+
+When locked, the server returns `429 Too Many Requests` with a `Retry-After` header indicating the remaining wait in seconds.
+
+### Privacy
+
+Client IP addresses are HMAC-SHA256 hashed with an ephemeral in-memory key before being stored. The key is generated fresh on startup and never persisted or logged - raw IPs are never retained.
+
+### Configuration Examples
+
+```bash
+# Stricter: lock after 5 attempts for 30 minutes
+PASSWORD_MAX_ATTEMPTS=5
+PASSWORD_LOCKOUT_MS=1800000
+
+# More lenient: lock after 20 attempts for 5 minutes
+PASSWORD_MAX_ATTEMPTS=20
+PASSWORD_LOCKOUT_MS=300000
+```
+
 ## IP Detection
 
 SkySend determines the client IP using:

@@ -91,6 +91,7 @@
     "passwordPlaceholder": "Voer wachtwoord in",
     "unlock": "Ontgrendelen",
     "wrongPassword": "Onjuist wachtwoord",
+    "tooManyAttempts": "Te veel mislukte pogingen. Wacht een paar minuten en probeer het opnieuw.",
     "download": "Downloaden",
     "downloading": "Ontsleutelen en downloaden...",
     "decrypting": "Ontsleutelen...",
