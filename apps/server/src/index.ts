@@ -13,6 +13,7 @@ import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
+import { createPasswordLockout } from "./lib/password-lockout.js";
 import type { QuotaVariables } from "./types.js";
 
 // Routes
@@ -22,11 +23,11 @@ import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { metaRoute } from "./routes/meta.js";
 import { infoRoute } from "./routes/info.js";
 import { createDownloadRoute } from "./routes/download.js";
-import { passwordRoute } from "./routes/password.js";
+import { createPasswordRoute } from "./routes/password.js";
 import { createDeleteRoute } from "./routes/delete.js";
 import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
-import { noteRoute } from "./routes/note.js";
+import { createNoteRoute } from "./routes/note.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -77,6 +78,8 @@ if (config.STORAGE_BACKEND === "s3") {
 }
 
 // Global middleware
+// L-4: Hono's built-in logger only logs METHOD, PATH, STATUS, and elapsed time.
+// It does NOT log IP addresses or other user-identifying information.
 app.use("*", logger());
 app.use(
   "*",
@@ -84,6 +87,11 @@ app.use(
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
+      // C-3: 'unsafe-inline' is required for dynamic inline styles used in:
+      //   - NoteContent.tsx: computed line-number column width (style={{ minWidth: `...ch` }})
+      //   - ui/progress.tsx: animated progress bar transform (style={{ transform: ... }})
+      // These cannot be replaced by static CSS without a larger refactor.
+      // All other CSP directives are strict.
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:"],
       connectSrc,
@@ -97,6 +105,7 @@ app.use(
     },
     strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",
     xFrameOptions: "DENY",
+    referrerPolicy: "no-referrer",
   }),
 );
 // Allow any origin on the public health endpoint (read-only, no sensitive data)
@@ -145,11 +154,20 @@ app.onError((err, c) => {
 const api = new Hono();
 
 // Rate limiter on API routes (not static assets).
-// Chunk upload requests are exempt - they are already guarded by the upload
-// session, quota middleware, and per-session memory limits.  Counting every
-// 10 MB chunk against the global limit would exhaust the budget on a single
-// large file upload.
+// S-2 (Security Audit): Chunk upload requests are intentionally exempt from the
+// global rate limiter. This is NOT a security gap - it is a deliberate design
+// decision for the following reasons:
+//   1. Chunk uploads are already guarded by an upload session (valid init token required).
+//   2. The quota middleware enforces per-IP byte limits on the entire upload.
+//   3. Per-session memory limits cap total in-flight data.
+//   4. Applying the global rate limit (e.g. 60 req/min) to chunks would block a
+//      single legitimate large-file upload (a 1 GB file = ~100 chunks at 10 MB each).
+// If dedicated chunk-level throttling is needed, implement it as a separate
+// bytes-per-second limit in the upload session layer, not via the global counter.
 const rateLimiter = createRateLimiter(config);
+const passwordLockout = createPasswordLockout(config.PASSWORD_MAX_ATTEMPTS, config.PASSWORD_LOCKOUT_MS);
+const passwordRoute = createPasswordRoute(passwordLockout);
+const noteRoute = createNoteRoute(passwordLockout);
 api.use("*", async (c, next) => {
   if (/\/upload\/[^/]+\/chunk/.test(c.req.path)) {
     return next();
@@ -268,9 +286,16 @@ const server = serve(
 );
 
 // Timeout tuning for large file uploads over slow connections:
-// - headersTimeout: 60s to receive HTTP headers (prevents Slowloris attacks)
-// - requestTimeout: 0 (disabled) - uploads can take hours on slow connections
-// - timeout: 0 (disabled) - socket inactivity handled by Node.js keep-alive defaults
+// - headersTimeout: 60s to receive HTTP headers.
+//   S-7 (Security Audit): This is the primary Slowloris defense. Slowloris sends
+//   HTTP headers extremely slowly - headersTimeout terminates such connections.
+//   Setting it to 0 would be dangerous; 60s is appropriate for normal clients.
+// - requestTimeout: 0 (disabled by design).
+//   S-7: NOT a Slowloris risk because headersTimeout already covers that attack.
+//   requestTimeout covers the body-transfer phase only. Disabling it is intentional:
+//   large file uploads over slow connections can legitimately take many hours.
+//   The reverse proxy (Nginx/Caddy/Traefik) should handle overall connection timeouts.
+// - timeout: 0 (disabled) - socket inactivity handled by Node.js keep-alive defaults.
 const nodeServer = server as unknown as import("node:http").Server;
 nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;

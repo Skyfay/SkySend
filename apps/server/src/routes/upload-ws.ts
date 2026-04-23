@@ -174,6 +174,10 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
       // so we check manually to prevent cross-site quota-waste attacks.
       const origin = c.req.header("origin") ?? "";
       const allowed = [config.BASE_URL, ...config.CORS_ORIGINS];
+      // L-3 (Security Audit): Empty origin is intentionally allowed.
+      // Non-browser clients (curl, the SkySend CLI) do not send an Origin header.
+      // For a self-hosted file-sharing tool, CLI access is a first-class use case.
+      // The upload still goes through quota enforcement and session validation.
       const originAllowed = origin === "" || allowed.includes(origin);
 
       return {

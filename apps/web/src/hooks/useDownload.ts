@@ -8,6 +8,7 @@ import {
   fromBase64url,
   applyPasswordProtection,
   deriveKeyFromPassword,
+  ARGON2_PARAMS_LEGACY,
   type FileMetadata,
   type Argon2idHashFn,
 } from "@skysend/crypto";
@@ -97,10 +98,14 @@ export function useDownload() {
           if (!info.passwordSalt) throw new Error("Missing password salt");
 
           const passwordSalt = fromBase64url(info.passwordSalt);
+          const isArgon2 = info.passwordAlgo === "argon2id" || info.passwordAlgo === "argon2id-v2";
+          // TODO: Remove "pbkdf2" branch once all pre-v2.4.4 uploads have expired (~ late 2026)
           const { key: passwordKey } = await deriveKeyFromPassword(
             password,
             passwordSalt,
-            info.passwordAlgo === "argon2id" ? argon2id : undefined,
+            isArgon2 ? argon2id : undefined,
+            // "argon2id" = legacy uploads (pre-v2.4.4) - use old params for backward compat
+            info.passwordAlgo === "argon2id" ? ARGON2_PARAMS_LEGACY : undefined,
           );
           secret = applyPasswordProtection(secret, passwordKey);
         }
@@ -309,6 +314,10 @@ export function useDownload() {
         // User cancelled the save dialog - not an error
         if (err instanceof DOMException && err.name === "AbortError") {
           setState((s) => ({ ...s, phase: "idle" }));
+          return;
+        }
+        if (err instanceof api.ApiError && err.status === 429) {
+          setState((s) => ({ ...s, phase: "needs-password", error: "rate-limited" }));
           return;
         }
         const message = err instanceof api.ApiError

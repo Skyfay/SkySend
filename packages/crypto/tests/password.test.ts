@@ -65,20 +65,42 @@ describe("deriveKeyFromPassword (auto-select)", () => {
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
   });
 
-  it("should fall back to PBKDF2 when Argon2id function fails", async () => {
+  it("should throw when Argon2id WASM is unavailable", async () => {
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const failingArgon2id = async () => {
+    const wasmFailingArgon2id = async () => {
       throw new Error("WASM not supported");
     };
-    const result = await deriveKeyFromPassword("test-password", salt, failingArgon2id);
-    expect(result.algorithm).toBe("pbkdf2");
-    expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
+    await expect(
+      deriveKeyFromPassword("test-password", salt, wasmFailingArgon2id),
+    ).rejects.toThrow("WASM not supported");
+  });
+
+  it("should throw when Argon2id fails for any reason", async () => {
+    const salt = randomBytes(PASSWORD_SALT_LENGTH);
+    const cryptoFailingArgon2id = async () => {
+      throw new Error("unexpected internal error");
+    };
+    await expect(
+      deriveKeyFromPassword("test-password", salt, cryptoFailingArgon2id),
+    ).rejects.toThrow("unexpected internal error");
   });
 
   it("should use Argon2id when provided and working", async () => {
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
     const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
     const result = await deriveKeyFromPassword("test-password", salt, mockArgon2id);
+    expect(result.algorithm).toBe("argon2id-v2");
+    expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
+  });
+
+  it("should return 'argon2id' algorithm when legacy argon2Params are passed", async () => {
+    const salt = randomBytes(PASSWORD_SALT_LENGTH);
+    const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
+    const result = await deriveKeyFromPassword("test-password", salt, mockArgon2id, {
+      memory: 65536,
+      iterations: 3,
+      parallelism: 1,
+    });
     expect(result.algorithm).toBe("argon2id");
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
   });
@@ -144,5 +166,24 @@ describe("deriveKeyFromPasswordArgon2", () => {
       mockArgon2id,
     );
     expect(constantTimeEqual(result, expectedKey)).toBe(true);
+  });
+});
+
+describe("deriveKeyFromPasswordPbkdf2 - known-answer test", () => {
+  // Verifies exact algorithm parameters: PBKDF2-SHA256, 600,000 iterations, 32-byte output.
+  // If iterations, hash, or output length ever change, this test will catch it.
+  it("should produce a specific known output for a fixed password and salt", async () => {
+    const password = "kat-password-skysend";
+    const salt = new Uint8Array(16); // all zeros - deterministic
+
+    const expected = new Uint8Array([
+      0x3d, 0x87, 0x12, 0x80, 0xab, 0xea, 0xd9, 0x97,
+      0x12, 0x98, 0xa0, 0x99, 0xba, 0xdb, 0xb0, 0x9b,
+      0xc5, 0x03, 0xd8, 0x78, 0x96, 0x5b, 0xc7, 0xb5,
+      0x90, 0x45, 0x82, 0x90, 0x36, 0x3f, 0x77, 0xcb,
+    ]);
+
+    const key = await deriveKeyFromPasswordPbkdf2(password, salt);
+    expect(constantTimeEqual(key, expected)).toBe(true);
   });
 });

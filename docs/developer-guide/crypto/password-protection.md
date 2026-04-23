@@ -21,12 +21,12 @@ Argon2id is a memory-hard KDF that is resistant to GPU and ASIC attacks. SkySend
 
 | Parameter | Value |
 | --- | --- |
-| Memory | 19,456 KiB (19 MiB) |
-| Iterations | 2 |
+| Memory | 65,536 KiB (64 MiB) |
+| Iterations | 3 |
 | Parallelism | 1 |
 | Hash Length | 32 bytes |
 
-These parameters meet the [OWASP minimum recommendations](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) for Argon2id.
+These parameters follow the [OWASP strong recommendation](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) for Argon2id.
 
 ```typescript
 const { key, algorithm } = await deriveKeyFromPassword(password, salt)
@@ -85,8 +85,8 @@ The salt and the algorithm used (`argon2id` or `pbkdf2`) are stored on the serve
 | `PASSWORD_SALT_LENGTH` | 16 bytes |
 | `DERIVED_KEY_LENGTH` | 32 bytes |
 | `PBKDF2_ITERATIONS` | 600,000 |
-| `ARGON2_PARAMS.memory` | 19,456 KiB |
-| `ARGON2_PARAMS.iterations` | 2 |
+| `ARGON2_PARAMS.memory` | 65,536 KiB |
+| `ARGON2_PARAMS.iterations` | 3 |
 | `ARGON2_PARAMS.parallelism` | 1 |
 | `ARGON2_PARAMS.hashLength` | 32 bytes |
 

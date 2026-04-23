@@ -5,8 +5,11 @@ import { z } from "zod";
 import { getDb } from "../db/index.js";
 import { notes, type Note } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
-import { constantTimeEqual, fromBase64url, toBase64url } from "@skysend/crypto";
+import { constantTimeEqual, fromBase64url, toBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH } from "@skysend/crypto";
+import { getClientIp } from "../middleware/rate-limit.js";
+import type { PasswordLockout } from "../lib/password-lockout.js";
 
+export function createNoteRoute(lockout: PasswordLockout) {
 const noteRoute = new Hono();
 
 // ── Validation Schemas ─────────────────────────────────
@@ -83,8 +86,8 @@ noteRoute.post(
     let saltBytes: Uint8Array;
     try {
       saltBytes = fromBase64url(data.salt);
-      if (saltBytes.length !== 16) {
-        return c.json({ error: "Salt must be exactly 16 bytes" }, 400);
+      if (saltBytes.length !== SALT_LENGTH && saltBytes.length !== 16) {
+        return c.json({ error: `Salt must be 16 or 32 bytes` }, 400);
       }
     } catch {
       return c.json({ error: "Invalid salt encoding" }, 400);
@@ -117,8 +120,8 @@ noteRoute.post(
       }
       try {
         const pwSaltBytes = fromBase64url(data.passwordSalt);
-        if (pwSaltBytes.length !== 16) {
-          return c.json({ error: "Password salt must be exactly 16 bytes" }, 400);
+        if (pwSaltBytes.length !== PASSWORD_SALT_LENGTH) {
+          return c.json({ error: `Password salt must be exactly ${PASSWORD_SALT_LENGTH} bytes` }, 400);
         }
       } catch {
         return c.json({ error: "Invalid password salt encoding" }, 400);
@@ -197,6 +200,15 @@ noteRoute.post(
   }),
   async (c) => {
     const id = c.req.param("id");
+    const config = getConfig();
+    const ip = getClientIp(c, config.TRUST_PROXY);
+    const resourceKey = `note:${id}`;
+
+    const lockState = lockout.check(resourceKey, ip);
+    if (lockState.locked) {
+      c.header("Retry-After", String(lockState.retryAfter));
+      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
+    }
 
     let body: unknown;
     try {
@@ -229,13 +241,17 @@ noteRoute.post(
     try {
       providedToken = fromBase64url(parsed.data.authToken);
     } catch {
+      lockout.recordFailure(resourceKey, ip);
       return c.json({ error: "Invalid auth token format" }, 401);
     }
 
     const storedToken = fromBase64url(note.authToken);
     if (!constantTimeEqual(providedToken, storedToken)) {
+      lockout.recordFailure(resourceKey, ip);
       return c.json({ error: "Invalid auth token" }, 401);
     }
+
+    lockout.recordSuccess(resourceKey, ip);
 
     // Atomically increment view count with race-proof WHERE clause
     const result = db
@@ -269,6 +285,15 @@ noteRoute.post(
   }),
   async (c) => {
     const id = c.req.param("id");
+    const config = getConfig();
+    const ip = getClientIp(c, config.TRUST_PROXY);
+    const resourceKey = `note:${id}`;
+
+    const lockState = lockout.check(resourceKey, ip);
+    if (lockState.locked) {
+      c.header("Retry-After", String(lockState.retryAfter));
+      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
+    }
 
     let body: { authToken?: string };
     try {
@@ -304,14 +329,17 @@ noteRoute.post(
     try {
       providedToken = fromBase64url(body.authToken);
     } catch {
+      lockout.recordFailure(resourceKey, ip);
       return c.json({ error: "Invalid auth token format" }, 401);
     }
 
     const storedToken = fromBase64url(note.authToken);
     if (!constantTimeEqual(providedToken, storedToken)) {
+      lockout.recordFailure(resourceKey, ip);
       return c.json({ error: "Invalid password" }, 401);
     }
 
+    lockout.recordSuccess(resourceKey, ip);
     return c.json({ ok: true });
   },
 );
@@ -352,4 +380,5 @@ noteRoute.delete("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-export { noteRoute };
+  return noteRoute;
+}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fromBase64url, SALT_LENGTH } from "@skysend/crypto";
+import { fromBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH } from "@skysend/crypto";
 import type { Config } from "./config.js";
 
 const base64urlPattern = /^[A-Za-z0-9_-]+$/;
@@ -35,7 +35,7 @@ export const uploadHeadersSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   passwordSalt: z.string().regex(base64urlPattern).optional(),
-  passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
+  passwordAlgo: z.enum(["argon2id", "argon2id-v2", "pbkdf2"]).optional(),
 });
 
 export type UploadHeaders = z.infer<typeof uploadHeadersSchema>;
@@ -79,8 +79,8 @@ export function validateUploadHeaders(
     }
     try {
       const pwSaltBytes = fromBase64url(headers.passwordSalt);
-      if (pwSaltBytes.length !== SALT_LENGTH) {
-        return { message: `Password salt must be exactly ${SALT_LENGTH} bytes`, status: 400 };
+      if (pwSaltBytes.length !== PASSWORD_SALT_LENGTH) {
+        return { message: `Password salt must be exactly ${PASSWORD_SALT_LENGTH} bytes`, status: 400 };
       }
     } catch {
       return { message: "Invalid password salt encoding", status: 400 };

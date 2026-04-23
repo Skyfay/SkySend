@@ -69,6 +69,11 @@ export function PasswordPrompt({
           {t("download.wrongPassword")}
         </p>
       )}
+      {error === "rate-limited" && (
+        <p className="text-sm text-destructive-foreground" role="alert">
+          {t("download.tooManyAttempts")}
+        </p>
+      )}
     </form>
   );
 }

@@ -104,11 +104,13 @@ export function createEncryptStream(
  */
 export function createDecryptStream(
   fileKey: CryptoKey,
+  expectedPlaintextSize?: number,
 ): TransformStream<Uint8Array, Uint8Array> {
   let baseNonce: AnyBytes | null = null;
   let buffer: AnyBytes = new Uint8Array(0);
   let counter = 0;
   let nonceBuffer: AnyBytes = new Uint8Array(0);
+  let totalDecrypted = 0;
 
   return new TransformStream<Uint8Array, Uint8Array>({
     async transform(chunk, controller) {
@@ -137,6 +139,7 @@ export function createDecryptStream(
       while (buffer.length > ENCRYPTED_RECORD_SIZE) {
         const record = buffer.slice(0, ENCRYPTED_RECORD_SIZE);
         buffer = buffer.slice(ENCRYPTED_RECORD_SIZE);
+        totalDecrypted += RECORD_SIZE;
         await decryptAndEnqueue(record, fileKey, baseNonce, counter++, controller);
       }
     },
@@ -151,7 +154,16 @@ export function createDecryptStream(
         if (buffer.length <= TAG_LENGTH) {
           throw new Error("Invalid encrypted record: too short to contain auth tag");
         }
+        totalDecrypted += buffer.length - TAG_LENGTH;
         await decryptAndEnqueue(buffer, fileKey, baseNonce, counter++, controller);
+      }
+
+      // Truncation check: verify the decrypted size matches the expected plaintext size.
+      // This catches a malicious server delivering fewer records than were encrypted.
+      if (expectedPlaintextSize !== undefined && totalDecrypted !== expectedPlaintextSize) {
+        throw new Error(
+          `Stream truncation detected: expected ${expectedPlaintextSize} bytes, got ${totalDecrypted} bytes`,
+        );
       }
     },
   });
@@ -165,6 +177,8 @@ async function encryptAndEnqueue(
   counter: number,
   controller: TransformStreamDefaultController<Uint8Array>,
 ): Promise<void> {
+  // Reaching MAX_RECORDS requires ~281 TB of data (0xffffffff × 64 KB); not reachable in practice.
+  /* v8 ignore next 2 */
   if (counter > MAX_RECORDS) {
     throw new Error("Maximum record count exceeded - stream too large");
   }
@@ -187,6 +201,8 @@ async function decryptAndEnqueue(
   counter: number,
   controller: TransformStreamDefaultController<Uint8Array>,
 ): Promise<void> {
+  // Reaching MAX_RECORDS requires ~281 TB of data (0xffffffff × 64 KB); not reachable in practice.
+  /* v8 ignore next 2 */
   if (counter > MAX_RECORDS) {
     throw new Error("Maximum record count exceeded - stream too large");
   }

@@ -13,6 +13,7 @@ import {
   PASSWORD_SALT_LENGTH,
   type NoteContentType,
 } from "@skysend/crypto";
+import { hashWasmArgon2 } from "@/lib/argon2";
 import { createNote } from "@/lib/api";
 import { saveNote } from "@/lib/upload-store";
 
@@ -75,7 +76,7 @@ export function useNoteUpload() {
       let effectiveSecret: Uint8Array = secret;
       let hasPassword = false;
       let passwordSalt: Uint8Array | undefined;
-      let passwordAlgo: "argon2id" | "pbkdf2" | undefined;
+      let passwordAlgo: "argon2id" | "argon2id-v2" | "pbkdf2" | undefined;
 
       if (password.length > 0) {
         hasPassword = true;
@@ -83,6 +84,7 @@ export function useNoteUpload() {
         const { key: passwordKey, algorithm } = await deriveKeyFromPassword(
           password,
           passwordSalt,
+          hashWasmArgon2,
         );
         passwordAlgo = algorithm;
         effectiveSecret = applyPasswordProtection(secret, passwordKey);

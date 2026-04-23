@@ -149,7 +149,9 @@ function createMockUpgrade(): {
 function buildHeaders(overrides: Record<string, unknown> = {}) {
   const authToken = "a".repeat(43);
   const ownerToken = "b".repeat(43);
-  const salt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+  // SALT_LENGTH = 32 bytes (updated in crypto package - legacy 16-byte salts are only
+  // accepted for decryption of old uploads, new uploads must use 32 bytes).
+  const salt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
   return {
     authToken,
     ownerToken,

@@ -1,6 +1,6 @@
 {
   "name": "@skysend/web",
-  "version": "2.4.3",
+  "version": "2.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,8 +24,10 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@skysend/crypto": "workspace:*",
     "@tailwindcss/typography": "^0.5.19",
+    "@types/dompurify": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.1",
     "fflate": "^0.8.2",
     "flag-icons": "^7.5.0",
     "hash-wasm": "^4.12.0",
@@ -40,6 +42,7 @@
     "react-i18next": "^17.0.2",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"

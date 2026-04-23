@@ -91,6 +91,7 @@
     "passwordPlaceholder": "Syötä salasana",
     "unlock": "Avaa",
     "wrongPassword": "Väärä salasana",
+    "tooManyAttempts": "Liian monta epäonnistunutta yritystä. Odota muutama minuutti ja yritä uudelleen.",
     "download": "Lataa",
     "downloading": "Puretaan salausta ja ladataan...",
     "decrypting": "Puretaan salausta...",

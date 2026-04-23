@@ -58,6 +58,18 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_IMAGE }}
+            ${{ env.DOCKERHUB_IMAGE }}
+          labels: |
+            org.opencontainers.image.description=Minimalist, end-to-end encrypted, self-hostable file sharing service
+            org.opencontainers.image.vendor=Skyfay
+            org.opencontainers.image.licenses=AGPL-3.0
+
       - name: Build and push (${{ matrix.suffix }})
         uses: docker/build-push-action@v6
         with:
@@ -65,6 +77,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ env.GHCR_IMAGE }}:${{ github.ref_name }}-${{ matrix.suffix }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=build-${{ matrix.suffix }}
           cache-to: type=gha,scope=build-${{ matrix.suffix }},mode=max
 

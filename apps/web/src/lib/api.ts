@@ -50,7 +50,7 @@ const infoResponseSchema = z.object({
   size: z.number(),
   fileCount: z.number(),
   hasPassword: z.boolean(),
-  passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
+  passwordAlgo: z.enum(["argon2id", "argon2id-v2", "pbkdf2"]).optional(),
   passwordSalt: z.string().optional(),
   salt: z.string(),
   encryptedMeta: z.string().nullable(),
@@ -180,6 +180,7 @@ export async function verifyPassword(
     body: JSON.stringify({ authToken }),
   });
   if (res.status === 401) return false;
+  if (res.status === 429) throw new ApiError(429, "rate-limited");
   if (!res.ok) {
     throw new ApiError(res.status, "Password verification failed");
   }
@@ -287,7 +288,7 @@ const noteInfoResponseSchema = z.object({
   id: z.string(),
   contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
   hasPassword: z.boolean(),
-  passwordAlgo: z.enum(["argon2id", "pbkdf2"]).optional(),
+  passwordAlgo: z.enum(["argon2id", "argon2id-v2", "pbkdf2"]).optional(),
   passwordSalt: z.string().optional(),
   salt: z.string(),
   maxViews: z.number(),
@@ -334,6 +335,7 @@ export async function verifyNotePassword(
     body: JSON.stringify({ authToken }),
   });
   if (res.status === 401) return false;
+  if (res.status === 429) throw new ApiError(429, "rate-limited");
   if (!res.ok) {
     throw new ApiError(res.status, "Password verification failed");
   }

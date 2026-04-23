@@ -90,6 +90,13 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `RATE_LIMIT_WINDOW` | ❌ | `60000` | Rate limit window in milliseconds. |
 | `RATE_LIMIT_MAX` | ❌ | `60` | Maximum requests per window per IP. |
 
+## Password Lockout
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `PASSWORD_MAX_ATTEMPTS` | ❌ | `10` | Failed password attempts before a specific IP is locked out from a specific upload or note. |
+| `PASSWORD_LOCKOUT_MS` | ❌ | `900000` | Lockout duration in milliseconds (default: 15 minutes). |
+
 ## Storage Backend
 
 | Variable | Required | Default | Description |

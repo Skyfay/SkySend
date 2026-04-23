@@ -63,6 +63,13 @@ describe("toBase64url / fromBase64url", () => {
     expect(decodeUtf8(fromBase64url(encoded))).toBe("foobar");
   });
 
+  it("should handle a single-character input (length 1 mod 4 edge case)", () => {
+    // Triggers the false branch of `i + 1 < input.length ? ... : 0` in fromBase64url.
+    // A 1-char base64url string encodes less than one full byte; byteLength rounds to 0.
+    const result = fromBase64url("A");
+    expect(result).toEqual(new Uint8Array(0));
+  });
+
   it("should throw on invalid characters", () => {
     expect(() => fromBase64url("abc!")).toThrow("Invalid base64url character");
   });
@@ -135,6 +142,17 @@ describe("randomBytes", () => {
     expect(randomBytes(64).length).toBe(64);
   });
 
+  it("should handle sizes larger than the 65536-byte getRandomValues limit (chunked allocation)", () => {
+    // crypto.getRandomValues() is limited to 65536 bytes per call.
+    // randomBytes() splits larger requests into chunks. Verify length and non-zero output.
+    const size = 65_537; // one byte over the limit, forces two getRandomValues() calls
+    const result = randomBytes(size);
+    expect(result.length).toBe(size);
+    // Statistically impossible for all bytes to be zero if CSPRNG is working
+    const allZero = result.every((b) => b === 0);
+    expect(allZero).toBe(false);
+  });
+
   it("should produce different values on each call", () => {
     const a = randomBytes(32);
     const b = randomBytes(32);
@@ -184,6 +202,28 @@ describe("nonceXorCounter", () => {
     const nonce = new Uint8Array(12);
     expect(() => nonceXorCounter(nonce, -1)).toThrow("32-bit unsigned integer");
     expect(() => nonceXorCounter(nonce, 0x100000000)).toThrow("32-bit unsigned integer");
+  });
+
+  it("should be identity for counter 0 (XOR with 0 leaves nonce unchanged)", () => {
+    // Counter 0 is always used for the FIRST encrypted record - the most security-critical position.
+    // XOR with 0 is the identity, so nonce[record 0] === baseNonce.
+    const nonce = new Uint8Array(12).fill(0xaa);
+    const result = nonceXorCounter(nonce, 0);
+    expect(result).toEqual(nonce);
+  });
+
+  it("should handle max valid counter (0xffffffff)", () => {
+    const nonce = new Uint8Array(12).fill(0);
+    const result = nonceXorCounter(nonce, 0xffffffff);
+    // Last 4 bytes: 0x00 ^ 0xff = 0xff each
+    expect(result[8]).toBe(0xff);
+    expect(result[9]).toBe(0xff);
+    expect(result[10]).toBe(0xff);
+    expect(result[11]).toBe(0xff);
+    // First 8 bytes unchanged
+    for (let i = 0; i < 8; i++) {
+      expect(result[i]).toBe(0);
+    }
   });
 
   it("should produce unique nonces for different counters", () => {

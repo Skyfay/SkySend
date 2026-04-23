@@ -103,7 +103,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     let effectiveSecret: Uint8Array = secret;
     let hasPassword = false;
     let passwordSalt: Uint8Array | undefined;
-    let passwordAlgo: "argon2id" | "pbkdf2" | undefined;
+    let passwordAlgo: "argon2id" | "argon2id-v2" | "pbkdf2" | undefined;
 
     if (msg.password.length > 0) {
       hasPassword = true;
@@ -453,7 +453,7 @@ interface WsInitHeaders {
   contentLength: number;
   hasPassword: boolean;
   passwordSalt?: string;
-  passwordAlgo?: "argon2id" | "pbkdf2";
+  passwordAlgo?: "argon2id" | "argon2id-v2" | "pbkdf2";
 }
 
 /**

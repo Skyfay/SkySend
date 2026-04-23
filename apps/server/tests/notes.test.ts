@@ -16,7 +16,10 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { noteRoute } from "../src/routes/note.js";
+import { createNoteRoute } from "../src/routes/note.js";
+import { createPasswordLockout } from "../src/lib/password-lockout.js";
+
+const mockLockout = createPasswordLockout(10, 60_000);
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -48,7 +51,7 @@ const DEFAULT_CONFIG = {
 
 function createApp() {
   const app = new Hono();
-  app.route("/api/note", noteRoute);
+  app.route("/api/note", createNoteRoute(mockLockout));
   return app;
 }
 
@@ -475,6 +478,50 @@ describe("note routes", () => {
       });
       expect(res.status).toBe(400);
     });
+
+    it("should return 401 when authToken is not valid base64url", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken: fakeBase64urlToken() });
+
+      const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: "!!!not-valid-base64url!!!" }),
+      });
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid auth token format");
+    });
+
+    it("should lock after repeated failed view attempts and return 429", async () => {
+      const authToken = fakeBase64urlToken();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken });
+
+      const strictLockout = createPasswordLockout(3, 60_000);
+      const app = new Hono();
+      app.route("/api/note", createNoteRoute(strictLockout));
+
+      // 3 failed attempts with wrong tokens
+      for (let i = 0; i < 3; i++) {
+        const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authToken: fakeBase64urlToken() }),
+        });
+        expect(res.status).toBe(401);
+      }
+
+      // 4th attempt (even with correct token) should be locked
+      const lockedRes = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken }),
+      });
+
+      expect(lockedRes.status).toBe(429);
+      expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
+    });
   });
 
   // ── POST /api/note/:id/password ─────────────────────
@@ -561,7 +608,78 @@ describe("note routes", () => {
       });
       expect(res.status).toBe(410);
     });
-  });
+    it("should return 400 when authToken is missing from body", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, {
+        id: TEST_UUID,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "pbkdf2",
+      });
+
+      const res = await app.request(`/api/note/${TEST_UUID}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("authToken");
+    });
+
+    it("should return 401 when authToken is not valid base64url", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, {
+        id: TEST_UUID,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "pbkdf2",
+      });
+
+      const res = await app.request(`/api/note/${TEST_UUID}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: "!!!not-valid-base64url!!!" }),
+      });
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid auth token format");
+    });
+
+    it("should lock after repeated failed password attempts and return 429", async () => {
+      insertTestNote(dbCtx.db, {
+        id: TEST_UUID,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "pbkdf2",
+      });
+
+      const strictLockout = createPasswordLockout(3, 60_000);
+      const app = new Hono();
+      app.route("/api/note", createNoteRoute(strictLockout));
+
+      // 3 failed attempts with wrong tokens
+      for (let i = 0; i < 3; i++) {
+        const res = await app.request(`/api/note/${TEST_UUID}/password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authToken: fakeBase64urlToken() }),
+        });
+        expect(res.status).toBe(401);
+      }
+
+      // 4th attempt should be locked
+      const lockedRes = await app.request(`/api/note/${TEST_UUID}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: fakeBase64urlToken() }),
+      });
+
+      expect(lockedRes.status).toBe(429);
+      expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
+    });  });
 
   // ── DELETE /api/note/:id ────────────────────────────
 
@@ -618,6 +736,20 @@ describe("note routes", () => {
       });
 
       expect(res.status).toBe(404);
+    });
+
+    it("should return 401 when owner token is not valid base64url", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, ownerToken: fakeBase64urlToken() });
+
+      const res = await app.request(`/api/note/${TEST_UUID}`, {
+        method: "DELETE",
+        headers: { "X-Owner-Token": "!!!not-valid-base64url!!!" },
+      });
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid owner token format");
     });
   });
 });

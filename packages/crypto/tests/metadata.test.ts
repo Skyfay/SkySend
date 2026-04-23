@@ -311,3 +311,22 @@ describe("validateMetadata - invalid shapes (via decryptMetadata)", () => {
     );
   });
 });
+
+describe("validateMetadata - edge cases", () => {
+  it("should accept an archive with an empty files array", async () => {
+    // An archive with zero entries is technically valid - the validator does not enforce
+    // a minimum file count. The application layer is responsible for disallowing empty archives.
+    const metaKey = await getMetaKey();
+    const metadata: ArchiveMetadata = {
+      type: "archive",
+      files: [],
+      totalSize: 0,
+    };
+    const encrypted = await encryptMetadata(metadata, metaKey);
+    const decrypted = await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey);
+    expect(decrypted).toEqual(metadata);
+    if (decrypted.type === "archive") {
+      expect(decrypted.files).toHaveLength(0);
+    }
+  });
+});

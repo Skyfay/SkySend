@@ -16,8 +16,11 @@ import { asBytes, randomBytes } from "./util.js";
 /** Length of the master secret in bytes (256 bits). */
 export const SECRET_LENGTH = 32;
 
-/** Length of the salt used in HKDF derivation (16 bytes). */
-export const SALT_LENGTH = 16;
+/**
+ * Length of the salt used in HKDF derivation for new uploads (32 bytes = SHA-256 output per RFC 5869).
+ * Legacy uploads with 16-byte salts are still accepted by deriveKeys() for backward compatibility.
+ */
+export const SALT_LENGTH = 32;
 
 /** HKDF info strings for domain separation. */
 const HKDF_INFO_FILE = "skysend-file-encryption";
@@ -108,8 +111,11 @@ async function deriveHmacKey(
  * intended operations (encrypt/decrypt or sign/verify).
  */
 export async function deriveKeys(secret: Uint8Array, salt: Uint8Array): Promise<DerivedKeys> {
-  if (salt.length !== SALT_LENGTH) {
-    throw new Error(`Salt must be exactly ${SALT_LENGTH} bytes`);
+  // Accept both 32 bytes (new uploads) and 16 bytes (legacy uploads).
+  // TODO: Remove the 16-byte branch once all existing uploads with legacy salts have expired.
+  //       After removing, update this check to: if (salt.length !== SALT_LENGTH)
+  if (salt.length !== 32 && salt.length !== 16) {
+    throw new Error(`Salt must be 16 or 32 bytes, got ${salt.length}`);
   }
 
   const baseKey = await importHkdfKey(secret);

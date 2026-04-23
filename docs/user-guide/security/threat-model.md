@@ -45,7 +45,7 @@ An attacker who gains access to the server's filesystem or database.
 ### Brute-Force Password Guessing
 **Threat**: An attacker tries to brute-force the password on a password-protected upload.
 
-**Mitigation**: Password-derived keys use Argon2id (19 MiB memory, GPU-resistant) or PBKDF2-SHA256 (600,000 iterations). Rate limiting applies to all endpoints.
+**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant) or PBKDF2-SHA256 (600,000 iterations). Rate limiting applies to all endpoints.
 
 **Result**: Online brute-force is impractical due to rate limiting. Offline brute-force is expensive due to memory-hard KDF.
 

@@ -76,7 +76,7 @@ The `createEncryptStream` function returns a `TransformStream` that:
 ## Decryption
 
 ```typescript
-const decryptStream = createDecryptStream(fileKey)
+const decryptStream = createDecryptStream(fileKey, expectedPlaintextSize)
 const plaintextStream = encryptedStream.pipeThrough(decryptStream)
 ```
 
@@ -87,6 +87,9 @@ The `createDecryptStream` function returns a `TransformStream` that:
 3. Decrypts each record with AES-256-GCM, verifying the auth tag
 4. Outputs plaintext chunks
 5. Throws an error if any record fails authentication
+6. If `expectedPlaintextSize` is provided, throws `"Stream truncation detected"` if the total decrypted byte count does not match - this prevents a malicious server from delivering fewer records than were encrypted
+
+The `expectedPlaintextSize` should be sourced from the authenticated, encrypted metadata (which contains the original file size). Passing it is optional but strongly recommended.
 
 ## Size Calculation
 

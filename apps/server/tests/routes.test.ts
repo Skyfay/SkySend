@@ -24,11 +24,15 @@ import { createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
 import { createDownloadRoute } from "../src/routes/download.js";
-import { passwordRoute } from "../src/routes/password.js";
+import { createPasswordRoute } from "../src/routes/password.js";
 import { createDeleteRoute } from "../src/routes/delete.js";
 import { existsRoute } from "../src/routes/exists.js";
 import { healthRoute } from "../src/routes/health.js";
-import { noteRoute } from "../src/routes/note.js";
+import { createNoteRoute } from "../src/routes/note.js";
+import { createPasswordLockout } from "../src/lib/password-lockout.js";
+import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
+
+const mockLockout = createPasswordLockout(10, 60_000);
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -323,6 +327,98 @@ describe("routes", () => {
 
       expect(res.status).toBe(409);
     });
+
+    it("should return 400 for invalid JSON body", async () => {
+      const ownerToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { ownerToken });
+
+      const app = new Hono();
+      app.route("/api/meta", metaRoute);
+
+      const res = await app.request(`/api/meta/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Owner-Token": ownerToken,
+        },
+        body: "not valid json",
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid JSON");
+    });
+
+    it("should return 400 when required fields are missing", async () => {
+      const ownerToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { ownerToken });
+
+      const app = new Hono();
+      app.route("/api/meta", metaRoute);
+
+      const res = await app.request(`/api/meta/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Owner-Token": ownerToken,
+        },
+        body: JSON.stringify({ encryptedMeta: "dGVzdA" }), // missing nonce
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid request body");
+    });
+
+    it("should return 400 when encryptedMeta decodes to empty bytes", async () => {
+      const ownerToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { ownerToken });
+
+      const app = new Hono();
+      app.route("/api/meta", metaRoute);
+
+      // A single base64 character decodes to 0 bytes (incomplete group)
+      const res = await app.request(`/api/meta/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Owner-Token": ownerToken,
+        },
+        body: JSON.stringify({
+          encryptedMeta: "a",
+          nonce: Buffer.from(crypto.getRandomValues(new Uint8Array(12))).toString("base64"),
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("encryptedMeta");
+    });
+
+    it("should return 400 when nonce decodes to empty bytes", async () => {
+      const ownerToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { ownerToken });
+
+      const app = new Hono();
+      app.route("/api/meta", metaRoute);
+
+      // A single base64 character decodes to 0 bytes (incomplete group)
+      const res = await app.request(`/api/meta/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Owner-Token": ownerToken,
+        },
+        body: JSON.stringify({
+          encryptedMeta: Buffer.from("test-meta").toString("base64"),
+          nonce: "a",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("nonce");
+    });
   });
 
   // ── Password ────────────────────────────────────────
@@ -338,7 +434,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -359,7 +455,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -374,7 +470,7 @@ describe("routes", () => {
       insertTestUpload(dbCtx.db, { hasPassword: false });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -387,7 +483,7 @@ describe("routes", () => {
 
     it("should return 404 for non-existent upload", async () => {
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -407,7 +503,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -416,6 +512,121 @@ describe("routes", () => {
       });
 
       expect(res.status).toBe(410);
+    });
+
+    it("should return 400 when request body is not valid JSON", async () => {
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(mockLockout));
+
+      const res = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not-valid-json",
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when authToken is missing from body", async () => {
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(mockLockout));
+
+      const res = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("authToken");
+    });
+
+    it("should return 400 when authToken is not a string", async () => {
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(mockLockout));
+
+      const res = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: 12345 }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 401 when authToken is not valid base64url", async () => {
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(mockLockout));
+
+      const res = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: "!!!not-valid-base64url!!!" }),
+      });
+
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid auth token format");
+    });
+
+    it("should lock IP after repeated failed attempts and return 429 with Retry-After header", async () => {
+      const authToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, {
+        authToken,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+
+      // Use a fresh lockout with low attempt limit to keep the test fast
+      const strictLockout = createPasswordLockout(3, 60_000);
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(strictLockout));
+
+      // Send 3 requests with wrong tokens to trigger lockout
+      for (let i = 0; i < 3; i++) {
+        const res = await app.request(`/api/password/${TEST_UUID}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authToken: fakeBase64urlToken() }),
+        });
+        expect(res.status).toBe(401);
+      }
+
+      // 4th attempt should be locked out
+      const lockedRes = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken }),
+      });
+
+      expect(lockedRes.status).toBe(429);
+      expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
     });
   });
 
@@ -567,7 +778,8 @@ describe("routes", () => {
   // ── Upload ──────────────────────────────────────────
 
   describe("POST /api/upload", () => {
-    const validSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+    // SALT_LENGTH = 32 bytes (crypto package requirement for HKDF salt)
+    const validSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 
     function makeUploadHeaders(overrides: Record<string, string> = {}) {
       return {
@@ -704,6 +916,285 @@ describe("routes", () => {
       const json = await res.json();
       expect(json.error).toContain("Password-protected");
     });
+
+    it("should return 400 when salt decodes to wrong number of bytes", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // 16-byte salt is valid base64url but SALT_LENGTH requires 32 bytes
+      const shortSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({ "X-Salt": shortSalt }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("32 bytes");
+    });
+
+    it("should return 400 when passwordSalt decodes to wrong length", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // 8-byte passwordSalt is valid base64url but PASSWORD_SALT_LENGTH requires 16 bytes
+      const shortPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(8))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({
+          "X-Has-Password": "true",
+          "X-Password-Salt": shortPwSalt,
+          "X-Password-Algo": "argon2id",
+        }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("16 bytes");
+    });
+
+    it("should accept password-protected upload with correct passwordSalt", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // Exactly 16 bytes for passwordSalt (PASSWORD_SALT_LENGTH)
+      const validPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({
+          "X-Has-Password": "true",
+          "X-Password-Salt": validPwSalt,
+          "X-Password-Algo": "argon2id",
+        }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.id).toBeTruthy();
+    });
+  });
+
+  // ── Chunked Upload (init / chunk / finalize) ────────
+
+  describe("POST /api/upload/init, /chunk, /finalize", () => {
+    const validChunkSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+
+    function makeInitHeaders(overrides: Record<string, string> = {}) {
+      return {
+        "X-Auth-Token": fakeBase64urlToken(),
+        "X-Owner-Token": fakeBase64urlToken(),
+        "X-Salt": validChunkSalt,
+        "X-Max-Downloads": "1",
+        "X-Expire-Sec": "86400",
+        "X-File-Count": "1",
+        "X-Content-Length": "10",
+        ...overrides,
+      };
+    }
+
+    it("should return 400 for missing required headers on /init", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const headers = makeInitHeaders();
+      delete (headers as Record<string, string>)["X-Auth-Token"];
+
+      const res = await app.request("/api/upload/init", {
+        method: "POST",
+        headers,
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("Invalid request headers");
+    });
+
+    it("should return 400 for invalid expiry on /init", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const res = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Expire-Sec": "999" }),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("expiry");
+    });
+
+    it("should return 404 for chunk with unknown session", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const res = await app.request("/api/upload/unknown-session-id/chunk?index=0", {
+        method: "POST",
+        body: new Uint8Array([1, 2, 3]),
+      });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 400 for chunk with missing index query param", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": "5" }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = await initRes.json();
+
+      const res = await app.request(`/api/upload/${id}/chunk`, {
+        method: "POST",
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("chunk index");
+    });
+
+    it("should return 400 for chunk with non-numeric index", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": "5" }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = await initRes.json();
+
+      const res = await app.request(`/api/upload/${id}/chunk?index=abc`, {
+        method: "POST",
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should complete a chunked upload with in-order chunks", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const chunk1 = new Uint8Array([1, 2, 3, 4, 5]);
+      const chunk2 = new Uint8Array([6, 7, 8, 9, 10]);
+      const totalSize = chunk1.length + chunk2.length;
+
+      // Init
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": String(totalSize) }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = await initRes.json();
+      expect(id).toBeTruthy();
+
+      // Chunk 0
+      const chunkRes1 = await app.request(`/api/upload/${id}/chunk?index=0`, {
+        method: "POST",
+        body: chunk1,
+      });
+      expect(chunkRes1.status).toBe(200);
+      expect((await chunkRes1.json()).bytesWritten).toBe(chunk1.length);
+
+      // Chunk 1
+      const chunkRes2 = await app.request(`/api/upload/${id}/chunk?index=1`, {
+        method: "POST",
+        body: chunk2,
+      });
+      expect(chunkRes2.status).toBe(200);
+      expect((await chunkRes2.json()).bytesWritten).toBe(totalSize);
+
+      // Finalize
+      const finalizeRes = await app.request(`/api/upload/${id}/finalize`, {
+        method: "POST",
+      });
+      expect(finalizeRes.status).toBe(200);
+      expect((await finalizeRes.json()).id).toBe(id);
+
+      // Verify DB record was created
+      const upload = await dbCtx.db.query.uploads.findFirst({
+        where: eq(uploads.id, id),
+      });
+      expect(upload).toBeDefined();
+      expect(upload!.size).toBe(totalSize);
+
+      // Verify file exists on disk
+      expect(await storage.exists(id)).toBe(true);
+    });
+
+    it("should buffer out-of-order chunks and flush them in correct sequence", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      const chunk1 = new Uint8Array([1, 2, 3, 4, 5]);
+      const chunk2 = new Uint8Array([6, 7, 8, 9, 10]);
+      const totalSize = chunk1.length + chunk2.length;
+
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": String(totalSize) }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = await initRes.json();
+
+      // Send chunk 1 FIRST (out of order) - should be buffered, bytesWritten stays 0
+      const chunkRes2 = await app.request(`/api/upload/${id}/chunk?index=1`, {
+        method: "POST",
+        body: chunk2,
+      });
+      expect(chunkRes2.status).toBe(200);
+      expect((await chunkRes2.json()).bytesWritten).toBe(0);
+
+      // Send chunk 0 - triggers flush of both buffered chunks
+      const chunkRes1 = await app.request(`/api/upload/${id}/chunk?index=0`, {
+        method: "POST",
+        body: chunk1,
+      });
+      expect(chunkRes1.status).toBe(200);
+      expect((await chunkRes1.json()).bytesWritten).toBe(totalSize);
+
+      // Finalize should succeed
+      const finalizeRes = await app.request(`/api/upload/${id}/finalize`, {
+        method: "POST",
+      });
+      expect(finalizeRes.status).toBe(200);
+    });
+
+    it("should return 400 on finalize when bytes written differ from declared size", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // Declare 10 bytes but only upload 5
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": "10" }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = await initRes.json();
+
+      await app.request(`/api/upload/${id}/chunk?index=0`, {
+        method: "POST",
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      const finalizeRes = await app.request(`/api/upload/${id}/finalize`, {
+        method: "POST",
+      });
+
+      expect(finalizeRes.status).toBe(400);
+      const json = await finalizeRes.json();
+      expect(json.error).toContain("content length");
+    });
   });
 
   // ── Service Guards ──────────────────────────────────
@@ -735,7 +1226,7 @@ describe("routes", () => {
       app.route("/api/upload", createUploadRoute(storage));
       app.route("/api/info", infoRoute);
       app.route("/api/download", createDownloadRoute(storage));
-      app.route("/api/note", noteRoute);
+      app.route("/api/note", createNoteRoute(mockLockout));
       return app;
     }
 
@@ -798,6 +1289,60 @@ describe("routes", () => {
       // Info for non-existent note returns 404, not 403
       const res = await app.request(`/api/note/${TEST_UUID}`);
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ── validateUploadHeaders direct unit tests ────────────────────────────────
+  // These tests bypass Zod schema validation to reach defensive catch paths
+  // that are unreachable through normal route flows.
+
+  describe("validateUploadHeaders (unit)", () => {
+    const validSalt32 = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+    const validPwSalt16 = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+    function makeHeaders(overrides: Partial<UploadHeaders> = {}): UploadHeaders {
+      return {
+        authToken: "abc",
+        ownerToken: "abc",
+        salt: validSalt32,
+        maxDownloads: 1,
+        expireSec: 86400,
+        fileCount: 1,
+        contentLength: 5,
+        hasPassword: false,
+        passwordSalt: undefined,
+        passwordAlgo: undefined,
+        ...overrides,
+      };
+    }
+
+    it("should return 400 with 'Invalid salt encoding' when fromBase64url throws for salt", () => {
+      // Bypass zod: inject a string with chars that fail base64url decoding
+      const headers = makeHeaders({ salt: "!!!invalid-chars!!!" });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result?.status).toBe(400);
+      expect(result?.message).toContain("Invalid salt encoding");
+    });
+
+    it("should return 400 with 'Invalid password salt encoding' when passwordSalt cannot be decoded", () => {
+      const headers = makeHeaders({
+        hasPassword: true,
+        passwordSalt: "!!!bad!!!",
+        passwordAlgo: "argon2id",
+      });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result?.status).toBe(400);
+      expect(result?.message).toContain("Invalid password salt encoding");
+    });
+
+    it("should return null for valid headers with correct passwordSalt length", () => {
+      const headers = makeHeaders({
+        hasPassword: true,
+        passwordSalt: validPwSalt16,
+        passwordAlgo: "argon2id",
+      });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result).toBeNull();
     });
   });
 });

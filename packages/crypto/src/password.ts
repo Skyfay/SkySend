@@ -6,8 +6,8 @@
  * the browser - only a derived key is used.
  *
  * Strategy:
- * 1. Try Argon2id via WASM (preferred - memory-hard, GPU-resistant)
- * 2. Fall back to PBKDF2-SHA256 with 600,000 iterations (Web Crypto native)
+ * Argon2id via WASM (memory-hard, GPU-resistant) is always used for new uploads.
+ * PBKDF2-SHA256 with 600,000 iterations remains supported for decrypting existing uploads.
  *
  * The derived key is 32 bytes and used to XOR with the master secret,
  * creating a password-protected secret that requires both the URL
@@ -31,9 +31,20 @@ export const DERIVED_KEY_LENGTH = 32;
 /** Salt length for password KDF. */
 export const PASSWORD_SALT_LENGTH = 16;
 
-/** Argon2id parameters (OWASP recommendations). */
+/** Argon2id parameters (OWASP strong recommendation: 64 MiB, 3 iterations). */
 export const ARGON2_PARAMS = {
-  memory: 19_456, // 19 MiB (OWASP minimum for Argon2id)
+  memory: 65_536, // 64 MiB (OWASP strong recommendation)
+  iterations: 3,
+  parallelism: 1,
+} as const;
+
+/**
+ * Legacy Argon2id parameters used before v2.4.4.
+ * Still needed to decrypt password-protected uploads created with the old params.
+ * @deprecated Only use this for decrypting existing uploads where passwordAlgo === "argon2id".
+ */
+export const ARGON2_PARAMS_LEGACY = {
+  memory: 19_456, // 19 MiB (OWASP minimum, used before v2.4.4)
   iterations: 2,
   parallelism: 1,
 } as const;
@@ -102,6 +113,7 @@ export async function deriveKeyFromPasswordArgon2(
   password: string,
   salt: Uint8Array,
   argon2id: Argon2idHashFn,
+  params: { memory: number; iterations: number; parallelism: number } = ARGON2_PARAMS,
 ): Promise<Uint8Array> {
   if (salt.length !== PASSWORD_SALT_LENGTH) {
     throw new Error(`Password salt must be exactly ${PASSWORD_SALT_LENGTH} bytes`);
@@ -113,35 +125,37 @@ export async function deriveKeyFromPasswordArgon2(
   const passwordBytes = encodeUtf8(password);
 
   return argon2id(passwordBytes, salt, {
-    memory: ARGON2_PARAMS.memory,
-    iterations: ARGON2_PARAMS.iterations,
-    parallelism: ARGON2_PARAMS.parallelism,
+    memory: params.memory,
+    iterations: params.iterations,
+    parallelism: params.parallelism,
     hashLength: DERIVED_KEY_LENGTH,
   });
 }
 
 /**
- * Derive a password key with automatic algorithm selection.
+ * Derive a password key with the specified algorithm.
  *
- * Tries Argon2id first (if provided), then falls back to PBKDF2.
+ * Pass an Argon2id function for new uploads (always Argon2id).
+ * Pass `undefined` only when decrypting a legacy upload where `passwordAlgo === "pbkdf2"`.
  *
  * @param password - The user's password
  * @param salt - A unique salt per upload
- * @param argon2id - Optional Argon2id hash function (from WASM)
+ * @param argon2id - Argon2id hash function (from WASM). Pass `undefined` only for PBKDF2 legacy decryption.
+ * @param argon2Params - Optional Argon2id parameters (defaults to current OWASP strong params)
  * @returns The derived key and which algorithm was used
  */
 export async function deriveKeyFromPassword(
   password: string,
   salt: Uint8Array,
   argon2id?: Argon2idHashFn,
-): Promise<{ key: Uint8Array; algorithm: "argon2id" | "pbkdf2" }> {
+  argon2Params?: { memory: number; iterations: number; parallelism: number },
+): Promise<{ key: Uint8Array; algorithm: "argon2id" | "argon2id-v2" | "pbkdf2" }> {
   if (argon2id) {
-    try {
-      const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id);
-      return { key, algorithm: "argon2id" };
-    } catch {
-      // Argon2id failed (e.g., WASM not supported), fall through to PBKDF2
-    }
+    // If legacy params are passed explicitly, this is for decrypting an old upload.
+    // Return "argon2id" to signal the caller that legacy params were used.
+    const usingLegacyParams = argon2Params !== undefined;
+    const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id, argon2Params);
+    return { key, algorithm: usingLegacyParams ? "argon2id" : "argon2id-v2" };
   }
 
   const key = await deriveKeyFromPasswordPbkdf2(password, salt);

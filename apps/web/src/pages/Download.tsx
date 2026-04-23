@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,8 +25,10 @@ export function DownloadPage() {
   const downloadHook = useDownload();
   const [passwordInput, setPasswordInput] = useState<string | undefined>();
 
-  // Get secret from URL fragment
-  const secret = window.location.hash.slice(1);
+  // Get secret from URL fragment - captured once at mount so that history.replaceState
+  // clearing the hash does not reset secret to "" on the next re-render.
+  const secretRef = useRef<string>(window.location.hash.slice(1));
+  const secret = secretRef.current;
 
   useEffect(() => {
     if (id && secret) {
@@ -34,6 +36,14 @@ export function DownloadPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Remove the key from the URL fragment once decryption starts.
+  // The key is now held in memory; removing it prevents browser-history leakage.
+  useEffect(() => {
+    if (downloadHook.phase === "downloading") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, [downloadHook.phase]);
 
   if (!id || !secret) {
     return (

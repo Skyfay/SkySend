@@ -91,6 +91,7 @@
     "passwordPlaceholder": "Ange lösenord",
     "unlock": "Lås upp",
     "wrongPassword": "Felaktigt lösenord",
+    "tooManyAttempts": "För många misslyckade försök. Vänta några minuter och försök igen.",
     "download": "Ladda ner",
     "downloading": "Dekrypterar och laddar ner...",
     "decrypting": "Dekrypterar...",

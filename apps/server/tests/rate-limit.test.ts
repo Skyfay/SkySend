@@ -110,12 +110,14 @@ describe("getClientIp", () => {
     return app;
   }
 
-  it("should extract IP from X-Forwarded-For when trusted", async () => {
+  it("should extract IP from X-Forwarded-For when trusted (rightmost = proxy-appended)", async () => {
     const app = createApp(true);
     const res = await app.request("/", {
       headers: { "X-Forwarded-For": "1.2.3.4, 10.0.0.1" },
     });
-    expect(await res.text()).toBe("1.2.3.4");
+    // S-1 fix: rightmost value is set by the trusted reverse proxy;
+    // leftmost (1.2.3.4) is client-controlled and must NOT be trusted.
+    expect(await res.text()).toBe("10.0.0.1");
   });
 
   it("should extract IP from X-Real-IP when trusted", async () => {

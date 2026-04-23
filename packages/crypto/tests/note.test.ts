@@ -88,6 +88,19 @@ describe("note encryption/decryption", () => {
     ).rejects.toThrow("Note decryption failed");
   });
 
+  it("should fail decryption with tampered nonce", async () => {
+    const metaKey = await getMetaKey();
+    const encrypted = await encryptNoteContent("secret note", metaKey);
+
+    // Flip a bit in the nonce - AES-GCM authentication will fail
+    const tamperedNonce = new Uint8Array(encrypted.nonce);
+    tamperedNonce[0] ^= 0xff;
+
+    await expect(
+      decryptNoteContent(encrypted.ciphertext, tamperedNonce, metaKey),
+    ).rejects.toThrow("Note decryption failed");
+  });
+
   it("should reject invalid nonce length", async () => {
     const metaKey = await getMetaKey();
     const encrypted = await encryptNoteContent("test", metaKey);

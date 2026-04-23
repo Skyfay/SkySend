@@ -232,7 +232,7 @@ describe("ECE streaming encryption/decryption", () => {
     ).rejects.toThrow("corrupted or tampered");
   });
 
-  it("should fail if nonce is missing", async () => {
+  it("should fail if nonce header is incomplete (< 12 bytes)", async () => {
     const fileKey = await getFileKey();
 
     await expect(
@@ -254,6 +254,79 @@ describe("ECE streaming encryption/decryption", () => {
         createReadableStream(tooShort).pipeThrough(createDecryptStream(fileKey)),
       ),
     ).rejects.toThrow("too short to contain auth tag");
+  });
+
+  it("should fail if encrypted records are reordered (position-binding via counter nonce)", async () => {
+    const fileKey = await getFileKey();
+    // Exactly 2 full records so we can cleanly swap them
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey)),
+    );
+
+    // Layout: [nonce 12B][record0 ENCRYPTED_RECORD_SIZE][record1 ENCRYPTED_RECORD_SIZE]
+    const nonce = encrypted.slice(0, NONCE_LENGTH);
+    const record0 = encrypted.slice(NONCE_LENGTH, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+    const record1 = encrypted.slice(NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+
+    // Swap records: record1 first, record0 second
+    const reordered = new Uint8Array(encrypted.length);
+    reordered.set(nonce, 0);
+    reordered.set(record1, NONCE_LENGTH);
+    reordered.set(record0, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+
+    // Decryption must fail because each record was encrypted with a counter-specific nonce.
+    // Record1 (encrypted with counter=1) cannot be decrypted with counter=0 nonce.
+    await expect(
+      collectStream(
+        createReadableStream(reordered, 8192).pipeThrough(createDecryptStream(fileKey)),
+      ),
+    ).rejects.toThrow("corrupted or tampered");
+  });
+
+  it("should NOT detect truncation without expectedPlaintextSize (application responsibility)", async () => {
+    // ECE provides per-record authentication, not end-of-stream authentication.
+    // Without expectedPlaintextSize, truncation is undetected at the crypto layer.
+    // Pass expectedPlaintextSize (from decrypted metadata) to enable the check.
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey)),
+    );
+
+    // Remove the last record entirely
+    const truncated = encrypted.slice(0, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+
+    // Decryption succeeds but returns only the first record
+    const decrypted = await collectStream(
+      createReadableStream(truncated, 8192).pipeThrough(createDecryptStream(fileKey)),
+    );
+
+    expect(decrypted.length).toBe(RECORD_SIZE); // only first record decrypted
+    expect(constantTimeEqual(decrypted, plaintext.slice(0, RECORD_SIZE))).toBe(true);
+  });
+
+  it("should detect truncation when expectedPlaintextSize is provided", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey)),
+    );
+
+    // Truncate: remove last record
+    const truncated = encrypted.slice(0, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+
+    // Pass the real plaintext size - stream should now reject the truncated data
+    await expect(
+      collectStream(
+        createReadableStream(truncated, 8192).pipeThrough(
+          createDecryptStream(fileKey, plaintext.length),
+        ),
+      ),
+    ).rejects.toThrow("Stream truncation detected");
   });
 });
 

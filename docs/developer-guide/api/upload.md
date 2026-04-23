@@ -30,7 +30,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 
 ### Validation
 
-- `X-Salt` must decode to exactly 16 bytes
+- `X-Salt` must decode to 16 or 32 bytes
 - `Content-Length` must not exceed `MAX_FILE_SIZE`
 - `X-File-Count` must not exceed `MAX_FILES_PER_UPLOAD`
 - `X-Expire-Sec` must be one of the configured `EXPIRE_OPTIONS_SEC`
@@ -89,7 +89,7 @@ The request body is empty. All metadata is passed via headers (same headers as `
 | --- | --- | --- |
 | `X-Auth-Token` | base64url | Authentication token (HMAC-derived) |
 | `X-Owner-Token` | base64url | Ownership token (HKDF-derived) |
-| `X-Salt` | base64url | HKDF salt (must decode to exactly 16 bytes) |
+| `X-Salt` | base64url | HKDF salt (must decode to 16 or 32 bytes) |
 | `X-Max-Downloads` | integer | Maximum number of downloads (must be a valid option) |
 | `X-Expire-Sec` | integer | Expiry time in seconds (must be a valid option) |
 | `X-File-Count` | integer | Number of files in the upload (1 for single, >1 for archive) |

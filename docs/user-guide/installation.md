@@ -19,8 +19,7 @@ Supports: Intel/AMD servers, Raspberry Pi 4+, Apple Silicon (M1/M2/M3), AWS Grav
 
 ::: code-group
 
-```yaml [Docker Compose (Recommended)]
-# docker-compose.yml
+```yaml [Docker Compose]
 services:
   skysend:
     image: skyfay/skysend:latest
@@ -28,18 +27,13 @@ services:
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      - BASE_URL=http://localhost:3000
-      # - DATA_DIR=/data            # Optional: Custom data directory (for the skysend.db SQLite file)
-      # - UPLOADS_DIR=/uploads      # Optional: Custom data and uploads directories
-      # - MAX_FILE_SIZE=2GB         # Optional: Max upload size
-      # - UPLOAD_QUOTA_BYTES=10GB   # Optional: Per-IP quota per 24h
-      # - TRUST_PROXY=true          # Optional: If behind a reverse proxy
-      # - PUID=1001                 # Optional: User ID
-      # - PGID=1001                 # Optional: Group ID
     volumes:
       - ./data:/data
       - ./uploads:/uploads
+    environment:
+      - BASE_URL=http://localhost:3000
+      # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
 ```bash [Docker Run]

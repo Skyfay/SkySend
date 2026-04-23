@@ -26,7 +26,13 @@ export async function runCleanup(storage: StorageBackend): Promise<number> {
   let deleted = 0;
 
   if (expiredUploads.length > 0) {
-    // Delete files from disk
+    // L-1 (Security Audit): Storage is deleted before the DB record intentionally
+    // (fire-and-forget via Promise.allSettled). In the rare case of a server crash
+    // between storage deletion and DB deletion, the DB record remains but the file
+    // is gone - the next download attempt will return 500 instead of 404.
+    // This is a non-critical edge case: there is no data leak (the file is already
+    // gone), only a minor UX degradation. The DB record will be cleaned up on the
+    // next cleanup run when the expiry/limit check fires again.
     await Promise.allSettled(
       expiredUploads.map((u) => storage.delete(u.id)),
     );
