@@ -52,6 +52,7 @@ export {
   DERIVED_KEY_LENGTH,
   PASSWORD_SALT_LENGTH,
   ARGON2_PARAMS,
+  ARGON2_PARAMS_LEGACY,
 } from "./password.js";
 export type { Argon2idHashFn } from "./password.js";
 

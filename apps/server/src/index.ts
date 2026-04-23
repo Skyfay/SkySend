@@ -97,6 +97,7 @@ app.use(
     },
     strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",
     xFrameOptions: "DENY",
+    referrerPolicy: "no-referrer",
   }),
 );
 // Allow any origin on the public health endpoint (read-only, no sensitive data)

@@ -285,10 +285,10 @@ describe("ECE streaming encryption/decryption", () => {
     ).rejects.toThrow("corrupted or tampered");
   });
 
-  it("should NOT detect truncation at a record boundary (application responsibility)", async () => {
+  it("should NOT detect truncation without expectedPlaintextSize (application responsibility)", async () => {
     // ECE provides per-record authentication, not end-of-stream authentication.
-    // If records are removed from the end, each remaining record still authenticates.
-    // The application MUST verify the decrypted size against the metadata file size.
+    // Without expectedPlaintextSize, truncation is undetected at the crypto layer.
+    // Pass expectedPlaintextSize (from decrypted metadata) to enable the check.
     const fileKey = await getFileKey();
     const plaintext = randomBytes(RECORD_SIZE * 2);
 
@@ -306,6 +306,27 @@ describe("ECE streaming encryption/decryption", () => {
 
     expect(decrypted.length).toBe(RECORD_SIZE); // only first record decrypted
     expect(constantTimeEqual(decrypted, plaintext.slice(0, RECORD_SIZE))).toBe(true);
+  });
+
+  it("should detect truncation when expectedPlaintextSize is provided", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey)),
+    );
+
+    // Truncate: remove last record
+    const truncated = encrypted.slice(0, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+
+    // Pass the real plaintext size - stream should now reject the truncated data
+    await expect(
+      collectStream(
+        createReadableStream(truncated, 8192).pipeThrough(
+          createDecryptStream(fileKey, plaintext.length),
+        ),
+      ),
+    ).rejects.toThrow("Stream truncation detected");
   });
 });
 

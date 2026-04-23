@@ -20,14 +20,14 @@ The `@skysend/crypto` package (`packages/crypto`) is the shared encryption libra
 ```typescript
 // Key Generation
 generateSecret(): Uint8Array            // 32 bytes
-generateSalt(): Uint8Array              // 16 bytes
+generateSalt(): Uint8Array              // 32 bytes
 deriveKeys(secret, salt): Promise<Keys> // fileKey, metaKey, authKey
 computeAuthToken(authKey): Promise<Uint8Array>
 computeOwnerToken(secret, salt): Promise<Uint8Array>
 
 // Streaming ECE
 createEncryptStream(fileKey): TransformStream
-createDecryptStream(fileKey): TransformStream
+createDecryptStream(fileKey, expectedPlaintextSize?): TransformStream
 calculateEncryptedSize(plaintextSize): number
 calculatePlaintextSize(encryptedSize): number
 

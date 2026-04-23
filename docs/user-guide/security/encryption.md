@@ -34,7 +34,7 @@ Browser (Client)                              Server
 | Metadata Encryption | AES-256-GCM + random 12-byte IV |
 | Nonce Handling | Counter-based XOR (32-bit big-endian) |
 | Auth Token | HMAC-SHA256 |
-| Password KDF (preferred) | Argon2id (19 MiB memory, 2 iterations, 1 parallelism) |
+| Password KDF (preferred) | Argon2id (64 MiB memory, 3 iterations, 1 parallelism) |
 | Password KDF (fallback) | PBKDF2-SHA256 (600,000 iterations) |
 
 ## Key Derivation
@@ -49,7 +49,7 @@ Secret (32 bytes, crypto.getRandomValues)
   +-- HKDF(secret, salt, "skysend-authentication")     --> authKey  (HMAC-SHA256)
 ```
 
-- The **salt** (16 bytes) is randomly generated per upload and stored on the server
+- The **salt** (32 bytes) is randomly generated per upload and stored on the server
 - The **info** strings provide domain separation, ensuring each derived key is independent
 - The secret is imported as a non-extractable HKDF key via Web Crypto
 
@@ -177,8 +177,8 @@ When a user sets a password, additional protection is applied:
 
 | Parameter | Value |
 | --- | --- |
-| Memory | 19,456 KiB (19 MiB) - OWASP minimum |
-| Iterations | 2 |
+| Memory | 65,536 KiB (64 MiB) - OWASP strong recommendation |
+| Iterations | 3 |
 | Parallelism | 1 |
 | Hash Length | 32 bytes |
 

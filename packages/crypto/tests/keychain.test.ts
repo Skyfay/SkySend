@@ -25,7 +25,7 @@ describe("generateSecret", () => {
 });
 
 describe("generateSalt", () => {
-  it("should produce a 16-byte salt", () => {
+  it("should produce a 32-byte salt", () => {
     const salt = generateSalt();
     expect(salt.length).toBe(SALT_LENGTH);
   });
@@ -118,7 +118,15 @@ describe("deriveKeys", () => {
 
   it("should reject wrong salt length", async () => {
     const secret = generateSecret();
-    await expect(deriveKeys(secret, new Uint8Array(8))).rejects.toThrow("16 bytes");
+    await expect(deriveKeys(secret, new Uint8Array(8))).rejects.toThrow("16 or 32 bytes");
+  });
+
+  it("should accept legacy 16-byte salt for backward compatibility", async () => {
+    const secret = generateSecret();
+    const legacySalt = new Uint8Array(16);
+    crypto.getRandomValues(legacySalt);
+    // Must not throw - old uploads use 16-byte salts
+    await expect(deriveKeys(secret, legacySalt)).resolves.toBeDefined();
   });
 
   it("should mark all keys as non-extractable", async () => {

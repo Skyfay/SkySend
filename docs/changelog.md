@@ -9,6 +9,13 @@ All notable changes to SkySend are documented here.
 
 - **server**: Updated `hono` from `4.12.12` to `4.12.14` to fix HTML injection via improperly handled JSX attribute names in SSR (GHSA-458j-xx4x-4375)
 - **infra**: Added `pnpm.overrides` for `esbuild` (`>=0.25.0`), `vite` (`>=6.4.2`), and `fast-xml-parser` (`>=5.7.0`) to patch transitive vulnerabilities in dev/docs dependencies (GHSA-67mh-4wv8-2f99, GHSA-4w7w-66w2-5vf9, GHSA-gh4j-gqv2-49f6)
+- **crypto**: Tightened Argon2id-to-PBKDF2 fallback logic - the fallback now only triggers on WASM availability errors (`CompileError`, `LinkError`, or matching message) and propagates all other crypto errors instead of silently swallowing them
+- **crypto**: Increased Argon2id parameters from 19 MiB / 2 iterations to 64 MiB / 3 iterations, matching OWASP's strong recommendation and significantly raising GPU brute-force cost for new password-protected uploads
+- **crypto**: Increased HKDF salt length from 16 to 32 bytes for new uploads, matching the RFC 5869 recommendation to use a salt equal to the hash output length - legacy 16-byte salts from existing uploads are still accepted
+- **crypto**: Added stream truncation detection to `createDecryptStream` - callers can pass `expectedPlaintextSize` (from authenticated metadata) to detect a malicious server delivering fewer records than were encrypted
+- **server**: Added `Referrer-Policy: no-referrer` HTTP header to prevent URL fragments from leaking via `Referer` header in misconfigured or future environments
+- **web**: Added `<meta name="referrer" content="no-referrer">` to `index.html` as defense-in-depth for the referrer policy
+- **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
 
 ### 🔧 CI/CD
 
@@ -16,7 +23,7 @@ All notable changes to SkySend are documented here.
 
 ### 🧪 Tests
 
-- **crypto**: Expanded test suite to 126 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE record reorder attacks, PBKDF2 known-answer verification, and various edge cases across all crypto modules.
+- **crypto**: Expanded test suite to 129 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE record reorder attacks, ECE truncation detection with `expectedPlaintextSize`, Argon2id non-WASM error propagation, PBKDF2 known-answer verification, legacy 16-byte HKDF salt backward compatibility, and various edge cases across all crypto modules.
 
 ### 🐳 Docker
 

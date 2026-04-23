@@ -65,14 +65,24 @@ describe("deriveKeyFromPassword (auto-select)", () => {
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
   });
 
-  it("should fall back to PBKDF2 when Argon2id function fails", async () => {
+  it("should fall back to PBKDF2 when Argon2id WASM is unavailable", async () => {
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const failingArgon2id = async () => {
-      throw new Error("WASM not supported");
+    const wasmFailingArgon2id = async () => {
+      throw new Error("WASM not supported"); // message matches /wasm/i
     };
-    const result = await deriveKeyFromPassword("test-password", salt, failingArgon2id);
+    const result = await deriveKeyFromPassword("test-password", salt, wasmFailingArgon2id);
     expect(result.algorithm).toBe("pbkdf2");
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
+  });
+
+  it("should NOT fall back to PBKDF2 when Argon2id fails for a non-WASM reason", async () => {
+    const salt = randomBytes(PASSWORD_SALT_LENGTH);
+    const cryptoFailingArgon2id = async () => {
+      throw new Error("unexpected internal error"); // no wasm/webassembly/instantiate
+    };
+    await expect(
+      deriveKeyFromPassword("test-password", salt, cryptoFailingArgon2id),
+    ).rejects.toThrow("unexpected internal error");
   });
 
   it("should use Argon2id when provided and working", async () => {

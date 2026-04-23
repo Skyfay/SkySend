@@ -7,6 +7,7 @@ import {
   fromBase64url,
   applyPasswordProtection,
   deriveKeyFromPassword,
+  ARGON2_PARAMS_LEGACY,
   type NoteContentType,
   type Argon2idHashFn,
 } from "@skysend/crypto";
@@ -77,10 +78,12 @@ export function useNoteView() {
           if (!info.passwordSalt) throw new Error("Missing password salt");
 
           const passwordSalt = fromBase64url(info.passwordSalt);
+          const isArgon2 = info.passwordAlgo === "argon2id" || info.passwordAlgo === "argon2id-v2";
           const { key: passwordKey } = await deriveKeyFromPassword(
             password,
             passwordSalt,
-            info.passwordAlgo === "argon2id" ? argon2id : undefined,
+            isArgon2 ? argon2id : undefined,
+            info.passwordAlgo === "argon2id" ? ARGON2_PARAMS_LEGACY : undefined,
           );
           secret = applyPasswordProtection(secret, passwordKey);
         }

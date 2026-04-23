@@ -14,13 +14,13 @@ This secret is the root of all derived keys. It is embedded in the share link UR
 
 ## Salt
 
-A 16-byte random salt is generated per upload:
+A 32-byte random salt is generated per upload:
 
 ```typescript
-const salt = generateSalt() // 16 bytes
+const salt = generateSalt() // 32 bytes (per RFC 5869, equal to SHA-256 output length)
 ```
 
-The salt is stored on the server (in the database) and included in the info response so that the downloader can derive the same keys.
+The salt is stored on the server (in the database) and included in the info response so that the downloader can derive the same keys. Legacy uploads created before v2.4.4 use a 16-byte salt, which `deriveKeys()` continues to accept for backward compatibility.
 
 ## Key Derivation with HKDF
 
@@ -90,4 +90,4 @@ Both tokens are sent to the server during upload and verified using constant-tim
 | Constant | Value |
 | --- | --- |
 | `SECRET_LENGTH` | 32 bytes |
-| `SALT_LENGTH` | 16 bytes |
+| `SALT_LENGTH` | 32 bytes (16 bytes accepted for legacy uploads) |
