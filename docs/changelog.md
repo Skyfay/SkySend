@@ -14,6 +14,10 @@ All notable changes to SkySend are documented here.
 
 - **infra**: Added OCI standard labels to Docker images via `docker/metadata-action@v5` - sets `title`, `description`, `url`, `source`, `version`, `revision`, `created`, `vendor`, and `licenses` for better registry compatibility and Renovate/Dependabot integration
 
+### 🧪 Tests
+
+- **crypto**: Achieved 100% statement, branch, function, and line coverage. Added edge-case test for `fromBase64url` with a 1-character input (length 1 mod 4 branch). Added `/* v8 ignore next 2 */` on the physically unreachable `counter > MAX_RECORDS` guards in `encryptAndEnqueue`/`decryptAndEnqueue` (would require ~281 TB of data to trigger).
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.4.4`

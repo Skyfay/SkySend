@@ -232,7 +232,7 @@ describe("ECE streaming encryption/decryption", () => {
     ).rejects.toThrow("corrupted or tampered");
   });
 
-  it("should fail if nonce is missing", async () => {
+  it("should fail if nonce header is incomplete (< 12 bytes)", async () => {
     const fileKey = await getFileKey();
 
     await expect(

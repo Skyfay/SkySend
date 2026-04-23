@@ -127,6 +127,22 @@ describe("deriveKeys", () => {
     expect(keys.metaKey.extractable).toBe(false);
     expect(keys.authKey.extractable).toBe(false);
   });
+
+  it("should derive domain-separated keys (fileKey and metaKey produce different ciphertext for same input)", async () => {
+    const keys = await deriveKeys(generateSecret(), generateSalt());
+    const iv = new Uint8Array(12); // fixed IV so only the key differs
+    const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    const ct1 = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv }, keys.fileKey, data),
+    );
+    const ct2 = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv }, keys.metaKey, data),
+    );
+
+    // Different HKDF info strings must produce independent keys
+    expect(constantTimeEqual(ct1, ct2)).toBe(false);
+  });
 });
 
 describe("computeAuthToken", () => {

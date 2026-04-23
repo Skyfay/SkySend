@@ -165,6 +165,8 @@ async function encryptAndEnqueue(
   counter: number,
   controller: TransformStreamDefaultController<Uint8Array>,
 ): Promise<void> {
+  // Reaching MAX_RECORDS requires ~281 TB of data (0xffffffff × 64 KB); not reachable in practice.
+  /* v8 ignore next 2 */
   if (counter > MAX_RECORDS) {
     throw new Error("Maximum record count exceeded - stream too large");
   }
@@ -187,6 +189,8 @@ async function decryptAndEnqueue(
   counter: number,
   controller: TransformStreamDefaultController<Uint8Array>,
 ): Promise<void> {
+  // Reaching MAX_RECORDS requires ~281 TB of data (0xffffffff × 64 KB); not reachable in practice.
+  /* v8 ignore next 2 */
   if (counter > MAX_RECORDS) {
     throw new Error("Maximum record count exceeded - stream too large");
   }

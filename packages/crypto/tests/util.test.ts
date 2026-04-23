@@ -63,6 +63,13 @@ describe("toBase64url / fromBase64url", () => {
     expect(decodeUtf8(fromBase64url(encoded))).toBe("foobar");
   });
 
+  it("should handle a single-character input (length 1 mod 4 edge case)", () => {
+    // Triggers the false branch of `i + 1 < input.length ? ... : 0` in fromBase64url.
+    // A 1-char base64url string encodes less than one full byte; byteLength rounds to 0.
+    const result = fromBase64url("A");
+    expect(result).toEqual(new Uint8Array(0));
+  });
+
   it("should throw on invalid characters", () => {
     expect(() => fromBase64url("abc!")).toThrow("Invalid base64url character");
   });
