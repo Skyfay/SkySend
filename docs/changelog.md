@@ -34,6 +34,7 @@ All notable changes to SkySend are documented here.
 ### 🧪 Tests
 
 - **crypto**: Expanded test suite to 129 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE record reorder attacks, ECE truncation detection with `expectedPlaintextSize`, Argon2id non-WASM error propagation, PBKDF2 known-answer verification, legacy 16-byte HKDF salt backward compatibility, and various edge cases across all crypto modules.
+- **server**: Added 24 new integration tests targeting the most critical coverage gaps - the chunked HTTP upload flow (`/init`, `/chunk`, `/finalize`) was previously entirely untested; added tests for in-order chunks, out-of-order chunk buffering and flush, finalize size mismatch (400), and session/index validation errors. Added tests for the password-attempt lockout (429 + `Retry-After`) in both the file and note password endpoints, plus invalid base64url token handling, missing/non-string authToken, and invalid JSON bodies across `meta.ts`, `password.ts`, and `note.ts` routes.
 
 ### 🐳 Docker
 

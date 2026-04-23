@@ -92,6 +92,18 @@ describe("deriveKeyFromPassword (auto-select)", () => {
     expect(result.algorithm).toBe("argon2id-v2");
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
   });
+
+  it("should return 'argon2id' algorithm when legacy argon2Params are passed", async () => {
+    const salt = randomBytes(PASSWORD_SALT_LENGTH);
+    const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
+    const result = await deriveKeyFromPassword("test-password", salt, mockArgon2id, {
+      memory: 65536,
+      iterations: 3,
+      parallelism: 1,
+    });
+    expect(result.algorithm).toBe("argon2id");
+    expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
+  });
 });
 
 describe("applyPasswordProtection", () => {
