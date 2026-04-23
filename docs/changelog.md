@@ -16,6 +16,8 @@ All notable changes to SkySend are documented here.
 - **server**: Added `Referrer-Policy: no-referrer` HTTP header to prevent URL fragments from leaking via `Referer` header in misconfigured or future environments
 - **web**: Added `<meta name="referrer" content="no-referrer">` to `index.html` as defense-in-depth for the referrer policy
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
+- **web**: Note uploads now use Argon2id for password key derivation - previously PBKDF2 was always used for notes due to a missing argument
+- **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
 
 ### 🔧 CI/CD
 

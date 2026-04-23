@@ -13,6 +13,7 @@ import {
   PASSWORD_SALT_LENGTH,
   type NoteContentType,
 } from "@skysend/crypto";
+import { hashWasmArgon2 } from "@/lib/argon2";
 import { createNote } from "@/lib/api";
 import { saveNote } from "@/lib/upload-store";
 
@@ -83,6 +84,7 @@ export function useNoteUpload() {
         const { key: passwordKey, algorithm } = await deriveKeyFromPassword(
           password,
           passwordSalt,
+          hashWasmArgon2,
         );
         passwordAlgo = algorithm;
         effectiveSecret = applyPasswordProtection(secret, passwordKey);

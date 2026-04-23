@@ -99,6 +99,7 @@ export function useDownload() {
 
           const passwordSalt = fromBase64url(info.passwordSalt);
           const isArgon2 = info.passwordAlgo === "argon2id" || info.passwordAlgo === "argon2id-v2";
+          // TODO: Remove "pbkdf2" branch once all pre-v2.4.4 uploads have expired (~ late 2026)
           const { key: passwordKey } = await deriveKeyFromPassword(
             password,
             passwordSalt,
