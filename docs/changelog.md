@@ -16,7 +16,7 @@ All notable changes to SkySend are documented here.
 
 ### 🧪 Tests
 
-- **crypto**: Achieved 100% statement, branch, function, and line coverage. Added edge-case test for `fromBase64url` with a 1-character input (length 1 mod 4 branch). Added `/* v8 ignore next 2 */` on the physically unreachable `counter > MAX_RECORDS` guards in `encryptAndEnqueue`/`decryptAndEnqueue` (would require ~281 TB of data to trigger).
+- **crypto**: Expanded test suite to 126 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE record reorder attacks, PBKDF2 known-answer verification, and various edge cases across all crypto modules.
 
 ### 🐳 Docker
 

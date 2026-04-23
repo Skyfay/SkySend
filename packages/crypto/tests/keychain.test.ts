@@ -198,4 +198,11 @@ describe("computeOwnerToken", () => {
       "32 bytes",
     );
   });
+
+  it("should differ for different salts (same secret)", async () => {
+    const secret = generateSecret();
+    const token1 = await computeOwnerToken(secret, generateSalt());
+    const token2 = await computeOwnerToken(secret, generateSalt());
+    expect(constantTimeEqual(token1, token2)).toBe(false);
+  });
 });

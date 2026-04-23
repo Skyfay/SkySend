@@ -146,3 +146,22 @@ describe("deriveKeyFromPasswordArgon2", () => {
     expect(constantTimeEqual(result, expectedKey)).toBe(true);
   });
 });
+
+describe("deriveKeyFromPasswordPbkdf2 - known-answer test", () => {
+  // Verifies exact algorithm parameters: PBKDF2-SHA256, 600,000 iterations, 32-byte output.
+  // If iterations, hash, or output length ever change, this test will catch it.
+  it("should produce a specific known output for a fixed password and salt", async () => {
+    const password = "kat-password-skysend";
+    const salt = new Uint8Array(16); // all zeros - deterministic
+
+    const expected = new Uint8Array([
+      0x3d, 0x87, 0x12, 0x80, 0xab, 0xea, 0xd9, 0x97,
+      0x12, 0x98, 0xa0, 0x99, 0xba, 0xdb, 0xb0, 0x9b,
+      0xc5, 0x03, 0xd8, 0x78, 0x96, 0x5b, 0xc7, 0xb5,
+      0x90, 0x45, 0x82, 0x90, 0x36, 0x3f, 0x77, 0xcb,
+    ]);
+
+    const key = await deriveKeyFromPasswordPbkdf2(password, salt);
+    expect(constantTimeEqual(key, expected)).toBe(true);
+  });
+});
