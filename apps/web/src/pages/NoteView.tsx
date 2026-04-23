@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -33,14 +33,20 @@ export function NoteViewPage() {
   const noteHook = useNoteView();
   const [passwordInput, setPasswordInput] = useState<string | undefined>();
 
-  const secret = window.location.hash.slice(1);
+  // T-2: Capture the secret from the URL fragment once at mount so that clearing
+  // the hash via history.replaceState does not reset the value on the next re-render.
+  const secretRef = useRef<string>(window.location.hash.slice(1));
+  const secret = secretRef.current;
 
   useEffect(() => {
+    // Remove the key fragment from the URL immediately to reduce exposure in
+    // browser history, screenshots, and browser extensions.
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
     if (id && secret) {
       noteHook.loadInfo(id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, []);
 
   if (!id || !secret) {
     return (

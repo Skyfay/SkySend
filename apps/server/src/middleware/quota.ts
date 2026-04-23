@@ -52,6 +52,16 @@ export function createUploadQuota(config: Config) {
   }
 
   function persistKey(): void {
+    // L-2 (Security Audit): The HMAC key is persisted to SQLite so that quota
+    // entries survive server restarts. This is an intentional trade-off.
+    // In SkySend's threat model, the server owner is a TRUSTED PARTY:
+    // anyone who can read the SQLite DB already has full access to all upload
+    // metadata and could observe connections via the reverse proxy anyway.
+    // Storing the key in RAM-only would provide no meaningful privacy improvement
+    // against the realistic threat of a DB-file leak to a third party, because
+    // the HMAC key rotates daily and historical data is purged on rotation.
+    // The daily key rotation already prevents cross-day IP correlation,
+    // which is the primary privacy goal.
     db.insert(quotaState)
       .values({ key: "hmac_key", value: hmacKey.toString("hex") })
       .onConflictDoUpdate({ target: quotaState.key, set: { value: hmacKey.toString("hex") } })

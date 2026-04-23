@@ -2,7 +2,7 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.4.4
+## v2.4.4 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
 *Release: In Progress*
 
 ### 🔒 Security
@@ -20,6 +20,12 @@ All notable changes to SkySend are documented here.
 - **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
 - **server**: Added per-IP and per-resource password attempt lockout - after 10 failed attempts from the same IP on a specific upload or note, that IP is locked out from that resource for 15 minutes with a `Retry-After` header; IPs are stored as ephemeral HMAC-SHA256 hashes (never persisted); configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
 - **web**: Password prompt now shows a translated "too many attempts" message when the server returns 429 - previously the UI showed an untranslated generic error string and switched away from the password screen
+- **web**: Added DOMPurify sanitization of highlight.js output before `dangerouslySetInnerHTML` in code notes - defense-in-depth against any future upstream hljs vulnerability
+- **web**: Added `rehype-sanitize` plugin to ReactMarkdown rendering in notes - prevents XSS from future react-markdown upstream changes that could enable raw HTML
+- **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` in `NoteView` immediately at page mount - previously only the Download page had this protection
+- **server**: Fixed IP extraction when `TRUST_PROXY=true` - previously the leftmost (client-controlled) value from `X-Forwarded-For` was used, allowing clients to spoof their IP and bypass rate limiting and upload quotas; now uses the rightmost (proxy-appended) value
+- **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement; now always uses presigned URLs with a TTL
+- **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning; the PWA manifest `display: standalone` already handles standalone mode on modern browsers
 
 ### 🔧 CI/CD
 

@@ -453,7 +453,7 @@ interface WsInitHeaders {
   contentLength: number;
   hasPassword: boolean;
   passwordSalt?: string;
-  passwordAlgo?: "argon2id" | "pbkdf2";
+  passwordAlgo?: "argon2id" | "argon2id-v2" | "pbkdf2";
 }
 
 /**

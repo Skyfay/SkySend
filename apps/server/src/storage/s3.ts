@@ -60,7 +60,6 @@ export class S3Storage implements StorageBackend {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly presignedExpiry: number;
-  private readonly publicUrl?: string;
   private readonly partSize: number;
   private readonly concurrency: number;
   private readonly multipartSessions = new Map<string, MultipartSession>();
@@ -68,7 +67,6 @@ export class S3Storage implements StorageBackend {
   constructor(config: S3StorageConfig) {
     this.bucket = config.bucket;
     this.presignedExpiry = config.presignedExpiry;
-    this.publicUrl = config.publicUrl?.replace(/\/+$/, "");
     this.partSize = Math.max(config.partSize, MIN_PART_SIZE);
     this.concurrency = config.concurrency;
 
@@ -467,9 +465,18 @@ export class S3Storage implements StorageBackend {
     } while (continuationToken);
   }
 
-  /** S3 storage supports presigned download URLs (unless public URL is configured). */
+  /**
+   * S3 storage always uses presigned download URLs, even when S3_PUBLIC_URL is configured.
+   *
+   * L-5 (Security Audit): Returning a permanent public URL (via getPublicDownloadUrl) is a
+   * security bug - the URL remains valid indefinitely after the DB record is deleted, allowing
+   * downloads past the expiry or max-download limit by anyone who recorded the URL.
+   * Presigned URLs have a short TTL (configurable, default 1 hour) and expire automatically.
+   * Trade-off: presigned URLs bypass CDN caching - this is an accepted trade-off for
+   * correct access-control enforcement.
+   */
   supportsPresignedUrls(): boolean {
-    return !this.publicUrl;
+    return true;
   }
 
   /** Generate a presigned GET URL for direct client download. */
@@ -484,10 +491,13 @@ export class S3Storage implements StorageBackend {
     });
   }
 
-  /** Get the public download URL for an object. */
-  getPublicDownloadUrl(id: string): string | null {
-    if (!this.publicUrl) return null;
-    return `${this.publicUrl}/${this.key(id)}`;
+  /**
+   * Always returns null - permanent public URLs are not used for downloads.
+   * See supportsPresignedUrls() for the rationale.
+   * S3_PUBLIC_URL is still used for upload operations where needed.
+   */
+  getPublicDownloadUrl(_id: string): string | null {
+    return null;
   }
 
   /** Abort a multipart upload in progress. */

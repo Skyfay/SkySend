@@ -49,6 +49,11 @@ infoRoute.get("/:id", async (c) => {
     nonce: upload.nonce
       ? Buffer.from(upload.nonce).toString("base64")
       : null,
+    // S-5 (Security Audit): downloadCount is intentionally exposed here.
+    // Exposing it is by design for a file-sharing tool - recipients benefit from
+    // knowing how many times a link has already been accessed. Anyone who has the
+    // upload ID (the UUID in the share URL) can already download the file, so
+    // exposing the counter does not grant additional access or reveal sensitive data.
     downloadCount: upload.downloadCount,
     maxDownloads: upload.maxDownloads,
     expiresAt: upload.expiresAt.toISOString(),

@@ -24,11 +24,14 @@ import { createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
 import { createDownloadRoute } from "../src/routes/download.js";
-import { passwordRoute } from "../src/routes/password.js";
+import { createPasswordRoute } from "../src/routes/password.js";
 import { createDeleteRoute } from "../src/routes/delete.js";
 import { existsRoute } from "../src/routes/exists.js";
 import { healthRoute } from "../src/routes/health.js";
-import { noteRoute } from "../src/routes/note.js";
+import { createNoteRoute } from "../src/routes/note.js";
+import { createPasswordLockout } from "../src/lib/password-lockout.js";
+
+const mockLockout = createPasswordLockout(10, 60_000);
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -338,7 +341,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -359,7 +362,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -374,7 +377,7 @@ describe("routes", () => {
       insertTestUpload(dbCtx.db, { hasPassword: false });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -387,7 +390,7 @@ describe("routes", () => {
 
     it("should return 404 for non-existent upload", async () => {
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -407,7 +410,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/password", passwordRoute);
+      app.route("/api/password", createPasswordRoute(mockLockout));
 
       const res = await app.request(`/api/password/${TEST_UUID}`, {
         method: "POST",
@@ -567,7 +570,8 @@ describe("routes", () => {
   // ── Upload ──────────────────────────────────────────
 
   describe("POST /api/upload", () => {
-    const validSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+    // SALT_LENGTH = 32 bytes (crypto package requirement for HKDF salt)
+    const validSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 
     function makeUploadHeaders(overrides: Record<string, string> = {}) {
       return {
@@ -735,7 +739,7 @@ describe("routes", () => {
       app.route("/api/upload", createUploadRoute(storage));
       app.route("/api/info", infoRoute);
       app.route("/api/download", createDownloadRoute(storage));
-      app.route("/api/note", noteRoute);
+      app.route("/api/note", createNoteRoute(mockLockout));
       return app;
     }
 

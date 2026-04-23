@@ -11,6 +11,12 @@ interface RateLimitEntry {
 /**
  * In-memory rate limiter using a sliding window approach.
  * Entries are lazily cleaned up when accessed.
+ *
+ * S-3 (Security Audit): This store is intentionally in-memory (not Redis/Valkey).
+ * SkySend is designed as a single-instance, self-hosted tool. A persistent external
+ * store would be over-engineering for the typical deployment model. If multi-instance
+ * deployments are needed, rate limiting should be handled at the reverse proxy layer
+ * (Nginx, Traefik, Cloudflare) which is better suited for distributed enforcement.
  */
 export function createRateLimiter(config: Config) {
   const store = new Map<string, RateLimitEntry>();
@@ -60,13 +66,21 @@ export function createRateLimiter(config: Config) {
  * Extract the client IP from the request.
  * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled.
  * Falls back to Node.js socket info via getConnInfo.
+ *
+ * S-1 (Security Audit): When TRUST_PROXY is enabled, we take the RIGHTMOST value from
+ * X-Forwarded-For, not the leftmost. The rightmost entry is appended by the trusted
+ * reverse proxy and reflects the actual client IP as seen by the proxy.
+ * The leftmost entries are client-controlled and can be spoofed freely.
+ * Example: X-Forwarded-For: <spoofed>, <real-client-ip>  → we use <real-client-ip>.
  */
 function getClientIp(c: Context, trustProxy = false): string {
   if (trustProxy) {
     const forwarded = c.req.header("X-Forwarded-For");
     if (forwarded) {
-      const first = forwarded.split(",")[0]?.trim();
-      if (first) return first;
+      // Rightmost IP is appended by the trusted reverse proxy.
+      // Leftmost IPs can be spoofed by the client.
+      const trusted = forwarded.split(",").at(-1)?.trim();
+      if (trusted) return trusted;
     }
 
     const realIp = c.req.header("X-Real-IP");

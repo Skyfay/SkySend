@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import { Button } from "@/components/ui/button";
 import type { NoteContentType } from "@skysend/crypto";
 import hljs from "highlight.js/lib/core";
@@ -73,7 +75,15 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
 
   const highlightedCode = useMemo(() => {
     if (contentType !== "code") return "";
-    return hljs.highlightAuto(content).value;
+    // Defense-in-Depth (C-1): sanitize hljs output before using dangerouslySetInnerHTML.
+    // hljs escapes HTML entities in user content by default, but DOMPurify provides an
+    // additional layer of protection against any future upstream vulnerabilities.
+    // Only <span> with a class attribute is needed for syntax highlighting.
+    const raw = hljs.highlightAuto(content).value;
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: ["span"],
+      ALLOWED_ATTR: ["class"],
+    });
   }, [content, contentType]);
 
   const copyToClipboard = async () => {
@@ -342,7 +352,9 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
     return (
       <div className="space-y-3">
         <div className="rounded-lg border bg-muted/50 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {/* C-2: rehype-sanitize prevents XSS from future react-markdown upstream changes
+              that could enable allowDangerousHtml. Explicit sanitization is best practice. */}
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</ReactMarkdown>
         </div>
         <Button variant="outline" size="sm" onClick={copyToClipboard}>
           {copied ? (

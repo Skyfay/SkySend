@@ -16,7 +16,10 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { noteRoute } from "../src/routes/note.js";
+import { createNoteRoute } from "../src/routes/note.js";
+import { createPasswordLockout } from "../src/lib/password-lockout.js";
+
+const mockLockout = createPasswordLockout(10, 60_000);
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -48,7 +51,7 @@ const DEFAULT_CONFIG = {
 
 function createApp() {
   const app = new Hono();
-  app.route("/api/note", noteRoute);
+  app.route("/api/note", createNoteRoute(mockLockout));
   return app;
 }
 
