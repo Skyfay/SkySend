@@ -9,7 +9,7 @@ vi.mock("../src/db/index.js", () => ({
 }));
 
 import { getDb } from "../src/db/index.js";
-import { runCleanup } from "../src/lib/cleanup.js";
+import { runCleanup, startCleanupJob } from "../src/lib/cleanup.js";
 
 describe("cleanup", () => {
   let dbCtx: ReturnType<typeof createTestDb>;
@@ -232,5 +232,107 @@ describe("cleanup", () => {
 
     const deleted = await runCleanup(storageCtx.storage);
     expect(deleted).toBe(2);
+  });
+});
+
+// ── startCleanupJob ───────────────────────────────────────────────────────────
+
+describe("startCleanupJob", () => {
+  let dbCtx: ReturnType<typeof createTestDb>;
+  let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    dbCtx = createTestDb();
+    storageCtx = await createTestStorage();
+    vi.mocked(getDb).mockReturnValue(dbCtx.db);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    dbCtx.cleanup();
+    storageCtx.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("should run cleanup on each interval tick", async () => {
+    // Mock storage.delete to avoid real I/O that outlives the fake timer advance
+    const deleteSpy = vi.spyOn(storageCtx.storage, "delete").mockResolvedValue(undefined);
+
+    insertTestUpload(dbCtx.db, {
+      id: TEST_UUID,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const stop = startCleanupJob(storageCtx.storage, 60);
+    await vi.advanceTimersByTimeAsync(60_000);
+    stop();
+
+    expect(deleteSpy).toHaveBeenCalledWith(TEST_UUID);
+  });
+
+  it("should return a stop function that cancels the interval", async () => {
+    const deleteSpy = vi.spyOn(storageCtx.storage, "delete").mockResolvedValue(undefined);
+
+    insertTestUpload(dbCtx.db, {
+      id: TEST_UUID,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const stop = startCleanupJob(storageCtx.storage, 60);
+    stop(); // Cancel BEFORE advancing time
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it("should log when records are deleted", async () => {
+    vi.spyOn(storageCtx.storage, "delete").mockResolvedValue(undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    insertTestUpload(dbCtx.db, {
+      id: TEST_UUID,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const stop = startCleanupJob(storageCtx.storage, 60);
+    await vi.advanceTimersByTimeAsync(60_000);
+    stop();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Removed 1 expired record(s)"),
+    );
+  });
+
+  it("should not log when nothing is deleted", async () => {
+    vi.spyOn(storageCtx.storage, "delete").mockResolvedValue(undefined);
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const stop = startCleanupJob(storageCtx.storage, 60);
+    await vi.advanceTimersByTimeAsync(60_000);
+    stop();
+
+    expect(consoleSpy).not.toHaveBeenCalled();
+  });
+
+  it("should catch errors and log them, then continue on next tick", async () => {
+    vi.spyOn(storageCtx.storage, "delete").mockResolvedValue(undefined);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // First tick throws, second tick should still run without crashing
+    vi.mocked(getDb)
+      .mockImplementationOnce(() => { throw new Error("DB unavailable"); })
+      .mockReturnValue(dbCtx.db);
+
+    const stop = startCleanupJob(storageCtx.storage, 60);
+    await vi.advanceTimersByTimeAsync(60_000); // First tick - throws
+    await vi.advanceTimersByTimeAsync(60_000); // Second tick - recovers
+    stop();
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[cleanup] Error"),
+      expect.any(Error),
+    );
   });
 });

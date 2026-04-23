@@ -30,6 +30,7 @@ import { existsRoute } from "../src/routes/exists.js";
 import { healthRoute } from "../src/routes/health.js";
 import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
+import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
 
@@ -915,6 +916,68 @@ describe("routes", () => {
       const json = await res.json();
       expect(json.error).toContain("Password-protected");
     });
+
+    it("should return 400 when salt decodes to wrong number of bytes", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // 16-byte salt is valid base64url but SALT_LENGTH requires 32 bytes
+      const shortSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({ "X-Salt": shortSalt }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("32 bytes");
+    });
+
+    it("should return 400 when passwordSalt decodes to wrong length", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // 8-byte passwordSalt is valid base64url but PASSWORD_SALT_LENGTH requires 16 bytes
+      const shortPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(8))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({
+          "X-Has-Password": "true",
+          "X-Password-Salt": shortPwSalt,
+          "X-Password-Algo": "argon2id",
+        }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain("16 bytes");
+    });
+
+    it("should accept password-protected upload with correct passwordSalt", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+
+      // Exactly 16 bytes for passwordSalt (PASSWORD_SALT_LENGTH)
+      const validPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({
+          "X-Has-Password": "true",
+          "X-Password-Salt": validPwSalt,
+          "X-Password-Algo": "argon2id",
+        }),
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.id).toBeTruthy();
+    });
   });
 
   // ── Chunked Upload (init / chunk / finalize) ────────
@@ -1226,6 +1289,60 @@ describe("routes", () => {
       // Info for non-existent note returns 404, not 403
       const res = await app.request(`/api/note/${TEST_UUID}`);
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ── validateUploadHeaders direct unit tests ────────────────────────────────
+  // These tests bypass Zod schema validation to reach defensive catch paths
+  // that are unreachable through normal route flows.
+
+  describe("validateUploadHeaders (unit)", () => {
+    const validSalt32 = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+    const validPwSalt16 = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+
+    function makeHeaders(overrides: Partial<UploadHeaders> = {}): UploadHeaders {
+      return {
+        authToken: "abc",
+        ownerToken: "abc",
+        salt: validSalt32,
+        maxDownloads: 1,
+        expireSec: 86400,
+        fileCount: 1,
+        contentLength: 5,
+        hasPassword: false,
+        passwordSalt: undefined,
+        passwordAlgo: undefined,
+        ...overrides,
+      };
+    }
+
+    it("should return 400 with 'Invalid salt encoding' when fromBase64url throws for salt", () => {
+      // Bypass zod: inject a string with chars that fail base64url decoding
+      const headers = makeHeaders({ salt: "!!!invalid-chars!!!" });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result?.status).toBe(400);
+      expect(result?.message).toContain("Invalid salt encoding");
+    });
+
+    it("should return 400 with 'Invalid password salt encoding' when passwordSalt cannot be decoded", () => {
+      const headers = makeHeaders({
+        hasPassword: true,
+        passwordSalt: "!!!bad!!!",
+        passwordAlgo: "argon2id",
+      });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result?.status).toBe(400);
+      expect(result?.message).toContain("Invalid password salt encoding");
+    });
+
+    it("should return null for valid headers with correct passwordSalt length", () => {
+      const headers = makeHeaders({
+        hasPassword: true,
+        passwordSalt: validPwSalt16,
+        passwordAlgo: "argon2id",
+      });
+      const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
+      expect(result).toBeNull();
     });
   });
 });

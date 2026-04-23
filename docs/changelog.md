@@ -2,8 +2,12 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.4.4 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
-*Release: In Progress*
+## v2.5.0 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
+*Released: April 23, 2026*
+
+### ✨ Features
+
+- **server**: Added per-IP per-resource password attempt lockout - after 10 failed attempts the IP is locked out for 15 minutes with a `Retry-After` header; IPs stored as ephemeral HMAC-SHA256 hashes; configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
 
 ### 🔒 Security
 
@@ -18,8 +22,6 @@ All notable changes to SkySend are documented here.
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
 - **web**: Note uploads now use Argon2id for password key derivation - previously PBKDF2 was always used for notes due to a missing argument
 - **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
-- **server**: Added per-IP and per-resource password attempt lockout - after 10 failed attempts from the same IP on a specific upload or note, that IP is locked out from that resource for 15 minutes with a `Retry-After` header; IPs are stored as ephemeral HMAC-SHA256 hashes (never persisted); configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
-- **web**: Password prompt now shows a translated "too many attempts" message when the server returns 429 - previously the UI showed an untranslated generic error string and switched away from the password screen
 - **web**: Added DOMPurify sanitization of highlight.js output before `dangerouslySetInnerHTML` in code notes - defense-in-depth against any future upstream hljs vulnerability
 - **web**: Added `rehype-sanitize` plugin to ReactMarkdown rendering in notes - prevents XSS from future react-markdown upstream changes that could enable raw HTML
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` in `NoteView` immediately at page mount - previously only the Download page had this protection
@@ -27,18 +29,25 @@ All notable changes to SkySend are documented here.
 - **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement; now always uses presigned URLs with a TTL
 - **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning; the PWA manifest `display: standalone` already handles standalone mode on modern browsers
 
+### 🎨 Improvements
+
+- **web**: Password prompt now shows a translated "too many attempts" error when the server returns 429 instead of switching away from the password screen
+
 ### 🔧 CI/CD
 
 - **infra**: Added OCI standard labels to Docker images via `docker/metadata-action@v5` - sets `title`, `description`, `url`, `source`, `version`, `revision`, `created`, `vendor`, and `licenses` for better registry compatibility and Renovate/Dependabot integration
 
 ### 🧪 Tests
 
-- **crypto**: Expanded test suite to 129 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE record reorder attacks, ECE truncation detection with `expectedPlaintextSize`, Argon2id non-WASM error propagation, PBKDF2 known-answer verification, legacy 16-byte HKDF salt backward compatibility, and various edge cases across all crypto modules.
-- **server**: Added 24 new integration tests targeting the most critical coverage gaps - the chunked HTTP upload flow (`/init`, `/chunk`, `/finalize`) was previously entirely untested; added tests for in-order chunks, out-of-order chunk buffering and flush, finalize size mismatch (400), and session/index validation errors. Added tests for the password-attempt lockout (429 + `Retry-After`) in both the file and note password endpoints, plus invalid base64url token handling, missing/non-string authToken, and invalid JSON bodies across `meta.ts`, `password.ts`, and `note.ts` routes.
+- **crypto**: Expanded to 129 tests with 100% coverage - added security-property tests for HKDF domain separation, ECE reorder/truncation attacks, Argon2id error propagation, PBKDF2 known-answer verification, and legacy salt backward compatibility.
+- **server**: Added 24 integration tests for the chunked upload flow (`/init`, `/chunk`, `/finalize`), password-attempt lockout (429 + `Retry-After`), and invalid input handling across `meta.ts`, `password.ts`, and `note.ts` routes.
+- **server**: Added 5 tests for `startCleanupJob` (interval, stop function, logging, error recovery) - bringing `cleanup.ts` to 100%.
+- **server**: Brought `upload-validation.ts` and `quota.ts` to 100% - covers all `check()`, `getStatus()`, 413 middleware, DB key restoration, and interval behavior (rotation, expiry cleanup).
+- **infra**: Added `vitest.config.ts` for `server` and `client`; updated `vite.config.ts` for `web` - all with scoped `coverage.include` and explicit excludes for untestable files (browser workers, WASM, S3 backend, app entrypoints).
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:v2.4.4`
+- **Image**: `skyfay/skysend:v2.5.0`
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
