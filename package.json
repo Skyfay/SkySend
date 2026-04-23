@@ -1,6 +1,6 @@
 {
   "name": "skysend",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
@@ -31,7 +31,12 @@
     "onlyBuiltDependencies": [
       "better-sqlite3",
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "esbuild": ">=0.25.0",
+      "vite": ">=6.4.2",
+      "fast-xml-parser": ">=5.7.0"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

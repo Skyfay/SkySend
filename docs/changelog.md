@@ -2,6 +2,25 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.4.4
+*Release: In Progress*
+
+### 🔒 Security
+
+- **server**: Updated `hono` from `4.12.12` to `4.12.14` to fix HTML injection via improperly handled JSX attribute names in SSR (GHSA-458j-xx4x-4375)
+- **infra**: Added `pnpm.overrides` for `esbuild` (`>=0.25.0`), `vite` (`>=6.4.2`), and `fast-xml-parser` (`>=5.7.0`) to patch transitive vulnerabilities in dev/docs dependencies (GHSA-67mh-4wv8-2f99, GHSA-4w7w-66w2-5vf9, GHSA-gh4j-gqv2-49f6)
+
+### 🔧 CI/CD
+
+- **infra**: Added OCI standard labels to Docker images via `docker/metadata-action@v5` - sets `title`, `description`, `url`, `source`, `version`, `revision`, `created`, `vendor`, and `licenses` for better registry compatibility and Renovate/Dependabot integration
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.4.4`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.4.3 - Codecov, Unit Test Improvements & Web Improvements
 *Released: April 21, 2026*
 

@@ -1,6 +1,6 @@
 {
   "name": "@skysend/server",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "private": true,
   "type": "module",
   "exports": {
@@ -44,7 +44,7 @@
     "@skysend/crypto": "workspace:*",
     "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.12",
+    "hono": "^4.12.14",
     "zod": "^4.3.6"
   },
   "devDependencies": {
