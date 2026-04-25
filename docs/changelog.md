@@ -7,7 +7,12 @@ All notable changes to SkySend are documented here.
 
 ### 🐛 Bug Fixes
 
+- **client**: Fixed `resolveServer()` ignoring `defaultServer` and using the legacy top-level `server` field instead - if both fields exist in `config.json` (e.g. after migrating to multi-server), the TUI and all commands now correctly prefer `defaultServer`.
 - **client**: Fixed WebSocket uploads hanging at 100% on remote servers - the progress bar reached 100% as soon as data was queued in Node.js's send buffer, not when it arrived at the server, causing the fixed 5-minute finalize timeout to expire for large files on slow connections. The send buffer is now drained to zero before sending "finalize", the timeout is dynamic (5 min + 2 s/MB), and the TUI/CLI show "Finalizing..." while waiting for the server confirmation.
+
+### 🎨 Improvements
+
+- **client**: TUI and non-interactive CLI now display the average upload speed on the summary screen after a successful upload, matching the existing web behavior.
 
 ### 🐳 Docker
 

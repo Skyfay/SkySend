@@ -52,7 +52,8 @@ export function resetConfig(): void {
  * Resolve the server URL with priority:
  * 1. --server CLI flag
  * 2. SKYSEND_SERVER env variable
- * 3. Saved config
+ * 3. defaultServer from multi-server config
+ * 4. Legacy top-level server field
  */
 export function resolveServer(flagValue?: string): string {
   if (flagValue) return flagValue.replace(/\/+$/, "");
@@ -61,6 +62,7 @@ export function resolveServer(flagValue?: string): string {
   if (env) return env.replace(/\/+$/, "");
 
   const config = loadConfig();
+  if (config.defaultServer) return config.defaultServer;
   if (config.server) return config.server;
 
   throw new Error(
