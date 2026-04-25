@@ -52,7 +52,7 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 - **AES-256-GCM** streaming encryption with 64KB record size
 - **HKDF-SHA256** key derivation with domain-separated keys (fileKey, metaKey, authKey)
 - **Zero Knowledge** - the encryption key lives only in the URL fragment (`#`) and never leaves the browser
-- **Argon2id** password protection via WASM with PBKDF2-SHA256 fallback
+- **Argon2id** password protection via WASM (memory-hard, GPU-resistant)
 
 ### 📁 Upload & Sharing
 
@@ -203,7 +203,7 @@ skysend update
 | Metadata Encryption | AES-256-GCM + Random IV |
 | Nonce Handling | Counter-based (XOR) |
 | Auth Token | HMAC-SHA256 |
-| Password KDF | Argon2id (WASM) / PBKDF2-SHA256 (600k iterations) |
+| Password KDF | Argon2id (WASM) |
 
 The complete crypto design is publicly documented at [docs.skysend.ch/developer-guide/crypto](https://docs.skysend.ch/developer-guide/crypto/).
 

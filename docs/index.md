@@ -28,7 +28,7 @@ features:
     details: No registration, no login, no tracking. Upload a file, get a link, share it. That's it.
   - icon: 🔑
     title: Password Protection
-    details: Protect uploads with a password using Argon2id (WASM) or PBKDF2-SHA256 as fallback. GPU-resistant key derivation.
+    details: Protect uploads with a password using Argon2id (WASM). Memory-hard, GPU-resistant key derivation.
   - icon: 📁
     title: Multi-File & Folder Uploads
     details: Upload multiple files or entire folders. Files are zipped client-side with fflate before encryption - the server sees only one encrypted blob.

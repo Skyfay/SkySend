@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.1
+*Release: In Progress*
+
+### � Documentation
+
+- **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
+
+### �🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.0 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
 *Released: April 23, 2026*
 

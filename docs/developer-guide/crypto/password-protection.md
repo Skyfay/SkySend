@@ -1,6 +1,6 @@
 # Password Protection
 
-SkySend supports optional password protection using Argon2id (preferred) or PBKDF2-SHA256 (fallback).
+SkySend supports optional password protection using Argon2id (WASM, memory-hard, GPU-resistant).
 
 ## How It Works
 
@@ -13,9 +13,9 @@ Download: secret = protectedSecret XOR passwordKey
 
 The XOR operation is reversible, so the original secret can be recovered by applying the same password key.
 
-## Key Derivation Functions
+## Key Derivation Function
 
-### Argon2id (Preferred)
+### Argon2id
 
 Argon2id is a memory-hard KDF that is resistant to GPU and ASIC attacks. SkySend uses it via a WASM implementation in the browser.
 
@@ -29,24 +29,8 @@ Argon2id is a memory-hard KDF that is resistant to GPU and ASIC attacks. SkySend
 These parameters follow the [OWASP strong recommendation](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) for Argon2id.
 
 ```typescript
-const { key, algorithm } = await deriveKeyFromPassword(password, salt)
-// algorithm = "argon2id"
-```
-
-### PBKDF2-SHA256 (Fallback)
-
-If Argon2id WASM is unavailable (e.g., older browsers), PBKDF2-SHA256 is used as a fallback.
-
-| Parameter | Value |
-| --- | --- |
-| Hash | SHA-256 |
-| Iterations | 600,000 |
-| Key Length | 32 bytes |
-
-600,000 iterations follow the [OWASP 2024 recommendation](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) for PBKDF2-SHA256.
-
-```typescript
-const key = await deriveKeyFromPasswordPbkdf2(password, salt)
+const { key, algorithm } = await deriveKeyFromPassword(password, salt, argon2id)
+// algorithm = "argon2id-v2"
 ```
 
 ## Password Salt
@@ -57,7 +41,7 @@ A 16-byte random salt is generated per upload:
 const passwordSalt = randomBytes(16) // PASSWORD_SALT_LENGTH = 16
 ```
 
-The salt and the algorithm used (`argon2id` or `pbkdf2`) are stored on the server so that the downloader can derive the same password key.
+The salt and the algorithm identifier are stored on the server so that the downloader can derive the same password key.
 
 ## Upload Flow
 
@@ -84,7 +68,6 @@ The salt and the algorithm used (`argon2id` or `pbkdf2`) are stored on the serve
 | --- | --- |
 | `PASSWORD_SALT_LENGTH` | 16 bytes |
 | `DERIVED_KEY_LENGTH` | 32 bytes |
-| `PBKDF2_ITERATIONS` | 600,000 |
 | `ARGON2_PARAMS.memory` | 65,536 KiB |
 | `ARGON2_PARAMS.iterations` | 3 |
 | `ARGON2_PARAMS.parallelism` | 1 |
@@ -94,6 +77,5 @@ The salt and the algorithm used (`argon2id` or `pbkdf2`) are stored on the serve
 
 - **Unique salt per upload** - Prevents rainbow table attacks
 - **Memory-hard KDF** - Argon2id is resistant to GPU/ASIC brute-force
-- **High iteration count** - PBKDF2 fallback uses OWASP-recommended iterations
 - **Server never sees the password** - Only verifies the derived auth token
 - **UTF-8 encoding** - Passwords are consistently encoded as UTF-8 before hashing
