@@ -1,6 +1,6 @@
 {
   "name": "@skysend/client",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "type": "module",
   "bin": {
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@skysend/crypto": "workspace:*",
-    "commander": "^13.1.0",
+    "commander": "^14.0.3",
     "fflate": "^0.8.2",
     "hash-wasm": "^4.12.0",
     "ink": "^7.0.1",

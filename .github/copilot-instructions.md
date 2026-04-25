@@ -5,6 +5,7 @@
 
 - Always use English
 - Use hyphens instead of em dashes
+- Never use semicolons (`;`) to join clauses in prose, changelog entries, or documentation. Use a comma or end the sentence with a period instead.
 
 # Code Style
 

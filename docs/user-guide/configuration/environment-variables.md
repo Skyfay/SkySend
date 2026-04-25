@@ -108,8 +108,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `S3_ACCESS_KEY` | ⚠️ | - | S3 access key ID. Required when `STORAGE_BACKEND=s3`. |
 | `S3_SECRET_KEY` | ⚠️ | - | S3 secret access key. Required when `STORAGE_BACKEND=s3`. |
 | `S3_FORCE_PATH_STYLE` | ❌ | `false` | Use path-style URLs instead of virtual-hosted-style. Required for MinIO, Garage, and some self-hosted providers. |
-| `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. Only used when `S3_PUBLIC_URL` is not set. |
-| `S3_PUBLIC_URL` | ❌ | _(none)_ | Public base URL for downloading files (e.g. `https://cdn.example.com`). When set, downloads use direct URLs instead of presigned URLs - simpler and avoids CORS issues. Recommended for R2 custom domains and other publicly accessible buckets. |
+| `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. |
 | `S3_PART_SIZE` | ❌ | `25MB` | Size of each S3 multipart upload part. Larger values reduce round-trips but use more memory. Minimum is `5MB` (S3 requirement). |
 | `S3_CONCURRENCY` | ❌ | `4` | Number of S3 parts uploaded in parallel. Higher values improve throughput but use more memory and bandwidth. Range: 1-16. |
 
@@ -126,7 +125,6 @@ environment:
   S3_ENDPOINT: "https://<account-id>.r2.cloudflarestorage.com"
   S3_ACCESS_KEY: your-access-key
   S3_SECRET_KEY: your-secret-key
-  S3_PUBLIC_URL: "https://cdn.example.com"  # R2 custom domain (recommended)
 ```
 :::
 

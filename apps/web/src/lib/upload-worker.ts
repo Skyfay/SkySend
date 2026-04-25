@@ -173,6 +173,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     } catch (e) {
       throw new Error(
         `Server unreachable at ${apiBase || "(same-origin)"}: ${e instanceof Error ? e.message : String(e)}`,
+        { cause: e },
       );
     }
 
@@ -406,9 +407,7 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
   if (chunkSize > 0) {
     const blob = new Blob(chunkParts as unknown as BlobPart[]);
     const uploadedChunkSize = chunkSize;
-    chunkParts = [];
-    chunkSize = 0;
-    const currentIndex = chunkIndex++;
+    const currentIndex = chunkIndex;
 
     const p = uploadChunk(blob, currentIndex).then(() => {
       loaded += uploadedChunkSize;

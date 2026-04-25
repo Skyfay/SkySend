@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
+import { spawn } from "node:child_process";
 import type { Command } from "commander";
 import { writeLine } from "../lib/progress.js";
 import { APP_VERSION } from "../version.js";
@@ -155,9 +156,32 @@ export function registerUpdateCommand(program: Command): void {
         fs.writeFileSync(tmpPath, data);
         fs.chmodSync(tmpPath, 0o755);
 
-        // Atomic replace: rename new over old
-        fs.renameSync(tmpPath, execPath);
-        writeLine(`Updated to v${latestVersion}.`);
+        if (process.platform === "win32") {
+          // On Windows a running .exe is locked - it cannot be replaced directly,
+          // even as Administrator. Spawn a detached cmd script that waits for this
+          // process to exit, then moves the new binary into place.
+          const batPath = `${os.tmpdir()}\\skysend-update.bat`;
+          const bat = [
+            "@echo off",
+            "timeout /t 2 /nobreak >nul",
+            `move /y "${tmpPath}" "${execPath}"`,
+            `del "%~f0"`,
+            "",
+          ].join("\r\n");
+          fs.writeFileSync(batPath, bat, "ascii");
+          const child = spawn("cmd.exe", ["/c", batPath], {
+            detached: true,
+            stdio: "ignore",
+            windowsHide: true,
+          });
+          child.unref();
+          writeLine(`Updated to v${latestVersion}. The update will be applied on next run.`);
+          process.exit(0);
+        } else {
+          // On Unix, rename works atomically even on a running binary.
+          fs.renameSync(tmpPath, execPath);
+          writeLine(`Updated to v${latestVersion}.`);
+        }
       } catch (err) {
         // Clean up temp file on failure
         try {

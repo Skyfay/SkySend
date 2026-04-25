@@ -2,12 +2,50 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.1 - Bug fixes, dependency updates, and Dockerfile improvements
+*Released: April 25, 2026*
+
+### 🐛 Bug Fixes
+
+- **client**: Fixed `skysend update` failing on Windows with "Permission denied" even as Administrator. Windows locks running `.exe` files, so `fs.renameSync` always threw `EPERM`. The fix spawns a detached, hidden `cmd.exe` batch script that waits 2 seconds (until the current process exits) then moves the downloaded binary into place with `move /y`.
+- **client**: Fixed `install.ps1` hanging silently during download. PowerShell's default `$ProgressPreference = 'Continue'` makes `Invoke-WebRequest` up to 100x slower and shows no feedback in many terminal environments. The script now sets `$ProgressPreference = 'SilentlyContinue'` and prints `Downloading <file>... done (X.X MB)` and `Verifying checksum... ok` step messages instead.
+- **client**: Fixed `install.sh` showing no output during binary download. `curl -fsSL` and `wget -q` were fully silent. The binary download now uses `curl --progress-bar` (shows a `#####` bar on stderr) and `wget` without `-q`, so users see download progress.
+- **server**: Fixed S3 uploads failing with Cloudflare R2 and other S3-compatible providers with the error `[EntityReplacer] Invalid character '#' in entity name: "#xD"`. The root cause was `fast-xml-parser@5.7.1` introducing a regression where numeric character references (e.g. `&#xD;`) in XML responses could no longer be parsed. Updated `fast-xml-parser` override to `>=5.7.2` which restores correct behavior.
+- **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 >=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
+
+### 🔒 Security
+
+- **infra**: Added `pnpm.overrides` for `postcss` (`>=8.5.10`) to patch a moderate XSS vulnerability (GHSA-qx2v-qp2m-jg93) in transitive dependencies via `autoprefixer`
+
+### 🗑️ Removed
+
+- **server**: Removed `S3_PUBLIC_URL` environment variable. S3 downloads now exclusively use presigned URLs, which enforce expiry and download limits server-side and expire automatically. Public bucket URLs allowed clients to bypass these controls by reusing a captured URL.
+
+### 📝 Documentation
+
+- **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
+
+### 🎨 Improvements
+
+- **server**: Updated `@hono/node-server` from v1 to v2 - same public API, up to 2.3x faster body parsing via optimized direct Node.js `IncomingMessage` reads, URL construction fast-path, and `buildOutgoingHttpHeaders` optimization
+- **infra**: Updated patch and minor dependencies across all workspace packages - `hono`, `@aws-sdk/client-s3`, `@aws-sdk/lib-storage`, `@aws-sdk/s3-request-presigner`, `better-sqlite3`, `tailwindcss`, `@tailwindcss/vite`, `react-router-dom`, `i18next`, `react-i18next`, `lucide-react`, `autoprefixer`, `vite`, `vue`, `wrangler`, `@cloudflare/workers-types`, `prettier`, `typescript`, `eslint-plugin-react-hooks`, `globals`, `typescript-eslint`
+- **infra**: Updated `eslint` and `@eslint/js` from v9 to v10, and `commander` from v13 to v14 - no API changes required, fixed two new `eslint:recommended` rules (`no-useless-assignment` in upload chunking code, `preserve-caught-error` in upload worker)
+- **web**: Removed deprecated `@types/dompurify` - DOMPurify v3+ ships its own TypeScript declarations
+- **infra**: Added `COPY apps/client/package.json`, `COPY apps/client/stubs/`, and `COPY workers/instances/package.json` to the Dockerfile build stage so `pnpm install --frozen-lockfile` can resolve all workspace packages (including the `file:` stub dependency in `@skysend/client`) before `COPY . .`
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.0 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
 *Released: April 23, 2026*
 
 ### ✨ Features
 
-- **server**: Added per-IP per-resource password attempt lockout - after 10 failed attempts the IP is locked out for 15 minutes with a `Retry-After` header; IPs stored as ephemeral HMAC-SHA256 hashes; configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
+- **server**: Added per-IP per-resource password attempt lockout - after 10 failed attempts the IP is locked out for 15 minutes with a `Retry-After` header, IPs stored as ephemeral HMAC-SHA256 hashes, configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
 
 ### 🔒 Security
 
@@ -21,13 +59,13 @@ All notable changes to SkySend are documented here.
 - **web**: Added `<meta name="referrer" content="no-referrer">` to `index.html` as defense-in-depth for the referrer policy
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
 - **web**: Note uploads now use Argon2id for password key derivation - previously PBKDF2 was always used for notes due to a missing argument
-- **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
+- **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"), PBKDF2 decryption for existing uploads is unaffected
 - **web**: Added DOMPurify sanitization of highlight.js output before `dangerouslySetInnerHTML` in code notes - defense-in-depth against any future upstream hljs vulnerability
 - **web**: Added `rehype-sanitize` plugin to ReactMarkdown rendering in notes - prevents XSS from future react-markdown upstream changes that could enable raw HTML
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` in `NoteView` immediately at page mount - previously only the Download page had this protection
-- **server**: Fixed IP extraction when `TRUST_PROXY=true` - previously the leftmost (client-controlled) value from `X-Forwarded-For` was used, allowing clients to spoof their IP and bypass rate limiting and upload quotas; now uses the rightmost (proxy-appended) value
-- **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement; now always uses presigned URLs with a TTL
-- **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning; the PWA manifest `display: standalone` already handles standalone mode on modern browsers
+- **server**: Fixed IP extraction when `TRUST_PROXY=true` - previously the leftmost (client-controlled) value from `X-Forwarded-For` was used, allowing clients to spoof their IP and bypass rate limiting and upload quotas, now uses the rightmost (proxy-appended) value
+- **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement, now always uses presigned URLs with a TTL
+- **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning, the PWA manifest `display: standalone` already handles standalone mode on modern browsers
 
 ### 🎨 Improvements
 
@@ -43,7 +81,7 @@ All notable changes to SkySend are documented here.
 - **server**: Added 24 integration tests for the chunked upload flow (`/init`, `/chunk`, `/finalize`), password-attempt lockout (429 + `Retry-After`), and invalid input handling across `meta.ts`, `password.ts`, and `note.ts` routes.
 - **server**: Added 5 tests for `startCleanupJob` (interval, stop function, logging, error recovery) - bringing `cleanup.ts` to 100%.
 - **server**: Brought `upload-validation.ts` and `quota.ts` to 100% - covers all `check()`, `getStatus()`, 413 middleware, DB key restoration, and interval behavior (rotation, expiry cleanup).
-- **infra**: Added `vitest.config.ts` for `server` and `client`; updated `vite.config.ts` for `web` - all with scoped `coverage.include` and explicit excludes for untestable files (browser workers, WASM, S3 backend, app entrypoints).
+- **infra**: Added `vitest.config.ts` for `server` and `client`, updated `vite.config.ts` for `web` - all with scoped `coverage.include` and explicit excludes for untestable files (browser workers, WASM, S3 backend, app entrypoints).
 
 ### 🐳 Docker
 

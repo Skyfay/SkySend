@@ -37,8 +37,7 @@ initDatabase(config.DATA_DIR);
 // Log storage mode
 if (config.STORAGE_BACKEND === "s3") {
   const provider = config.S3_ENDPOINT ?? `AWS S3 (${config.S3_REGION})`;
-  const mode = config.S3_PUBLIC_URL ? "public URL" : "presigned URL";
-  console.log(`[storage] Using S3 backend (${mode}) - endpoint: ${provider}`);
+  console.log(`[storage] Using S3 backend (presigned URL) - endpoint: ${provider}`);
 } else {
   console.log(`[storage] Using filesystem backend - path: ${config.UPLOADS_DIR}`);
 }
@@ -64,10 +63,7 @@ const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
 // Build CSP connect-src based on storage backend
 const connectSrc: string[] = ["'self'"];
 if (config.STORAGE_BACKEND === "s3") {
-  if (config.S3_PUBLIC_URL) {
-    // Public URL mode - allow fetches to the public domain
-    connectSrc.push(config.S3_PUBLIC_URL.replace(/\/+$/, "") + "/");
-  } else if (config.S3_ENDPOINT) {
+  if (config.S3_ENDPOINT) {
     // Presigned URL mode with custom S3 provider
     connectSrc.push(config.S3_ENDPOINT.replace(/\/$/, "") + "/");
   } else if (config.S3_REGION) {

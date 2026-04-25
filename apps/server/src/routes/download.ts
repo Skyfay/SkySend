@@ -52,17 +52,7 @@ export function createDownloadRoute(storage: StorageBackend) {
       return c.json({ error: "Upload no longer available" }, 410);
     }
 
-    // S3 backend with public URL: return direct URL
-    const publicUrl = storage.getPublicDownloadUrl(upload.id);
-    if (publicUrl) {
-      return c.json({
-        url: publicUrl,
-        size: upload.size,
-        fileCount: upload.fileCount,
-      });
-    }
-
-    // S3 backend with presigned URL: generate signed URL
+    // S3 backend: generate presigned URL for direct client download
     if (storage.supportsPresignedUrls()) {
       const url = await storage.getPresignedDownloadUrl(upload.id);
       return c.json({

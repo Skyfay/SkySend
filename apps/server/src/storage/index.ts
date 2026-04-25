@@ -21,7 +21,6 @@ export async function createStorage(config: Config): Promise<StorageBackend> {
       secretAccessKey: config.S3_SECRET_KEY!,
       forcePathStyle: config.S3_FORCE_PATH_STYLE,
       presignedExpiry: config.S3_PRESIGNED_EXPIRY,
-      publicUrl: config.S3_PUBLIC_URL,
       partSize: config.S3_PART_SIZE,
       concurrency: config.S3_CONCURRENCY,
     });

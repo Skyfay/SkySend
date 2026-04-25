@@ -1,6 +1,6 @@
 {
   "name": "@skysend/web",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,7 +24,6 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@skysend/crypto": "workspace:*",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/dompurify": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.1",
@@ -32,28 +31,28 @@
     "flag-icons": "^7.5.0",
     "hash-wasm": "^4.12.0",
     "highlight.js": "^11.11.1",
-    "i18next": "^26.0.4",
+    "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
     "idb-keyval": "^6.2.2",
-    "lucide-react": "^1.8.0",
+    "lucide-react": "^1.11.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-i18next": "^17.0.2",
+    "react-i18next": "^17.0.4",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.14.0",
+    "react-router-dom": "^7.14.2",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "autoprefixer": "^10.4.27",
-    "tailwindcss": "^4.2.2",
-    "vite": "^8.0.8"
+    "autoprefixer": "^10.5.0",
+    "tailwindcss": "^4.2.4",
+    "vite": "^8.0.10"
   }
 }

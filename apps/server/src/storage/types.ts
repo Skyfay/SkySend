@@ -64,10 +64,4 @@ export interface StorageBackend {
    * For S3 this aborts the multipart upload.
    */
   abortChunkedUpload(id: string): Promise<void>;
-
-  /**
-   * Get the public download URL for an object.
-   * Returns null if public URLs are not configured.
-   */
-  getPublicDownloadUrl(id: string): string | null;
 }

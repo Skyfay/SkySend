@@ -79,11 +79,12 @@ download_and_install() {
   trap 'rm -rf "$TMPDIR"' EXIT
 
   # Download binary
+  printf "  Downloading %s...\n" "$ASSET_NAME"
   if command -v curl > /dev/null 2>&1; then
-    curl -fsSL -o "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
+    curl -fL --progress-bar -o "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
     curl -fsSL -o "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" 2>/dev/null || true
   else
-    wget -qO "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
+    wget -O "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
     wget -qO "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" 2>/dev/null || true
   fi
 

@@ -263,11 +263,6 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  S3_PUBLIC_URL: z
-    .string()
-    .url("S3_PUBLIC_URL must be a valid URL (e.g. https://cdn.example.com)")
-    .optional(),
-
   S3_PART_SIZE: z
     .string()
     .default("25MB")
