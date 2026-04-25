@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -35,8 +35,7 @@ export function NoteViewPage() {
 
   // T-2: Capture the secret from the URL fragment once at mount so that clearing
   // the hash via history.replaceState does not reset the value on the next re-render.
-  const secretRef = useRef<string>(window.location.hash.slice(1));
-  const secret = secretRef.current;
+  const [secret] = useState<string>(() => window.location.hash.slice(1));
 
   useEffect(() => {
     // Remove the key fragment from the URL immediately to reduce exposure in

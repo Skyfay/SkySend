@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -27,8 +27,7 @@ export function DownloadPage() {
 
   // Get secret from URL fragment - captured once at mount so that history.replaceState
   // clearing the hash does not reset secret to "" on the next re-render.
-  const secretRef = useRef<string>(window.location.hash.slice(1));
-  const secret = secretRef.current;
+  const [secret] = useState<string>(() => window.location.hash.slice(1));
 
   useEffect(() => {
     if (id && secret) {

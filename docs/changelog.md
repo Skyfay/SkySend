@@ -10,6 +10,10 @@ All notable changes to SkySend are documented here.
 - **server**: Fixed S3 uploads failing with Cloudflare R2 and other S3-compatible providers with the error `[EntityReplacer] Invalid character '#' in entity name: "#xD"`. The root cause was `fast-xml-parser@5.7.1` introducing a regression where numeric character references (e.g. `&#xD;`) in XML responses could no longer be parsed. Updated `fast-xml-parser` override to `>=5.7.2` which restores correct behavior.
 - **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 >=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
 
+### 🔒 Security
+
+- **infra**: Added `pnpm.overrides` for `postcss` (`>=8.5.10`) to patch a moderate XSS vulnerability (GHSA-qx2v-qp2m-jg93) in transitive dependencies via `autoprefixer`
+
 ### 🗑️ Removed
 
 - **server**: Removed `S3_PUBLIC_URL` environment variable. S3 downloads now exclusively use presigned URLs, which enforce expiry and download limits server-side and expire automatically. Public bucket URLs allowed clients to bypass these controls by reusing a captured URL.
@@ -17,6 +21,12 @@ All notable changes to SkySend are documented here.
 ### 📝 Documentation
 
 - **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
+
+### 🎨 Improvements
+
+- **server**: Updated `@hono/node-server` from v1 to v2 - same public API, up to 2.3x faster body parsing via optimized direct Node.js `IncomingMessage` reads, URL construction fast-path, and `buildOutgoingHttpHeaders` optimization
+- **infra**: Updated patch and minor dependencies across all workspace packages - `hono`, `@aws-sdk/client-s3`, `@aws-sdk/lib-storage`, `@aws-sdk/s3-request-presigner`, `better-sqlite3`, `tailwindcss`, `@tailwindcss/vite`, `react-router-dom`, `i18next`, `react-i18next`, `lucide-react`, `autoprefixer`, `vite`, `vue`, `wrangler`, `@cloudflare/workers-types`, `prettier`, `typescript`, `eslint-plugin-react-hooks`, `globals`, `typescript-eslint`
+- **web**: Removed deprecated `@types/dompurify` - DOMPurify v3+ ships its own TypeScript declarations
 
 ### 🐳 Docker
 
