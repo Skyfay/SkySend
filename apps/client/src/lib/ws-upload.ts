@@ -14,7 +14,6 @@ const FRAME_SIZE = 256 * 1024;
 const HIGH_WATER = 8 * 1024 * 1024;
 const LOW_WATER = 2 * 1024 * 1024;
 const READY_TIMEOUT_MS = 10_000;
-const DONE_TIMEOUT_MS = 5 * 60_000;
 
 export async function uploadWsTransport(
   server: string,
@@ -23,6 +22,9 @@ export async function uploadWsTransport(
   encryptedSize: number,
   speedLimit: number,
   onProgress: (loaded: number) => void,
+  /** Called once all binary frames are queued and the client is waiting for the
+   *  server's "done" confirmation.  Use this to show a "Finalizing..." state. */
+  onFinalize?: () => void,
 ): Promise<{ id: string }> {
   const wsUrl = new URL("/api/upload/ws", server);
   wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
@@ -166,11 +168,31 @@ export async function uploadWsTransport(
 
     if (fatalError) throw fatalError;
 
+    // Drain the WebSocket send buffer to zero before sending "finalize".
+    // After the last ws.send() call, Node.js may still hold GBs of data in its
+    // internal write queue because bufferedAmount reflects the WebSocket-layer
+    // queue, not the OS TCP socket buffer.  Waiting for zero ensures all frames
+    // have been handed off to the TCP layer before the DONE timer starts, so the
+    // timeout only needs to cover the OS-level flush + server finalization - not
+    // the full remaining transit of the upload payload.
+    while ((ws as unknown as { bufferedAmount: number }).bufferedAmount > 0) {
+      if (fatalError) throw fatalError;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+
+    onFinalize?.();
+
     // Finalize
     ws.send(JSON.stringify({ type: "finalize" }));
+
+    // Dynamic timeout: 5 min base plus 2 s/MB assuming 4 Mbps minimum bandwidth.
+    // For large files on slow remote connections the upload payload may still be
+    // in transit (in the OS TCP buffer) after the client shows 100%, so the
+    // server's "done" reply may arrive long after the progress bar completes.
+    const doneTimeoutMs = Math.max(5 * 60_000, Math.ceil(encryptedSize / (1024 * 1024)) * 2_000);
     await new Promise<void>((resolve, reject) => {
       if (doneId || fatalError) { resolve(); return; }
-      const timer = setTimeout(() => reject(new Error("WebSocket finalize timed out")), DONE_TIMEOUT_MS);
+      const timer = setTimeout(() => reject(new Error("WebSocket finalize timed out")), doneTimeoutMs);
       doneWaiters.push(() => { clearTimeout(timer); resolve(); });
     });
 

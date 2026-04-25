@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.2
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **client**: Fixed WebSocket uploads hanging at 100% on remote servers - the progress bar reached 100% as soon as data was queued in Node.js's send buffer, not when it arrived at the server, causing the fixed 5-minute finalize timeout to expire for large files on slow connections. The send buffer is now drained to zero before sending "finalize", the timeout is dynamic (5 min + 2 s/MB), and the TUI/CLI show "Finalizing..." while waiting for the server confirmation.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.1 - Bug fixes, dependency updates, and Dockerfile improvements
 *Released: April 25, 2026*
 

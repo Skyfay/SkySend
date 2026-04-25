@@ -113,6 +113,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const [password, setPassword] = useState<string | undefined>();
   const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
   const [packProgress, setPackProgress] = useState({ percent: 0, packed: 0, total: 0 });
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showQR, setShowQR] = useState(false);
@@ -126,6 +127,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     let zipCleanup: (() => void) | undefined;
     try {
       setPhase("uploading");
+      setIsFinalizing(false);
       const isMulti = files.length > 1;
 
       let plaintextStream: ReadableStream<Uint8Array>;
@@ -189,6 +191,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           const result = await uploadWsTransport(
             server, headers, encryptedStream, encryptedSize,
             config.fileUploadSpeedLimit ?? 0, onProgress,
+            () => setIsFinalizing(true),
           );
           uploadId = result.id;
         } catch {
@@ -452,11 +455,13 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>
-          <Text bold>Uploading...</Text>
+          <Text bold>{isFinalizing ? "Finalizing..." : "Uploading..."}</Text>
         </Box>
         <ProgressBar
           percent={progress.percent}
-          detail={`${formatBytes(progress.loaded)} / ${formatBytes(progress.total)}  ${progress.speed}`}
+          detail={isFinalizing
+            ? "Waiting for server confirmation..."
+            : `${formatBytes(progress.loaded)} / ${formatBytes(progress.total)}  ${progress.speed}`}
         />
       </Box>
     );

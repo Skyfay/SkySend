@@ -327,6 +327,7 @@ export function registerUploadCommand(program: Command): void {
             uploadResult = await uploadWsTransport(
               server, headers, encryptedStream, encryptedSize,
               config.fileUploadSpeedLimit ?? 0, onProgress,
+              () => { if (!options.json) writeProgress("Finalizing..."); },
             );
           } catch {
             if (!options.json) writeLine("WebSocket failed, falling back to HTTP...");
