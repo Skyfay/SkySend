@@ -5,11 +5,20 @@ All notable changes to SkySend are documented here.
 ## v2.5.1
 *Release: In Progress*
 
-### � Documentation
+### 🐛 Bug Fixes
+
+- **server**: Fixed S3 uploads failing with Cloudflare R2 and other S3-compatible providers with the error `[EntityReplacer] Invalid character '#' in entity name: "#xD"`. The root cause was `fast-xml-parser@5.7.1` introducing a regression where numeric character references (e.g. `&#xD;`) in XML responses could no longer be parsed. Updated `fast-xml-parser` override to `>=5.7.2` which restores correct behavior.
+- **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 >=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
+
+### 🗑️ Removed
+
+- **server**: Removed `S3_PUBLIC_URL` environment variable. S3 downloads now exclusively use presigned URLs, which enforce expiry and download limits server-side and expire automatically. Public bucket URLs allowed clients to bypass these controls by reusing a captured URL.
+
+### 📝 Documentation
 
 - **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
 
-### �🐳 Docker
+### 🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.5.1`
 - **Also tagged as**: `latest`, `v2`
@@ -21,7 +30,7 @@ All notable changes to SkySend are documented here.
 
 ### ✨ Features
 
-- **server**: Added per-IP per-resource password attempt lockout - after 10 failed attempts the IP is locked out for 15 minutes with a `Retry-After` header; IPs stored as ephemeral HMAC-SHA256 hashes; configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
+- **server**: Added per-IP per-resource password attempt lockout - after 10 failed attempts the IP is locked out for 15 minutes with a `Retry-After` header, IPs stored as ephemeral HMAC-SHA256 hashes, configurable via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`
 
 ### 🔒 Security
 
@@ -35,13 +44,13 @@ All notable changes to SkySend are documented here.
 - **web**: Added `<meta name="referrer" content="no-referrer">` to `index.html` as defense-in-depth for the referrer policy
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` once decryption begins, preventing key leakage through browser history
 - **web**: Note uploads now use Argon2id for password key derivation - previously PBKDF2 was always used for notes due to a missing argument
-- **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"); PBKDF2 decryption for existing uploads is unaffected
+- **crypto**: Removed Argon2id-to-PBKDF2 upload fallback entirely - if Argon2id WASM fails during an upload, an error is thrown instead of silently downgrading to PBKDF2 ("fail secure"), PBKDF2 decryption for existing uploads is unaffected
 - **web**: Added DOMPurify sanitization of highlight.js output before `dangerouslySetInnerHTML` in code notes - defense-in-depth against any future upstream hljs vulnerability
 - **web**: Added `rehype-sanitize` plugin to ReactMarkdown rendering in notes - prevents XSS from future react-markdown upstream changes that could enable raw HTML
 - **web**: URL fragment (encryption key) is now removed from the browser address bar via `history.replaceState` in `NoteView` immediately at page mount - previously only the Download page had this protection
-- **server**: Fixed IP extraction when `TRUST_PROXY=true` - previously the leftmost (client-controlled) value from `X-Forwarded-For` was used, allowing clients to spoof their IP and bypass rate limiting and upload quotas; now uses the rightmost (proxy-appended) value
-- **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement; now always uses presigned URLs with a TTL
-- **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning; the PWA manifest `display: standalone` already handles standalone mode on modern browsers
+- **server**: Fixed IP extraction when `TRUST_PROXY=true` - previously the leftmost (client-controlled) value from `X-Forwarded-For` was used, allowing clients to spoof their IP and bypass rate limiting and upload quotas, now uses the rightmost (proxy-appended) value
+- **server**: Fixed S3 download with `S3_PUBLIC_URL` configured - previously a permanent public URL was returned, remaining valid indefinitely after DB record deletion and bypassing expiry/download-limit enforcement, now always uses presigned URLs with a TTL
+- **web**: Replaced deprecated `apple-mobile-web-app-capable` meta tag with the standard `mobile-web-app-capable` equivalent - eliminates browser console warning, the PWA manifest `display: standalone` already handles standalone mode on modern browsers
 
 ### 🎨 Improvements
 
@@ -57,7 +66,7 @@ All notable changes to SkySend are documented here.
 - **server**: Added 24 integration tests for the chunked upload flow (`/init`, `/chunk`, `/finalize`), password-attempt lockout (429 + `Retry-After`), and invalid input handling across `meta.ts`, `password.ts`, and `note.ts` routes.
 - **server**: Added 5 tests for `startCleanupJob` (interval, stop function, logging, error recovery) - bringing `cleanup.ts` to 100%.
 - **server**: Brought `upload-validation.ts` and `quota.ts` to 100% - covers all `check()`, `getStatus()`, 413 middleware, DB key restoration, and interval behavior (rotation, expiry cleanup).
-- **infra**: Added `vitest.config.ts` for `server` and `client`; updated `vite.config.ts` for `web` - all with scoped `coverage.include` and explicit excludes for untestable files (browser workers, WASM, S3 backend, app entrypoints).
+- **infra**: Added `vitest.config.ts` for `server` and `client`, updated `vite.config.ts` for `web` - all with scoped `coverage.include` and explicit excludes for untestable files (browser workers, WASM, S3 backend, app entrypoints).
 
 ### 🐳 Docker
 

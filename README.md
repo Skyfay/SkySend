@@ -83,7 +83,7 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 ### ☁️ S3 Storage Support
 
 - **S3-Compatible** - optional backend for Cloudflare R2, AWS S3, MinIO, Hetzner, Wasabi, and more
-- **Direct Downloads** - serve files via public URL or presigned URLs
+- **Direct Downloads** - serve files via presigned URLs (short-lived, enforces expiry and download limits)
 - **Tunable Performance** - configurable part size and upload concurrency
 
 ### 🐳 Docker Ready

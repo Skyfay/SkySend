@@ -142,9 +142,4 @@ export class FileStorage implements StorageBackend {
   async abortChunkedUpload(id: string): Promise<void> {
     await this.delete(id);
   }
-
-  /** Filesystem does not support public download URLs. */
-  getPublicDownloadUrl(_id: string): string | null {
-    return null;
-  }
 }

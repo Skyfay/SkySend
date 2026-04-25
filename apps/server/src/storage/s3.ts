@@ -29,7 +29,6 @@ export interface S3StorageConfig {
   secretAccessKey: string;
   forcePathStyle: boolean;
   presignedExpiry: number;
-  publicUrl?: string;
   partSize: number;
   concurrency: number;
 }
@@ -78,6 +77,13 @@ export class S3Storage implements StorageBackend {
       },
       ...(config.endpoint && { endpoint: config.endpoint }),
       forcePathStyle: config.forcePathStyle,
+      // AWS SDK v3 >=3.679 enables checksum calculation by default ("WHEN_SUPPORTED").
+      // S3-compatible providers (R2, MinIO, etc.) may return checksum fields containing
+      // characters like &#xD; (carriage return) in XML responses that the SDK XML
+      // parser cannot handle, causing "[EntityReplacer] Invalid character '#'" errors.
+      // Setting both to WHEN_REQUIRED disables this behavior for non-AWS providers.
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
 
@@ -466,14 +472,10 @@ export class S3Storage implements StorageBackend {
   }
 
   /**
-   * S3 storage always uses presigned download URLs, even when S3_PUBLIC_URL is configured.
+   * S3 storage always uses presigned download URLs.
    *
-   * L-5 (Security Audit): Returning a permanent public URL (via getPublicDownloadUrl) is a
-   * security bug - the URL remains valid indefinitely after the DB record is deleted, allowing
-   * downloads past the expiry or max-download limit by anyone who recorded the URL.
-   * Presigned URLs have a short TTL (configurable, default 1 hour) and expire automatically.
-   * Trade-off: presigned URLs bypass CDN caching - this is an accepted trade-off for
-   * correct access-control enforcement.
+   * Presigned URLs have a short TTL (configurable, default 300s) and expire automatically,
+   * enforcing download limits and expiry even if a URL is recorded by a client.
    */
   supportsPresignedUrls(): boolean {
     return true;
@@ -489,15 +491,6 @@ export class S3Storage implements StorageBackend {
     return getSignedUrl(this.client, command, {
       expiresIn: expiresInSec ?? this.presignedExpiry,
     });
-  }
-
-  /**
-   * Always returns null - permanent public URLs are not used for downloads.
-   * See supportsPresignedUrls() for the rationale.
-   * S3_PUBLIC_URL is still used for upload operations where needed.
-   */
-  getPublicDownloadUrl(_id: string): string | null {
-    return null;
   }
 
   /** Abort a multipart upload in progress. */

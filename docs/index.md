@@ -49,7 +49,7 @@ features:
     details: Upload and download files from the terminal with full E2E encryption. Pre-built binaries for Linux, macOS, and Windows with self-update support.
   - icon: ☁️
     title: S3 Storage Support
-    details: Optional S3-compatible storage backend for Cloudflare R2, AWS S3, MinIO, and more. Serve files via public URL or presigned URLs.
+    details: Optional S3-compatible storage backend for Cloudflare R2, AWS S3, MinIO, and more. Serve files via presigned URLs.
   - icon: 🐳
     title: Docker Ready
     details: Multi-arch images (AMD64/ARM64), built-in health checks, graceful shutdown, and configurable PUID/PGID.

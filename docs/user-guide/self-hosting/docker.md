@@ -69,11 +69,10 @@ services:
       - S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_PUBLIC_URL=https://cdn.example.com  # Optional: R2 custom domain
 ```
 
 ::: tip
-When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database. Set `S3_PUBLIC_URL` to your R2 custom domain or public bucket URL to use direct downloads instead of presigned URLs.
+When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database.
 :::
 
 ::: warning
