@@ -289,6 +289,15 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
             }
             session.stage = "finalizing";
 
+            // Send periodic keepalive messages while finalizing to prevent
+            // reverse proxies (Caddy, Nginx) from closing the WebSocket due
+            // to inactivity.  Clients silently ignore unknown message types.
+            const keepaliveTimer = setInterval(() => {
+              if (session!.stage === "finalizing") {
+                sendJson(ws, { type: "keepalive" });
+              }
+            }, 5_000);
+
             try {
               // Wait for all pending writes to complete, then flush remainder.
               await session.writePromise;
@@ -305,6 +314,7 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
               }
 
               if (session.bytesReceived !== session.headers.contentLength) {
+                clearInterval(keepaliveTimer);
                 await storage.abortChunkedUpload(session.id).catch(() => {});
                 fail(ws, session, "Body size does not match declared content length", 1008);
                 return;
@@ -351,6 +361,7 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
               }
 
               session.stage = "closed";
+              clearInterval(keepaliveTimer);
               sendJson(ws, { type: "done", id: session.id });
               try {
                 ws.close(1000, "done");
@@ -358,8 +369,10 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
                 // ignore
               }
             } catch (err) {
+              clearInterval(keepaliveTimer);
               fail(ws, session, err instanceof Error ? err.message : "Finalize failed");
             }
+            clearInterval(keepaliveTimer);
             return;
           }
 

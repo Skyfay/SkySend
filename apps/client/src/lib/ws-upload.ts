@@ -168,18 +168,6 @@ export async function uploadWsTransport(
 
     if (fatalError) throw fatalError;
 
-    // Drain the WebSocket send buffer to zero before sending "finalize".
-    // After the last ws.send() call, Node.js may still hold GBs of data in its
-    // internal write queue because bufferedAmount reflects the WebSocket-layer
-    // queue, not the OS TCP socket buffer.  Waiting for zero ensures all frames
-    // have been handed off to the TCP layer before the DONE timer starts, so the
-    // timeout only needs to cover the OS-level flush + server finalization - not
-    // the full remaining transit of the upload payload.
-    while ((ws as unknown as { bufferedAmount: number }).bufferedAmount > 0) {
-      if (fatalError) throw fatalError;
-      await new Promise((r) => setTimeout(r, 50));
-    }
-
     onFinalize?.();
 
     // Finalize
@@ -187,8 +175,8 @@ export async function uploadWsTransport(
 
     // Dynamic timeout: 5 min base plus 2 s/MB assuming 4 Mbps minimum bandwidth.
     // For large files on slow remote connections the upload payload may still be
-    // in transit (in the OS TCP buffer) after the client shows 100%, so the
-    // server's "done" reply may arrive long after the progress bar completes.
+    // in transit after the client shows 100%, so the server's "done" reply may
+    // arrive long after the progress bar completes.
     const doneTimeoutMs = Math.max(5 * 60_000, Math.ceil(encryptedSize / (1024 * 1024)) * 2_000);
     await new Promise<void>((resolve, reject) => {
       if (doneId || fatalError) { resolve(); return; }

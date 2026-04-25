@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.3 - WebSocket Upload Keepalive
+*Released: April 25, 2026*
+
+### 🐛 Bug Fixes
+
+- **server**: Fixed WebSocket uploads hanging at 100% on remote servers behind a reverse proxy - the server now sends a keepalive message every 5 seconds during the finalization phase so Caddy/Nginx/Traefik do not close the connection as idle while the server is still flushing data to storage and writing to the DB.
+
+### 🔧 CI/CD
+
+- **infra**: Added branche ignore rule to stop branch-specific workflows (e.g. `release.yml`) from running on the `main` branch - these workflows are only meant to run on feature branches and tags, not on `main` where they cause noise and duplicate runs alongside the generic `validate.yml`.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.3`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.2 - Client Improvements & Bug fixes
 *Released: April 25, 2026*
 
