@@ -2,11 +2,14 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.5.1
-*Release: In Progress*
+## v2.5.1 - Bug fixes, dependency updates, and Dockerfile improvements
+*Released: April 25, 2026*
 
 ### 🐛 Bug Fixes
 
+- **client**: Fixed `skysend update` failing on Windows with "Permission denied" even as Administrator. Windows locks running `.exe` files, so `fs.renameSync` always threw `EPERM`. The fix spawns a detached, hidden `cmd.exe` batch script that waits 2 seconds (until the current process exits) then moves the downloaded binary into place with `move /y`.
+- **client**: Fixed `install.ps1` hanging silently during download. PowerShell's default `$ProgressPreference = 'Continue'` makes `Invoke-WebRequest` up to 100x slower and shows no feedback in many terminal environments. The script now sets `$ProgressPreference = 'SilentlyContinue'` and prints `Downloading <file>... done (X.X MB)` and `Verifying checksum... ok` step messages instead.
+- **client**: Fixed `install.sh` showing no output during binary download. `curl -fsSL` and `wget -q` were fully silent. The binary download now uses `curl --progress-bar` (shows a `#####` bar on stderr) and `wget` without `-q`, so users see download progress.
 - **server**: Fixed S3 uploads failing with Cloudflare R2 and other S3-compatible providers with the error `[EntityReplacer] Invalid character '#' in entity name: "#xD"`. The root cause was `fast-xml-parser@5.7.1` introducing a regression where numeric character references (e.g. `&#xD;`) in XML responses could no longer be parsed. Updated `fast-xml-parser` override to `>=5.7.2` which restores correct behavior.
 - **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 >=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
 

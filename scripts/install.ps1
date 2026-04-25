@@ -7,6 +7,9 @@
 #   $env:VERSION     - specific version to install (default: latest)
 
 $ErrorActionPreference = "Stop"
+# Suppress PowerShell's built-in Invoke-WebRequest progress UI.
+# Without this, IWR can be 10-100x slower due to progress event overhead.
+$ProgressPreference = "SilentlyContinue"
 
 $Repo = "skyfay/SkySend"
 $BinaryName = "skysend"
@@ -49,11 +52,16 @@ function Install-SkySend {
     try {
         # Download binary
         $BinaryPath = Join-Path $TmpDir $AssetName
+        Write-Host "  Downloading $AssetName..." -NoNewline
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $BinaryPath -UseBasicParsing
+        $DownloadSize = (Get-Item $BinaryPath).Length
+        $SizeStr = if ($DownloadSize -ge 1MB) { "{0:F1} MB" -f ($DownloadSize / 1MB) } else { "{0:F0} KB" -f ($DownloadSize / 1KB) }
+        Write-Host " done ($SizeStr)"
 
         # Download and verify checksum
         try {
             $ChecksumPath = Join-Path $TmpDir "checksums.txt"
+            Write-Host "  Verifying checksum..." -NoNewline
             Invoke-WebRequest -Uri $ChecksumUrl -OutFile $ChecksumPath -UseBasicParsing
 
             $checksums = Get-Content $ChecksumPath
@@ -62,14 +70,14 @@ function Install-SkySend {
                 $expected = ($expectedLine -split "\s+")[0]
                 $actual = (Get-FileHash -Path $BinaryPath -Algorithm SHA256).Hash.ToLower()
                 if ($expected -eq $actual) {
-                    Write-Host "  Checksum verified."
+                    Write-Host " ok"
                 } else {
                     Write-Error "Checksum mismatch! Expected: $expected, Actual: $actual"
                     exit 1
                 }
             }
         } catch {
-            Write-Host "  Checksum file not available, skipping verification."
+            Write-Host " skipped (not available)"
         }
 
         # Move binary to install dir
