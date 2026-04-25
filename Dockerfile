@@ -13,7 +13,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY apps/cli/package.json apps/cli/
+COPY apps/client/package.json apps/client/
+COPY apps/client/stubs/ apps/client/stubs/
 COPY packages/crypto/package.json packages/crypto/
+COPY workers/instances/package.json workers/instances/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source and build

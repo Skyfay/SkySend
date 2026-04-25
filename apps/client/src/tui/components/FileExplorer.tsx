@@ -167,11 +167,7 @@ export function FileExplorer({
           const fullPath = entry ? path.join(cwd, entry.name) : "";
           const isChecked = selected.has(fullPath);
 
-          let icon = "  ";
-          if (isParent) icon = "▸ ";
-          else if (entry?.isDirectory) icon = "▸ ";
-          else if (isChecked) icon = "[x]";
-          else icon = "[ ]";
+          const icon = isParent || entry?.isDirectory ? "▸ " : isChecked ? "[x]" : "[ ]";
 
           return (
             <Box key={idx}>

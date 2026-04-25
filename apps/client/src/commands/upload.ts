@@ -99,9 +99,7 @@ async function uploadHttpTransport(
   if (chunkSize > 0) {
     const combined = concatChunks(chunkParts);
     const uploadedSize = chunkSize;
-    chunkParts = [];
-    chunkSize = 0;
-    const currentIndex = chunkIndex++;
+    const currentIndex = chunkIndex;
 
     const p = sendChunk(combined, currentIndex, uploadedSize)
       .catch((err) => { uploadError = err instanceof Error ? err : new Error(String(err)); })

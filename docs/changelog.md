@@ -26,7 +26,9 @@ All notable changes to SkySend are documented here.
 
 - **server**: Updated `@hono/node-server` from v1 to v2 - same public API, up to 2.3x faster body parsing via optimized direct Node.js `IncomingMessage` reads, URL construction fast-path, and `buildOutgoingHttpHeaders` optimization
 - **infra**: Updated patch and minor dependencies across all workspace packages - `hono`, `@aws-sdk/client-s3`, `@aws-sdk/lib-storage`, `@aws-sdk/s3-request-presigner`, `better-sqlite3`, `tailwindcss`, `@tailwindcss/vite`, `react-router-dom`, `i18next`, `react-i18next`, `lucide-react`, `autoprefixer`, `vite`, `vue`, `wrangler`, `@cloudflare/workers-types`, `prettier`, `typescript`, `eslint-plugin-react-hooks`, `globals`, `typescript-eslint`
+- **infra**: Updated `eslint` and `@eslint/js` from v9 to v10, and `commander` from v13 to v14 - no API changes required, fixed two new `eslint:recommended` rules (`no-useless-assignment` in upload chunking code, `preserve-caught-error` in upload worker)
 - **web**: Removed deprecated `@types/dompurify` - DOMPurify v3+ ships its own TypeScript declarations
+- **infra**: Added `COPY apps/client/package.json`, `COPY apps/client/stubs/`, and `COPY workers/instances/package.json` to the Dockerfile build stage so `pnpm install --frozen-lockfile` can resolve all workspace packages (including the `file:` stub dependency in `@skysend/client`) before `COPY . .`
 
 ### 🐳 Docker
 
