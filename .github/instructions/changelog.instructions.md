@@ -95,10 +95,11 @@ Examples:
 ## Rules
 
 1. **Scoped entries** - Every entry starts with `**scope**:` to identify the affected package/area.
-2. **One line per entry** - Each entry is a single bullet point. Max 1-2 sentences.
+2. **One line per entry** - Each entry is a single bullet point. Max 1-2 sentences. If you need more than two sentences, you are including too much detail - cut it.
 3. **No implementation details** - No file paths, function names, or technical internals. Those belong in git commits.
 4. **Chronological order** - Newest version at the top.
 5. **No separators** - Do not add `---` between versions. VitePress renders them automatically.
 6. **Docker section last** - `### 🐳 Docker` is always the final section in a version block.
 7. **Omit empty sections** - Only include section headings that have at least one entry.
 8. **Grouped sections** - Entries are organized under `###` section headings, not a flat list.
+9. **Keep it short** - A changelog is a summary, not a design document. The entry should answer "what changed and why" in one or two sentences. Root causes and implementation strategies belong in git commits or pull request descriptions, not here.

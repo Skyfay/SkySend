@@ -23,6 +23,7 @@ import { buildShareUrl } from "../lib/url.js";
 import { resolveServer, getWebSocket } from "../lib/config.js";
 import {
   formatBytes,
+  formatSpeed,
   formatExpiry,
   parseDuration,
   renderProgress,
@@ -305,10 +306,11 @@ export function registerUploadCommand(program: Command): void {
         }
 
         // Upload
+        const uploadStartTime = Date.now();
         const progressState: ProgressState = {
           loaded: 0,
           total: encryptedSize,
-          startTime: Date.now(),
+          startTime: uploadStartTime,
         };
 
         const onProgress = (loaded: number) => {
@@ -319,6 +321,7 @@ export function registerUploadCommand(program: Command): void {
         };
 
         let uploadResult: { id: string };
+        let uploadEndTime = 0;
 
         // Try WebSocket first, fall back to HTTP chunks
         const useWs = config.fileUploadWs && !options.noWs && getWebSocket(server);
@@ -327,7 +330,9 @@ export function registerUploadCommand(program: Command): void {
             uploadResult = await uploadWsTransport(
               server, headers, encryptedStream, encryptedSize,
               config.fileUploadSpeedLimit ?? 0, onProgress,
+              () => { if (!options.json) writeProgress("Finalizing..."); },
             );
+            uploadEndTime = Date.now();
           } catch {
             if (!options.json) writeLine("WebSocket failed, falling back to HTTP...");
             // Need fresh stream for retry - re-read file
@@ -341,12 +346,14 @@ export function registerUploadCommand(program: Command): void {
               server, headers, creds.ownerTokenB64, retryEncStream,
               encryptedSize, config.fileUploadConcurrentChunks, onProgress,
             );
+            uploadEndTime = Date.now();
           }
         } else {
           uploadResult = await uploadHttpTransport(
             server, headers, creds.ownerTokenB64, encryptedStream,
             encryptedSize, config.fileUploadConcurrentChunks, onProgress,
           );
+          uploadEndTime = Date.now();
         }
 
         if (!options.json) { clearLine(); writeLine("Upload complete."); }
@@ -403,9 +410,13 @@ export function registerUploadCommand(program: Command): void {
             hasPassword: creds.hasPassword,
           }));
         } else {
+          const elapsedSec = (uploadEndTime - uploadStartTime) / 1000;
+          const avgSpeed = elapsedSec > 0 && encryptedSize > 0
+            ? ` | Avg speed: ${formatSpeed(encryptedSize / elapsedSec)}`
+            : "";
           writeLine("");
           writeLine(`Share URL: ${shareUrl}`);
-          writeLine(`Files: ${fileCount} | Size: ${formatBytes(plaintextSize)} | Expires: ${formatExpiry(expireSec)} | Downloads: ${maxDownloads}`);
+          writeLine(`Files: ${fileCount} | Size: ${formatBytes(plaintextSize)} | Expires: ${formatExpiry(expireSec)} | Downloads: ${maxDownloads}${avgSpeed}`);
           if (creds.hasPassword) writeLine("Password protected: yes");
         }
       } catch (err) {

@@ -1,2 +1,2 @@
 // Auto-synced by scripts/sync-version.sh - do not edit manually
-export const APP_VERSION = "2.5.1";
+export const APP_VERSION = "2.5.2";

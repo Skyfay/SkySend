@@ -113,6 +113,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const [password, setPassword] = useState<string | undefined>();
   const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
   const [packProgress, setPackProgress] = useState({ percent: 0, packed: 0, total: 0 });
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [avgSpeed, setAvgSpeed] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showQR, setShowQR] = useState(false);
@@ -126,6 +128,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     let zipCleanup: (() => void) | undefined;
     try {
       setPhase("uploading");
+      setIsFinalizing(false);
+      setAvgSpeed("");
       const isMulti = files.length > 1;
 
       let plaintextStream: ReadableStream<Uint8Array>;
@@ -181,6 +185,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
       };
 
       let uploadId: string;
+      let uploadEndTime = 0;
 
       const useWs = config.fileUploadWs && getWebSocket(server);
       if (useWs) {
@@ -189,7 +194,9 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           const result = await uploadWsTransport(
             server, headers, encryptedStream, encryptedSize,
             config.fileUploadSpeedLimit ?? 0, onProgress,
+            () => setIsFinalizing(true),
           );
+          uploadEndTime = Date.now();
           uploadId = result.id;
         } catch {
           // WS failed - recreate stream for HTTP fallback
@@ -237,6 +244,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           }
 
           await uploadFinalize(server, httpId, creds.ownerTokenB64);
+          uploadEndTime = Date.now();
           uploadId = httpId;
         }
       } else {
@@ -271,6 +279,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         }
 
         await uploadFinalize(server, httpId, creds.ownerTokenB64);
+        uploadEndTime = Date.now();
         uploadId = httpId;
       }
 
@@ -295,6 +304,11 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
 
       const url = buildShareUrl(server, "file", uploadId, creds.effectiveSecretB64);
       setShareUrl(url);
+
+      const elapsedSec = (uploadEndTime - startTime) / 1000;
+      if (elapsedSec > 0 && encryptedSize > 0) {
+        setAvgSpeed(formatSpeed(encryptedSize / elapsedSec));
+      }
 
       addUpload({
         id: uploadId, server, url,
@@ -452,11 +466,13 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>
-          <Text bold>Uploading...</Text>
+          <Text bold>{isFinalizing ? "Finalizing..." : "Uploading..."}</Text>
         </Box>
         <ProgressBar
           percent={progress.percent}
-          detail={`${formatBytes(progress.loaded)} / ${formatBytes(progress.total)}  ${progress.speed}`}
+          detail={isFinalizing
+            ? "Waiting for server confirmation..."
+            : `${formatBytes(progress.loaded)} / ${formatBytes(progress.total)}  ${progress.speed}`}
         />
       </Box>
     );
@@ -475,6 +491,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
           <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
           <Text><Text dimColor>Transport: </Text>{transport}</Text>
+          {avgSpeed !== "" && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
           {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
         </Box>
         {showQR && (

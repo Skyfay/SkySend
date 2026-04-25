@@ -2,6 +2,29 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.2 - Client Improvements & Bug fixes
+*Released: April 25, 2026*
+
+### 🐛 Bug Fixes
+
+- **client**: Fixed `resolveServer()` ignoring `defaultServer` and using the legacy top-level `server` field instead - if both fields exist in `config.json` (e.g. after migrating to multi-server), the TUI and all commands now correctly prefer `defaultServer`.
+- **client**: Fixed WebSocket uploads hanging at 100% on remote servers - the progress bar reached 100% as soon as data was queued in Node.js's send buffer, not when it arrived at the server, causing the fixed 5-minute finalize timeout to expire for large files on slow connections. The send buffer is now drained to zero before sending "finalize", the timeout is dynamic (5 min + 2 s/MB), and the TUI/CLI show "Finalizing..." while waiting for the server confirmation.
+
+### 🎨 Improvements
+
+- **client**: TUI and non-interactive CLI now display the average upload speed on the summary screen after a successful upload, matching the existing web behavior.
+
+### 📝 Documentation
+
+- **docs**: Updated the benchmarks page with more specific details on the environment, new results and client tests.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.1 - Bug fixes, dependency updates, and Dockerfile improvements
 *Released: April 25, 2026*
 
@@ -17,14 +40,6 @@ All notable changes to SkySend are documented here.
 
 - **infra**: Added `pnpm.overrides` for `postcss` (`>=8.5.10`) to patch a moderate XSS vulnerability (GHSA-qx2v-qp2m-jg93) in transitive dependencies via `autoprefixer`
 
-### 🗑️ Removed
-
-- **server**: Removed `S3_PUBLIC_URL` environment variable. S3 downloads now exclusively use presigned URLs, which enforce expiry and download limits server-side and expire automatically. Public bucket URLs allowed clients to bypass these controls by reusing a captured URL.
-
-### 📝 Documentation
-
-- **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
-
 ### 🎨 Improvements
 
 - **server**: Updated `@hono/node-server` from v1 to v2 - same public API, up to 2.3x faster body parsing via optimized direct Node.js `IncomingMessage` reads, URL construction fast-path, and `buildOutgoingHttpHeaders` optimization
@@ -32,6 +47,14 @@ All notable changes to SkySend are documented here.
 - **infra**: Updated `eslint` and `@eslint/js` from v9 to v10, and `commander` from v13 to v14 - no API changes required, fixed two new `eslint:recommended` rules (`no-useless-assignment` in upload chunking code, `preserve-caught-error` in upload worker)
 - **web**: Removed deprecated `@types/dompurify` - DOMPurify v3+ ships its own TypeScript declarations
 - **infra**: Added `COPY apps/client/package.json`, `COPY apps/client/stubs/`, and `COPY workers/instances/package.json` to the Dockerfile build stage so `pnpm install --frozen-lockfile` can resolve all workspace packages (including the `file:` stub dependency in `@skysend/client`) before `COPY . .`
+
+### 🗑️ Removed
+
+- **server**: Removed `S3_PUBLIC_URL` environment variable. S3 downloads now exclusively use presigned URLs, which enforce expiry and download limits server-side and expire automatically. Public bucket URLs allowed clients to bypass these controls by reusing a captured URL.
+
+### 📝 Documentation
+
+- **docs**: Removed PBKDF2-SHA256 fallback references from `password-protection.md`, `README.md`, and `docs/index.md` - password protection now exclusively documents Argon2id
 
 ### 🐳 Docker
 
