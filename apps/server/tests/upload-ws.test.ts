@@ -313,6 +313,48 @@ describe("upload-ws route", () => {
     expect(err).toMatchObject({ type: "error", message: "Upload quota exceeded. Try again later." });
   });
 
+  it("sends keepalive messages during slow finalization", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    const headers = buildHeaders({ contentLength: "16" });
+
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+
+    // Delay finalizeChunkedUpload so the keepalive timer fires before done.
+    let resolveFinalize!: () => void;
+    vi.spyOn(storage, "finalizeChunkedUpload").mockReturnValueOnce(
+      new Promise<void>((resolve) => { resolveFinalize = resolve; }),
+    );
+
+    // Switch to fake timers before finalize so setInterval uses them.
+    vi.useFakeTimers();
+    try {
+      const finalizePromise = events.onMessage!(
+        msgEvent(JSON.stringify({ type: "finalize" })),
+        fake.ws,
+      );
+
+      // Advance past the 5 s keepalive interval.
+      await vi.advanceTimersByTimeAsync(5_001);
+
+      const keepalives = fake.allJson().filter((m) => m.type === "keepalive");
+      expect(keepalives.length).toBeGreaterThanOrEqual(1);
+
+      // Let finalization complete and verify done is sent.
+      resolveFinalize();
+      await finalizePromise;
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const done = fake.allJson().find((m) => m.type === "done");
+    expect(done).toBeTruthy();
+  });
+
   it("records quota usage on successful finalize", async () => {
     const mock = createMockUpgrade();
     const recordUsage = vi.fn();
