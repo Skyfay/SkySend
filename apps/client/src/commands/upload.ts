@@ -330,9 +330,8 @@ export function registerUploadCommand(program: Command): void {
             uploadResult = await uploadWsTransport(
               server, headers, encryptedStream, encryptedSize,
               config.fileUploadSpeedLimit ?? 0, onProgress,
-              () => { if (!options.json) writeProgress("Finalizing..."); },
+              () => { uploadEndTime = Date.now(); if (!options.json) writeProgress("Finalizing..."); },
             );
-            uploadEndTime = Date.now();
           } catch {
             if (!options.json) writeLine("WebSocket failed, falling back to HTTP...");
             // Need fresh stream for retry - re-read file

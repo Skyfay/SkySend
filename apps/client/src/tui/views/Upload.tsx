@@ -194,9 +194,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           const result = await uploadWsTransport(
             server, headers, encryptedStream, encryptedSize,
             config.fileUploadSpeedLimit ?? 0, onProgress,
-            () => setIsFinalizing(true),
+            () => { uploadEndTime = Date.now(); setIsFinalizing(true); },
           );
-          uploadEndTime = Date.now();
           uploadId = result.id;
         } catch {
           // WS failed - recreate stream for HTTP fallback

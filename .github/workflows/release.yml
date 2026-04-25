@@ -8,6 +8,8 @@ on:
   push:
     tags:
       - "v*"
+    branches-ignore:
+      - "**"
 
 permissions:
   contents: read
