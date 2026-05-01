@@ -7,7 +7,7 @@ services:
     expose:
       - "3000"
     environment:
-      - BASE_URL=https://localhost
+      - BASE_URL=http://localhost
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
       - FILE_MAX_SIZE=10GB
@@ -23,6 +23,7 @@ services:
     #  - PGID=${PGID:-1001}
       - CUSTOM_TITLE=SkySend Build
       - CUSTOM_COLOR=ff5f5a
+    #  - CUSTOM_LOGO=https://cdn-icons-png.flaticon.com/512/10296/10296100.png
       #CUSTOM_LOGO=
       - CUSTOM_PRIVACY=https://skysend.ch
       - CUSTOM_LEGAL=https://skysend.ch
@@ -41,6 +42,6 @@ services:
     # - "443:443"
       - "80:80"
     # command: caddy reverse-proxy --from localhost --to skysend:3000 (HTTPS)
-    command: caddy reverse-proxy --from :80 --to skysend:3000 (HTTP)
+    command: caddy reverse-proxy --from :80 --to skysend:3000 #(HTTP)
     depends_on:
       - skysend
