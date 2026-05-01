@@ -4,12 +4,12 @@ SkySend provides several configuration options to control upload behavior.
 
 ## Maximum File Size
 
-The `MAX_FILE_SIZE` variable controls the maximum allowed upload size. It supports human-readable units:
+The `FILE_MAX_SIZE` variable controls the maximum allowed upload size. It supports human-readable units:
 
 ```bash
-MAX_FILE_SIZE=2GB      # 2 gigabytes (default)
-MAX_FILE_SIZE=500MB    # 500 megabytes
-MAX_FILE_SIZE=100MB    # 100 megabytes
+FILE_MAX_SIZE=2GB      # 2 gigabytes (default)
+FILE_MAX_SIZE=500MB    # 500 megabytes
+FILE_MAX_SIZE=100MB    # 100 megabytes
 ```
 
 Supported units: `B`, `KB`, `MB`, `GB`
@@ -20,14 +20,14 @@ If using a reverse proxy (Nginx, Caddy, etc.), make sure its upload size limit m
 
 ## Maximum Files Per Upload
 
-When users upload multiple files, they are zipped client-side before encryption. The `MAX_FILES_PER_UPLOAD` variable limits the number of files per upload:
+When users upload multiple files, they are zipped client-side before encryption. The `FILE_MAX_FILES_PER_UPLOAD` variable limits the number of files per upload:
 
 ```bash
-MAX_FILES_PER_UPLOAD=32   # default
-MAX_FILES_PER_UPLOAD=100  # allow more files
+FILE_MAX_FILES_PER_UPLOAD=32   # default
+FILE_MAX_FILES_PER_UPLOAD=100  # allow more files
 ```
 
-Note: `MAX_FILE_SIZE` applies to the total payload size (after zip, before encryption), not to individual files.
+Note: `FILE_MAX_SIZE` applies to the total payload size (after zip, before encryption), not to individual files.
 
 ## Expiry Options
 
@@ -35,16 +35,16 @@ Control which expiry times users can select:
 
 ```bash
 # Default: 5min, 1h, 1d, 7d
-EXPIRE_OPTIONS_SEC=300,3600,86400,604800
+FILE_EXPIRE_OPTIONS_SEC=300,3600,86400,604800
 
 # Custom: 1h, 12h, 1d, 3d
-EXPIRE_OPTIONS_SEC=3600,43200,86400,259200
+FILE_EXPIRE_OPTIONS_SEC=3600,43200,86400,259200
 
 # Short-lived only: 5min, 15min, 1h
-EXPIRE_OPTIONS_SEC=300,900,3600
+FILE_EXPIRE_OPTIONS_SEC=300,900,3600
 ```
 
-The `DEFAULT_EXPIRE_SEC` must be one of the values in `EXPIRE_OPTIONS_SEC`.
+The `FILE_DEFAULT_EXPIRE_SEC` must be one of the values in `FILE_EXPIRE_OPTIONS_SEC`.
 
 ## Download Limits
 
@@ -52,21 +52,21 @@ Control which download limits users can select:
 
 ```bash
 # Default options
-DOWNLOAD_OPTIONS=1,2,3,4,5,10,20,50,100
+FILE_DOWNLOAD_OPTIONS=1,2,3,4,5,10,20,50,100
 
 # Restrictive: 1-5 only
-DOWNLOAD_OPTIONS=1,2,3,4,5
+FILE_DOWNLOAD_OPTIONS=1,2,3,4,5
 
 # Generous: allow up to 1000
-DOWNLOAD_OPTIONS=1,5,10,50,100,500,1000
+FILE_DOWNLOAD_OPTIONS=1,5,10,50,100,500,1000
 ```
 
-The `DEFAULT_DOWNLOAD` must be one of the values in `DOWNLOAD_OPTIONS`.
+The `FILE_DEFAULT_DOWNLOAD` must be one of the values in `FILE_DOWNLOAD_OPTIONS`.
 
 ## How Limits Are Enforced
 
 1. The frontend fetches server limits via `GET /api/config` on load
 2. Upload options in the UI are restricted to server-configured values
 3. The server validates all headers against configured limits during upload
-4. Uploads exceeding `MAX_FILE_SIZE` are rejected before writing to disk
+4. Uploads exceeding `FILE_MAX_SIZE` are rejected before writing to disk
 5. `Content-Length` header must match the actual body size
