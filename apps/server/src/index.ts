@@ -73,6 +73,15 @@ if (config.STORAGE_BACKEND === "s3") {
   }
 }
 
+// Allow a custom external logo origin in CSP image sources, local paths remain covered by 'self'.
+const imgSrc: string[] = ["'self'", "data:"];
+if (config.CUSTOM_LOGO && /^https?:\/\//.test(config.CUSTOM_LOGO)) {
+  const customLogoOrigin = new URL(config.CUSTOM_LOGO).origin;
+  if (!imgSrc.includes(customLogoOrigin)) {
+    imgSrc.push(customLogoOrigin);
+  }
+}
+
 // Global middleware
 // L-4: Hono's built-in logger only logs METHOD, PATH, STATUS, and elapsed time.
 // It does NOT log IP addresses or other user-identifying information.
@@ -89,7 +98,7 @@ app.use(
       // These cannot be replaced by static CSS without a larger refactor.
       // All other CSP directives are strict.
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
+      imgSrc,
       connectSrc,
       workerSrc: ["'self'", "blob:"],
       childSrc: ["'self'", "blob:"],

@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.4 - Content Security Policy Update for Custom Logo Support
+*Released: May 1, 2026*
+
+### 🔄 Changed
+
+- **server**: Content Security Policy now dynamically allows the origin of `CUSTOM_LOGO` in `img-src` when an external HTTP(S) logo URL is configured, while keeping the default image policy strict.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.4`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.3 - WebSocket Upload Keepalive
 *Released: April 25, 2026*
 
