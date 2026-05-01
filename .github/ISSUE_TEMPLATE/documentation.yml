@@ -1,0 +1,44 @@
+name: Documentation Issue
+description: Report missing, incorrect, or unclear documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found an issue with the documentation? Let us know so we can improve it.
+
+  - type: input
+    id: page
+    attributes:
+      label: Page / Section
+      description: Which documentation page or section is affected?
+      placeholder: e.g. User Guide > Getting Started
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      options:
+        - Missing documentation
+        - Incorrect / outdated information
+        - Unclear / confusing explanation
+        - Typo / formatting
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is wrong or missing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?

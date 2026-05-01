@@ -1,0 +1,30 @@
+name: Question / Support
+description: Ask a question about setup, configuration, or usage
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about SkySend? Check the [documentation](https://docs.skysend.ch) first - your answer might already be there.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: SkySend Version
+      description: Which version are you running? (optional)
+      placeholder: e.g. v2.5.4
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any relevant details, screenshots, or configuration snippets.

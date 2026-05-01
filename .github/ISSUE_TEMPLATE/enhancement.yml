@@ -1,0 +1,59 @@
+name: Enhancement
+description: Suggest an improvement to an existing feature
+title: "[Enhancement]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want to improve something that already exists in SkySend? Let us know what could be better.
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: How does the existing feature currently work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Proposed Improvement
+      description: How should it work instead? What would you change?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why would this improvement be useful?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of SkySend does this relate to?
+      options:
+        - Upload
+        - Download
+        - Web UI
+        - CLI Client
+        - Admin CLI
+        - Storage (S3)
+        - Storage (Filesystem)
+        - Crypto / Security
+        - API
+        - Docker / Deployment
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or mockups.
