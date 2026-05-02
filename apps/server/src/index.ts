@@ -91,7 +91,12 @@ app.use(
   secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      // C-4: 'wasm-unsafe-eval' is required for hash-wasm (Argon2id password-based key
+      // derivation). hash-wasm bundles the WebAssembly binary inline and instantiates it
+      // from a buffer via WebAssembly.compile(), which Chrome 95+ and Firefox 93+ block
+      // under CSP unless 'wasm-unsafe-eval' is present. This does NOT grant 'unsafe-eval'
+      // for arbitrary JavaScript - it is narrowly scoped to WebAssembly compilation only.
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
       // C-3: 'unsafe-inline' is required for dynamic inline styles used in:
       //   - NoteContent.tsx: computed line-number column width (style={{ minWidth: `...ch` }})
       //   - ui/progress.tsx: animated progress bar transform (style={{ transform: ... }})

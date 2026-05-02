@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.5 - CSP Fix for Password-Protected Uploads, Downloads and Notes
+*Released: May 2, 2026*
+
+### 🐛 Bug Fixes
+
+- **server**: Fixed password-protected file and note uploads/downloads failing with `WebAssembly.compile() blocked by CSP` in browsers behind reverse proxies that forward CSP headers - added `'wasm-unsafe-eval'` to `script-src` to allow Argon2id (hash-wasm) to compile its inline WASM binary.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.5`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.4 - Content Security Policy Update for Custom Logo Support
 *Released: May 1, 2026*
 
