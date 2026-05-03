@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.7 - Docker Entrypoint Custom Data/Uploads Directory Fix
+*Released: May 3, 2026*
+
+### 🐛 Bug Fixes
+
+- **docker**: Fixed `EACCES: permission denied` on startup when `DATA_DIR` or `UPLOADS_DIR` are set to a custom path - the entrypoint previously hardcoded `/data` and `/uploads` for `mkdir` and `chown`, so custom paths were never created or made writable. The entrypoint now uses the actual `DATA_DIR` and `UPLOADS_DIR` environment variables.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.7`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.6 - Docker Entrypoint PGID Fix
 *Released: May 3, 2026*
 
