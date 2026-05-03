@@ -3,7 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## v2.5.6 - Docker Entrypoint PGID Fix
-*Release: In Progress*
+*Released: May 3, 2026*
 
 ### 🐛 Bug Fixes
 
