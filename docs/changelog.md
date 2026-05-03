@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.5.6 - Docker Entrypoint PGID Fix
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **docker**: Fixed container startup failing with `addgroup: group 'skysend' in use` when `PGID` is set to a value other than the default `1001` - `busybox`'s `delgroup` cannot remove a group that still has members, so the subsequent `addgroup` always failed. The entrypoint now uses `sed` to update the GID in-place in `/etc/group` and `/etc/passwd`, matching the existing approach used for `PUID`.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.5.6`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.5 - CSP Fix for Password-Protected Uploads, Downloads and Notes
 *Released: May 2, 2026*
 

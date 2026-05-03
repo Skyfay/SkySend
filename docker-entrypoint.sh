@@ -7,9 +7,8 @@ SKIP_CHOWN="${SKIP_CHOWN:-false}"
 
 # Adjust GID if it differs from the built-in default
 if [ "$(id -g skysend)" != "$PGID" ]; then
-  delgroup skysend 2>/dev/null || true
-  addgroup -g "$PGID" skysend
-  adduser skysend skysend 2>/dev/null || true
+  sed -i "s/^skysend:x:[0-9]*/skysend:x:${PGID}/" /etc/group
+  sed -i "s/^\(skysend:x:[0-9]*:\)[0-9]*/\1${PGID}/" /etc/passwd
 fi
 
 # Adjust UID if it differs from the built-in default
