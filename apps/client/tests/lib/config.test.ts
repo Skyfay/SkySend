@@ -162,25 +162,58 @@ describe("removeServer", () => {
 // ── getWebSocket / setWebSocket ───────────────────────────────────────────────
 
 describe("WebSocket preference", () => {
-  it("defaults to true when no preference is saved", async () => {
+  it("always returns false while WebSocket uploads are globally disabled", async () => {
     const { addServer, getWebSocket } = await freshConfig();
     addServer("A", "https://a.example.com");
-    expect(getWebSocket("https://a.example.com")).toBe(true);
-  });
-
-  it("persists WebSocket setting per server", async () => {
-    const { addServer, setWebSocket, getWebSocket } = await freshConfig();
-    addServer("A", "https://a.example.com");
-    setWebSocket("https://a.example.com", false);
     expect(getWebSocket("https://a.example.com")).toBe(false);
   });
 
-  it("does not affect other servers", async () => {
+  it("returns false even without a server URL", async () => {
+    const { getWebSocket } = await freshConfig();
+    expect(getWebSocket()).toBe(false);
+  });
+
+  it("setWebSocket is a no-op - getWebSocket still returns false", async () => {
     const { addServer, setWebSocket, getWebSocket } = await freshConfig();
     addServer("A", "https://a.example.com");
+    setWebSocket("https://a.example.com", true);
+    expect(getWebSocket("https://a.example.com")).toBe(false);
+  });
+});
+
+// ── resetConfig ───────────────────────────────────────────────────────────────
+
+describe("resetConfig", () => {
+  it("deletes the config file when it exists", async () => {
+    const { saveConfig, resetConfig, getConfigFilePath } = await freshConfig();
+    saveConfig({ server: "https://send.example.com" });
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(getConfigFilePath())).toBe(true);
+    resetConfig();
+    expect(existsSync(getConfigFilePath())).toBe(false);
+  });
+
+  it("does nothing when no config file exists", async () => {
+    const { resetConfig } = await freshConfig();
+    expect(() => resetConfig()).not.toThrow();
+  });
+});
+
+// ── setDefaultServer ──────────────────────────────────────────────────────────
+
+describe("setDefaultServer", () => {
+  it("sets the default server, stripping trailing slashes", async () => {
+    const { setDefaultServer, getDefaultServer } = await freshConfig();
+    setDefaultServer("https://send.example.com/");
+    expect(getDefaultServer()).toBe("https://send.example.com");
+  });
+
+  it("updates an existing default server", async () => {
+    const { addServer, setDefaultServer, getDefaultServer } = await freshConfig();
+    addServer("A", "https://a.example.com");
     addServer("B", "https://b.example.com");
-    setWebSocket("https://a.example.com", false);
-    expect(getWebSocket("https://b.example.com")).toBe(true);
+    setDefaultServer("https://b.example.com");
+    expect(getDefaultServer()).toBe("https://b.example.com");
   });
 });
 

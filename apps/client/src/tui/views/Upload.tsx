@@ -386,6 +386,18 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
 
   // Password ask
   if (phase === "password-ask") {
+    if (config.forceFilePassword) {
+      // Skip the Yes/No question - password is required
+      return (
+        <TextPrompt
+          label="Password (required by server policy)"
+          mask="*"
+          onSubmit={(val) => { setPassword(val); setPhase("confirm"); }}
+          onCancel={() => setPhase("downloads")}
+          validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
+        />
+      );
+    }
     return (
       <SelectList
         items={[

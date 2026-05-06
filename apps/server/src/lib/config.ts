@@ -238,6 +238,26 @@ const configSchema = z.object({
 
   CUSTOM_LINK_NAME: z.string().max(50).optional(),
 
+  // --- UI defaults ---
+
+  DEFAULT_THEME: z
+    .enum(["dark", "light", "system"])
+    .default("system"),
+
+  DEFAULT_TAB: z
+    .enum(["file", "text", "password", "code", "sshkey"])
+    .default("file"),
+
+  FORCE_FILE_PASSWORD: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+
+  FORCE_NOTE_PASSWORD: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+
   // --- Storage backend configuration ---
 
   STORAGE_BACKEND: z

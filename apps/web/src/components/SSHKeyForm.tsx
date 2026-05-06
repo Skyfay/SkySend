@@ -41,7 +41,7 @@ type Mode = "paste" | "generate";
 type Algorithm = "ed25519" | "rsa";
 type RSABits = 1024 | 2048 | 4096;
 
-export function SSHKeyForm() {
+export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean }) {
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
@@ -73,7 +73,7 @@ export function SSHKeyForm() {
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [notePassword, setNotePassword] = useState("");
   const [showNotePassword, setShowNotePassword] = useState(false);
-  const [notePasswordEnabled, setNotePasswordEnabled] = useState(false);
+  const [notePasswordEnabled, setNotePasswordEnabled] = useState(forcePassword);
 
   // Copy state
   const [copiedPublic, setCopiedPublic] = useState(false);
@@ -255,12 +255,17 @@ export function SSHKeyForm() {
           <Label className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
             {t("upload.password")}
+            {forcePassword && (
+              <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
+            )}
           </Label>
-          <Switch
-            checked={notePasswordEnabled}
-            onCheckedChange={setNotePasswordEnabled}
-            disabled={isSubmitting}
-          />
+          {!forcePassword && (
+            <Switch
+              checked={notePasswordEnabled}
+              onCheckedChange={setNotePasswordEnabled}
+              disabled={isSubmitting}
+            />
+          )}
         </div>
         {notePasswordEnabled && (
           <div className="relative">

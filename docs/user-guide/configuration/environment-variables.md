@@ -168,7 +168,7 @@ When using S3 storage, your S3 bucket needs a **CORS policy** configured at your
 Replace `https://your-skysend-domain.com` with your actual SkySend URL. For local development, add `http://localhost:5173`.
 :::
 
-## Branding
+## Branding & Customization
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
@@ -179,6 +179,10 @@ Replace `https://your-skysend-domain.com` with your actual SkySend URL. For loca
 | `CUSTOM_LEGAL` | ❌ | _(none)_ | URL to your legal notice / impressum page. Shown as a link in the footer if set. |
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
 | `CUSTOM_LINK_NAME` | ❌ | _(none)_ | Display text for the custom footer link (max 50 characters). |
+| `DEFAULT_THEME` | ❌ | `system` | Default theme for users who have not set a preference. One of `dark`, `light`, or `system`. Users can still override this in the UI. |
+| `DEFAULT_TAB` | ❌ | `file` | Default upload tab shown when opening the app. One of `file`, `text`, `password`, `code`, or `sshkey`. Falls back to the first available tab if the configured tab is not enabled via `ENABLED_SERVICES`. |
+| `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
+| `FORCE_NOTE_PASSWORD` | ❌ | `false` | When `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both frontend and server. |
 
 ::: tip Example
 ```yaml

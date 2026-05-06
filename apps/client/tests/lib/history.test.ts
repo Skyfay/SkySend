@@ -226,3 +226,44 @@ describe("corrupt history file recovery", () => {
     expect(getNotes()).toEqual([]);
   });
 });
+
+// ── Malformed history (non-array fields) ─────────────────────────────────────
+
+describe("malformed history with non-array fields", () => {
+  it("returns empty arrays when uploads and notes are not arrays", async () => {
+    const dir = join(tempDir, "skysend");
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "history.json"),
+      JSON.stringify({ uploads: "bad", notes: 42 }),
+      "utf-8",
+    );
+    const { getUploads, getNotes } = await freshHistory();
+    expect(getUploads()).toEqual([]);
+    expect(getNotes()).toEqual([]);
+  });
+});
+
+// ── XDG fallback (no XDG_CONFIG_HOME) ────────────────────────────────────────
+
+describe("homedir fallback", () => {
+  it("uses os.homedir()/.config when XDG_CONFIG_HOME is not set", async () => {
+    delete process.env["XDG_CONFIG_HOME"];
+    const originalHome = process.env["HOME"];
+    process.env["HOME"] = tempDir;
+    try {
+      vi.resetModules();
+      const { addUpload, getUploads } = await import("../../src/lib/history.js");
+      addUpload(makeUpload());
+      expect(getUploads()).toHaveLength(1);
+    } finally {
+      if (originalHome !== undefined) {
+        process.env["HOME"] = originalHome;
+      } else {
+        delete process.env["HOME"];
+      }
+      process.env["XDG_CONFIG_HOME"] = tempDir;
+    }
+  });
+});

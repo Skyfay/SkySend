@@ -209,3 +209,22 @@ describe("clearExpiredNotes", () => {
     expect(await getUpload("upload-a")).toBeDefined();
   });
 });
+
+// ── getAllUploads / getAllNotes null-value guard ───────────────────────────────
+
+describe("getAllUploads skips null values from idb", () => {
+  it("omits entries where idb returns undefined", async () => {
+    // Inject a key with no corresponding value (simulates a corrupted/missing idb entry)
+    store.set("upload:orphan", undefined);
+    const uploads = await getAllUploads();
+    expect(uploads).toHaveLength(0);
+  });
+});
+
+describe("getAllNotes skips null values from idb", () => {
+  it("omits entries where idb returns undefined", async () => {
+    store.set("note:orphan", undefined);
+    const notes = await getAllNotes();
+    expect(notes).toHaveLength(0);
+  });
+});

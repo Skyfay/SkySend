@@ -2,6 +2,33 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.6.0 - New Customization Options, Added Chinese Language and Bug Fixes
+*Released: May 6, 2026*
+
+### ✨ Features
+
+- **web**: Added Simplified Chinese (zh-CN) translation. Thanks @Liyouran-center ([#36](https://github.com/skyfay/SkySend/pull/36))
+- **server**: Added `DEFAULT_THEME` env var to set the default UI theme (`dark`, `light`, or `system`) for users who have not stored a preference. The user's own choice always takes precedence. ([#35](https://github.com/skyfay/SkySend/pull/35))
+- **server**: Added `DEFAULT_TAB` env var to set the default upload tab (`file`, `text`, `password`, `code`, or `sshkey`). Falls back to the first enabled tab if the configured tab is unavailable. ([#35](https://github.com/skyfay/SkySend/pull/35))
+- **server**: Added `FORCE_FILE_PASSWORD` env var - when set to `true`, all file uploads must be password-protected. Enforced on both the server (HTTP 400) and in the UI. ([#35](https://github.com/skyfay/SkySend/pull/35))
+- **server**: Added `FORCE_NOTE_PASSWORD` env var - when set to `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both the server (HTTP 400) and in the UI. ([#35](https://github.com/skyfay/SkySend/pull/35))
+- **client**: `FORCE_FILE_PASSWORD` and `FORCE_NOTE_PASSWORD` are now respected by the CLI client. When enforced, the CLI automatically prompts for a password if `-p` was not provided. The interactive TUI skips the "Password protect?" question and goes directly to the password input prompt. ([#35](https://github.com/skyfay/SkySend/pull/35))
+
+### 🐛 Bug Fixes
+
+- **docker**: Fixed health check failing when a custom `PORT` is set - the `HEALTHCHECK` command hardcoded port 3000 instead of reading the `PORT` environment variable. ([#34](https://github.com/Skyfay/SkySend/issues/34))
+
+### 🔄 Changed
+
+- **client**: WebSocket upload transport is globally disabled. Large file transfers via WebSocket over HTTPS connections fail mid-transfer due to an unresolved issue. HTTP chunked upload is now always used. The per-server toggle has been removed from the settings until the root cause is fixed.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.6.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.7 - Docker Entrypoint Custom Data/Uploads Directory Fix
 *Released: May 3, 2026*
 

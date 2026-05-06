@@ -29,6 +29,8 @@ const configResponseSchema = z.object({
   customLegal: z.string().nullable(),
   customLinkUrl: z.string().nullable(),
   customLinkName: z.string().nullable(),
+  forceFilePassword: z.boolean().optional().default(false),
+  forceNotePassword: z.boolean().optional().default(false),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;

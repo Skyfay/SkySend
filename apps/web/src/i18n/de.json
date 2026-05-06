@@ -63,6 +63,7 @@
     "downloads": "Max. Downloads",
     "password": "Passwortschutz",
     "passwordPlaceholder": "Passwort eingeben (optional)",
+    "passwordRequired": "vom Server vorgeschrieben",
     "uploading": "Verschlüsseln & Hochladen...",
     "encryptingProgress": "Verschlüsseln...",
     "processing": "Verarbeitung...",

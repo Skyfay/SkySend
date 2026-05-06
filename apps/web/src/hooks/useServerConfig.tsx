@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { fetchConfig, type ServerConfig } from "@/lib/api";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ServerConfigContextValue {
   config: ServerConfig | null;
@@ -17,6 +18,7 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +28,11 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setConfig(cfg);
           setLoading(false);
+
+          // Apply server default theme only when the user has no stored preference
+          if (!localStorage.getItem("skysend-theme")) {
+            setTheme(cfg.defaultTheme);
+          }
 
           // Apply custom brand color if configured
           if (cfg.customColor) {
@@ -57,7 +64,7 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setTheme]);
 
   return (
     <ServerConfigContext.Provider value={{ config, loading, error }}>

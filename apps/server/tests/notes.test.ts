@@ -245,6 +245,71 @@ describe("note routes", () => {
       });
       expect(res.status).toBe(201);
     });
+
+    it("should reject invalid password salt encoding", async () => {
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          validNotePayload({
+            hasPassword: true,
+            passwordSalt: "!!!not-base64url!!!",
+            passwordAlgo: "pbkdf2",
+          }),
+        ),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("password salt");
+    });
+
+    it("should reject password salt with wrong byte length", async () => {
+      const app = createApp();
+      // 8 bytes is valid base64url but PASSWORD_SALT_LENGTH requires 16 bytes
+      const shortSalt = Buffer.from(new Uint8Array(8)).toString("base64url");
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          validNotePayload({
+            hasPassword: true,
+            passwordSalt: shortSalt,
+            passwordAlgo: "pbkdf2",
+          }),
+        ),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Password salt must be exactly");
+    });
+
+    it("should reject when FORCE_NOTE_PASSWORD is set and note has no password", async () => {
+      vi.mocked(getConfig).mockReturnValueOnce({ ...DEFAULT_CONFIG, FORCE_NOTE_PASSWORD: true });
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ hasPassword: false })),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Password is required");
+    });
+
+    it("should return 413 when request body exceeds 2 MB limit", async () => {
+      const app = createApp();
+      const oversizedBody = "x".repeat(2 * 1024 * 1024 + 1);
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(oversizedBody.length),
+        },
+        body: oversizedBody,
+      });
+      expect(res.status).toBe(413);
+    });
   });
 
   // ── GET /api/note/:id (info) ────────────────────────
@@ -522,6 +587,38 @@ describe("note routes", () => {
       expect(lockedRes.status).toBe(429);
       expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
     });
+
+    it("should return 413 when request body exceeds 16 KB limit", async () => {
+      const app = createApp();
+      const authToken = fakeBase64urlToken();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken });
+
+      const oversizedBody = "x".repeat(17 * 1024);
+      const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(oversizedBody.length),
+        },
+        body: oversizedBody,
+      });
+      expect(res.status).toBe(413);
+    });
+
+    it("should return 400 for invalid JSON body", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, { id: TEST_UUID });
+
+      const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not-valid-json",
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid JSON");
+    });
   });
 
   // ── POST /api/note/:id/password ─────────────────────
@@ -679,7 +776,49 @@ describe("note routes", () => {
 
       expect(lockedRes.status).toBe(429);
       expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
-    });  });
+    });
+
+    it("should return 400 for invalid JSON body", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, {
+        id: TEST_UUID,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "pbkdf2",
+      });
+
+      const res = await app.request(`/api/note/${TEST_UUID}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not-valid-json",
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Invalid JSON");
+    });
+
+    it("should return 413 when request body exceeds 16 KB limit", async () => {
+      const app = createApp();
+      insertTestNote(dbCtx.db, {
+        id: TEST_UUID,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "pbkdf2",
+      });
+
+      const oversizedBody = "x".repeat(17 * 1024);
+      const res = await app.request(`/api/note/${TEST_UUID}/password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(oversizedBody.length),
+        },
+        body: oversizedBody,
+      });
+      expect(res.status).toBe(413);
+    });
+  });
 
   // ── DELETE /api/note/:id ────────────────────────────
 

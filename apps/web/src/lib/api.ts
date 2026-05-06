@@ -30,6 +30,11 @@ const configResponseSchema = z.object({
   customLegal: z.string().nullable(),
   customLinkUrl: z.string().nullable(),
   customLinkName: z.string().nullable(),
+  // UI defaults
+  defaultTheme: z.enum(["dark", "light", "system"]).optional().default("system"),
+  defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),
+  forceFilePassword: z.boolean().optional().default(false),
+  forceNotePassword: z.boolean().optional().default(false),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;

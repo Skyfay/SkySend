@@ -74,9 +74,13 @@ export function UploadPage() {
   if (config && expireSec === 0) {
     setExpireSec(config.fileDefaultExpire);
     setMaxDownloads(config.fileDefaultDownload);
-    // Set initial tab to first available service
-    if (!availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0]!);
+    // Set initial tab: use server default if available, else first available tab
+    const preferredTab = config.defaultTab;
+    const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;
+    setActiveTab(targetTab);
+    // Apply force-password for file uploads
+    if (config.forceFilePassword) {
+      setPasswordEnabled(true);
     }
   }
 
@@ -310,12 +314,17 @@ export function UploadPage() {
                 >
                   <Lock className="h-4 w-4" />
                   {t("upload.password")}
+                  {config.forceFilePassword && (
+                    <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
+                  )}
                 </Label>
-                <Switch
-                  id="password-toggle"
-                  checked={passwordEnabled}
-                  onCheckedChange={setPasswordEnabled}
-                />
+                {!config.forceFilePassword && (
+                  <Switch
+                    id="password-toggle"
+                    checked={passwordEnabled}
+                    onCheckedChange={setPasswordEnabled}
+                  />
+                )}
               </div>
               {passwordEnabled && (
                 <div className="relative">
@@ -364,10 +373,10 @@ export function UploadPage() {
       )}
 
       {/* Note forms */}
-      {activeTab === "text" && <NoteForm contentType="text" />}
-      {activeTab === "password" && <PasswordForm />}
-      {activeTab === "code" && <NoteForm contentType="code" />}
-      {activeTab === "sshkey" && <SSHKeyForm />}
+      {activeTab === "text" && <NoteForm contentType="text" forcePassword={config.forceNotePassword} />}
+      {activeTab === "password" && <PasswordForm forcePassword={config.forceNotePassword} />}
+      {activeTab === "code" && <NoteForm contentType="code" forcePassword={config.forceNotePassword} />}
+      {activeTab === "sshkey" && <SSHKeyForm forcePassword={config.forceNotePassword} />}
     </div>
   );
 }

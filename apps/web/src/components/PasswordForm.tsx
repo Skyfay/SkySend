@@ -28,7 +28,7 @@ import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { formatDuration, formatBytes } from "@/lib/utils";
 
-export function PasswordForm() {
+export function PasswordForm({ forcePassword = false }: { forcePassword?: boolean }) {
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
@@ -41,7 +41,7 @@ export function PasswordForm() {
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [notePassword, setNotePassword] = useState("");
   const [showNotePassword, setShowNotePassword] = useState(false);
-  const [notePasswordEnabled, setNotePasswordEnabled] = useState(false);
+  const [notePasswordEnabled, setNotePasswordEnabled] = useState(forcePassword);
 
   if (!config) return null;
 
@@ -270,12 +270,17 @@ export function PasswordForm() {
             <Label className="flex items-center gap-2">
               <Lock className="h-4 w-4" />
               {t("upload.password")}
+              {forcePassword && (
+                <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
+              )}
             </Label>
-            <Switch
-              checked={notePasswordEnabled}
-              onCheckedChange={setNotePasswordEnabled}
-              disabled={isSubmitting}
-            />
+            {!forcePassword && (
+              <Switch
+                checked={notePasswordEnabled}
+                onCheckedChange={setNotePasswordEnabled}
+                disabled={isSubmitting}
+              />
+            )}
           </div>
           {notePasswordEnabled && (
             <div className="relative">
