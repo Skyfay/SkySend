@@ -128,4 +128,30 @@ describe("FileStorage", () => {
       expect(await storage.exists(uuid2)).toBe(false);
     });
   });
+
+  describe("delete", () => {
+    it("should delete an existing file", async () => {
+      await storage.save(TEST_UUID, createStream(new Uint8Array([1])));
+      await storage.delete(TEST_UUID);
+      expect(await storage.exists(TEST_UUID)).toBe(false);
+    });
+
+    it("should silently ignore deleting a non-existent file (ENOENT)", async () => {
+      await expect(storage.delete(TEST_UUID)).resolves.toBeUndefined();
+    });
+  });
+
+  describe("supportsPresignedUrls", () => {
+    it("returns false - filesystem does not support presigned URLs", () => {
+      expect(storage.supportsPresignedUrls()).toBe(false);
+    });
+  });
+
+  describe("getPresignedDownloadUrl", () => {
+    it("returns null - not supported by filesystem backend", async () => {
+      await storage.save(TEST_UUID, createStream(new Uint8Array([1])));
+      expect(await storage.getPresignedDownloadUrl(TEST_UUID)).toBeNull();
+      expect(await storage.getPresignedDownloadUrl(TEST_UUID, 300)).toBeNull();
+    });
+  });
 });

@@ -64,7 +64,7 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setTheme]);
 
   return (
     <ServerConfigContext.Provider value={{ config, loading, error }}>

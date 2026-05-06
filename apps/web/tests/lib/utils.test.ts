@@ -1,5 +1,23 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { formatBytes, formatDuration, formatTimeRemaining, isSafari } from "../../src/lib/utils.js";
+import { cn, formatBytes, formatDuration, formatTimeRemaining, isSafari } from "../../src/lib/utils.js";
+
+// ── cn ────────────────────────────────────────────────────────────────────────
+
+describe("cn", () => {
+  it("merges class names", () => {
+    expect(cn("foo", "bar")).toBe("foo bar");
+  });
+
+  it("resolves Tailwind conflicts (last wins)", () => {
+    expect(cn("p-4", "p-8")).toBe("p-8");
+  });
+
+  it("handles conditional classes", () => {
+    const active = true;
+    expect(cn("base", active && "active")).toBe("base active");
+    expect(cn("base", false && "active")).toBe("base");
+  });
+});
 
 // ── formatBytes ──────────────────────────────────────────────────────────────
 

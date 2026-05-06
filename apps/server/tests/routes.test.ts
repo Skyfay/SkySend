@@ -221,6 +221,50 @@ describe("routes", () => {
       expect(body.authToken).toBeUndefined();
       expect(body.storagePath).toBeUndefined();
     });
+
+    it("should return 410 when download limit is reached", async () => {
+      insertTestUpload(dbCtx.db, { maxDownloads: 3, downloadCount: 3 });
+      const app = new Hono();
+      app.route("/api/info", infoRoute);
+
+      const res = await app.request(`/api/info/${TEST_UUID}`);
+      expect(res.status).toBe(410);
+      const body = await res.json();
+      expect(body.error).toContain("Download limit");
+    });
+
+    it("should include passwordAlgo and passwordSalt for password-protected upload", async () => {
+      const passwordSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16)));
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt,
+        passwordAlgo: "argon2id",
+      });
+      const app = new Hono();
+      app.route("/api/info", infoRoute);
+
+      const res = await app.request(`/api/info/${TEST_UUID}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.hasPassword).toBe(true);
+      expect(body.passwordAlgo).toBe("argon2id");
+      expect(body.passwordSalt).toBeTruthy();
+    });
+
+    it("should include encryptedMeta and nonce when set", async () => {
+      insertTestUpload(dbCtx.db, {
+        encryptedMeta: Buffer.from("some-meta"),
+        nonce: Buffer.from(crypto.getRandomValues(new Uint8Array(12))),
+      });
+      const app = new Hono();
+      app.route("/api/info", infoRoute);
+
+      const res = await app.request(`/api/info/${TEST_UUID}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.encryptedMeta).toBeTruthy();
+      expect(body.nonce).toBeTruthy();
+    });
   });
 
   // ── Meta ────────────────────────────────────────────
@@ -418,6 +462,26 @@ describe("routes", () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toContain("nonce");
+    });
+
+    it("should return 413 when request body exceeds 256 KB limit", async () => {
+      const ownerToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { ownerToken });
+      const app = new Hono();
+      app.route("/api/meta", metaRoute);
+
+      const oversizedBody = "x".repeat(257 * 1024);
+      const res = await app.request(`/api/meta/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(oversizedBody.length),
+          "X-Owner-Token": ownerToken,
+        },
+        body: oversizedBody,
+      });
+
+      expect(res.status).toBe(413);
     });
   });
 
@@ -627,6 +691,28 @@ describe("routes", () => {
 
       expect(lockedRes.status).toBe(429);
       expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
+    });
+
+    it("should return 413 when request body exceeds 16 KB limit", async () => {
+      insertTestUpload(dbCtx.db, {
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id",
+      });
+      const app = new Hono();
+      app.route("/api/password", createPasswordRoute(mockLockout));
+
+      const oversizedBody = "x".repeat(17 * 1024);
+      const res = await app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(oversizedBody.length),
+        },
+        body: oversizedBody,
+      });
+
+      expect(res.status).toBe(413);
     });
   });
 

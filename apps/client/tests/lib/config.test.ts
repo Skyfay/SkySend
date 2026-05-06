@@ -181,6 +181,42 @@ describe("WebSocket preference", () => {
   });
 });
 
+// ── resetConfig ───────────────────────────────────────────────────────────────
+
+describe("resetConfig", () => {
+  it("deletes the config file when it exists", async () => {
+    const { saveConfig, resetConfig, getConfigFilePath } = await freshConfig();
+    saveConfig({ server: "https://send.example.com" });
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(getConfigFilePath())).toBe(true);
+    resetConfig();
+    expect(existsSync(getConfigFilePath())).toBe(false);
+  });
+
+  it("does nothing when no config file exists", async () => {
+    const { resetConfig } = await freshConfig();
+    expect(() => resetConfig()).not.toThrow();
+  });
+});
+
+// ── setDefaultServer ──────────────────────────────────────────────────────────
+
+describe("setDefaultServer", () => {
+  it("sets the default server, stripping trailing slashes", async () => {
+    const { setDefaultServer, getDefaultServer } = await freshConfig();
+    setDefaultServer("https://send.example.com/");
+    expect(getDefaultServer()).toBe("https://send.example.com");
+  });
+
+  it("updates an existing default server", async () => {
+    const { addServer, setDefaultServer, getDefaultServer } = await freshConfig();
+    addServer("A", "https://a.example.com");
+    addServer("B", "https://b.example.com");
+    setDefaultServer("https://b.example.com");
+    expect(getDefaultServer()).toBe("https://b.example.com");
+  });
+});
+
 // ── Legacy migration ──────────────────────────────────────────────────────────
 
 describe("legacy single-server config migration", () => {
