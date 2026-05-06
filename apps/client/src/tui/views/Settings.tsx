@@ -4,7 +4,7 @@ import { SelectList, type SelectItem } from "../components/SelectList.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import {
   getServers, addServer, removeServer, setDefaultServer, getDefaultServer,
-  getWebSocket, setWebSocket,
+  getWebSocket,
 } from "../../lib/config.js";
 import type { AppState } from "../types.js";
 
@@ -20,12 +20,12 @@ export function SettingsView({ appState, onBack }: SettingsViewProps): React.Rea
   const [phase, setPhase] = useState<Phase>("menu");
   const [newUrl, setNewUrl] = useState("");
   const [, setRefreshKey] = useState(0);
-  const [wsMessage, setWsMessage] = useState<string | null>(null);
   const [selectedServerUrl, setSelectedServerUrl] = useState<string | null>(null);
   const servers = getServers();
   const defaultUrl = getDefaultServer();
 
   const serverWsEnabled = appState.config.fileUploadWs;
+  // getWebSocket is always false while WebSocket uploads are globally disabled
   const clientWsEnabled = getWebSocket(appState.server);
 
   if (phase === "add-url") {
@@ -127,18 +127,14 @@ export function SettingsView({ appState, onBack }: SettingsViewProps): React.Rea
     );
   }
 
-  // Menu
-  const wsLabel = serverWsEnabled
-    ? `WebSocket upload: ${clientWsEnabled ? "On" : "Off"}`
-    : "WebSocket upload: Off (server disabled)";
-  const wsDesc = serverWsEnabled
-    ? (clientWsEnabled ? "Using WebSocket transport" : "Using HTTP chunked transport")
-    : "Server does not support WebSocket uploads";
+  // serverWsEnabled and clientWsEnabled are kept for future use once the
+  // WebSocket issue is resolved.
+  void serverWsEnabled;
+  void clientWsEnabled;
 
   const items: Array<SelectItem<string>> = [
     { label: "Add server", value: "add" },
     { label: "Manage servers", value: "manage", description: `${servers.length} server(s)` },
-    { label: wsLabel, value: "toggle-ws", description: wsDesc },
     { label: "Back", value: "back" },
   ];
 
@@ -150,25 +146,16 @@ export function SettingsView({ appState, onBack }: SettingsViewProps): React.Rea
         onSelect={(val) => {
           if (val === "add") setPhase("add-url");
           else if (val === "manage") setPhase("manage");
-          else if (val === "toggle-ws") {
-            if (!serverWsEnabled) {
-              setWsMessage("WebSocket uploads are disabled on this server");
-              setTimeout(() => setWsMessage(null), 3000);
-            } else {
-              setWebSocket(appState.server, !clientWsEnabled);
-              setWsMessage(null);
-              setRefreshKey((k) => k + 1);
-            }
-          }
           else onBack();
         }}
         onCancel={onBack}
       />
-      {wsMessage && (
-        <Box marginX={2}>
-          <Text color="yellow">{wsMessage}</Text>
-        </Box>
-      )}
+      {/* WebSocket uploads are globally disabled due to known connection issues
+          with HTTPS servers - large file transfers fail mid-transfer.
+          HTTP chunked upload is used instead until the root cause is fixed. */}
+      <Box marginX={2} marginTop={1}>
+        <Text dimColor>WebSocket upload: Off (globally disabled - HTTP chunked upload is used)</Text>
+      </Box>
     </Box>
   );
 }

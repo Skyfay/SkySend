@@ -121,21 +121,17 @@ export function getDefaultServer(): string | undefined {
   return config.defaultServer ?? config.server;
 }
 
-export function getWebSocket(serverUrl?: string): boolean {
-  const config = loadConfig();
-  if (serverUrl) {
-    const entry = (config.servers ?? []).find((s) => s.url === serverUrl);
-    if (entry && entry.websocket !== undefined) return entry.websocket;
-  }
-  return true;
+// WebSocket uploads are globally disabled.
+// Large file transfers via WebSocket over HTTPS connections fail mid-transfer
+// due to an unresolved issue. HTTP chunked upload is used instead until a
+// proper fix is in place. Do not re-enable this without resolving the root cause.
+export function getWebSocket(_serverUrl?: string): boolean {
+  return false;
 }
 
-export function setWebSocket(serverUrl: string, enabled: boolean): void {
-  const config = loadConfig();
-  const servers = config.servers ?? [];
-  const entry = servers.find((s) => s.url === serverUrl);
-  if (entry) {
-    entry.websocket = enabled;
-    saveConfig({ ...config, servers });
-  }
+// setWebSocket is intentionally a no-op while WebSocket uploads are globally
+// disabled. The per-server preference is not persisted so the stored config
+// cannot accidentally re-enable WebSocket after the lock is lifted.
+export function setWebSocket(_serverUrl: string, _enabled: boolean): void {
+  // no-op - see getWebSocket comment above
 }

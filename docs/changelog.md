@@ -18,6 +18,10 @@ All notable changes to SkySend are documented here.
 
 - **docker**: Fixed health check failing when a custom `PORT` is set - the `HEALTHCHECK` command hardcoded port 3000 instead of reading the `PORT` environment variable. ([#34](https://github.com/Skyfay/SkySend/issues/34))
 
+### 🔄 Changed
+
+- **client**: WebSocket upload transport is globally disabled. Large file transfers via WebSocket over HTTPS connections fail mid-transfer due to an unresolved issue. HTTP chunked upload is now always used. The per-server toggle has been removed from the settings until the root cause is fixed.
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`
