@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **web**: Added Simplified Chinese (zh-CN) translation. Thanks @Liyouran-center ([#36](https://github.com/skyfay/SkySend/pull/36))
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.5.7 - Docker Entrypoint Custom Data/Uploads Directory Fix
 *Released: May 3, 2026*
 
