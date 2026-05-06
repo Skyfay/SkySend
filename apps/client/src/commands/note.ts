@@ -63,6 +63,10 @@ export function registerNoteCommand(program: Command): void {
           if (!password) throw new Error("Password cannot be empty");
         } else if (typeof options.password === "string") {
           password = options.password;
+        } else if (config.forceNotePassword) {
+          if (!options.json) writeLine("Password is required by server policy.");
+          password = await promptPassword("Password: ");
+          if (!password) throw new Error("Password cannot be empty");
         }
 
         // Resolve expiry

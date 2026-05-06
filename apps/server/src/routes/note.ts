@@ -128,6 +128,10 @@ noteRoute.post(
       }
     }
 
+    if (config.FORCE_NOTE_PASSWORD && !data.hasPassword) {
+      return c.json({ error: "Password is required by server policy" }, 400);
+    }
+
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + data.expireSec * 1000);
 

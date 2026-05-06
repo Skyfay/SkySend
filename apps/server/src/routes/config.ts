@@ -39,6 +39,11 @@ configRoute.get("/", (c) => {
     customLegal: config.CUSTOM_LEGAL ?? null,
     customLinkUrl: config.CUSTOM_LINK_URL ?? null,
     customLinkName: config.CUSTOM_LINK_NAME ?? null,
+    // UI defaults
+    defaultTheme: config.DEFAULT_THEME,
+    defaultTab: config.DEFAULT_TAB,
+    forceFilePassword: config.FORCE_FILE_PASSWORD,
+    forceNotePassword: config.FORCE_NOTE_PASSWORD,
   });
 });
 

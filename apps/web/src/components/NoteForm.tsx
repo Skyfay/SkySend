@@ -31,9 +31,10 @@ import type { NoteContentType } from "@skysend/crypto";
 
 interface NoteFormProps {
   contentType: NoteContentType;
+  forcePassword?: boolean;
 }
 
-export function NoteForm({ contentType }: NoteFormProps) {
+export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) {
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
@@ -46,7 +47,7 @@ export function NoteForm({ contentType }: NoteFormProps) {
   const [maxViews, setMaxViews] = useState<number | null>(() => null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordEnabled, setPasswordEnabled] = useState(false);
+  const [passwordEnabled, setPasswordEnabled] = useState(forcePassword);
 
   // Initialize defaults when config loads
   if (config && expireSec === null) {
@@ -321,13 +322,18 @@ export function NoteForm({ contentType }: NoteFormProps) {
             >
               <Lock className="h-4 w-4" />
               {t("upload.password")}
+              {forcePassword && (
+                <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
+              )}
             </Label>
-            <Switch
-              id="note-password-toggle"
-              checked={passwordEnabled}
-              onCheckedChange={setPasswordEnabled}
-              disabled={isSubmitting}
-            />
+            {!forcePassword && (
+              <Switch
+                id="note-password-toggle"
+                checked={passwordEnabled}
+                onCheckedChange={setPasswordEnabled}
+                disabled={isSubmitting}
+              />
+            )}
           </div>
           {passwordEnabled && (
             <div className="relative">

@@ -87,5 +87,9 @@ export function validateUploadHeaders(
     }
   }
 
+  if (config.FORCE_FILE_PASSWORD && !headers.hasPassword) {
+    return { message: "Password is required by server policy", status: 400 };
+  }
+
   return null;
 }

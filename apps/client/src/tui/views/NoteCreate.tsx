@@ -71,10 +71,11 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
     setPhase("expiry");
   }, [config.noteMaxSize]);
 
-  const doCreate = useCallback(async () => {
+  const doCreate = useCallback(async (passwordOverride?: string) => {
+    const effectivePassword = passwordOverride !== undefined ? passwordOverride : password;
     try {
       setPhase("creating");
-      const creds = await prepareUpload(password);
+      const creds = await prepareUpload(effectivePassword);
       const encrypted = await encryptNoteContent(content, creds.keys.metaKey);
 
       const result = await createNote(server, {
@@ -495,13 +496,25 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   }
 
   if (phase === "password-ask") {
+    if (config.forceNotePassword) {
+      // Skip the Yes/No question - password is required
+      return (
+        <TextPrompt
+          label="Password (required by server policy)"
+          mask="*"
+          onSubmit={(val) => { setPassword(val); void doCreate(val); }}
+          onCancel={() => setPhase("views")}
+          validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
+        />
+      );
+    }
     return (
       <SelectList
         items={[{ label: "No", value: "no" }, { label: "Yes", value: "yes" }]}
         title="Password protect?"
         onSelect={(val) => {
           if (val === "yes") setPhase("password-input");
-          else { setPassword(undefined); void doCreate(); }
+          else { setPassword(undefined); void doCreate(undefined); }
         }}
         onCancel={() => setPhase("views")}
       />
@@ -513,7 +526,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       <TextPrompt
         label="Password"
         mask="*"
-        onSubmit={(val) => { setPassword(val); void doCreate(); }}
+        onSubmit={(val) => { setPassword(val); void doCreate(val); }}
         onCancel={() => setPhase("password-ask")}
         validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
       />
