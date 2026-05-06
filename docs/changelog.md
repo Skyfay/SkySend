@@ -9,6 +9,10 @@ All notable changes to SkySend are documented here.
 
 - **web**: Added Simplified Chinese (zh-CN) translation. Thanks @Liyouran-center ([#36](https://github.com/skyfay/SkySend/pull/36))
 
+### 🐛 Bug Fixes
+
+- **docker**: Fixed health check failing when a custom `PORT` is set - the `HEALTHCHECK` command hardcoded port 3000 instead of reading the `PORT` environment variable. ([#34](https://github.com/Skyfay/SkySend/issues/34))
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`
