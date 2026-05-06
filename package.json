@@ -18,6 +18,7 @@
     "validate": "bash scripts/validate.sh",
     "version:sync": "bash scripts/sync-version.sh --sync-only",
     "version:bump": "bash scripts/sync-version.sh",
+    "changelog:next": "bash scripts/sync-version.sh --changelog-init",
     "client:build": "pnpm --filter @skysend/crypto build && pnpm --filter @skysend/client build",
     "client:run": "tsx apps/client/src/index.ts",
     "client:compile": "pnpm client:build && pnpm --filter @skysend/client build:compile",
