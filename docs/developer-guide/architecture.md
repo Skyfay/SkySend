@@ -304,6 +304,7 @@ apps/web/src/
     nl.json             # Dutch translations
     it.json             # Italian translations
     pl.json             # Polish translations
+    zh.json             # Chinese translations
 ```
 
 ## CLI Client Architecture

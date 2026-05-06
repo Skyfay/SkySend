@@ -11,6 +11,7 @@ import nb from "./nb.json";
 import nl from "./nl.json";
 import it from "./it.json";
 import pl from "./pl.json";
+import zh from "./zh.json";
 
 const COOKIE_NAME = "skysend-lang";
 
@@ -41,6 +42,7 @@ i18n
       nl: { translation: nl },
       it: { translation: it },
       pl: { translation: pl },
+      zh: { translation: zh },
     },
     fallbackLng: "en",
     interpolation: {
