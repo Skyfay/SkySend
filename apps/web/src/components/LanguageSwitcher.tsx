@@ -16,6 +16,7 @@ const languages = [
   { code: "fi", name: "Suomi", flag: "fi" },
   { code: "sv", name: "Svenska", flag: "se" },
   { code: "nb", name: "Norsk Bokmål", flag: "no" },
+  { code: "zh", name: "简体中文", flag: "cn" },
 ] as const;
 
 function detectBrowserLanguage(): string {
