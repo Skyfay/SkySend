@@ -14,8 +14,9 @@ describe("cn", () => {
 
   it("handles conditional classes", () => {
     const active = true;
+    const inactive = false;
     expect(cn("base", active && "active")).toBe("base active");
-    expect(cn("base", false && "active")).toBe("base");
+    expect(cn("base", inactive && "active")).toBe("base");
   });
 });
 
