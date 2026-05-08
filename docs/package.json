@@ -1,6 +1,6 @@
 {
   "name": "@skysend/docs",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "private": true,
   "scripts": {
     "dev": "vitepress dev",
@@ -9,7 +9,7 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "^1.6.0",
-    "vue": "^3.5.33"
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.34"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@skysend/server",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -36,20 +36,20 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1037.0",
-    "@aws-sdk/lib-storage": "^3.1037.0",
-    "@aws-sdk/s3-request-presigner": "^3.1037.0",
-    "@hono/node-server": "^2.0.0",
-    "@hono/node-ws": "^1.3.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/lib-storage": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
+    "@hono/node-server": "^2.0.2",
+    "@hono/node-ws": "^1.3.1",
     "@skysend/crypto": "workspace:*",
     "better-sqlite3": "^12.9.0",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.15",
-    "zod": "^4.3.6"
+    "hono": "^4.12.18",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.21.0"
   }
