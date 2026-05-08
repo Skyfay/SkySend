@@ -9,6 +9,14 @@ All notable changes to SkySend are documented here.
 
 - **web**: Added a native OS Share button to the upload success screen. Uses the Web Share API (`navigator.share()`) and is only shown on devices that support it (iOS Safari, Android Chrome). The Copy button remains unchanged as fallback.
 
+### 🔒 Security
+
+- **server**: Updated `hono` from `4.12.15` to `4.12.18` to patch two moderate vulnerabilities - `bodyLimit()` bypass for chunked requests (GHSA-9vqf-7f2p-gf9v) and unvalidated JSX tag names allowing HTML injection (GHSA-69xw-7hcm-h432).
+
+### 🎨 Improvements
+
+- **infra**: Updated all dependencies to their latest compatible versions (`react` 19.2.6, `zod` 4.4.3, `react-router-dom` 7.15.0, `vite` 8.0.11, `@aws-sdk/*` 3.1045.0, `eslint` 10.3.0, `dompurify` 3.4.2, and others).
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`
