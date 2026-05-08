@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Link, Plus } from "lucide-react";
+import { Check, Copy, Link, Plus, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ export function ShareLink({ link, averageSpeed, onNewUpload }: ShareLinkProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
+
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const copyToClipboard = async () => {
     try {
@@ -75,6 +77,16 @@ export function ShareLink({ link, averageSpeed, onNewUpload }: ShareLinkProps) {
                 </>
               )}
             </Button>
+            {canShare && (
+              <Button
+                onClick={() => navigator.share({ title: t("common.appName"), url: link })}
+                variant="secondary"
+                size="default"
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("common.share")}</span>
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             {t("upload.shareLinkHint")}

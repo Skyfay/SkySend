@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **web**: Added a native OS Share button to the upload success screen. Uses the Web Share API (`navigator.share()`) and is only shown on devices that support it (iOS Safari, Android Chrome). The Copy button remains unchanged as fallback.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.6.0 - New Customization Options, Added Chinese Language and Bug Fixes
 *Released: May 6, 2026*
 
