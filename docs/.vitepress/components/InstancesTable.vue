@@ -52,8 +52,9 @@ const filteredInstances = computed(() => {
   })
 })
 
-function formatBytes(bytes: number | null): string {
-  if (bytes === null || bytes === 0) return '-'
+function formatBytes(bytes: number | null, unlimitedIfZero = false): string {
+  if (bytes === null) return '-'
+  if (bytes === 0) return unlimitedIfZero ? '∞' : '-'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   const value = bytes / Math.pow(1024, i)
@@ -177,8 +178,8 @@ onMounted(async () => {
           <span class="stat-label">Files / Upload</span>
         </div>
         <div class="stat">
-          <span class="stat-value">{{ formatBytes(inst.fileUploadQuotaBytes) }}</span>
-          <span class="stat-label">Quota / {{ inst.fileUploadQuotaWindow ? formatDuration(inst.fileUploadQuotaWindow) : '24h' }}</span>
+          <span class="stat-value">{{ formatBytes(inst.fileUploadQuotaBytes, true) }}</span>
+          <span class="stat-label">Quota{{ inst.fileUploadQuotaBytes !== 0 ? ' / ' + (inst.fileUploadQuotaWindow ? formatDuration(inst.fileUploadQuotaWindow) : '24h') : '' }}</span>
         </div>
         <div class="stat">
           <span class="stat-value">{{ formatDuration(inst.fileMaxExpiry) }}</span>
