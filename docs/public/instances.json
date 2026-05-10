@@ -8,5 +8,15 @@
       "label": "Contact",
       "url": "https://docs.skysend.ch/#%F0%9F%92%AC-community-support"
     }
+  },
+  {
+    "name": "share.adminforge.de",
+    "url": "https://share.adminforge.de",
+    "country": "Germany",
+    "flag": "🇩🇪",
+    "contact": {
+      "label": "Contact",
+      "url": "https://adminforge.de/kontakt"
+    }
   }
 ]
