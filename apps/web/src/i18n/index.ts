@@ -42,6 +42,7 @@ i18n
       nl: { translation: nl },
       it: { translation: it },
       pl: { translation: pl },
+      pt-BR: { translation: ptBR },
       zh: { translation: zh },
     },
     fallbackLng: "en",
