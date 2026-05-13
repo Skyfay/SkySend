@@ -4,7 +4,18 @@ import { Check, Copy, Eye, EyeOff } from "lucide-react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeSanitize from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+
+// Extend the default sanitize schema to allow checkbox inputs for GFM task lists.
+// type/checked/disabled are the only attributes react-markdown sets on these elements.
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    input: [["type", "checkbox"], "checked", "disabled"],
+  },
+  tagNames: [...(defaultSchema.tagNames ?? []), "input"],
+};
 import { Button } from "@/components/ui/button";
 import type { NoteContentType } from "@skysend/crypto";
 import hljs from "highlight.js/lib/core";
@@ -354,7 +365,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
         <div className="rounded-lg border bg-muted/50 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
           {/* C-2: rehype-sanitize prevents XSS from future react-markdown upstream changes
               that could enable allowDangerousHtml. Explicit sanitization is best practice. */}
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, sanitizeSchema]]} components={markdownComponents}>{content}</ReactMarkdown>
         </div>
         <Button variant="outline" size="sm" onClick={copyToClipboard}>
           {copied ? (

@@ -14,6 +14,10 @@ All notable changes to SkySend are documented here.
 
 - **web**: Fixed Markdown preview and note view not rendering headings, blockquotes, lists, and other block-level elements. The `@tailwindcss/typography` plugin was installed but not loaded via `@plugin` in `index.css`, so `prose` styles had no effect. ([#42](https://github.com/Skyfay/SkySend/issues/42))
 
+### 🔄 Changed
+
+- **web**: Markdown prose elements (list bullets, counters, links, blockquote borders, table borders, and horizontal rules) now follow the project's primary color, including the `CUSTOM_COLOR` branding setting.
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`

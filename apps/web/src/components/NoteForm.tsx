@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Lock, Eye, EyeOff, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { markdownComponents } from "@/lib/markdownComponents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -171,7 +172,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
           {markdownMode && showPreview ? (
             <div className="min-h-50 rounded-md border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
               {content ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{content}</ReactMarkdown>
               ) : (
                 <p className="text-muted-foreground italic">{t("note.previewEmpty")}</p>
               )}
@@ -247,7 +248,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
               {markdownMode && showPreview ? (
                 <div className="h-full overflow-auto rounded-md border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none">
                   {content ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{content}</ReactMarkdown>
                   ) : (
                     <p className="text-muted-foreground italic">{t("note.previewEmpty")}</p>
                   )}
