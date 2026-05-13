@@ -2,6 +2,21 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **web**: Added Japanese (ja) translation. Thanks @canaria-computer ([#41](https://github.com/skyfay/SkySend/pull/41))
+- **web**: Added Brazilian Portuguese (pt-BR) translation. Thanks @magisph ([#40](https://github.com/skyfay/SkySend/pull/40))
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.7.0 - Native OS Share Button, Security Patches, and Dependency Updates
 *Released: May 8, 2026*
 

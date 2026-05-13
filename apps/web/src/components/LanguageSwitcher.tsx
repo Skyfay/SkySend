@@ -16,7 +16,9 @@ const languages = [
   { code: "fi", name: "Suomi", flag: "fi" },
   { code: "sv", name: "Svenska", flag: "se" },
   { code: "nb", name: "Norsk Bokmål", flag: "no" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
   { code: "zh", name: "简体中文", flag: "cn" },
+  { code: "ja", name: "日本語", flag: "jp" },
 ] as const;
 
 function detectBrowserLanguage(): string {
@@ -24,8 +26,11 @@ function detectBrowserLanguage(): string {
   detector.init({ order: ["navigator"], caches: [] });
   const detected = detector.detect();
   const lang = Array.isArray(detected) ? detected[0] : detected;
+  if (!lang) return "en";
+  // Check for exact match first (e.g. "pt-BR")
+  if (languages.some((l) => l.code === lang)) return lang;
   // Normalize e.g. "de-CH" -> "de"
-  const base = lang?.split("-")[0] ?? "en";
+  const base = lang.split("-")[0];
   return languages.some((l) => l.code === base) ? base : "en";
 }
 
