@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
@@ -96,6 +97,26 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
       ALLOWED_ATTR: ["class"],
     });
   }, [content, contentType]);
+
+  const markdownComponents = useMemo<Components>(() => ({
+    code({ className, children }) {
+      const match = /language-(\w+)/.exec(className ?? "");
+      const code = String(children).replace(/\n$/, "");
+      if (match?.[1]) {
+        try {
+          const raw = hljs.highlight(code, { language: match[1] }).value;
+          const sanitized = DOMPurify.sanitize(raw, {
+            ALLOWED_TAGS: ["span"],
+            ALLOWED_ATTR: ["class"],
+          });
+          return <code className={className} dangerouslySetInnerHTML={{ __html: sanitized }} />;
+        } catch {
+          // Fall through to default rendering
+        }
+      }
+      return <code className={className}>{children}</code>;
+    },
+  }), []);
 
   const copyToClipboard = async () => {
     try {

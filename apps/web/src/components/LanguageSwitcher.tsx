@@ -30,7 +30,7 @@ function detectBrowserLanguage(): string {
   // Check for exact match first (e.g. "pt-BR")
   if (languages.some((l) => l.code === lang)) return lang;
   // Normalize e.g. "de-CH" -> "de"
-  const base = lang.split("-")[0];
+  const base = lang.split("-")[0] ?? "en";
   return languages.some((l) => l.code === base) ? base : "en";
 }
 
@@ -67,7 +67,7 @@ export function LanguageSwitcher() {
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-[160px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-50 min-w-40 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           sideOffset={5}
           align="end"
         >

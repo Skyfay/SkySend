@@ -2,7 +2,7 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
+## v2.7.1
 *Release: In Progress*
 
 ### ✨ Features
@@ -20,8 +20,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.7.1`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
