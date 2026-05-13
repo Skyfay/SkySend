@@ -10,6 +10,10 @@ All notable changes to SkySend are documented here.
 - **web**: Added Japanese (ja) translation. Thanks @canaria-computer ([#41](https://github.com/skyfay/SkySend/pull/41))
 - **web**: Added Brazilian Portuguese (pt-BR) translation. Thanks @magisph ([#40](https://github.com/skyfay/SkySend/pull/40))
 
+### 🐛 Bug Fixes
+
+- **web**: Fixed Markdown preview and note view not rendering headings, blockquotes, lists, and other block-level elements. The `@tailwindcss/typography` plugin was installed but not loaded via `@plugin` in `index.css`, so `prose` styles had no effect. ([#42](https://github.com/Skyfay/SkySend/issues/42))
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`
