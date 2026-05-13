@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.7.1
-*Release: In Progress*
+## v2.7.1 - Two New Languages & Markdown Rendering Fixes
+*Released: May 13, 2026*
 
 ### ✨ Features
 
