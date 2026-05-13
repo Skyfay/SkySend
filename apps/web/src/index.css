@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -76,6 +77,29 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Override typography plugin accent colors to follow the project primary color.
+   Must be outside any @layer so it wins over the plugin's @layer components rules.
+   This ensures CUSTOM_COLOR also affects Markdown prose elements. */
+.prose,
+.prose-invert {
+  --tw-prose-links: var(--color-primary);
+  --tw-prose-bullets: var(--color-primary);
+  --tw-prose-counters: var(--color-primary);
+  --tw-prose-quote-borders: var(--color-primary);
+  --tw-prose-hr: var(--color-border);
+  --tw-prose-th-borders: var(--color-border);
+  --tw-prose-td-borders: var(--color-border);
+}
+
+/* Style task list checkboxes with the primary brand color */
+.prose input[type="checkbox"],
+.prose-invert input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 0.9em;
+  height: 0.9em;
+  cursor: default;
 }
 
 @keyframes indeterminate {

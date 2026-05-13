@@ -2,6 +2,29 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.7.1 - Two New Languages & Markdown Rendering Fixes
+*Released: May 13, 2026*
+
+### ✨ Features
+
+- **web**: Added Japanese (ja) translation. Thanks @canaria-computer ([#41](https://github.com/skyfay/SkySend/pull/41))
+- **web**: Added Brazilian Portuguese (pt-BR) translation. Thanks @magisph ([#40](https://github.com/skyfay/SkySend/pull/40))
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed Markdown preview and note view not rendering headings, blockquotes, lists, and other block-level elements. The `@tailwindcss/typography` plugin was installed but not loaded via `@plugin` in `index.css`, so `prose` styles had no effect. ([#42](https://github.com/Skyfay/SkySend/issues/42))
+
+### 🔄 Changed
+
+- **web**: Markdown prose elements (list bullets, counters, links, blockquote borders, table borders, and horizontal rules) now follow the project's primary color, including the `CUSTOM_COLOR` branding setting.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.7.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.7.0 - Native OS Share Button, Security Patches, and Dependency Updates
 *Released: May 8, 2026*
 
