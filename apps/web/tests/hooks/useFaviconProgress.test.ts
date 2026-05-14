@@ -61,7 +61,7 @@ describe("useFaviconProgress", () => {
 
   it("updates the favicon href when progress is active", async () => {
     const { useFaviconProgress } = await import("../../src/hooks/useFaviconProgress.js");
-    const { result, rerender } = renderHook(({ p }) => useFaviconProgress(p), {
+    const { result, rerender: _rerender } = renderHook(({ p }) => useFaviconProgress(p), {
       initialProps: { p: 50 as number | null },
     });
 

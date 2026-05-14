@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Hono } from "hono";
 import { createAuthRoute } from "../src/routes/auth.js";
 import { createSessionJwt, createPkceJwt, createPkceState } from "../src/auth/session.js";

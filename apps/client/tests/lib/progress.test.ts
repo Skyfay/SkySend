@@ -319,7 +319,7 @@ describe("promptPassword", () => {
         question: vi.fn((p: string, cb: (ans: string) => void) => { cb("mysecret"); }),
         close: vi.fn(),
       };
-      vi.mocked(readline.createInterface).mockReturnValue(mockRl as any);
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
 
       const result = await promptPassword("Enter: ");
       expect(result).toBe("mysecret");
@@ -331,7 +331,7 @@ describe("promptPassword", () => {
         question: vi.fn((p: string, cb: (ans: string) => void) => { cb(""); }),
         close: vi.fn(),
       };
-      vi.mocked(readline.createInterface).mockReturnValue(mockRl as any);
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
 
       await promptPassword();
       expect(mockRl.question).toHaveBeenCalledWith("Password: ", expect.any(Function));
@@ -361,7 +361,7 @@ describe("promptPassword", () => {
       });
       vi.spyOn(process.stdin, "removeListener").mockReturnValue(process.stdin);
       vi.spyOn(process.stderr, "write").mockReturnValue(true);
-      vi.mocked(readline.createInterface).mockReturnValue(mockRl as any);
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
     });
 
     afterEach(() => {
