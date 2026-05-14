@@ -299,7 +299,7 @@ const configSchema = z.object({
 
   /** Which provider preset to use. Defaults to "generic" when OIDC is active. */
   OIDC_PROVIDER: z
-    .enum(["generic", "pocketid", "authentik"])
+    .enum(["generic", "pocketid", "authentik", "keycloak"])
     .default("generic"),
 
   /** OIDC issuer URL (e.g. https://auth.example.com/realms/myrealm). Required when OIDC is active. */

@@ -209,7 +209,7 @@ All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-disc
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `OIDC_PROVIDER` | ❌ | `generic` | Provider preset. One of `generic`, `pocketid`, `authentik`. Controls which token claims are used for the display name. |
+| `OIDC_PROVIDER` | ❌ | `generic` | Provider preset. One of `generic`, `pocketid`, `authentik`, `keycloak`. Controls which token claims are used for the display name. |
 | `OIDC_ISSUER` | ⚠️ | - | Issuer URL of your OIDC provider. Required to activate OIDC. All endpoints are discovered automatically from this URL. |
 | `OIDC_CLIENT_ID` | ⚠️ | - | Client ID of the application registered at your provider. |
 | `OIDC_CLIENT_SECRET` | ⚠️ | - | Client secret of the application registered at your provider. |
@@ -221,6 +221,24 @@ All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-disc
 | `OIDC_SESSION_DURATION` | ❌ | `86400` | Session cookie lifetime in seconds (default: 24 hours). |
 
 > ⚠️ The four variables marked ⚠️ (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SESSION_SECRET`) must all be set together. Setting any one of them without the others will cause SkySend to refuse to start.
+
+### Provider: Keycloak
+
+Set `OIDC_ISSUER` to the realm-specific issuer URL. You can find this in the Keycloak Admin Console under **Realm Settings** > **General** > **OpenID Endpoint Configuration** - the `issuer` field is the value to use.
+
+```yaml
+environment:
+  OIDC_PROVIDER: keycloak
+  OIDC_ISSUER: "https://keycloak.example.com/realms/myrealm"
+  OIDC_CLIENT_ID: "skysend"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+  OIDC_SESSION_SECRET: "change-me-at-least-32-chars-long!!"
+```
+
+In Keycloak, create a new client with:
+- **Client type**: OpenID Connect
+- **Valid redirect URIs**: `https://your-skysend-domain.com/auth/callback`
+- **Client authentication**: On (confidential client)
 
 ### Provider: PocketID
 

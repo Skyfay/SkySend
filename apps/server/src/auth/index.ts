@@ -3,6 +3,7 @@ import type { OidcAdapterProfile } from "./types.js";
 import { genericAdapter } from "./adapters/generic.js";
 import { pocketIdAdapter } from "./adapters/pocketid.js";
 import { authentikAdapter } from "./adapters/authentik.js";
+import { keycloakAdapter } from "./adapters/keycloak.js";
 
 export type { OidcAdapterProfile, OidcUser } from "./types.js";
 
@@ -10,6 +11,7 @@ const ADAPTERS: Record<string, OidcAdapterProfile> = {
   generic: genericAdapter,
   pocketid: pocketIdAdapter,
   authentik: authentikAdapter,
+  keycloak: keycloakAdapter,
 };
 
 /**
