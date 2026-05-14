@@ -36,7 +36,9 @@
     ],
     "overrides": {
       "fast-xml-parser": ">=5.7.2",
-      "postcss": ">=8.5.10"
+      "postcss": ">=8.5.10",
+      "@esbuild-kit/core-utils>esbuild": ">=0.25.0",
+      "vitepress>vite": "~6.4.2"
     }
   },
   "devDependencies": {

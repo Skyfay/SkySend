@@ -11,6 +11,10 @@ All notable changes to SkySend are documented here.
 - **web**: Added inline auth blocks on the upload page when OIDC is enabled and the user is not logged in. A user indicator with logout button is shown in the navigation header when authenticated.
 - **client**: Added OIDC authentication support for the CLI. When a server has `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` enabled, the CLI automatically opens a browser for login before uploading or creating notes. Session tokens are stored per-server in `~/.config/skysend/tokens.json` and reused until they expire. New `auth` subcommands (`login`, `logout`, `status`) allow explicit session management.
 
+### 🔒 Security
+
+- **infra**: Added pnpm overrides for `@esbuild-kit/core-utils>esbuild` (`>=0.25.0`) and `vitepress>vite` (`~6.4.2`) to address GHSA-67mh-4wv8-2f99 (esbuild dev server CORS bypass) and GHSA-4w7w-66w2-5vf9 (Vite path traversal in optimized deps `.map` handling).
+
 ### 🎨 Improvements
 
 - **web**: The password input placeholder no longer says "(optional)" when `FORCE_FILE_PASSWORD` or `FORCE_NOTE_PASSWORD` is enabled - it now correctly says "(required)".
