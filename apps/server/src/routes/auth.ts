@@ -92,6 +92,7 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
       redirect_uri: redirectUri,
       scope: scopes.join(" "),
       state: pkce.state,
+      nonce: pkce.nonce,
       code_challenge: pkce.codeChallenge,
       code_challenge_method: "S256",
     });
@@ -134,6 +135,7 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
       tokens = await authorizationCodeGrant(oidcConfig, callbackUrl, {
         pkceCodeVerifier: pkce.codeVerifier,
         expectedState: pkce.state,
+        expectedNonce: pkce.nonce,
       });
     } catch (err) {
       console.error("[oidc] Token exchange failed:", err);

@@ -294,6 +294,8 @@ app.route("/api", api);
 // Mounted outside /api so the browser can follow redirects without CORS issues
 if (config.OIDC_ENABLED && oidcAdapter) {
   const authRoute = createAuthRoute(config, oidcAdapter);
+  // Apply the same rate limiter as the API routes to prevent login flooding
+  app.use("/auth/*", rateLimiter);
   app.route("/auth", authRoute);
 }
 

@@ -3,6 +3,7 @@ import {
   randomPKCECodeVerifier,
   calculatePKCECodeChallenge,
   randomState,
+  randomNonce,
 } from "openid-client";
 import type { OidcUser } from "./types.js";
 
@@ -59,6 +60,7 @@ export async function verifySessionJwt(
 
 export interface PkceState {
   state: string;
+  nonce: string;
   codeVerifier: string;
   codeChallenge: string;
 }
@@ -69,9 +71,10 @@ export interface PkceState {
  */
 export async function createPkceState(): Promise<PkceState> {
   const state = randomState();
+  const nonce = randomNonce();
   const codeVerifier = randomPKCECodeVerifier();
   const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
-  return { state, codeVerifier, codeChallenge };
+  return { state, nonce, codeVerifier, codeChallenge };
 }
 
 /**
@@ -82,7 +85,7 @@ export async function createPkceJwt(
   secret: string,
 ): Promise<string> {
   const key = await importSecret(secret);
-  return new SignJWT({ state: pkce.state, codeVerifier: pkce.codeVerifier })
+  return new SignJWT({ state: pkce.state, nonce: pkce.nonce, codeVerifier: pkce.codeVerifier })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("5m")
@@ -95,15 +98,16 @@ export async function createPkceJwt(
 export async function verifyPkceJwt(
   token: string,
   secret: string,
-): Promise<{ state: string; codeVerifier: string } | null> {
+): Promise<{ state: string; nonce: string; codeVerifier: string } | null> {
   try {
     const key = await importSecret(secret);
     const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
     if (
       typeof payload["state"] === "string" &&
+      typeof payload["nonce"] === "string" &&
       typeof payload["codeVerifier"] === "string"
     ) {
-      return { state: payload["state"], codeVerifier: payload["codeVerifier"] };
+      return { state: payload["state"], nonce: payload["nonce"], codeVerifier: payload["codeVerifier"] };
     }
     return null;
   } catch {

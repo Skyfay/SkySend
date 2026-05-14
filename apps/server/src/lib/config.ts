@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 /**
@@ -418,20 +419,28 @@ export function loadConfig(): Config {
   const oidcPartiallyConfigured =
     _config.OIDC_ISSUER ||
     _config.OIDC_CLIENT_ID ||
-    _config.OIDC_CLIENT_SECRET ||
-    _config.OIDC_SESSION_SECRET;
+    _config.OIDC_CLIENT_SECRET;
 
   if (oidcPartiallyConfigured) {
     const missing: string[] = [];
     if (!_config.OIDC_ISSUER) missing.push("OIDC_ISSUER");
     if (!_config.OIDC_CLIENT_ID) missing.push("OIDC_CLIENT_ID");
     if (!_config.OIDC_CLIENT_SECRET) missing.push("OIDC_CLIENT_SECRET");
-    if (!_config.OIDC_SESSION_SECRET) missing.push("OIDC_SESSION_SECRET");
     if (missing.length > 0) {
       throw new Error(`OIDC is partially configured. Missing: ${missing.join(", ")}`);
     }
-    if (_config.OIDC_SESSION_SECRET!.length < 32) {
+    if (!_config.OIDC_SESSION_SECRET) {
+      _config.OIDC_SESSION_SECRET = randomBytes(48).toString("base64");
+      console.warn(
+        "[oidc] WARNING: OIDC_SESSION_SECRET is not set - a random secret was generated at startup. "
+        + "All active sessions will be invalidated on every server restart. "
+        + "Set OIDC_SESSION_SECRET in your environment to persist sessions across restarts.",
+      );
+    } else if (_config.OIDC_SESSION_SECRET.length < 32) {
       throw new Error("OIDC_SESSION_SECRET must be at least 32 characters long");
+    }
+    if (!_config.OIDC_ISSUER!.startsWith("https://")) {
+      console.warn("[oidc] WARNING: OIDC_ISSUER is using HTTP instead of HTTPS. This exposes OAuth tokens to network interception and is insecure in production.");
     }
     if (!_config.OIDC_PROTECT_FILES && !_config.OIDC_PROTECT_NOTES) {
       console.warn(

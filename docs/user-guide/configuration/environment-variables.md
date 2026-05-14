@@ -213,14 +213,23 @@ All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-disc
 | `OIDC_ISSUER` | ⚠️ | - | Issuer URL of your OIDC provider. Required to activate OIDC. All endpoints are discovered automatically from this URL. |
 | `OIDC_CLIENT_ID` | ⚠️ | - | Client ID of the application registered at your provider. |
 | `OIDC_CLIENT_SECRET` | ⚠️ | - | Client secret of the application registered at your provider. |
-| `OIDC_SESSION_SECRET` | ⚠️ | - | Secret used to sign session JWT cookies. Must be at least 32 characters. Generate with `openssl rand -hex 32`. |
+| `OIDC_SESSION_SECRET` | ❌ | auto | Secret used to sign session JWT cookies. If not set, a random 48-byte secret is generated at startup - sessions will be invalidated on every server restart. Set this to a fixed value (minimum 32 characters, generate with `openssl rand -base64 48`) to persist sessions across restarts. |
 | `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files. Set to `false` to allow anonymous file uploads while OIDC is active. |
 | `OIDC_PROTECT_NOTES` | ❌ | `true` | Require login to create notes. Set to `false` to allow anonymous note creation while OIDC is active. |
 | `OIDC_REDIRECT_URI` | ❌ | `{BASE_URL}/auth/callback` | Override the OAuth2 redirect/callback URI. Only needed if SkySend is served under a sub-path or behind a proxy that changes the origin. |
 | `OIDC_SCOPES` | ❌ | `openid profile email` | Space-separated list of OIDC scopes to request. |
 | `OIDC_SESSION_DURATION` | ❌ | `86400` | Session cookie lifetime in seconds (default: 24 hours). |
 
-> ⚠️ The four variables marked ⚠️ (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SESSION_SECRET`) must all be set together. Setting any one of them without the others will cause SkySend to refuse to start.
+> ⚠️ The three variables marked ⚠️ (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`) must all be set together. Setting any one of them without the others will cause SkySend to refuse to start.
+
+::: tip Session secret and restarts
+If `OIDC_SESSION_SECRET` is not set, SkySend generates a cryptographically random secret at startup. This means every logged-in user will be signed out whenever the server restarts or the container is recreated. If you want sessions to survive restarts, set a fixed value:
+
+```sh
+# generate once, then paste the output into your environment
+openssl rand -base64 48
+```
+:::
 
 ### Provider: Keycloak
 
@@ -232,7 +241,6 @@ environment:
   OIDC_ISSUER: "https://keycloak.example.com/realms/myrealm"
   OIDC_CLIENT_ID: "skysend"
   OIDC_CLIENT_SECRET: "your-client-secret"
-  OIDC_SESSION_SECRET: "change-me-at-least-32-chars-long!!"
 ```
 
 In Keycloak, create a new client with:
@@ -250,7 +258,6 @@ environment:
   OIDC_ISSUER: "https://auth.example.com"
   OIDC_CLIENT_ID: "your-client-id"
   OIDC_CLIENT_SECRET: "your-client-secret"
-  OIDC_SESSION_SECRET: "change-me-at-least-32-chars-long!!"
 ```
 
 In PocketID, the callback URL to register in the application settings is `https://your-skysend-domain.com/auth/callback`.
@@ -265,7 +272,6 @@ environment:
   OIDC_ISSUER: "https://auth.example.com/application/o/skysend/"
   OIDC_CLIENT_ID: "your-client-id"
   OIDC_CLIENT_SECRET: "your-client-secret"
-  OIDC_SESSION_SECRET: "change-me-at-least-32-chars-long!!"
 ```
 
 In Authentik, set the redirect URI in the OAuth2/OIDC provider to `https://your-skysend-domain.com/auth/callback`.
@@ -280,7 +286,6 @@ environment:
   OIDC_ISSUER: "https://auth.example.com/realms/myrealm"
   OIDC_CLIENT_ID: "your-client-id"
   OIDC_CLIENT_SECRET: "your-client-secret"
-  OIDC_SESSION_SECRET: "change-me-at-least-32-chars-long!!"
 ```
 
 ::: tip What is the Issuer URL?
@@ -326,8 +331,8 @@ SkySend validates all environment variables on startup using Zod:
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL
 - `CUSTOM_LINK_NAME` must be at most 50 characters
-- When any OIDC variable is set, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_SESSION_SECRET` must all be present
-- `OIDC_SESSION_SECRET` must be at least 32 characters
+- When any OIDC variable is set, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` must all be present
+- If `OIDC_SESSION_SECRET` is set, it must be at least 32 characters
 - `OIDC_ISSUER` and `OIDC_REDIRECT_URI` must be valid URLs when set
 
 If any variable is invalid, the server will fail to start with a descriptive error message.
