@@ -256,6 +256,11 @@ api.route("/upload", uploadWithQuota);
 
 // WebSocket upload transport (primary path when FILE_UPLOAD_WS=true)
 if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+  // OIDC guard: protect WebSocket upload when configured (same guard as HTTP init)
+  if (config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter) {
+    const oidcGuard = createOidcGuard(config);
+    api.use("/upload/ws", oidcGuard);
+  }
   const uploadWsRoute = createUploadWsRoute({
     storage,
     upgradeWebSocket,
