@@ -226,8 +226,6 @@
   "auth": {
     "loginRequired": "Accesso richiesto per caricare",
     "loginButton": "Accedi con SSO",
-    "logout": "Disconnetti",
-    "loggedInAs": "Connesso come {{name}}",
-    "loginNavButton": "Accedi"
+    "logout": "Disconnetti"
   }
 }

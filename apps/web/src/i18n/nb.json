@@ -224,8 +224,6 @@
   "auth": {
     "loginRequired": "Pålogging kreves for å laste opp",
     "loginButton": "Logg inn med SSO",
-    "logout": "Logg ut",
-    "loggedInAs": "Innlogget som {{name}}",
-    "loginNavButton": "Logg inn"
+    "logout": "Logg ut"
   }
 }

@@ -226,8 +226,6 @@
   "auth": {
     "loginRequired": "Se requiere iniciar sesión para subir",
     "loginButton": "Iniciar sesión con SSO",
-    "logout": "Cerrar sesión",
-    "loggedInAs": "Conectado como {{name}}",
-    "loginNavButton": "Iniciar sesión"
+    "logout": "Cerrar sesión"
   }
 }

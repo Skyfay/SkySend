@@ -4,20 +4,9 @@ import { pocketIdAdapter } from "../src/auth/adapters/pocketid.js";
 import { authentikAdapter } from "../src/auth/adapters/authentik.js";
 import { keycloakAdapter } from "../src/auth/adapters/keycloak.js";
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-/** Minimal required scopes every adapter must request. */
-const REQUIRED_SCOPES = ["openid", "profile", "email"];
-
 // ── Generic adapter ───────────────────────────────────────────────────────────
 
 describe("genericAdapter", () => {
-  it("has all required scopes", () => {
-    for (const scope of REQUIRED_SCOPES) {
-      expect(genericAdapter.scopes).toContain(scope);
-    }
-  });
-
   it("extractUser: returns correct OidcUser from complete claims", () => {
     const user = genericAdapter.extractUser({
       sub: "u1",
@@ -55,12 +44,6 @@ describe("genericAdapter", () => {
 // ── PocketID adapter ──────────────────────────────────────────────────────────
 
 describe("pocketIdAdapter", () => {
-  it("has all required scopes", () => {
-    for (const scope of REQUIRED_SCOPES) {
-      expect(pocketIdAdapter.scopes).toContain(scope);
-    }
-  });
-
   it("extractUser: prefers preferred_username as display name", () => {
     const user = pocketIdAdapter.extractUser({
       sub: "u2",
@@ -94,12 +77,6 @@ describe("pocketIdAdapter", () => {
 // ── Authentik adapter ─────────────────────────────────────────────────────────
 
 describe("authentikAdapter", () => {
-  it("has all required scopes", () => {
-    for (const scope of REQUIRED_SCOPES) {
-      expect(authentikAdapter.scopes).toContain(scope);
-    }
-  });
-
   it("extractUser: prefers name claim", () => {
     const user = authentikAdapter.extractUser({
       sub: "u3",
@@ -133,12 +110,6 @@ describe("authentikAdapter", () => {
 // ── Keycloak adapter ──────────────────────────────────────────────────────────
 
 describe("keycloakAdapter", () => {
-  it("has all required scopes", () => {
-    for (const scope of REQUIRED_SCOPES) {
-      expect(keycloakAdapter.scopes).toContain(scope);
-    }
-  });
-
   it("extractUser: prefers preferred_username as display name", () => {
     const user = keycloakAdapter.extractUser({
       sub: "u4",

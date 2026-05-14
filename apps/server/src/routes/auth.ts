@@ -87,11 +87,24 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
 
     // Optional CLI callback URL - strictly validated to prevent open redirects.
     // Only http://localhost:{port} and http://127.0.0.1:{port} are accepted.
+    // Port must be in the valid TCP range 1-65535.
     const cliCallbackParam = c.req.query("cli_callback");
     let cliCallback: string | undefined;
     if (cliCallbackParam !== undefined) {
-      const localhostPattern = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}(\/[\w%\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
-      if (!localhostPattern.test(cliCallbackParam)) {
+      let parsedCallback: URL;
+      try {
+        parsedCallback = new URL(cliCallbackParam);
+      } catch {
+        return c.json({ error: "Invalid cli_callback: not a valid URL" }, 400);
+      }
+      const port = parseInt(parsedCallback.port, 10);
+      if (
+        parsedCallback.protocol !== "http:" ||
+        (parsedCallback.hostname !== "localhost" && parsedCallback.hostname !== "127.0.0.1") ||
+        !parsedCallback.port ||
+        port < 1 ||
+        port > 65535
+      ) {
         return c.json({ error: "Invalid cli_callback: only http://localhost or http://127.0.0.1 is allowed" }, 400);
       }
       cliCallback = cliCallbackParam;

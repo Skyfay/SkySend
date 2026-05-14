@@ -226,8 +226,6 @@
   "auth": {
     "loginRequired": "Connexion requise pour téléverser",
     "loginButton": "Se connecter avec SSO",
-    "logout": "Se déconnecter",
-    "loggedInAs": "Connecté en tant que {{name}}",
-    "loginNavButton": "Connexion"
+    "logout": "Se déconnecter"
   }
 }

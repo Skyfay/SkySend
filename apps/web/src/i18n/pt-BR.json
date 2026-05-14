@@ -6,8 +6,6 @@
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
-      "auth.loggedInAs",
-      "auth.loginNavButton",
       "nav.menu",
       "upload.passwordPlaceholderRequired"
     ],
@@ -231,8 +229,6 @@
   "auth": {
     "loginRequired": "Login necessário para enviar",
     "loginButton": "Entrar com SSO",
-    "logout": "Sair",
-    "loggedInAs": "Conectado como {{name}}",
-    "loginNavButton": "Entrar"
+    "logout": "Sair"
   }
 }

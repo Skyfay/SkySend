@@ -226,8 +226,6 @@
   "auth": {
     "loginRequired": "Inloggen vereist om te uploaden",
     "loginButton": "Inloggen met SSO",
-    "logout": "Uitloggen",
-    "loggedInAs": "Ingelogd als {{name}}",
-    "loginNavButton": "Inloggen"
+    "logout": "Uitloggen"
   }
 }

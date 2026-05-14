@@ -155,7 +155,7 @@ export function UploadZone({
             {" - "}
             {t("upload.totalSize", { size: formatBytes(totalSize) })}
           </p>
-          <ScrollArea className="max-h-60 [&>[data-radix-scroll-area-viewport]]:max-h-60">
+          <ScrollArea className="max-h-60 *:data-radix-scroll-area-viewport:max-h-60">
             <ul className="space-y-1" role="list">
               {files.map((file, i) => (
                 <li

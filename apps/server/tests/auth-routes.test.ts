@@ -145,6 +145,18 @@ describe("GET /auth/login", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects an invalid cli_callback (port 0)", async () => {
+    const app = buildApp();
+    const res = await app.request("/auth/login?cli_callback=http://127.0.0.1:0/callback");
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects an invalid cli_callback (port out of range)", async () => {
+    const app = buildApp();
+    const res = await app.request("/auth/login?cli_callback=http://127.0.0.1:99999/callback");
+    expect(res.status).toBe(400);
+  });
+
   it("accepts a valid cli_callback on localhost", async () => {
     const app = buildApp();
     const res = await app.request("/auth/login?cli_callback=http://127.0.0.1:54321/callback");

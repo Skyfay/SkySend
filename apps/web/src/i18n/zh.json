@@ -6,8 +6,6 @@
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
-      "auth.loggedInAs",
-      "auth.loginNavButton",
       "nav.menu",
       "upload.passwordPlaceholderRequired"
     ],
@@ -235,8 +233,6 @@
   "auth": {
     "loginRequired": "上传需要登录",
     "loginButton": "通过 SSO 登录",
-    "logout": "退出登录",
-    "loggedInAs": "已登录为 {{name}}",
-    "loginNavButton": "登录"
+    "logout": "退出登录"
   }
 }

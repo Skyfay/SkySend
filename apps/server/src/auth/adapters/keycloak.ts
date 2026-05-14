@@ -13,7 +13,6 @@ import type { OidcAdapterProfile, OidcUser } from "../types.js";
  */
 export const keycloakAdapter: OidcAdapterProfile = {
   name: "keycloak",
-  scopes: ["openid", "profile", "email"],
   claimsMap: { name: "preferred_username", email: "email" },
 
   extractUser(claims: Record<string, unknown>): OidcUser {

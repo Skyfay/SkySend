@@ -8,7 +8,6 @@ import type { OidcAdapterProfile, OidcUser } from "../types.js";
  */
 export const pocketIdAdapter: OidcAdapterProfile = {
   name: "pocketid",
-  scopes: ["openid", "profile", "email"],
   claimsMap: { name: "preferred_username", email: "email" },
 
   extractUser(claims: Record<string, unknown>): OidcUser {

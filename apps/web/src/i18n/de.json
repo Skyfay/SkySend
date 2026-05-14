@@ -221,8 +221,6 @@
   "auth": {
     "loginRequired": "Anmeldung erforderlich zum Hochladen",
     "loginButton": "Mit SSO anmelden",
-    "logout": "Abmelden",
-    "loggedInAs": "Angemeldet als {{name}}",
-    "loginNavButton": "Anmelden"
+    "logout": "Abmelden"
   }
 }

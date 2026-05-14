@@ -16,8 +16,6 @@ export interface OidcUser {
 export interface OidcAdapterProfile {
   /** Human-readable name for log output. */
   readonly name: string;
-  /** Scopes to request from the provider. */
-  readonly scopes: string[];
   /**
    * Maps standard field names to the actual claim keys returned by this provider.
    * Falls back to the key itself when the resolved claim is absent.

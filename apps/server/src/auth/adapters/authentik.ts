@@ -8,7 +8,6 @@ import type { OidcAdapterProfile, OidcUser } from "../types.js";
  */
 export const authentikAdapter: OidcAdapterProfile = {
   name: "authentik",
-  scopes: ["openid", "profile", "email"],
   claimsMap: { name: "name", email: "email" },
 
   extractUser(claims: Record<string, unknown>): OidcUser {

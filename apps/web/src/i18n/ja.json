@@ -5,8 +5,6 @@
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
-      "auth.loggedInAs",
-      "auth.loginNavButton",
       "nav.menu",
       "upload.passwordPlaceholderRequired"
     ],
@@ -234,8 +232,6 @@
   "auth": {
     "loginRequired": "アップロードにはログインが必要です",
     "loginButton": "SSOでログイン",
-    "logout": "ログアウト",
-    "loggedInAs": "{{name}}としてログイン中",
-    "loginNavButton": "ログイン"
+    "logout": "ログアウト"
   }
 }

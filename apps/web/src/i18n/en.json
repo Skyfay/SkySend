@@ -221,8 +221,6 @@
   "auth": {
     "loginRequired": "Login required to upload",
     "loginButton": "Login with SSO",
-    "logout": "Logout",
-    "loggedInAs": "Logged in as {{name}}",
-    "loginNavButton": "Login"
+    "logout": "Logout"
   }
 }
