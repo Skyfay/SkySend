@@ -2,7 +2,11 @@
   "__meta": {
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGeneratedKeys": [
-      "*"
+      "auth.loginRequired",
+      "auth.loginButton",
+      "auth.logout",
+      "auth.loggedInAs",
+      "auth.loginNavButton"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -222,5 +226,12 @@
     "privateKey": "秘密鍵",
     "shareAs": "暗号化メモとして共有",
     "createNote": "メモとして共有"
+  },
+  "auth": {
+    "loginRequired": "アップロードにはログインが必要です",
+    "loginButton": "SSOでログイン",
+    "logout": "ログアウト",
+    "loggedInAs": "{{name}}としてログイン中",
+    "loginNavButton": "ログイン"
   }
 }

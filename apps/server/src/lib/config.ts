@@ -294,10 +294,61 @@ const configSchema = z.object({
     .default("4")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().min(1).max(16, "S3_CONCURRENCY must be between 1 and 16")),
+
+  // --- OIDC authentication (optional) ---
+
+  /** Which provider preset to use. Defaults to "generic" when OIDC is active. */
+  OIDC_PROVIDER: z
+    .enum(["generic", "pocketid", "authentik"])
+    .default("generic"),
+
+  /** OIDC issuer URL (e.g. https://auth.example.com/realms/myrealm). Required when OIDC is active. */
+  OIDC_ISSUER: z.string().url("OIDC_ISSUER must be a valid URL").optional(),
+
+  /** OIDC client ID registered at the provider. Required when OIDC is active. */
+  OIDC_CLIENT_ID: z.string().optional(),
+
+  /** OIDC client secret. Required when OIDC is active. */
+  OIDC_CLIENT_SECRET: z.string().optional(),
+
+  /** Override the redirect URI. Defaults to ${BASE_URL}/auth/callback. */
+  OIDC_REDIRECT_URI: z.string().url("OIDC_REDIRECT_URI must be a valid URL").optional(),
+
+  /** Space-separated scopes. Defaults to "openid profile email". */
+  OIDC_SCOPES: z.string().default("openid profile email"),
+
+  /** Protect file uploads behind OIDC when active. Default: true. */
+  OIDC_PROTECT_FILES: z
+    .string()
+    .default("true")
+    .transform((v) => v.toLowerCase() !== "false"),
+
+  /** Protect note creation behind OIDC when active. Default: true. */
+  OIDC_PROTECT_NOTES: z
+    .string()
+    .default("true")
+    .transform((v) => v.toLowerCase() !== "false"),
+
+  /**
+   * Secret used to sign session JWT cookies. Must be at least 32 characters.
+   * Required when OIDC is active.
+   */
+  OIDC_SESSION_SECRET: z.string().optional(),
+
+  /** Session duration in seconds. Default: 86400 (24 hours). */
+  OIDC_SESSION_DURATION: z
+    .string()
+    .default("86400")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
 });
 
 type RawConfig = z.infer<typeof configSchema>;
-export type Config = Omit<RawConfig, "UPLOADS_DIR"> & { UPLOADS_DIR: string };
+export type Config = Omit<RawConfig, "UPLOADS_DIR"> & {
+  UPLOADS_DIR: string;
+  /** True when OIDC is fully configured (OIDC_ISSUER + OIDC_CLIENT_ID + OIDC_CLIENT_SECRET + OIDC_SESSION_SECRET are all set). */
+  OIDC_ENABLED: boolean;
+};
 
 let _config: Config | undefined;
 
@@ -316,6 +367,7 @@ export function loadConfig(): Config {
   _config = {
     ...parsed,
     UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
+    OIDC_ENABLED: false,
   } as Config;
 
   // Cross-field validation - Files
@@ -360,6 +412,33 @@ export function loadConfig(): Config {
         `STORAGE_BACKEND=s3 requires: ${missing.join(", ")}`,
       );
     }
+  }
+
+  // Cross-field validation - OIDC
+  const oidcPartiallyConfigured =
+    _config.OIDC_ISSUER ||
+    _config.OIDC_CLIENT_ID ||
+    _config.OIDC_CLIENT_SECRET ||
+    _config.OIDC_SESSION_SECRET;
+
+  if (oidcPartiallyConfigured) {
+    const missing: string[] = [];
+    if (!_config.OIDC_ISSUER) missing.push("OIDC_ISSUER");
+    if (!_config.OIDC_CLIENT_ID) missing.push("OIDC_CLIENT_ID");
+    if (!_config.OIDC_CLIENT_SECRET) missing.push("OIDC_CLIENT_SECRET");
+    if (!_config.OIDC_SESSION_SECRET) missing.push("OIDC_SESSION_SECRET");
+    if (missing.length > 0) {
+      throw new Error(`OIDC is partially configured. Missing: ${missing.join(", ")}`);
+    }
+    if (_config.OIDC_SESSION_SECRET!.length < 32) {
+      throw new Error("OIDC_SESSION_SECRET must be at least 32 characters long");
+    }
+    if (!_config.OIDC_PROTECT_FILES && !_config.OIDC_PROTECT_NOTES) {
+      console.warn(
+        "[oidc] WARNING: OIDC_PROTECT_FILES=false and OIDC_PROTECT_NOTES=false - OIDC is enabled but no upload routes are protected.",
+      );
+    }
+    _config.OIDC_ENABLED = true;
   }
 
   return _config;

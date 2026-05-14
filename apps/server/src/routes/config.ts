@@ -44,6 +44,10 @@ configRoute.get("/", (c) => {
     defaultTab: config.DEFAULT_TAB,
     forceFilePassword: config.FORCE_FILE_PASSWORD,
     forceNotePassword: config.FORCE_NOTE_PASSWORD,
+    // OIDC auth
+    oidcEnabled: config.OIDC_ENABLED,
+    oidcProtectFiles: config.OIDC_ENABLED && config.OIDC_PROTECT_FILES,
+    oidcProtectNotes: config.OIDC_ENABLED && config.OIDC_PROTECT_NOTES,
   });
 });
 

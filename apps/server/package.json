@@ -45,6 +45,8 @@
     "better-sqlite3": "^12.9.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.18",
+    "jose": "^6.2.3",
+    "openid-client": "^6.8.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {

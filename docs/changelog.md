@@ -2,6 +2,22 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **server**: Added optional OIDC/SSO authentication via a plugin adapter system. Supports Generic, PocketID, and Authentik providers via the `OIDC_PROVIDER` env var. File uploads and note creation can each be independently protected using `OIDC_PROTECT_FILES` and `OIDC_PROTECT_NOTES`. Sessions are stateless JWT cookies - no database changes required.
+- **web**: Added inline auth blocks on the upload page when OIDC is enabled and the user is not logged in. A user indicator with logout button is shown in the navigation header when authenticated.
+- **docs**: Documented all OIDC environment variables in the configuration reference, including per-provider setup examples for PocketID, Authentik, and Generic providers.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.7.1 - Two New Languages & Markdown Rendering Fixes
 *Released: May 13, 2026*
 

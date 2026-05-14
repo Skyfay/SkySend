@@ -220,5 +220,12 @@
     "privateKey": "Chiave privata",
     "shareAs": "Condividi come nota crittografata",
     "createNote": "Condividi come nota"
+  },
+  "auth": {
+    "loginRequired": "Accesso richiesto per caricare",
+    "loginButton": "Accedi con SSO",
+    "logout": "Disconnetti",
+    "loggedInAs": "Connesso come {{name}}",
+    "loginNavButton": "Accedi"
   }
 }

@@ -220,5 +220,12 @@
     "privateKey": "Clé privée",
     "shareAs": "Partager comme note chiffrée",
     "createNote": "Partager comme note"
+  },
+  "auth": {
+    "loginRequired": "Connexion requise pour téléverser",
+    "loginButton": "Se connecter avec SSO",
+    "logout": "Se déconnecter",
+    "loggedInAs": "Connecté en tant que {{name}}",
+    "loginNavButton": "Connexion"
   }
 }

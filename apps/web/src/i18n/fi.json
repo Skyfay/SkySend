@@ -220,5 +220,12 @@
     "privateKey": "Yksityinen avain",
     "shareAs": "Jaa salattuna muistiinpanona",
     "createNote": "Jaa muistiinpanona"
+  },
+  "auth": {
+    "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
+    "loginButton": "Kirjaudu SSO:lla",
+    "logout": "Kirjaudu ulos",
+    "loggedInAs": "Kirjautunut käyttäjänä {{name}}",
+    "loginNavButton": "Kirjaudu"
   }
 }

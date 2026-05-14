@@ -2,6 +2,13 @@
   "__meta": {
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGenerated": false,
+    "aiGeneratedKeys": [
+      "auth.loginRequired",
+      "auth.loginButton",
+      "auth.logout",
+      "auth.loggedInAs",
+      "auth.loginNavButton"
+    ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
   "common": {
@@ -216,5 +223,12 @@
     "privateKey": "Chave Privada",
     "shareAs": "Compartilhar como nota criptografada",
     "createNote": "Compartilhar como nota"
+  },
+  "auth": {
+    "loginRequired": "Login necessário para enviar",
+    "loginButton": "Entrar com SSO",
+    "logout": "Sair",
+    "loggedInAs": "Conectado como {{name}}",
+    "loginNavButton": "Entrar"
   }
 }

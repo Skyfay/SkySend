@@ -1,19 +1,23 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
-import { Upload, FolderOpen } from "lucide-react";
+import { Upload, FolderOpen, LogIn, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useServerConfig } from "@/hooks/useServerConfig";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 export function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
   const { config } = useServerConfig();
+  const { user, isLoggedIn, loading: authLoading, logout } = useAuth(config ?? null);
 
   const logoSrc = config?.customLogo ?? "/logo.svg";
   const title = config?.customTitle ?? t("common.appName");
+  const oidcEnabled = config?.oidcEnabled ?? false;
 
   useEffect(() => {
     document.title = `${title} | ${t("common.tabSubtitle")}`;
@@ -54,6 +58,30 @@ export function Layout() {
             ))}
             <LanguageSwitcher />
             <ThemeToggle />
+            {/* OIDC user indicator */}
+            {oidcEnabled && (
+              authLoading ? (
+                <Skeleton className="h-7 w-20 rounded-md" />
+              ) : isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={logout}
+                  title={t("auth.logout")}
+                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden max-w-[8rem] truncate sm:inline">{user?.name}</span>
+                </button>
+              ) : (
+                <a
+                  href="/auth/login"
+                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("auth.loginNavButton")}</span>
+                </a>
+              )
+            )}
           </nav>
         </div>
       </header>

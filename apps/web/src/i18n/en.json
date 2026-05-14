@@ -215,5 +215,12 @@
     "privateKey": "Private Key",
     "shareAs": "Share as encrypted note",
     "createNote": "Share as note"
+  },
+  "auth": {
+    "loginRequired": "Login required to upload",
+    "loginButton": "Login with SSO",
+    "logout": "Logout",
+    "loggedInAs": "Logged in as {{name}}",
+    "loginNavButton": "Login"
   }
 }

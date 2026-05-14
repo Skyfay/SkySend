@@ -220,5 +220,12 @@
     "privateKey": "Klucz prywatny",
     "shareAs": "Udostępnij jako zaszyfrowaną notatkę",
     "createNote": "Udostępnij jako notatkę"
+  },
+  "auth": {
+    "loginRequired": "Wymagane logowanie do przesyłania",
+    "loginButton": "Zaloguj przez SSO",
+    "logout": "Wyloguj",
+    "loggedInAs": "Zalogowano jako {{name}}",
+    "loginNavButton": "Zaloguj"
   }
 }

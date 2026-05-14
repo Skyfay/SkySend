@@ -218,5 +218,12 @@
     "privateKey": "Privat nyckel",
     "shareAs": "Dela som krypterad anteckning",
     "createNote": "Dela som anteckning"
+  },
+  "auth": {
+    "loginRequired": "Inloggning krävs för att ladda upp",
+    "loginButton": "Logga in med SSO",
+    "logout": "Logga ut",
+    "loggedInAs": "Inloggad som {{name}}",
+    "loginNavButton": "Logga in"
   }
 }

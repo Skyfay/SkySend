@@ -215,5 +215,12 @@
     "privateKey": "Privater Schlüssel",
     "shareAs": "Als verschlüsselte Notiz teilen",
     "createNote": "Als Notiz teilen"
+  },
+  "auth": {
+    "loginRequired": "Anmeldung erforderlich zum Hochladen",
+    "loginButton": "Mit SSO anmelden",
+    "logout": "Abmelden",
+    "loggedInAs": "Angemeldet als {{name}}",
+    "loginNavButton": "Anmelden"
   }
 }
