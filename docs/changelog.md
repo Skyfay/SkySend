@@ -14,6 +14,7 @@ All notable changes to SkySend are documented here.
 ### 🔒 Security
 
 - **infra**: Added pnpm overrides for `@esbuild-kit/core-utils>esbuild` (`>=0.25.0`) and `vitepress>vite` (`~6.4.2`) to address GHSA-67mh-4wv8-2f99 (esbuild dev server CORS bypass) and GHSA-4w7w-66w2-5vf9 (Vite path traversal in optimized deps `.map` handling).
+- **infra**: Updated all dependencies to latest versions - `vite` 8.0.13, `tailwindcss` + `@tailwindcss/vite` 4.3.0, `better-sqlite3` 12.10.0, `@aws-sdk/*` 3.1046.0, `i18next` 26.1.0, `lucide-react` 1.16.0, `tailwind-merge` 3.6.0, `vitest` + `@vitest/coverage-v8` 4.1.6, `tsx` 4.22.0, and others.
 
 ### 🎨 Improvements
 
