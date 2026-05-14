@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal } from "lucide-react";
+import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { SSHKeyForm } from "@/components/SSHKeyForm";
 import { useUpload } from "@/hooks/useUpload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
+import { useAuth } from "@/hooks/useAuth";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
 import { formatBytes } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export function UploadPage() {
   const { t } = useTranslation();
   const { config, loading: configLoading } = useServerConfig();
   const uploadHook = useUpload();
+  const { isLoggedIn, loading: authLoading } = useAuth(config);
 
   const [activeTab, setActiveTab] = useState<Tab>("file");
   const [files, setFiles] = useState<File[]>([]);
@@ -263,6 +265,24 @@ export function UploadPage() {
       {activeTab === "file" && (
         <Card>
           <CardContent className="space-y-6 pt-6">
+            {/* OIDC auth block: shown when file uploads are protected and user is not logged in */}
+            {config.oidcProtectFiles && !isLoggedIn && !authLoading ? (
+              <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border/60 bg-muted/30 py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <LogIn className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">{t("auth.loginRequired")}</p>
+                </div>
+                <Button asChild size="sm">
+                  <a href="/auth/login">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    {t("auth.loginButton")}
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <>
             {/* Quota bar */}
             <QuotaBar quota={quota} />
 
@@ -332,7 +352,7 @@ export function UploadPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("upload.passwordPlaceholder")}
+                    placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
                     autoComplete="off"
                   />
                   <button
@@ -368,15 +388,41 @@ export function UploadPage() {
               <Shield className="mr-2 h-5 w-5" />
               {t("upload.startUpload")}
             </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Note forms */}
+      {/* Note forms - show auth block when notes are protected and user is not logged in */}
+      {(activeTab === "text" || activeTab === "password" || activeTab === "code" || activeTab === "sshkey") &&
+        config.oidcProtectNotes && !isLoggedIn && !authLoading ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border/60 bg-muted/30 py-12 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <LogIn className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">{t("auth.loginRequired")}</p>
+              </div>
+              <Button asChild size="sm">
+                <a href="/auth/login">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  {t("auth.loginButton")}
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       {activeTab === "text" && <NoteForm contentType="text" forcePassword={config.forceNotePassword} />}
       {activeTab === "password" && <PasswordForm forcePassword={config.forceNotePassword} />}
       {activeTab === "code" && <NoteForm contentType="code" forcePassword={config.forceNotePassword} />}
       {activeTab === "sshkey" && <SSHKeyForm forcePassword={config.forceNotePassword} />}
+        </>
+      )}
     </div>
   );
 }

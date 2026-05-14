@@ -1,4 +1,7 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import * as readline from "node:readline";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+
+vi.mock("node:readline", () => ({ createInterface: vi.fn() }));
 import {
   formatBytes,
   formatSpeed,
@@ -6,6 +9,10 @@ import {
   formatExpiry,
   parseDuration,
   renderProgress,
+  clearLine,
+  writeProgress,
+  writeLine,
+  promptPassword,
   type ProgressState,
 } from "../../src/lib/progress.js";
 
@@ -227,5 +234,219 @@ describe("renderProgress", () => {
     const output = renderProgress(state, "Starting");
     expect(output).toContain("0.0%");
     expect(output).toContain("░".repeat(30));
+  });
+
+  it("handles total = 0 (shows 0%)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T00:00:05.000Z"));
+
+    const state: ProgressState = {
+      loaded: 0,
+      total: 0,
+      startTime: new Date("2024-01-01T00:00:00.000Z").getTime(),
+    };
+
+    const output = renderProgress(state, "Empty");
+    expect(output).toContain("0.0%");
+  });
+
+  it("shows ETA 0s when speed is zero", () => {
+    vi.useFakeTimers();
+    // elapsed = 0 -> speed = 0 -> remaining = 0
+    vi.setSystemTime(new Date("2024-01-01T00:00:00.000Z"));
+
+    const state: ProgressState = {
+      loaded: 0,
+      total: 1024,
+      startTime: new Date("2024-01-01T00:00:00.000Z").getTime(),
+    };
+
+    const output = renderProgress(state, "Stalled");
+    expect(output).toContain("ETA 0s");
+  });
+});
+
+// ── clearLine / writeProgress / writeLine ─────────────────────────────────────
+
+describe("clearLine", () => {
+  it("writes the ANSI clear sequence to stderr", () => {
+    const write = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    clearLine();
+    expect(write).toHaveBeenCalledWith("\r\x1b[K");
+    write.mockRestore();
+  });
+});
+
+describe("writeProgress", () => {
+  it("writes the line with ANSI clear prefix to stderr", () => {
+    const write = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    writeProgress("50%");
+    expect(write).toHaveBeenCalledWith("\r\x1b[K50%");
+    write.mockRestore();
+  });
+});
+
+describe("writeLine", () => {
+  it("writes the line followed by a newline to stderr", () => {
+    const write = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    writeLine("hello");
+    expect(write).toHaveBeenCalledWith("hello\n");
+    write.mockRestore();
+  });
+});
+
+// ── promptPassword ────────────────────────────────────────────────────────────
+
+describe("promptPassword", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  describe("non-TTY mode", () => {
+    let origIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      origIsTTY = process.stdin.isTTY;
+      Object.defineProperty(process.stdin, "isTTY", { value: false, configurable: true, writable: true });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process.stdin, "isTTY", { value: origIsTTY, configurable: true, writable: true });
+    });
+
+    it("resolves with the entered answer", async () => {
+      const mockRl = {
+        question: vi.fn((p: string, cb: (ans: string) => void) => { cb("mysecret"); }),
+        close: vi.fn(),
+      };
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+
+      const result = await promptPassword("Enter: ");
+      expect(result).toBe("mysecret");
+      expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it("uses 'Password: ' as default prompt", async () => {
+      const mockRl = {
+        question: vi.fn((p: string, cb: (ans: string) => void) => { cb(""); }),
+        close: vi.fn(),
+      };
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+
+      await promptPassword();
+      expect(mockRl.question).toHaveBeenCalledWith("Password: ", expect.any(Function));
+    });
+  });
+
+  describe("TTY mode", () => {
+    let origIsTTY: boolean | undefined;
+    let origSetRawMode: unknown;
+    let capturedDataHandler: ((data: Buffer) => void) | null;
+    let mockSetRawMode: ReturnType<typeof vi.fn>;
+    let mockRl: { question: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+
+    beforeEach(() => {
+      origIsTTY = process.stdin.isTTY;
+      origSetRawMode = (process.stdin as NodeJS.ReadStream & { setRawMode?: unknown }).setRawMode;
+      capturedDataHandler = null;
+      mockSetRawMode = vi.fn();
+      mockRl = { question: vi.fn(), close: vi.fn() };
+
+      Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true, writable: true });
+      (process.stdin as NodeJS.ReadStream & { setRawMode: unknown }).setRawMode = mockSetRawMode;
+
+      vi.spyOn(process.stdin, "on").mockImplementation((event: string | symbol, handler: (...args: unknown[]) => void) => {
+        if (event === "data") capturedDataHandler = handler as (data: Buffer) => void;
+        return process.stdin;
+      });
+      vi.spyOn(process.stdin, "removeListener").mockReturnValue(process.stdin);
+      vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      Object.defineProperty(process.stdin, "isTTY", { value: origIsTTY, configurable: true, writable: true });
+      (process.stdin as NodeJS.ReadStream & { setRawMode: unknown }).setRawMode = origSetRawMode;
+    });
+
+    it("resolves with typed characters on Enter (\\r)", async () => {
+      const promise = promptPassword("Pass: ");
+      expect(capturedDataHandler).not.toBeNull();
+      capturedDataHandler!(Buffer.from("a"));
+      capturedDataHandler!(Buffer.from("b"));
+      capturedDataHandler!(Buffer.from("c"));
+      capturedDataHandler!(Buffer.from("\r"));
+
+      const result = await promise;
+      expect(result).toBe("abc");
+      expect(mockSetRawMode).toHaveBeenCalledWith(false);
+      expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it("resolves on newline (\\n)", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("x"));
+      capturedDataHandler!(Buffer.from("\n"));
+
+      const result = await promise;
+      expect(result).toBe("x");
+    });
+
+    it("resolves on Ctrl+D (\\u0004)", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("\u0004"));
+
+      const result = await promise;
+      expect(result).toBe("");
+    });
+
+    it("rejects on Ctrl+C (\\u0003)", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("\u0003"));
+
+      await expect(promise).rejects.toThrow("Aborted");
+      expect(mockSetRawMode).toHaveBeenCalledWith(false);
+      expect(mockRl.close).toHaveBeenCalled();
+    });
+
+    it("handles backspace DEL (\\u007F)", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("a"));
+      capturedDataHandler!(Buffer.from("b"));
+      capturedDataHandler!(Buffer.from("\u007F"));
+      capturedDataHandler!(Buffer.from("c"));
+      capturedDataHandler!(Buffer.from("\r"));
+
+      const result = await promise;
+      expect(result).toBe("ac");
+    });
+
+    it("handles backspace (\\b)", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("a"));
+      capturedDataHandler!(Buffer.from("\b"));
+      capturedDataHandler!(Buffer.from("\r"));
+
+      const result = await promise;
+      expect(result).toBe("");
+    });
+
+    it("ignores backspace on empty password", async () => {
+      const promise = promptPassword("Pass: ");
+      capturedDataHandler!(Buffer.from("\u007F"));
+      capturedDataHandler!(Buffer.from("a"));
+      capturedDataHandler!(Buffer.from("\r"));
+
+      const result = await promise;
+      expect(result).toBe("a");
+    });
+
+    it("writes the custom prompt to stderr", async () => {
+      const promise = promptPassword("Secret: ");
+      capturedDataHandler!(Buffer.from("\r"));
+      await promise;
+      expect(process.stderr.write).toHaveBeenCalledWith("Secret: ");
+    });
   });
 });

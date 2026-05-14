@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Téléverser",
-    "myUploads": "Mes envois"
+    "myUploads": "Mes envois",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Fichier",
@@ -69,6 +70,7 @@
     "downloads": "Téléchargements max.",
     "password": "Protection par mot de passe",
     "passwordPlaceholder": "Saisissez un mot de passe (optionnel)",
+    "passwordPlaceholderRequired": "Saisissez un mot de passe (requis)",
     "passwordRequired": "requis par le serveur",
     "uploading": "Chiffrement et téléversement...",
     "encryptingProgress": "Chiffrement...",
@@ -220,5 +222,13 @@
     "privateKey": "Clé privée",
     "shareAs": "Partager comme note chiffrée",
     "createNote": "Partager comme note"
+  },
+  "auth": {
+    "loginRequired": "Connexion requise pour téléverser",
+    "loginButton": "Se connecter avec SSO",
+    "logout": "Se déconnecter"
+  },
+  "language": {
+    "search": "Rechercher une langue..."
   }
 }

@@ -10,6 +10,7 @@ import { registerDeleteCommand } from "./commands/delete.js";
 import { registerUpdateCommand } from "./commands/update.js";
 import { registerInteractiveCommand } from "./commands/interactive.js";
 import { registerLsCommand } from "./commands/ls.js";
+import { registerAuthCommand } from "./commands/auth.js";
 import { APP_VERSION } from "./version.js";
 
 const program = new Command()
@@ -26,6 +27,7 @@ registerConfigCommand(program);
 registerDeleteCommand(program);
 registerLsCommand(program);
 registerUpdateCommand(program);
+registerAuthCommand(program);
 registerInteractiveCommand(program);
 
 await program.parseAsync().catch((err: unknown) => {

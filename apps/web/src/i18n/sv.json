@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Ladda upp",
-    "myUploads": "Mina uppladdningar"
+    "myUploads": "Mina uppladdningar",
+    "menu": "Meny"
   },
   "tab": {
     "file": "Fil",
@@ -69,6 +70,7 @@
     "downloads": "Max nedladdningar",
     "password": "Lösenordsskydd",
     "passwordPlaceholder": "Ange lösenord (valfritt)",
+    "passwordPlaceholderRequired": "Ange lösenord (obligatoriskt)",
     "passwordRequired": "krävs av servern",
     "uploading": "Krypterar och laddar upp...",
     "encryptingProgress": "Krypterar...",
@@ -193,13 +195,15 @@
     "length": "Längd",
     "generate": "Generera",
     "bits": "bitar av entropi"
-  },  "password": {
+  },
+  "password": {
     "passwords": "Lösenord",
     "enterPassword": "Ange lösenord...",
     "addAnother": "Lägg till ytterligare lösenord",
     "passwordNumber": "Lösenord {{number}}",
     "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)"
-  },  "sshKey": {
+  },
+  "sshKey": {
     "algorithm": "Algoritm",
     "comment": "Kommentar",
     "commentPlaceholder": "user@hostname (valfritt)",
@@ -218,5 +222,13 @@
     "privateKey": "Privat nyckel",
     "shareAs": "Dela som krypterad anteckning",
     "createNote": "Dela som anteckning"
+  },
+  "auth": {
+    "loginRequired": "Inloggning krävs för att ladda upp",
+    "loginButton": "Logga in med SSO",
+    "logout": "Logga ut"
+  },
+  "language": {
+    "search": "Sök språk..."
   }
 }

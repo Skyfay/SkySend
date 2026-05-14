@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Carica",
-    "myUploads": "I miei caricamenti"
+    "myUploads": "I miei caricamenti",
+    "menu": "Menu"
   },
   "tab": {
     "file": "File",
@@ -69,6 +70,7 @@
     "downloads": "Download max",
     "password": "Protezione con password",
     "passwordPlaceholder": "Inserisci password (opzionale)",
+    "passwordPlaceholderRequired": "Inserisci password (obbligatoria)",
     "passwordRequired": "richiesta dal server",
     "uploading": "Crittografia e caricamento...",
     "encryptingProgress": "Crittografia...",
@@ -220,5 +222,13 @@
     "privateKey": "Chiave privata",
     "shareAs": "Condividi come nota crittografata",
     "createNote": "Condividi come nota"
+  },
+  "auth": {
+    "loginRequired": "Accesso richiesto per caricare",
+    "loginButton": "Accedi con SSO",
+    "logout": "Disconnetti"
+  },
+  "language": {
+    "search": "Cerca lingua..."
   }
 }

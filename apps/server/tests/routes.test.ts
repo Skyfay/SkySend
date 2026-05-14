@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
 import { uploads } from "../src/db/schema.js";
 import type { FileStorage } from "../src/storage/filesystem.js";
+import type { StorageBackend } from "../src/storage/types.js";
 
 // Mock both db and config modules
 vi.mock("../src/db/index.js", () => ({
@@ -31,6 +32,7 @@ import { healthRoute } from "../src/routes/health.js";
 import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
+import { authMiddleware, ownerMiddleware } from "../src/middleware/auth.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
 
@@ -111,6 +113,40 @@ describe("routes", () => {
       expect(body.customTitle).toBe("SkySend");
       expect(body.noteMaxSize).toBe(1024 ** 2);
       expect(body.noteViewOptions).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
+    });
+
+    it("should include oidcProtectFiles=true when OIDC is enabled with file protection", async () => {
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...DEFAULT_CONFIG,
+        OIDC_ENABLED: true,
+        OIDC_PROTECT_FILES: true,
+        OIDC_PROTECT_NOTES: false,
+      });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+
+      const res = await app.request("/api/config");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.oidcEnabled).toBe(true);
+      expect(body.oidcProtectFiles).toBe(true);
+      expect(body.oidcProtectNotes).toBe(false);
+    });
+
+    it("should include oidcProtectNotes=true when OIDC is enabled with note protection", async () => {
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...DEFAULT_CONFIG,
+        OIDC_ENABLED: true,
+        OIDC_PROTECT_FILES: false,
+        OIDC_PROTECT_NOTES: true,
+      });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+
+      const res = await app.request("/api/config");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.oidcProtectNotes).toBe(true);
     });
   });
 
@@ -1430,5 +1466,237 @@ describe("routes", () => {
       const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
       expect(result).toBeNull();
     });
+  });
+});
+
+// ── authMiddleware edge cases ─────────────────────────────────────────────────
+
+describe("authMiddleware edge cases", () => {
+  let dbCtx: ReturnType<typeof createTestDb>;
+  let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
+
+  beforeEach(async () => {
+    dbCtx = createTestDb();
+    storageCtx = await createTestStorage();
+    vi.mocked(getDb).mockReturnValue(dbCtx.db);
+    vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
+  });
+
+  afterEach(() => {
+    dbCtx.cleanup();
+    storageCtx.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("returns 400 when the route has no :id param", async () => {
+    const app = new Hono();
+    // Mount middleware on a flat path - c.req.param("id") returns undefined
+    app.get("/test", authMiddleware, (c) => c.json({ ok: true }));
+
+    const res = await app.request("/test", {
+      headers: { "X-Auth-Token": fakeBase64urlToken() },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Missing upload ID");
+  });
+
+  it("returns 404 when the upload does not exist in the database", async () => {
+    // DB is empty - no upload inserted
+    const app = new Hono();
+    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/download/${TEST_UUID}`, {
+      headers: { "X-Auth-Token": fakeBase64urlToken() },
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Upload not found");
+  });
+
+  it("returns 401 for an auth token containing non-base64url characters", async () => {
+    insertTestUpload(dbCtx.db);
+    const app = new Hono();
+    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/download/${TEST_UUID}`, {
+      headers: { "X-Auth-Token": "!!!invalid-base64url!!!" },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid auth token format");
+  });
+});
+
+// ── ownerMiddleware edge cases ────────────────────────────────────────────────
+
+describe("ownerMiddleware edge cases", () => {
+  let dbCtx: ReturnType<typeof createTestDb>;
+  let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
+
+  beforeEach(async () => {
+    dbCtx = createTestDb();
+    storageCtx = await createTestStorage();
+    vi.mocked(getDb).mockReturnValue(dbCtx.db);
+    vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
+  });
+
+  afterEach(() => {
+    dbCtx.cleanup();
+    storageCtx.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("returns 400 when the route has no :id param", async () => {
+    const app = new Hono();
+    app.delete("/test", ownerMiddleware, (c) => c.json({ ok: true }));
+
+    const res = await app.request("/test", {
+      method: "DELETE",
+      headers: { "X-Owner-Token": fakeBase64urlToken() },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Missing upload ID");
+  });
+
+  it("returns 404 when the upload does not exist in the database", async () => {
+    // DB is empty
+    const app = new Hono();
+    app.route("/api/upload", createDeleteRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/upload/${TEST_UUID}`, {
+      method: "DELETE",
+      headers: { "X-Owner-Token": fakeBase64urlToken() },
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Upload not found");
+  });
+
+  it("returns 401 for an owner token containing non-base64url characters", async () => {
+    insertTestUpload(dbCtx.db);
+    const app = new Hono();
+    app.route("/api/upload", createDeleteRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/upload/${TEST_UUID}`, {
+      method: "DELETE",
+      headers: { "X-Owner-Token": "!!!invalid-base64url!!!" },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid owner token format");
+  });
+});
+
+// ── Download edge cases ───────────────────────────────────────────────────────
+
+describe("download route edge cases", () => {
+  let dbCtx: ReturnType<typeof createTestDb>;
+  let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
+
+  beforeEach(async () => {
+    dbCtx = createTestDb();
+    storageCtx = await createTestStorage();
+    vi.mocked(getDb).mockReturnValue(dbCtx.db);
+    vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
+  });
+
+  afterEach(() => {
+    dbCtx.cleanup();
+    storageCtx.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("returns 500 when the file does not exist in storage", async () => {
+    const authToken = fakeBase64urlToken();
+    insertTestUpload(dbCtx.db, { authToken });
+    // File deliberately not saved to storage
+
+    const app = new Hono();
+    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/download/${TEST_UUID}`, {
+      headers: { "X-Auth-Token": authToken },
+    });
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toContain("File not found on disk");
+  });
+
+  it("returns 410 when the atomic download increment is blocked by a race condition", async () => {
+    const authToken = fakeBase64urlToken();
+    const fileData = new Uint8Array([1, 2, 3]);
+    insertTestUpload(dbCtx.db, { authToken, size: fileData.length, maxDownloads: 1 });
+    await storageCtx.storage.save(TEST_UUID, new ReadableStream({
+      start(c) { c.enqueue(fileData); c.close(); },
+    }));
+
+    // Simulate race: the conditional UPDATE matches 0 rows
+    const updateSpy = vi.spyOn(dbCtx.db, "update").mockReturnValueOnce({
+      set: () => ({
+        where: () => ({
+          run: () => ({ changes: 0, lastInsertRowid: 0n }),
+        }),
+      }),
+    } as ReturnType<typeof dbCtx.db.update>);
+
+    const app = new Hono();
+    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/download/${TEST_UUID}`, {
+      headers: { "X-Auth-Token": authToken },
+    });
+
+    expect(res.status).toBe(410);
+    const body = await res.json();
+    expect(body.error).toContain("no longer available");
+    updateSpy.mockRestore();
+  });
+
+  it("returns a presigned URL JSON response when the storage backend supports it", async () => {
+    const authToken = fakeBase64urlToken();
+    insertTestUpload(dbCtx.db, { authToken, size: 100, fileCount: 2 });
+
+    const presignedUrl = "https://s3.example.com/bucket/file?sig=abc123";
+    const mockStorage: StorageBackend = {
+      init: async () => {},
+      save: async () => {},
+      exists: async () => true,
+      createReadStream: storageCtx.storage.createReadStream.bind(storageCtx.storage),
+      delete: async () => {},
+      supportsPresignedUrls: () => true,
+      getPresignedDownloadUrl: async () => presignedUrl,
+    };
+
+    // The DB update needs to succeed (changes=1) so the route proceeds to presign
+    const updateSpy = vi.spyOn(dbCtx.db, "update").mockReturnValueOnce({
+      set: () => ({
+        where: () => ({
+          run: () => ({ changes: 1, lastInsertRowid: 0n }),
+        }),
+      }),
+    } as ReturnType<typeof dbCtx.db.update>);
+
+    const app = new Hono();
+    app.route("/api/download", createDownloadRoute(mockStorage));
+
+    const res = await app.request(`/api/download/${TEST_UUID}`, {
+      headers: { "X-Auth-Token": authToken },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url).toBe(presignedUrl);
+    expect(body.size).toBe(100);
+    expect(body.fileCount).toBe(2);
+    updateSpy.mockRestore();
   });
 });

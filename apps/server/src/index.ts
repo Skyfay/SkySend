@@ -28,11 +28,19 @@ import { createDeleteRoute } from "./routes/delete.js";
 import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
 import { createNoteRoute } from "./routes/note.js";
+import { createAuthRoute } from "./routes/auth.js";
+
+// OIDC
+import { createOidcAdapter } from "./auth/index.js";
+import { createOidcGuard } from "./middleware/oidc-guard.js";
 
 // ── Initialize ─────────────────────────────────────────
 
 const config = loadConfig();
 initDatabase(config.DATA_DIR);
+
+// Initialize OIDC adapter if configured
+const oidcAdapter = config.OIDC_ENABLED ? createOidcAdapter(config) : null;
 
 // Log storage mode
 if (config.STORAGE_BACKEND === "s3") {
@@ -62,6 +70,14 @@ const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
 
 // Build CSP connect-src based on storage backend
 const connectSrc: string[] = ["'self'"];
+
+// Collect OIDC issuer origin for CSP form-action
+const oidcOrigins: string[] = [];
+if (config.OIDC_ENABLED && config.OIDC_ISSUER) {
+  try {
+    oidcOrigins.push(new URL(config.OIDC_ISSUER).origin);
+  } catch { /* invalid URL - already validated in config */ }
+}
 if (config.STORAGE_BACKEND === "s3") {
   if (config.S3_ENDPOINT) {
     // Presigned URL mode with custom S3 provider
@@ -110,7 +126,7 @@ app.use(
       frameSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'"],
+      formAction: ["'self'", ...oidcOrigins],
       frameAncestors: ["'none'"],
     },
     strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",
@@ -141,6 +157,7 @@ app.use(
       "X-Has-Password",
       "X-Password-Salt",
       "X-Password-Algo",
+      "Authorization",
     ],
     exposeHeaders: [
       "X-RateLimit-Limit",
@@ -220,6 +237,14 @@ api.get("/quota", (c) => {
 // Upload route with quota middleware
 const uploadRoute = createUploadRoute(storage);
 const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
+
+// OIDC guard: protect file upload init when configured
+if (config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter) {
+  const oidcGuard = createOidcGuard(config);
+  // Guard applies to POST /upload/init only (chunk + finalize need no re-check)
+  uploadWithQuota.use("/init", oidcGuard);
+}
+
 uploadWithQuota.use("*", quota.middleware);
 uploadWithQuota.use("*", async (c, next) => {
   // Inject quota recorder into context for all upload sub-routes
@@ -231,6 +256,11 @@ api.route("/upload", uploadWithQuota);
 
 // WebSocket upload transport (primary path when FILE_UPLOAD_WS=true)
 if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+  // OIDC guard: protect WebSocket upload when configured (same guard as HTTP init)
+  if (config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter) {
+    const oidcGuard = createOidcGuard(config);
+    api.use("/upload/ws", oidcGuard);
+  }
   const uploadWsRoute = createUploadWsRoute({
     storage,
     upgradeWebSocket,
@@ -249,9 +279,25 @@ api.use("/note/*", async (c: Context, next: Next) => {
   }
   return next();
 });
+
+// OIDC guard: protect note creation when configured
+if (config.OIDC_ENABLED && config.OIDC_PROTECT_NOTES && oidcAdapter) {
+  const oidcGuard = createOidcGuard(config);
+  api.use("/note", oidcGuard);
+}
+
 api.route("/note", noteRoute);
 
 app.route("/api", api);
+
+// ── Auth Routes (OIDC) ─────────────────────────────────
+// Mounted outside /api so the browser can follow redirects without CORS issues
+if (config.OIDC_ENABLED && oidcAdapter) {
+  const authRoute = createAuthRoute(config, oidcAdapter);
+  // Apply the same rate limiter as the API routes to prevent login flooding
+  app.use("/auth/*", rateLimiter);
+  app.route("/auth", authRoute);
+}
 
 // ── Static SPA Serving ─────────────────────────────────
 

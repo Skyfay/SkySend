@@ -201,6 +201,123 @@ environment:
 The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are valid. Omitting the `#` avoids quoting issues in `.env` files.
 :::
 
+## SSO / OIDC Authentication
+
+SkySend supports optional single sign-on via any OIDC-compliant provider. When enabled, file uploads and/or note creation require users to authenticate first. Downloads are always public - authentication only gates the upload action.
+
+All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-discovered** from the issuer URL. You never need to specify individual endpoint URLs manually.
+
+### What to register at your provider
+
+When you create a new application/client at your OIDC provider, you only need to configure **one redirect/callback URL**, regardless of whether users access SkySend via the web browser or the CLI client:
+
+```
+https://skysend.example.com/auth/callback
+```
+
+Replace `skysend.example.com` with your actual domain (the value of `BASE_URL`).
+
+**No additional URLs are needed for the CLI.** The CLI piggybacks on the same server callback - SkySend handles the provider redirect first and then forwards the session token to the CLI's temporary local listener. The provider never talks to the CLI directly.
+
+::: tip Grant type
+Register the application as a **confidential client** with the **authorization code** grant type and PKCE support. You need both a client ID and a client secret.
+:::
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `OIDC_PROVIDER` | ❌ | `generic` | Provider preset. One of `generic`, `pocketid`, `authentik`, `keycloak`. Controls which token claims are used for the display name. |
+| `OIDC_ISSUER` | ⚠️ | - | Issuer URL of your OIDC provider. Required to activate OIDC. All endpoints are discovered automatically from this URL. |
+| `OIDC_CLIENT_ID` | ⚠️ | - | Client ID of the application registered at your provider. |
+| `OIDC_CLIENT_SECRET` | ⚠️ | - | Client secret of the application registered at your provider. |
+| `OIDC_SESSION_SECRET` | ❌ | auto | Secret used to sign session JWT cookies. If not set, a random 48-byte secret is generated at startup - sessions will be invalidated on every server restart. Set this to a fixed value (minimum 32 characters, generate with `openssl rand -base64 48`) to persist sessions across restarts. |
+| `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files. Set to `false` to allow anonymous file uploads while OIDC is active. |
+| `OIDC_PROTECT_NOTES` | ❌ | `true` | Require login to create notes. Set to `false` to allow anonymous note creation while OIDC is active. |
+| `OIDC_REDIRECT_URI` | ❌ | `{BASE_URL}/auth/callback` | Override the OAuth2 redirect/callback URI. Only needed if SkySend is served under a sub-path or behind a proxy that changes the origin. |
+| `OIDC_SCOPES` | ❌ | `openid profile email` | Space-separated list of OIDC scopes to request. |
+| `OIDC_SESSION_DURATION` | ❌ | `86400` | Session cookie lifetime in seconds (default: 24 hours). |
+
+> ⚠️ The three variables marked ⚠️ (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`) must all be set together. Setting any one of them without the others will cause SkySend to refuse to start.
+
+::: tip Session secret and restarts
+If `OIDC_SESSION_SECRET` is not set, SkySend generates a cryptographically random secret at startup. This means every logged-in user will be signed out whenever the server restarts or the container is recreated. If you want sessions to survive restarts, set a fixed value:
+
+```sh
+# generate once, then paste the output into your environment
+openssl rand -base64 48
+```
+:::
+
+### Provider: Keycloak
+
+Set `OIDC_ISSUER` to the realm-specific issuer URL. You can find this in the Keycloak Admin Console under **Realm Settings** > **General** > **OpenID Endpoint Configuration** - the `issuer` field is the value to use.
+
+```yaml
+environment:
+  OIDC_PROVIDER: keycloak
+  OIDC_ISSUER: "https://keycloak.example.com/realms/myrealm"
+  OIDC_CLIENT_ID: "skysend"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+```
+
+In Keycloak, create a new client with:
+- **Client type**: OpenID Connect
+- **Valid redirect URIs**: `https://your-skysend-domain.com/auth/callback`
+- **Client authentication**: On (confidential client)
+
+### Provider: PocketID
+
+Set `OIDC_ISSUER` to the root URL of your PocketID instance. PocketID exposes the discovery document at `/.well-known/openid-configuration` on the root, so the issuer URL is simply the base URL.
+
+```yaml
+environment:
+  OIDC_PROVIDER: pocketid
+  OIDC_ISSUER: "https://auth.example.com"
+  OIDC_CLIENT_ID: "your-client-id"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+```
+
+In PocketID, the callback URL to register in the application settings is `https://your-skysend-domain.com/auth/callback`.
+
+### Provider: Authentik
+
+Set `OIDC_ISSUER` to the application-specific path, which includes the application slug. You can find this URL in the Authentik admin panel under **Applications** > your application > **Edit** > **OpenID Configuration Issuer**.
+
+```yaml
+environment:
+  OIDC_PROVIDER: authentik
+  OIDC_ISSUER: "https://auth.example.com/application/o/skysend/"
+  OIDC_CLIENT_ID: "your-client-id"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+```
+
+In Authentik, set the redirect URI in the OAuth2/OIDC provider to `https://your-skysend-domain.com/auth/callback`.
+
+### Provider: Generic
+
+Use `generic` for any other OIDC-compliant provider (Keycloak, Zitadel, Kanidm, Dex, etc.). Set `OIDC_ISSUER` to the issuer URL shown in your provider's OIDC configuration panel or discovery document. The value must match the `issuer` field returned by `/.well-known/openid-configuration`.
+
+```yaml
+environment:
+  OIDC_PROVIDER: generic
+  OIDC_ISSUER: "https://auth.example.com/realms/myrealm"
+  OIDC_CLIENT_ID: "your-client-id"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+```
+
+::: tip What is the Issuer URL?
+Open `{OIDC_ISSUER}/.well-known/openid-configuration` in a browser. If you get a JSON document with an `authorization_endpoint` field, the URL is correct. SkySend reads this document automatically at login time.
+:::
+
+::: info Partial protection
+You can allow anonymous access to one service type while requiring login for the other:
+
+```yaml
+# Require login for file uploads, but allow anonymous notes
+OIDC_PROTECT_FILES: "true"
+OIDC_PROTECT_NOTES: "false"
+```
+:::
+
 ## Docker
 
 | Variable | Required | Default | Description |
@@ -230,5 +347,8 @@ SkySend validates all environment variables on startup using Zod:
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL
 - `CUSTOM_LINK_NAME` must be at most 50 characters
+- When any OIDC variable is set, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` must all be present
+- If `OIDC_SESSION_SECRET` is set, it must be at least 32 characters
+- `OIDC_ISSUER` and `OIDC_REDIRECT_URI` must be valid URLs when set
 
 If any variable is invalid, the server will fail to start with a descriptive error message.

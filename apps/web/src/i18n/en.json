@@ -18,7 +18,8 @@
   },
   "nav": {
     "upload": "Upload",
-    "myUploads": "My Uploads"
+    "myUploads": "My Uploads",
+    "menu": "Menu"
   },
   "tab": {
     "file": "File",
@@ -64,6 +65,7 @@
     "downloads": "Max downloads",
     "password": "Password protection",
     "passwordPlaceholder": "Enter password (optional)",
+    "passwordPlaceholderRequired": "Enter password (required)",
     "passwordRequired": "required by server",
     "uploading": "Encrypting & uploading...",
     "encryptingProgress": "Encrypting...",
@@ -215,5 +217,13 @@
     "privateKey": "Private Key",
     "shareAs": "Share as encrypted note",
     "createNote": "Share as note"
+  },
+  "auth": {
+    "loginRequired": "Login required to upload",
+    "loginButton": "Login with SSO",
+    "logout": "Logout"
+  },
+  "language": {
+    "search": "Search language..."
   }
 }

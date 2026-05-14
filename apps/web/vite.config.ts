@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     coverage: {
-      include: ["src/lib/**/*.ts"],
+      include: ["src/lib/**/*.ts", "src/hooks/**/*.ts"],
       exclude: [
         // Browser OPFS / Worker context - not unit-testable in Node
         "src/lib/opfs-download.ts",
@@ -43,9 +43,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
         changeOrigin: true,
         ws: true,
+      },
+      "/auth": {
+        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
+        changeOrigin: true,
       },
     },
   },

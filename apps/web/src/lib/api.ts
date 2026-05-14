@@ -35,6 +35,10 @@ const configResponseSchema = z.object({
   defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
+  // OIDC auth
+  oidcEnabled: z.boolean().optional().default(false),
+  oidcProtectFiles: z.boolean().optional().default(false),
+  oidcProtectNotes: z.boolean().optional().default(false),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;
@@ -361,5 +365,38 @@ export async function deleteNote(
       res.status,
       (data as { error?: string }).error ?? "Delete failed",
     );
+  }
+}
+
+// ── OIDC Auth API ─────────────────────────────────────
+
+export interface OidcUser {
+  sub: string;
+  name: string;
+  email: string;
+}
+
+/**
+ * Fetch the current OIDC session from the server.
+ * Returns the logged-in user or null when unauthenticated / OIDC is disabled.
+ */
+export async function fetchAuthSession(): Promise<OidcUser | null> {
+  try {
+    const res = await fetch("/auth/session");
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      typeof data.sub === "string" &&
+      typeof data.name === "string" &&
+      typeof data.email === "string"
+    ) {
+      return data as OidcUser;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { createRateLimiter, getClientIp } from "../src/middleware/rate-limit.js";
 import type { Config } from "../src/lib/config.js";
@@ -152,5 +152,33 @@ describe("getClientIp", () => {
     const app = createApp(true);
     const res = await app.request("/");
     expect(await res.text()).toBe("unknown");
+  });
+});
+
+describe("rate limiter cleanup interval", () => {
+  it("resets the window for an IP after the cleanup interval fires", async () => {
+    vi.useFakeTimers();
+    // RATE_LIMIT_WINDOW=1000 ms, cleanup fires every 2000 ms
+    const config = makeConfig({ RATE_LIMIT_MAX: 2, RATE_LIMIT_WINDOW: 1000, TRUST_PROXY: true });
+    const app = new Hono();
+    app.use("*", createRateLimiter(config));
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    // Exhaust the limit for 1.2.3.4
+    for (let i = 0; i < 2; i++) {
+      const res = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+      expect(res.status).toBe(200);
+    }
+    const blocked = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+    expect(blocked.status).toBe(429);
+
+    // Advance past the cleanup interval (RATE_LIMIT_WINDOW * 2 = 2000 ms)
+    vi.advanceTimersByTime(2001);
+
+    // Cleanup removed the stale entry - next request creates a fresh window
+    const fresh = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+    expect(fresh.status).toBe(200);
+
+    vi.useRealTimers();
   });
 });

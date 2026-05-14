@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Last opp",
-    "myUploads": "Mine opplastinger"
+    "myUploads": "Mine opplastinger",
+    "menu": "Meny"
   },
   "tab": {
     "file": "Fil",
@@ -69,6 +70,7 @@
     "downloads": "Maks nedlastinger",
     "password": "Passordbeskyttelse",
     "passwordPlaceholder": "Skriv inn passord (valgfritt)",
+    "passwordPlaceholderRequired": "Skriv inn passord (påkrevd)",
     "passwordRequired": "påkrevd av serveren",
     "uploading": "Krypterer og laster opp...",
     "encryptingProgress": "Krypterer...",
@@ -193,13 +195,15 @@
     "length": "Lengde",
     "generate": "Generer",
     "bits": "bits med entropi"
-  },  "password": {
+  },
+  "password": {
     "passwords": "Passord",
     "enterPassword": "Skriv inn passord...",
     "addAnother": "Legg til et nytt passord",
     "passwordNumber": "Passord {{number}}",
     "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)"
-  },  "sshKey": {
+  },
+  "sshKey": {
     "algorithm": "Algoritme",
     "comment": "Kommentar",
     "commentPlaceholder": "user@hostname (valgfritt)",
@@ -218,5 +222,13 @@
     "privateKey": "Privat nøkkel",
     "shareAs": "Del som kryptert notat",
     "createNote": "Del som notat"
+  },
+  "auth": {
+    "loginRequired": "Pålogging kreves for å laste opp",
+    "loginButton": "Logg inn med SSO",
+    "logout": "Logg ut"
+  },
+  "language": {
+    "search": "Søk etter språk..."
   }
 }

@@ -138,7 +138,8 @@ export default defineConfig({
             { text: 'Download', link: '/developer-guide/api/download' },
             { text: 'Metadata & Info', link: '/developer-guide/api/metadata' },
             { text: 'Password Verification', link: '/developer-guide/api/password' },
-            { text: 'Management', link: '/developer-guide/api/management' }
+            { text: 'Management', link: '/developer-guide/api/management' },
+            { text: 'OIDC Authentication', link: '/developer-guide/api/oidc' }
           ]
         },
         {

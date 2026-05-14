@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Lähetä",
-    "myUploads": "Omat lähetykset"
+    "myUploads": "Omat lähetykset",
+    "menu": "Valikko"
   },
   "tab": {
     "file": "Tiedosto",
@@ -69,6 +70,7 @@
     "downloads": "Latauskerrat",
     "password": "Salasanasuojaus",
     "passwordPlaceholder": "Syötä salasana (valinnainen)",
+    "passwordPlaceholderRequired": "Syötä salasana (pakollinen)",
     "passwordRequired": "palvelimen vaatima",
     "uploading": "Salataan ja lähetetään...",
     "encryptingProgress": "Salataan...",
@@ -220,5 +222,13 @@
     "privateKey": "Yksityinen avain",
     "shareAs": "Jaa salattuna muistiinpanona",
     "createNote": "Jaa muistiinpanona"
+  },
+  "auth": {
+    "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
+    "loginButton": "Kirjaudu SSO:lla",
+    "logout": "Kirjaudu ulos"
+  },
+  "language": {
+    "search": "Hae kieltä..."
   }
 }

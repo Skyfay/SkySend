@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Subir",
-    "myUploads": "Mis subidas"
+    "myUploads": "Mis subidas",
+    "menu": "Menú"
   },
   "tab": {
     "file": "Archivo",
@@ -69,6 +70,7 @@
     "downloads": "Máximo de descargas",
     "password": "Protección con contraseña",
     "passwordPlaceholder": "Introduzca contraseña (opcional)",
+    "passwordPlaceholderRequired": "Introduzca contraseña (obligatoria)",
     "passwordRequired": "requerido por el servidor",
     "uploading": "Cifrando y subiendo...",
     "encryptingProgress": "Cifrando...",
@@ -220,5 +222,13 @@
     "privateKey": "Clave privada",
     "shareAs": "Compartir como nota cifrada",
     "createNote": "Compartir como nota"
+  },
+  "auth": {
+    "loginRequired": "Se requiere iniciar sesión para subir",
+    "loginButton": "Iniciar sesión con SSO",
+    "logout": "Cerrar sesión"
+  },
+  "language": {
+    "search": "Buscar idioma..."
   }
 }

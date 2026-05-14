@@ -37,6 +37,19 @@ http://localhost:3000/api
 | `POST` | `/api/note/:id/password` | Verify note password | - |
 | `DELETE` | `/api/note/:id` | Delete note | Owner Token |
 
+### OIDC Auth Endpoints
+
+These routes are only active when `OIDC_ENABLED=true`. They live outside the `/api` prefix.
+
+| Method | Path | Description | Auth |
+| --- | --- | --- | --- |
+| `GET` | `/auth/login` | Start PKCE login, redirect to provider | - |
+| `GET` | `/auth/callback` | Handle provider callback, issue session | - |
+| `GET` | `/auth/logout` | Clear session, redirect to provider end-session | Session cookie |
+| `GET` | `/auth/session` | Return current user info | Session cookie / Bearer |
+
+See [OIDC Authentication](/developer-guide/api/oidc) for the full flow and access-control details.
+
 ## Authentication
 
 SkySend uses two token types, both derived from the client-side secret:

@@ -10,7 +10,7 @@ const themes = [
   { value: "dark", icon: Moon },
 ] as const;
 
-export function ThemeToggle() {
+export function ThemeToggle({ mobile }: { mobile?: boolean }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
 
@@ -20,22 +20,35 @@ export function ThemeToggle() {
   const label = (value: string) =>
     value === "system" ? "Auto" : t(`theme.${value}`);
 
+  const trigger = mobile ? (
+    <button
+      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
+      aria-label={label(theme)}
+    >
+      <CurrentIcon className="h-4 w-4" />
+      <span className="flex-1 text-left">{label(theme)}</span>
+      <ChevronDown className="h-3.5 w-3.5 opacity-50 mr-1" />
+    </button>
+  ) : (
+    <button
+      className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
+      aria-label={label(theme)}
+    >
+      <CurrentIcon className="h-4 w-4" />
+      <span className="hidden sm:inline">{label(theme)}</span>
+      <ChevronDown className="h-3 w-3 opacity-50" />
+    </button>
+  );
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-          aria-label={label(theme)}
-        >
-          <CurrentIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">{label(theme)}</span>
-          <ChevronDown className="h-3 w-3 opacity-50" />
-        </button>
+        {trigger}
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-[140px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-50 min-w-35 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           sideOffset={5}
           align="end"
         >

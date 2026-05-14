@@ -18,7 +18,8 @@
   },
   "nav": {
     "upload": "Hochladen",
-    "myUploads": "Meine Uploads"
+    "myUploads": "Meine Uploads",
+    "menu": "Menü"
   },
   "tab": {
     "file": "Datei",
@@ -64,6 +65,7 @@
     "downloads": "Max. Downloads",
     "password": "Passwortschutz",
     "passwordPlaceholder": "Passwort eingeben (optional)",
+    "passwordPlaceholderRequired": "Passwort eingeben (erforderlich)",
     "passwordRequired": "vom Server vorgeschrieben",
     "uploading": "Verschlüsseln & Hochladen...",
     "encryptingProgress": "Verschlüsseln...",
@@ -215,5 +217,13 @@
     "privateKey": "Privater Schlüssel",
     "shareAs": "Als verschlüsselte Notiz teilen",
     "createNote": "Als Notiz teilen"
+  },
+  "auth": {
+    "loginRequired": "Anmeldung erforderlich zum Hochladen",
+    "loginButton": "Mit SSO anmelden",
+    "logout": "Abmelden"
+  },
+  "language": {
+    "search": "Sprache suchen..."
   }
 }

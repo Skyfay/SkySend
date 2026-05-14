@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Prześlij",
-    "myUploads": "Moje przesyłki"
+    "myUploads": "Moje przesyłki",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Plik",
@@ -69,6 +70,7 @@
     "downloads": "Maks. pobrań",
     "password": "Ochrona hasłem",
     "passwordPlaceholder": "Wprowadź hasło (opcjonalnie)",
+    "passwordPlaceholderRequired": "Wprowadź hasło (wymagane)",
     "passwordRequired": "wymagane przez serwer",
     "uploading": "Szyfrowanie i przesyłanie...",
     "encryptingProgress": "Szyfrowanie...",
@@ -220,5 +222,13 @@
     "privateKey": "Klucz prywatny",
     "shareAs": "Udostępnij jako zaszyfrowaną notatkę",
     "createNote": "Udostępnij jako notatkę"
+  },
+  "auth": {
+    "loginRequired": "Wymagane logowanie do przesyłania",
+    "loginButton": "Zaloguj przez SSO",
+    "logout": "Wyloguj"
+  },
+  "language": {
+    "search": "Wyszukaj język..."
   }
 }

@@ -2,7 +2,12 @@
   "__meta": {
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGeneratedKeys": [
-      "*"
+      "auth.loginRequired",
+      "auth.loginButton",
+      "auth.logout",
+      "nav.menu",
+      "upload.passwordPlaceholderRequired",
+      "language.search"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -25,7 +30,8 @@
   },
   "nav": {
     "upload": "アップロード",
-    "myUploads": "アップロード履歴"
+    "myUploads": "アップロード履歴",
+    "menu": "メニュー"
   },
   "tab": {
     "file": "ファイル",
@@ -71,6 +77,7 @@
     "downloads": "最大ダウンロード数",
     "password": "パスワード保護",
     "passwordPlaceholder": "パスワードを入力（任意）",
+    "passwordPlaceholderRequired": "パスワードを入力（必須）",
     "passwordRequired": "サーバーによる必須設定",
     "uploading": "暗号化・アップロード中...",
     "encryptingProgress": "暗号化中...",
@@ -222,5 +229,13 @@
     "privateKey": "秘密鍵",
     "shareAs": "暗号化メモとして共有",
     "createNote": "メモとして共有"
+  },
+  "auth": {
+    "loginRequired": "アップロードにはログインが必要です",
+    "loginButton": "SSOでログイン",
+    "logout": "ログアウト"
+  },
+  "language": {
+    "search": "言語を検索..."
   }
 }

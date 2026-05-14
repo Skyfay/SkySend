@@ -2,6 +2,50 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.8.0 - OIDC/SSO Authentication, General Improvements, Security & Dependency Patches
+*Released: May 14, 2026*
+
+### ✨ Features
+
+- **server**: Added optional OIDC/SSO authentication via a plugin adapter system. Supports Generic, PocketID, Authentik, and Keycloak providers via the `OIDC_PROVIDER` env var. File uploads and note creation can each be independently protected using `OIDC_PROTECT_FILES` and `OIDC_PROTECT_NOTES`. Both HTTP and WebSocket upload transports are guarded. Sessions are stateless JWT cookies - no database changes required.
+- **web**: Added inline auth blocks on the upload page when OIDC is enabled and the user is not logged in. A user indicator with logout button is shown in the navigation header when authenticated.
+- **client**: Added OIDC authentication support for the CLI. When a server has `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` enabled, the CLI automatically opens a browser for login before uploading or creating notes. Session tokens are stored per-server in `~/.config/skysend/tokens.json` and reused until they expire. New `auth` subcommands (`login`, `logout`, `status`) allow explicit session management.
+
+### 🔒 Security
+
+- **infra**: Added pnpm overrides for `@esbuild-kit/core-utils>esbuild` (`>=0.25.0`) and `vitepress>vite` (`~6.4.2`) to address GHSA-67mh-4wv8-2f99 (esbuild dev server CORS bypass) and GHSA-4w7w-66w2-5vf9 (Vite path traversal in optimized deps `.map` handling).
+- **infra**: Updated all dependencies to latest versions - `vite` 8.0.13, `tailwindcss` + `@tailwindcss/vite` 4.3.0, `better-sqlite3` 12.10.0, `@aws-sdk/*` 3.1046.0, `i18next` 26.1.0, `lucide-react` 1.16.0, `tailwind-merge` 3.6.0, `vitest` + `@vitest/coverage-v8` 4.1.6, `tsx` 4.22.0, and others.
+
+### 🎨 Improvements
+
+- **web**: The password input placeholder no longer says "(optional)" when `FORCE_FILE_PASSWORD` or `FORCE_NOTE_PASSWORD` is enabled - it now correctly says "(required)".
+- **web**: The navigation header title now truncates with an ellipsis when a custom title is very long, preventing layout overflow on all screen sizes.
+- **web**: Added a hamburger menu for mobile screens. All navigation links, the language switcher, theme toggle, and OIDC login/logout are now accessible in a collapsible dropdown on small viewports.
+- **web**: The language selector dropdown now has a fixed max height with a scrollable list (using shadcn ScrollArea) and a search input at the top, so all languages are accessible on small screens without getting cut off.
+- **web**: The logout button tooltip in the navigation header now uses the shadcn Tooltip component instead of a native browser `title` attribute.
+
+### 🧪 Tests
+
+- **server**: Added unit tests for the OIDC auth layer, all four provider adapters, the guard middleware, and auth routes, plus expanded coverage across multiple server modules - overall line coverage improved from 84.44% to 90%.
+- **client**: Added unit tests for the OIDC login flow and progress/password prompt utilities, bringing both modules to near-100% coverage.
+- **web**: Added unit tests for the auth hook, session API, and all remaining hooks that previously had 0% coverage.
+- **server**: Increased patch coverage for OIDC-related modules - added tests for `verifySessionJwt`/`verifyPkceJwt` returning null on malformed payloads, the `String(err)` branch in the discovery warm-up handler, and empty-claims fallback paths in all four provider adapters, bringing `auth/session.ts`, `routes/auth.ts`, and all `auth/adapters/*.ts` to 100% branch coverage.
+- **client**: Added tests for the `getFreePort` error path and the `performOidcLogin` catch block, bringing `lib/oidc.ts` to 100% line coverage.
+
+### 📝 Documentation
+
+- **docs**: Added OIDC Authentication page to the Developer Guide API Reference, covering the full PKCE login flow, auth/callback/logout/session endpoints, the OIDC guard middleware, protected vs. always-public endpoints, provider adapters, session JWT format, and the CLI device-browser login flow.
+- **docs**: Added OIDC/SSO to the features list on the landing page.
+- **docs**: Extended the API Overview with the `/auth/*` endpoint table and a link to the new OIDC page.
+- **docs**: Added `auth login`, `auth logout`, and `auth status` to the client CLI command reference, including the OIDC login flow explanation and token storage details.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.8.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.7.1 - Two New Languages & Markdown Rendering Fixes
 *Released: May 13, 2026*
 

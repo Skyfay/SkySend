@@ -4,6 +4,7 @@ import { Toaster } from "@/components/Toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ServerConfigProvider } from "@/hooks/useServerConfig";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { UploadPage } from "@/pages/Upload";
 import { DownloadPage } from "@/pages/Download";
 import { NoteViewPage } from "@/pages/NoteView";
@@ -24,6 +25,7 @@ export function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
+        <TooltipProvider delayDuration={0}>
         <ServerConfigProvider>
           <BrowserRouter>
             <Routes>
@@ -39,6 +41,7 @@ export function App() {
           </BrowserRouter>
           <Toaster />
         </ServerConfigProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

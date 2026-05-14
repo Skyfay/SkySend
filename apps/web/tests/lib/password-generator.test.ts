@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { generatePassword, calculateEntropy } from "../../src/lib/password-generator.js";
 
 // Character set definitions (must match the implementation)
@@ -52,6 +52,29 @@ describe("generatePassword", () => {
     const pw = generatePassword({ length: 100, uppercase: true, lowercase: false, numbers: true, symbols: false });
     const allowed = UPPERCASE + NUMBERS;
     expect([...pw].every((c) => allowed.includes(c))).toBe(true);
+  });
+
+  it("Rejection-Sampling: Werte \u2265 limit werden \u00fcbersprungen, Passwort hat trotzdem korrekte L\u00e4nge", () => {
+    const originalGetRandomValues = crypto.getRandomValues.bind(crypto);
+    let callCount = 0;
+
+    // First call: return a value >= limit so it gets rejected, then delegate to real implementation
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+      if (array instanceof Uint32Array && callCount === 0) {
+        callCount++;
+        // Fill every slot with 0xFFFFFFFF which is always >= limit (limit <= 0xFFFFFFFF)
+        array.fill(0xffffffff);
+        return array;
+      }
+      return originalGetRandomValues(array);
+    });
+
+    const pw = generatePassword({ length: 8, uppercase: true, lowercase: false, numbers: false, symbols: false });
+
+    expect(pw).toHaveLength(8);
+    expect([...pw].every((c) => UPPERCASE.includes(c))).toBe(true);
+
+    vi.restoreAllMocks();
   });
 
   it("produces different passwords on successive calls (randomness sanity check)", () => {

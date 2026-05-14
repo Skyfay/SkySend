@@ -394,6 +394,105 @@ Alternatively, re-run the install script.
 
 ---
 
+## auth
+
+Manage OIDC authentication sessions for a server. When a server has OIDC enabled and requires authentication for file uploads or note creation, the CLI opens a browser automatically. Use the `auth` commands to manage sessions explicitly.
+
+### auth login
+
+```bash
+skysend auth login [options]
+```
+
+Starts a browser-based OIDC login for the configured server. A temporary local server is started to receive the callback, and your default browser is opened automatically. After completing the login, the session token is saved to `~/.config/skysend/tokens.json` and reused for future commands until it expires.
+
+#### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Server URL (overrides config) |
+
+#### Example
+
+```bash
+skysend auth login
+skysend auth login --server https://send.company.com
+```
+
+---
+
+### auth logout
+
+```bash
+skysend auth logout [options]
+```
+
+Removes the stored session token for a server. The next upload or note command will require a fresh login.
+
+#### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Server URL (overrides config) |
+
+#### Example
+
+```bash
+skysend auth logout
+skysend auth logout --server https://send.company.com
+```
+
+---
+
+### auth status
+
+```bash
+skysend auth status [options]
+```
+
+Shows the current session status for a server - the authenticated user's name, email, and when the session expires.
+
+#### Options
+
+| Option | Description |
+| --- | --- |
+| `-s, --server <url>` | Server URL (overrides config) |
+
+#### Example
+
+```bash
+skysend auth status
+```
+
+Output:
+
+```
+Server:  https://send.company.com
+User:    Jane Doe <jane@company.com>
+Expires: 5/15/2026, 10:30:00 AM
+Status:  active
+```
+
+---
+
+### How OIDC auth works
+
+When you run `skysend upload` or `skysend note` on an OIDC-protected server:
+
+1. The CLI fetches the server config and detects that OIDC is required
+2. It checks `~/.config/skysend/tokens.json` for a valid, non-expired token
+3. If none exists, it starts a local callback server, opens your browser, and waits
+4. You complete login in the browser - the server redirects back to the local server with the session token
+5. The token is saved and the upload/note creation continues automatically
+
+In the **interactive TUI mode**, a "Waiting for browser login..." screen is shown during this step.
+
+::: tip Token Storage
+Session tokens are stored per-server in `~/.config/skysend/tokens.json` with `600` file permissions (owner read/write only). Tokens are JWT session tokens issued by the SkySend server - they are not your OIDC provider credentials.
+:::
+
+---
+
 ## interactive (default)
 
 Launch an interactive menu-driven mode. Fetches the server configuration and displays available options, limits, and quota information.

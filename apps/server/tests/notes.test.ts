@@ -310,6 +310,19 @@ describe("note routes", () => {
       });
       expect(res.status).toBe(413);
     });
+
+    it("should return 400 for salt with invalid base64url characters", async () => {
+      const app = createApp();
+      // "!!!" contains characters outside the base64url alphabet, causing fromBase64url to throw
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ salt: "!!!invalid-salt-characters!!!" })),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid salt encoding");
+    });
   });
 
   // ── GET /api/note/:id (info) ────────────────────────
@@ -618,6 +631,34 @@ describe("note routes", () => {
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toContain("Invalid JSON");
+    });
+
+    it("should return 410 when the atomic view increment is blocked by a race condition", async () => {
+      const app = createApp();
+      const authToken = fakeBase64urlToken();
+      // Note is available per the initial SELECT (viewCount=4 < maxViews=5)
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken, maxViews: 5, viewCount: 4 });
+
+      // Simulate race: another request incremented viewCount to maxViews between our SELECT and UPDATE.
+      // The conditional UPDATE therefore matches 0 rows.
+      const updateSpy = vi.spyOn(dbCtx.db, "update").mockReturnValueOnce({
+        set: () => ({
+          where: () => ({
+            run: () => ({ changes: 0, lastInsertRowid: 0n }),
+          }),
+        }),
+      } as ReturnType<typeof dbCtx.db.update>);
+
+      const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken }),
+      });
+
+      expect(res.status).toBe(410);
+      const body = await res.json();
+      expect(body.error).toBe("View limit reached");
+      updateSpy.mockRestore();
     });
   });
 

@@ -2,6 +2,14 @@
   "__meta": {
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGenerated": false,
+    "aiGeneratedKeys": [
+      "auth.loginRequired",
+      "auth.loginButton",
+      "auth.logout",
+      "nav.menu",
+      "upload.passwordPlaceholderRequired",
+      "language.search"
+    ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
   "common": {
@@ -23,7 +31,8 @@
   },
   "nav": {
     "upload": "Enviar",
-    "myUploads": "Meus Envios"
+    "myUploads": "Meus Envios",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Arquivo",
@@ -47,7 +56,8 @@
     "preview": "Pré-visualizar",
     "previewEmpty": "Nada para pré-visualizar ainda...",
     "expand": "Expandir editor",
-    "placeholder": {      "text": "Digite seu texto secreto...",
+    "placeholder": {
+      "text": "Digite seu texto secreto...",
       "password": "Digite a senha para compartilhar...",
       "code": "Cole seu código aqui...",
       "markdown": "Escreva seu Markdown aqui..."
@@ -68,6 +78,7 @@
     "downloads": "Máximo de downloads",
     "password": "Proteção com senha",
     "passwordPlaceholder": "Digite a senha (opcional)",
+    "passwordPlaceholderRequired": "Digite a senha (obrigatória)",
     "passwordRequired": "obrigatório pelo servidor",
     "uploading": "Criptografando e enviando...",
     "encryptingProgress": "Criptografando...",
@@ -96,7 +107,8 @@
     "passwordRequired": "Este arquivo está protegido por senha",
     "passwordPlaceholder": "Digite a senha",
     "unlock": "Desbloquear",
-    "wrongPassword": "Senha incorreta",    "tooManyAttempts": "Muitas tentativas falhas. Aguarde alguns minutos e tente novamente.",
+    "wrongPassword": "Senha incorreta",
+    "tooManyAttempts": "Muitas tentativas falhas. Aguarde alguns minutos e tente novamente.",
     "download": "Baixar",
     "downloading": "Descriptografando e baixando...",
     "decrypting": "Descriptografando...",
@@ -145,7 +157,8 @@
     "expiresIn": "Expira em {{time}}",
     "burnWarning": "Esta nota será excluída permanentemente após a visualização.",
     "viewNote": "Ver nota",
-    "viewCount": "Visualização {{current}} de {{max}}",    "viewCountUnlimited": "Visualização {{current}} (ilimitado)",
+    "viewCount": "Visualização {{current}} de {{max}}",
+    "viewCountUnlimited": "Visualização {{current}} (ilimitado)",
     "destroyed": "Esta nota foi excluída permanentemente. Salve o conteúdo agora — não será possível acessá-lo novamente.",
     "reveal": "Mostrar",
     "hide": "Ocultar",
@@ -194,7 +207,8 @@
   "password": {
     "passwords": "Senhas",
     "enterPassword": "Digite a senha...",
-    "addAnother": "Adicionar outra senha",    "passwordNumber": "Senha {{number}}",
+    "addAnother": "Adicionar outra senha",
+    "passwordNumber": "Senha {{number}}",
     "labelPlaceholder": "Rótulo para senha {{number}} (opcional)"
   },
   "sshKey": {
@@ -216,5 +230,13 @@
     "privateKey": "Chave Privada",
     "shareAs": "Compartilhar como nota criptografada",
     "createNote": "Compartilhar como nota"
+  },
+  "auth": {
+    "loginRequired": "Login necessário para enviar",
+    "loginButton": "Entrar com SSO",
+    "logout": "Sair"
+  },
+  "language": {
+    "search": "Buscar idioma..."
   }
 }

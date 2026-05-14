@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Uploaden",
-    "myUploads": "Mijn uploads"
+    "myUploads": "Mijn uploads",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Bestand",
@@ -69,6 +70,7 @@
     "downloads": "Max downloads",
     "password": "Wachtwoordbeveiliging",
     "passwordPlaceholder": "Voer wachtwoord in (optioneel)",
+    "passwordPlaceholderRequired": "Voer wachtwoord in (verplicht)",
     "passwordRequired": "vereist door de server",
     "uploading": "Versleutelen en uploaden...",
     "encryptingProgress": "Versleutelen...",
@@ -220,5 +222,13 @@
     "privateKey": "Privésleutel",
     "shareAs": "Delen als versleutelde notitie",
     "createNote": "Delen als notitie"
+  },
+  "auth": {
+    "loginRequired": "Inloggen vereist om te uploaden",
+    "loginButton": "Inloggen met SSO",
+    "logout": "Uitloggen"
+  },
+  "language": {
+    "search": "Taal zoeken..."
   }
 }
