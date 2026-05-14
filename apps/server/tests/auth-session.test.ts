@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { SignJWT } from "jose";
 import {
   createSessionJwt,
   verifySessionJwt,
@@ -18,6 +19,22 @@ const TEST_USER: OidcUser = {
   name: "Ada Lovelace",
   email: "ada@example.com",
 };
+
+/** Sign a custom payload with the shared test secret (HS256, 1 h). */
+async function signCustomJwt(payload: Record<string, unknown>): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(key);
+}
 
 // ── createSessionJwt / verifySessionJwt ───────────────────────────────────────
 
@@ -46,6 +63,18 @@ describe("createSessionJwt + verifySessionJwt", () => {
 
   it("returns null for a completely invalid string", async () => {
     const result = await verifySessionJwt("not.a.jwt", SECRET);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the JWT payload has wrong field types (e.g. sub is a number)", async () => {
+    const token = await signCustomJwt({ sub: 42, name: "Ada Lovelace", email: "ada@example.com" });
+    const result = await verifySessionJwt(token, SECRET);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the JWT payload is missing required fields entirely", async () => {
+    const token = await signCustomJwt({ role: "admin" });
+    const result = await verifySessionJwt(token, SECRET);
     expect(result).toBeNull();
   });
 
@@ -109,6 +138,18 @@ describe("createPkceJwt + verifyPkceJwt", () => {
 
   it("returns null for invalid string", async () => {
     const result = await verifyPkceJwt("garbage", SECRET);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the PKCE JWT payload is missing required fields", async () => {
+    const token = await signCustomJwt({ someOtherClaim: "value" });
+    const result = await verifyPkceJwt(token, SECRET);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when PKCE JWT payload has wrong field types (e.g. state is a number)", async () => {
+    const token = await signCustomJwt({ state: 42, nonce: "n", codeVerifier: "v" });
+    const result = await verifyPkceJwt(token, SECRET);
     expect(result).toBeNull();
   });
 });

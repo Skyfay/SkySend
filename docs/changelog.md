@@ -29,6 +29,8 @@ All notable changes to SkySend are documented here.
 - **server**: Added unit tests for the OIDC auth layer, all four provider adapters, the guard middleware, and auth routes, plus expanded coverage across multiple server modules - overall line coverage improved from 84.44% to 90%.
 - **client**: Added unit tests for the OIDC login flow and progress/password prompt utilities, bringing both modules to near-100% coverage.
 - **web**: Added unit tests for the auth hook, session API, and all remaining hooks that previously had 0% coverage.
+- **server**: Increased patch coverage for OIDC-related modules - added tests for `verifySessionJwt`/`verifyPkceJwt` returning null on malformed payloads, the `String(err)` branch in the discovery warm-up handler, and empty-claims fallback paths in all four provider adapters, bringing `auth/session.ts`, `routes/auth.ts`, and all `auth/adapters/*.ts` to 100% branch coverage.
+- **client**: Added tests for the `getFreePort` error path and the `performOidcLogin` catch block, bringing `lib/oidc.ts` to 100% line coverage.
 
 ### 📝 Documentation
 

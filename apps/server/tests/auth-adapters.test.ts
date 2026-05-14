@@ -39,6 +39,11 @@ describe("genericAdapter", () => {
     const user = genericAdapter.extractUser({ sub: "stable-id", name: "X", email: "" });
     expect(user.sub).toBe("stable-id");
   });
+
+  it("extractUser: all claims missing returns empty strings", () => {
+    const user = genericAdapter.extractUser({});
+    expect(user).toEqual({ sub: "", name: "", email: "" });
+  });
 });
 
 // ── PocketID adapter ──────────────────────────────────────────────────────────
@@ -71,6 +76,11 @@ describe("pocketIdAdapter", () => {
   it("extractUser: email defaults to empty string when absent", () => {
     const user = pocketIdAdapter.extractUser({ sub: "u2", preferred_username: "ada_lv" });
     expect(user.email).toBe("");
+  });
+
+  it("extractUser: all claims missing returns empty strings", () => {
+    const user = pocketIdAdapter.extractUser({});
+    expect(user).toEqual({ sub: "", name: "", email: "" });
   });
 });
 
@@ -105,6 +115,11 @@ describe("authentikAdapter", () => {
     const user = authentikAdapter.extractUser({ sub: "u3", name: "Alan" });
     expect(user.email).toBe("");
   });
+
+  it("extractUser: all claims missing returns empty strings", () => {
+    const user = authentikAdapter.extractUser({});
+    expect(user).toEqual({ sub: "", name: "", email: "" });
+  });
 });
 
 // ── Keycloak adapter ──────────────────────────────────────────────────────────
@@ -137,5 +152,10 @@ describe("keycloakAdapter", () => {
   it("extractUser: email defaults to empty string when absent", () => {
     const user = keycloakAdapter.extractUser({ sub: "u4", preferred_username: "linus_t" });
     expect(user.email).toBe("");
+  });
+
+  it("extractUser: all claims missing returns empty strings", () => {
+    const user = keycloakAdapter.extractUser({});
+    expect(user).toEqual({ sub: "", name: "", email: "" });
   });
 });

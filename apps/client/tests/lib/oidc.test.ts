@@ -219,6 +219,27 @@ describe("startLocalCallbackServer", () => {
     await fetch(`http://127.0.0.1:${srv.port}/callback`);
     await rejectionPromise;
   });
+
+  it("rejects when getFreePort cannot determine the port (address() returns null)", async () => {
+    // Mock node:net so that the temporary server's address() returns null,
+    // triggering the error branch inside getFreePort.
+    const mockNetServer = {
+      listen: vi.fn().mockImplementation(
+        (_port: number, _host: string, cb: () => void) => { cb(); return mockNetServer; },
+      ),
+      address: vi.fn().mockReturnValue(null),
+      close: vi.fn(),
+      on: vi.fn(),
+    };
+    vi.doMock("node:net", () => ({ createServer: vi.fn().mockReturnValue(mockNetServer) }));
+    vi.resetModules();
+
+    const { startLocalCallbackServer } = await import("../../src/lib/oidc.js");
+    await expect(startLocalCallbackServer()).rejects.toThrow("Could not determine free port");
+
+    // Restore node:net to the real implementation so subsequent tests are unaffected.
+    vi.doMock("node:net", async () => vi.importActual("node:net"));
+  });
 });
 
 // ── performOidcLogin ──────────────────────────────────────────────────────────
@@ -283,6 +304,33 @@ describe("performOidcLogin", () => {
     const port = parseInt(cbMatch![1]!);
     await fetch(`http://127.0.0.1:${port}/callback?token=cleanup.token`);
     await loginPromise;
+  });
+
+  it("rejects and closes the callback server when the OIDC callback contains no token", async () => {
+    vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+
+    let capturedUrl = "";
+    const spawnMock = vi.fn().mockImplementation((_cmd: string, args: string[]) => {
+      capturedUrl = args[0] ?? "";
+      return { unref: vi.fn() };
+    });
+    vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
+    vi.resetModules();
+
+    const { performOidcLogin } = await import("../../src/lib/oidc.js");
+    const loginPromise = performOidcLogin("http://localhost:3000");
+
+    await vi.waitFor(() => {
+      if (!capturedUrl) throw new Error("browser not opened yet");
+    }, { timeout: 2000 });
+
+    // Attach the rejection handler BEFORE sending the request, so the promise
+    // has a handler before it rejects (same pattern as "rejects waitForToken" above).
+    const cbMatch = /cli_callback=http%3A%2F%2F127\.0\.0\.1%3A(\d+)/.exec(capturedUrl);
+    const port = parseInt(cbMatch![1]!);
+    const rejectionPromise = expect(loginPromise).rejects.toThrow("no token");
+    await fetch(`http://127.0.0.1:${port}/callback`);
+    await rejectionPromise;
   });
 });
 

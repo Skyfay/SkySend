@@ -180,6 +180,24 @@ describe("GET /auth/login", () => {
     const body = await res.json();
     expect(body.error).toContain("unreachable");
   });
+
+  it("logs a non-Error startup failure using String(err) (covers the non-Error branch)", async () => {
+    const { discovery } = await import("openid-client");
+    // Reject with a plain string instead of an Error instance so that
+    // the `String(err)` branch in the warm-up catch handler is exercised.
+    vi.mocked(discovery).mockRejectedValueOnce("provider unavailable");
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    buildApp();
+
+    // Wait for the background warm-up's catch handler to run
+    await vi.waitFor(() => {
+      expect(warnSpy).toHaveBeenCalled();
+    }, { timeout: 1000 });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("provider unavailable"));
+    warnSpy.mockRestore();
+  });
 });
 
 // ── GET /auth/callback ────────────────────────────────────────────────────────
