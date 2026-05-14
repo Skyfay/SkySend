@@ -227,5 +227,8 @@
     "loginRequired": "Wymagane logowanie do przesyłania",
     "loginButton": "Zaloguj przez SSO",
     "logout": "Wyloguj"
+  },
+  "language": {
+    "search": "Wyszukaj język..."
   }
 }

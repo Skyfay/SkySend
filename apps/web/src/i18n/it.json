@@ -227,5 +227,8 @@
     "loginRequired": "Accesso richiesto per caricare",
     "loginButton": "Accedi con SSO",
     "logout": "Disconnetti"
+  },
+  "language": {
+    "search": "Cerca lingua..."
   }
 }

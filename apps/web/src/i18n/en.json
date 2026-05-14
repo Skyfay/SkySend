@@ -222,5 +222,8 @@
     "loginRequired": "Login required to upload",
     "loginButton": "Login with SSO",
     "logout": "Logout"
+  },
+  "language": {
+    "search": "Search language..."
   }
 }

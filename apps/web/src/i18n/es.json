@@ -227,5 +227,8 @@
     "loginRequired": "Se requiere iniciar sesión para subir",
     "loginButton": "Iniciar sesión con SSO",
     "logout": "Cerrar sesión"
+  },
+  "language": {
+    "search": "Buscar idioma..."
   }
 }

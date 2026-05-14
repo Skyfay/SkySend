@@ -6,7 +6,8 @@
       "auth.loginButton",
       "auth.logout",
       "nav.menu",
-      "upload.passwordPlaceholderRequired"
+      "upload.passwordPlaceholderRequired",
+      "language.search"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -233,5 +234,8 @@
     "loginRequired": "アップロードにはログインが必要です",
     "loginButton": "SSOでログイン",
     "logout": "ログアウト"
+  },
+  "language": {
+    "search": "言語を検索..."
   }
 }

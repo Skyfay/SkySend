@@ -227,5 +227,8 @@
     "loginRequired": "Connexion requise pour téléverser",
     "loginButton": "Se connecter avec SSO",
     "logout": "Se déconnecter"
+  },
+  "language": {
+    "search": "Rechercher une langue..."
   }
 }

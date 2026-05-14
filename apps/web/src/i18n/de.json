@@ -222,5 +222,8 @@
     "loginRequired": "Anmeldung erforderlich zum Hochladen",
     "loginButton": "Mit SSO anmelden",
     "logout": "Abmelden"
+  },
+  "language": {
+    "search": "Sprache suchen..."
   }
 }

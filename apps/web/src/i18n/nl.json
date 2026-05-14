@@ -227,5 +227,8 @@
     "loginRequired": "Inloggen vereist om te uploaden",
     "loginButton": "Inloggen met SSO",
     "logout": "Uitloggen"
+  },
+  "language": {
+    "search": "Taal zoeken..."
   }
 }

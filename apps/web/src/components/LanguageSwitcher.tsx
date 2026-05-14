@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Globe, ChevronDown, Check } from "lucide-react";
+import { Globe, ChevronDown, Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSavedLanguage, saveLanguage } from "@/i18n";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const languages = [
   { code: "en", name: "English", flag: "us" },
@@ -35,7 +37,9 @@ function detectBrowserLanguage(): string {
 }
 
 export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
 
   const isAuto = !getSavedLanguage();
   const resolvedLang = i18n.resolvedLanguage ?? i18n.language;
@@ -53,6 +57,13 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
   };
 
   const currentLabel = isAuto ? "Auto" : current.name;
+
+  const filteredLanguages = languages.filter(
+    (l) =>
+      l.name.toLowerCase().includes(search.toLowerCase()) ||
+      l.code.toLowerCase().includes(search.toLowerCase()),
+  );
+  const showAuto = search === "" || "auto".includes(search.toLowerCase());
 
   const trigger = mobile ? (
     <button
@@ -75,47 +86,76 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
   );
 
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setSearch("");
+      }}
+    >
       <DropdownMenu.Trigger asChild>
         {trigger}
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-40 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-50 w-52 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           sideOffset={5}
           align="end"
         >
-          <DropdownMenu.Item
-            className={cn(
-              "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-              isAuto && "bg-accent/50",
-            )}
-            onSelect={handleAuto}
-          >
-            <Globe className="h-4 w-4" />
-            <span className="flex-1">Auto</span>
-            {isAuto && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
-          </DropdownMenu.Item>
+          <div className="p-1 pb-0">
+            <div className="flex items-center gap-1.5 rounded-sm border border-input px-2 py-1.5">
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                placeholder={t("language.search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
 
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
 
-          {languages.map((lang) => (
-            <DropdownMenu.Item
-              key={lang.code}
-              className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                !isAuto && lang.code === current.code && "bg-accent/50",
+          <ScrollArea className="h-60">
+            <div className="p-1 pt-0">
+              {showAuto && (
+                <DropdownMenu.Item
+                  className={cn(
+                    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                    isAuto && "bg-accent/50",
+                  )}
+                  onSelect={handleAuto}
+                >
+                  <Globe className="h-4 w-4" />
+                  <span className="flex-1">Auto</span>
+                  {isAuto && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
+                </DropdownMenu.Item>
               )}
-              onSelect={() => handleSelect(lang.code)}
-            >
-              <span className={`fi fi-${lang.flag} rounded-sm`} />
-              <span className="flex-1">{lang.name}</span>
-              {!isAuto && lang.code === current.code && (
-                <Check className="h-3.5 w-3.5 text-muted-foreground" />
+
+              {showAuto && filteredLanguages.length > 0 && (
+                <DropdownMenu.Separator className="my-1 h-px bg-border" />
               )}
-            </DropdownMenu.Item>
-          ))}
+
+              {filteredLanguages.map((lang) => (
+                <DropdownMenu.Item
+                  key={lang.code}
+                  className={cn(
+                    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                    !isAuto && lang.code === current.code && "bg-accent/50",
+                  )}
+                  onSelect={() => handleSelect(lang.code)}
+                >
+                  <span className={`fi fi-${lang.flag} rounded-sm`} />
+                  <span className="flex-1">{lang.name}</span>
+                  {!isAuto && lang.code === current.code && (
+                    <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </DropdownMenu.Item>
+              ))}
+            </div>
+          </ScrollArea>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
