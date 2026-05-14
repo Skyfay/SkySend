@@ -156,6 +156,18 @@ describe("GET /auth/login", () => {
     const res = await app.request("/auth/login?cli_callback=http://localhost:54321/callback");
     expect(res.status).toBe(302);
   });
+
+  it("returns 503 when the OIDC provider is unreachable", async () => {
+    const { discovery } = await import("openid-client");
+    vi.mocked(discovery).mockRejectedValueOnce(new Error("connection refused"));
+
+    const app = buildApp();
+    const res = await app.request("/auth/login");
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toContain("unreachable");
+  });
 });
 
 // ── GET /auth/callback ────────────────────────────────────────────────────────
@@ -246,5 +258,46 @@ describe("GET /auth/callback", () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it("returns 503 when the OIDC provider is unreachable during callback", async () => {
+    const { discovery } = await import("openid-client");
+    // Two rejections: one consumed by the warm-up in buildApp(), one for the callback's retry
+    vi.mocked(discovery)
+      .mockRejectedValueOnce(new Error("connection refused"))
+      .mockRejectedValueOnce(new Error("connection refused"));
+
+    const app = buildApp();
+
+    const pkce = await createPkceState();
+    const pkceToken = await createPkceJwt(pkce, SECRET);
+
+    const res = await app.request(`/auth/callback?code=fake&state=${pkce.state}`, {
+      headers: { Cookie: `skysend-pkce=${pkceToken}` },
+    });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toContain("unreachable");
+  });
+
+  it("returns 400 when the ID token has no claims", async () => {
+    const { authorizationCodeGrant } = await import("openid-client");
+    vi.mocked(authorizationCodeGrant).mockResolvedValueOnce({
+      claims: () => null,
+    } as ReturnType<typeof authorizationCodeGrant> extends Promise<infer T> ? T : never);
+
+    const app = buildApp();
+
+    const pkce = await createPkceState();
+    const pkceToken = await createPkceJwt(pkce, SECRET);
+
+    const res = await app.request(`/auth/callback?code=fake&state=${pkce.state}`, {
+      headers: { Cookie: `skysend-pkce=${pkceToken}` },
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("No ID token claims");
   });
 });

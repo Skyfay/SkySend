@@ -225,5 +225,111 @@ describe("config", () => {
       const mod = await import("../src/lib/config.js");
       expect(() => mod.getConfig()).toThrow("Config not loaded");
     });
+
+    it("should return the loaded config after loadConfig() succeeds", async () => {
+      const mod = await import("../src/lib/config.js");
+      const loaded = mod.loadConfig();
+      expect(mod.getConfig()).toBe(loaded);
+    });
+  });
+
+  describe("CUSTOM_LOGO", () => {
+    it("should accept an absolute path starting with /", async () => {
+      process.env.CUSTOM_LOGO = "/logo.svg";
+      const config = await loadFreshConfig();
+      expect(config.CUSTOM_LOGO).toBe("/logo.svg");
+    });
+  });
+
+  describe("FILE_UPLOAD_SPEED_LIMIT", () => {
+    it("should parse a plain integer string (no unit suffix)", async () => {
+      process.env.FILE_UPLOAD_SPEED_LIMIT = "2097152";
+      const config = await loadFreshConfig();
+      expect(config.FILE_UPLOAD_SPEED_LIMIT).toBe(2097152);
+    });
+
+    it("should parse a byte-unit string via parseByteSize", async () => {
+      process.env.FILE_UPLOAD_SPEED_LIMIT = "5MB";
+      const config = await loadFreshConfig();
+      expect(config.FILE_UPLOAD_SPEED_LIMIT).toBe(5 * 1024 ** 2);
+    });
+  });
+
+  describe("CUSTOM_COLOR", () => {
+    it("should keep the value unchanged when # prefix is already present", async () => {
+      process.env.CUSTOM_COLOR = "#46c89d";
+      const config = await loadFreshConfig();
+      expect(config.CUSTOM_COLOR).toBe("#46c89d");
+    });
+  });
+
+  describe("S3 cross-field validation", () => {
+    it("should throw when STORAGE_BACKEND=s3 but required S3 fields are missing", async () => {
+      process.env.STORAGE_BACKEND = "s3";
+      // S3_BUCKET, S3_REGION, S3_ACCESS_KEY, S3_SECRET_KEY intentionally absent
+      await expect(loadFreshConfig()).rejects.toThrow("STORAGE_BACKEND=s3 requires");
+    });
+  });
+
+  describe("OIDC cross-field validation", () => {
+    it("should throw when OIDC is only partially configured", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      // OIDC_CLIENT_ID and OIDC_CLIENT_SECRET intentionally absent
+      await expect(loadFreshConfig()).rejects.toThrow("OIDC is partially configured");
+    });
+
+    it("should auto-generate OIDC_SESSION_SECRET and set OIDC_ENABLED when secret is absent", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      // OIDC_SESSION_SECRET intentionally not set
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const config = await loadFreshConfig();
+
+      expect(config.OIDC_ENABLED).toBe(true);
+      expect(config.OIDC_SESSION_SECRET).toBeTruthy();
+      expect(config.OIDC_SESSION_SECRET!.length).toBeGreaterThan(32);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("OIDC_SESSION_SECRET is not set"));
+      warnSpy.mockRestore();
+    });
+
+    it("should throw when OIDC_SESSION_SECRET is shorter than 32 characters", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "short";
+      await expect(loadFreshConfig()).rejects.toThrow("OIDC_SESSION_SECRET must be at least 32 characters");
+    });
+
+    it("should warn (not throw) when OIDC_ISSUER uses HTTP", async () => {
+      process.env.OIDC_ISSUER = "http://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const config = await loadFreshConfig();
+
+      expect(config.OIDC_ENABLED).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("HTTP instead of HTTPS"));
+      warnSpy.mockRestore();
+    });
+
+    it("should warn but still set OIDC_ENABLED when both protect flags are false", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const config = await loadFreshConfig();
+
+      expect(config.OIDC_ENABLED).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no upload routes are protected"));
+      warnSpy.mockRestore();
+    });
   });
 });
