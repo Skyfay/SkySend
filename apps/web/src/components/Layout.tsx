@@ -25,6 +25,12 @@ export function Layout() {
     document.title = `${title} | ${t("common.tabSubtitle")}`;
   }, [title, t]);
 
+  const [lastPathname, setLastPathname] = useState(location.pathname);
+  if (lastPathname !== location.pathname) {
+    setLastPathname(location.pathname);
+    if (mobileMenuOpen) setMobileMenuOpen(false);
+  }
+
   useEffect(() => {
     if (!mobileMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -38,10 +44,6 @@ export function Layout() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
 
   const navItems = [
     { to: "/", label: t("nav.upload"), icon: Upload },

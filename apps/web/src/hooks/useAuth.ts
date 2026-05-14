@@ -17,16 +17,16 @@ export interface UseAuthResult {
  */
 export function useAuth(config: ServerConfig | null): UseAuthResult {
   const [user, setUser] = useState<OidcUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   const oidcEnabled = config?.oidcEnabled ?? false;
+  const loading = oidcEnabled && !done;
 
   useEffect(() => {
     if (!oidcEnabled) return;
-    setLoading(true);
     fetchAuthSession()
       .then(setUser)
-      .finally(() => setLoading(false));
+      .finally(() => setDone(true));
   }, [oidcEnabled]);
 
   const logout = useCallback(() => {
