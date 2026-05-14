@@ -88,4 +88,43 @@ describe("useFaviconProgress", () => {
     link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
     expect(link?.href).toContain("original-favicon");
   });
+
+  it("--color-primary CSS-Variable gesetzt → resolvePrimaryColor() läuft vollständig", async () => {
+    // Set the CSS variable so resolvePrimaryColor() takes the full path (lines 12-17)
+    document.documentElement.style.setProperty("--color-primary", "purple");
+
+    const { useFaviconProgress } = await import("../../src/hooks/useFaviconProgress.js");
+    renderHook(() => useFaviconProgress(50));
+
+    const link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
+    expect(link?.href).toBe("data:image/png;base64,test");
+
+    document.documentElement.style.removeProperty("--color-primary");
+  });
+
+  it("kein <link>-Element vorhanden → eines wird neu erstellt", async () => {
+    // Remove all favicon links that beforeEach added
+    document.head.querySelectorAll('link[rel*="icon"]').forEach((el) => el.remove());
+
+    const { useFaviconProgress } = await import("../../src/hooks/useFaviconProgress.js");
+    renderHook(() => useFaviconProgress(50));
+
+    const link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
+    expect(link).not.toBeNull();
+    expect(link?.href).toBe("data:image/png;base64,test");
+  });
+
+  it("unmount während Progress aktiv → Cleanup-Effect stellt Original-Favicon wieder her", async () => {
+    const { useFaviconProgress } = await import("../../src/hooks/useFaviconProgress.js");
+    const { unmount } = renderHook(() => useFaviconProgress(50));
+
+    // Progress favicon is active
+    let link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
+    expect(link?.href).toBe("data:image/png;base64,test");
+
+    unmount();
+
+    link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
+    expect(link?.href).toContain("original-favicon");
+  });
 });

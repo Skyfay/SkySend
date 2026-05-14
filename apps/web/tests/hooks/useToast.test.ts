@@ -109,4 +109,23 @@ describe("useToast", () => {
 
     expect(result.current.toasts[0]?.open).toBe(false);
   });
+
+  it("unmount entfernt Listener \u2192 kein Crash nach Unmount", () => {
+    const { result, unmount } = renderHook(() => useToast());
+
+    act(() => {
+      toast({ title: "Before unmount" });
+    });
+    expect(result.current.toasts).toHaveLength(1);
+
+    // Unmounting removes the setState listener from the listeners array
+    unmount();
+
+    // Dispatching after unmount must not throw
+    expect(() => {
+      act(() => {
+        toast({ title: "After unmount" });
+      });
+    }).not.toThrow();
+  });
 });

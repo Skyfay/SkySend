@@ -52,6 +52,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -146,5 +148,131 @@ describe("useUpload", () => {
 
     await waitFor(() => expect(result.current.phase).toBe("error"));
     expect(result.current.error).toBe("encryption failed");
+  });
+
+  it("Datei nicht lesbar → error='fileNotReadable'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    const badFile = makeFile("bad.txt");
+    Object.defineProperty(badFile, "slice", {
+      value: () => { throw new Error("read error"); },
+      writable: true,
+      configurable: true,
+    });
+
+    await act(async () => {
+      await result.current.upload({ files: [badFile], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("fileNotReadable");
+  });
+
+  it("Multi-File-Upload (2 Dateien) → Startphase='zipping'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({
+        files: [makeFile("a.txt"), makeFile("b.txt")],
+        maxDownloads: 1,
+        expireSec: 3600,
+        password: "",
+      });
+    });
+
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    expect(result.current.phase).toBe("zipping");
+  });
+
+  it("Worker 'phase'-Message → Zustandswechsel zu 'uploading'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "phase", phase: "uploading" });
+    });
+
+    expect(result.current.phase).toBe("uploading");
+    expect(result.current.progress).toBe(0);
+    expect(result.current.speed).toBeNull();
+  });
+
+  it("Worker 'progress'-Message mit Speed-Berechnung (≥500ms)", async () => {
+    vi.useFakeTimers({ toFake: ["performance"] });
+
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    // lastTime = performance.now() = 0 (fake clock); advance so elapsed >= 0.5s
+    vi.advanceTimersByTime(600);
+
+    act(() => {
+      worker.emit({ type: "progress", loaded: 500, total: 1000 });
+    });
+
+    expect(result.current.progress).toBe(50);
+    expect(result.current.speed).not.toBeNull();
+    expect(result.current.speed).toMatch(/\/s$/);
+  });
+
+  it("Worker onerror → phase='error'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emitError("Worker crashed");
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.error).toBe("Worker crashed");
+  });
+
+  it("Upload mit averageSpeed-Berechnung nach Abschluss", async () => {
+    let fakeNow = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => (fakeNow += 1000));
+
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+
+    act(() => {
+      worker.emit({ type: "phase", phase: "uploading" });
+    });
+    act(() => {
+      worker.emit({ type: "progress", loaded: 5000, total: 5000 });
+    });
+    act(() => {
+      worker.emit({ type: "done", id: "file-abc", ownerToken: "tok", effectiveSecret: "sec" });
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("done"));
+    expect(result.current.averageSpeed).not.toBeNull();
+    expect(result.current.averageSpeed).toMatch(/\/s$/);
   });
 });

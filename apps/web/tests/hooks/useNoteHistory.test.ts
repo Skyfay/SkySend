@@ -106,7 +106,9 @@ describe("useNoteHistory", () => {
     const { getAllNotes, removeNote } = await import("../../src/lib/upload-store.js");
     const { fetchNoteInfo, deleteNote } = await import("../../src/lib/api.js");
 
-    vi.mocked(getAllNotes).mockResolvedValueOnce([storedNote("d-1")]);
+    vi.mocked(getAllNotes)
+      .mockResolvedValueOnce([storedNote("d-1")])
+      .mockResolvedValue([]);  // persistent fallback for any extra loadData() calls
     vi.mocked(fetchNoteInfo).mockResolvedValueOnce(noteInfo("d-1"));
     vi.mocked(deleteNote).mockResolvedValueOnce(undefined);
     vi.mocked(removeNote).mockResolvedValueOnce(undefined);
@@ -125,5 +127,31 @@ describe("useNoteHistory", () => {
     expect(vi.mocked(deleteNote)).toHaveBeenCalledWith("d-1", "tok-d-1");
     expect(vi.mocked(removeNote)).toHaveBeenCalledWith("d-1");
     expect(result.current.notes.find((n) => n.id === "d-1")).toBeUndefined();
+
+    // trigger refresh to cover emitNoteRefresh body (lines 26-27)
+    act(() => {
+      result.current.refresh();
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
+  it("generischer Netzwerkfehler von fetchNoteInfo \u2192 Note bleibt sichtbar, loading=false", async () => {
+    const { getAllNotes } = await import("../../src/lib/upload-store.js");
+    const { fetchNoteInfo } = await import("../../src/lib/api.js");
+
+    vi.mocked(getAllNotes).mockResolvedValue([storedNote("e-1")]);
+    vi.mocked(fetchNoteInfo).mockRejectedValue(new Error("Network error"));
+
+    const { useNoteHistory } = await import("../../src/hooks/useNoteHistory.js");
+    const { result } = renderHook(() => useNoteHistory());
+
+    await waitFor(() => {
+      const note = result.current.notes.find((n) => n.id === "e-1");
+      return note !== undefined && !note.loading;
+    });
+
+    expect(result.current.notes).toHaveLength(1);
+    expect(result.current.notes[0]?.loading).toBe(false);
+    expect(result.current.notes[0]?.gone).toBe(false);
   });
 });

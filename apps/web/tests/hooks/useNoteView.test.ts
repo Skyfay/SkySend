@@ -202,4 +202,49 @@ describe("useNoteView", () => {
     expect(result.current.phase).toBe("needs-password");
     expect(result.current.error).toBe("rate-limited");
   });
+
+  it("view() mit hasPassword=true, passwordSalt=undefined \u2192 phase='error'", async () => {
+    const api = await import("../../src/lib/api.js");
+    // passwordSalt intentionally absent so the throw on line 70 fires
+    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
+      makeNoteInfo({ hasPassword: true, passwordAlgo: "pbkdf2" }),
+    );
+
+    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+    const { result } = renderHook(() => useNoteView());
+
+    await act(async () => {
+      await result.current.loadInfo("n-1");
+    });
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "anypassword");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Failed to view note");
+  });
+
+  it("view() mit korrektem Passwort (verifyNotePassword=true) \u2192 phase='viewing'", async () => {
+    const api = await import("../../src/lib/api.js");
+    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+    );
+    vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
+    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
+
+    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+    const { result } = renderHook(() => useNoteView());
+
+    await act(async () => {
+      await result.current.loadInfo("n-1");
+    });
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "correctpass");
+    });
+
+    expect(result.current.phase).toBe("viewing");
+    expect(result.current.content).toBe("decrypted content");
+  });
 });

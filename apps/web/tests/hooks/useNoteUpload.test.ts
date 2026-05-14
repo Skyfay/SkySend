@@ -152,4 +152,25 @@ describe("useNoteUpload", () => {
     await waitFor(() => expect(result.current.phase).toBe("done"));
     expect(vi.mocked(deriveKeyFromPassword)).toHaveBeenCalled();
   });
+
+  it("createNote wirft Non-Error \u2192 error='Note creation failed'", async () => {
+    const createNote = await getCreateNote();
+    createNote.mockRejectedValueOnce("unexpected string throw");
+
+    const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
+    const { result } = renderHook(() => useNoteUpload());
+
+    act(() => {
+      result.current.upload({
+        content: "hello",
+        contentType: "text",
+        maxViews: 1,
+        expireSec: 3600,
+        password: "",
+      });
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.error).toBe("Note creation failed");
+  });
 });

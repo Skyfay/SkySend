@@ -109,7 +109,9 @@ describe("useUploadHistory", () => {
     const { getAllUploads, removeUpload } = await import("../../src/lib/upload-store.js");
     const { fetchInfo, deleteUpload } = await import("../../src/lib/api.js");
 
-    vi.mocked(getAllUploads).mockResolvedValueOnce([storedUpload("d-1")]);
+    vi.mocked(getAllUploads)
+      .mockResolvedValueOnce([storedUpload("d-1")])
+      .mockResolvedValue([]);  // persistent fallback for extra loadData() calls
     vi.mocked(fetchInfo).mockResolvedValueOnce(uploadInfo("d-1"));
     vi.mocked(deleteUpload).mockResolvedValueOnce(undefined);
     vi.mocked(removeUpload).mockResolvedValueOnce(undefined);
@@ -128,5 +130,31 @@ describe("useUploadHistory", () => {
     expect(vi.mocked(deleteUpload)).toHaveBeenCalledWith("d-1", "tok-d-1");
     expect(vi.mocked(removeUpload)).toHaveBeenCalledWith("d-1");
     expect(result.current.uploads.find((u) => u.id === "d-1")).toBeUndefined();
+
+    // trigger refresh to cover emitRefresh body (lines 26-27)
+    act(() => {
+      result.current.refresh();
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
+  it("generischer Netzwerkfehler von fetchInfo \u2192 Upload bleibt sichtbar, loading=false", async () => {
+    const { getAllUploads } = await import("../../src/lib/upload-store.js");
+    const { fetchInfo } = await import("../../src/lib/api.js");
+
+    vi.mocked(getAllUploads).mockResolvedValue([storedUpload("e-1")]);
+    vi.mocked(fetchInfo).mockRejectedValue(new Error("Network error"));
+
+    const { useUploadHistory } = await import("../../src/hooks/useUploadHistory.js");
+    const { result } = renderHook(() => useUploadHistory());
+
+    await waitFor(() => {
+      const upload = result.current.uploads.find((u) => u.id === "e-1");
+      return upload !== undefined && !upload.loading;
+    });
+
+    expect(result.current.uploads).toHaveLength(1);
+    expect(result.current.uploads[0]?.loading).toBe(false);
+    expect(result.current.uploads[0]?.gone).toBe(false);
   });
 });
