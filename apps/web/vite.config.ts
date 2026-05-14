@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     coverage: {
-      include: ["src/lib/**/*.ts"],
+      include: ["src/lib/**/*.ts", "src/hooks/**/*.ts"],
       exclude: [
         // Browser OPFS / Worker context - not unit-testable in Node
         "src/lib/opfs-download.ts",

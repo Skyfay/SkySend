@@ -17,6 +17,13 @@ All notable changes to SkySend are documented here.
 - **web**: The navigation header title now truncates with an ellipsis when a custom title is very long, preventing layout overflow on all screen sizes.
 - **web**: Added a hamburger menu for mobile screens. All navigation links, the language switcher, theme toggle, and OIDC login/logout are now accessible in a collapsible dropdown on small viewports.
 
+### 🧪 Tests
+
+- **server**: Added unit tests for the OIDC authentication layer - covers `auth/session.ts` (JWT round-trips, expiry, tamper detection, cookie helpers), all four provider adapters (`generic`, `pocketid`, `authentik`, `keycloak`), the `oidc-guard` middleware (cookie and Bearer auth), and all five `routes/auth.ts` endpoints including mocked `openid-client` discovery and token exchange.
+- **client**: Added unit tests for `lib/oidc.ts` (previously 0% coverage) - covers `isTokenExpired`, `decodeTokenUser`, `openBrowser` (all three platforms), `startLocalCallbackServer` (port binding, token resolution, rejection), `performOidcLogin` (full flow with mocked browser + simulated callback), and `ensureOidcAuth` (cached token reuse, trailing-slash normalization, expired token triggers re-login).
+- **web**: Added unit tests for `hooks/useAuth.ts` and `lib/api.ts#fetchAuthSession` - covers OIDC disabled (no fetch), authenticated and unauthenticated session fetch, null config handling, and logout navigation. Also covers `fetchAuthSession` response parsing for 200/401/403/500 status codes, missing or malformed fields, and network errors.
+- **web**: Added unit tests for all remaining hooks previously at 0% coverage - `useToast` (state machine, dismiss, auto-remove, update), `useNoteUpload` (encrypt/upload/done flow, error, reset, password path), `useNoteView` (loadInfo, view, destroyed, wrong-password, rate-limited), `useUpload` (Worker mock, done, error, reset, cancel), `useUploadHistory` and `useNoteHistory` (load, 404/410 removal, delete), `useDownload` (loadInfo flows), and `useFaviconProgress` (canvas stub, progress/restore).
+
 ### 📝 Documentation
 
 - **docs**: Added OIDC Authentication page to the Developer Guide API Reference, covering the full PKCE login flow, auth/callback/logout/session endpoints, the OIDC guard middleware, protected vs. always-public endpoints, provider adapters, session JWT format, and the CLI device-browser login flow.
