@@ -70,6 +70,7 @@
     "downloads": "Téléchargements max.",
     "password": "Protection par mot de passe",
     "passwordPlaceholder": "Saisissez un mot de passe (optionnel)",
+    "passwordPlaceholderRequired": "Saisissez un mot de passe (requis)",
     "passwordRequired": "requis par le serveur",
     "uploading": "Chiffrement et téléversement...",
     "encryptingProgress": "Chiffrement...",

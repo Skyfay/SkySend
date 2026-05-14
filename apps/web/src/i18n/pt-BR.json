@@ -8,7 +8,8 @@
       "auth.logout",
       "auth.loggedInAs",
       "auth.loginNavButton",
-      "nav.menu"
+      "nav.menu",
+      "upload.passwordPlaceholderRequired"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -77,6 +78,7 @@
     "downloads": "Máximo de downloads",
     "password": "Proteção com senha",
     "passwordPlaceholder": "Digite a senha (opcional)",
+    "passwordPlaceholderRequired": "Digite a senha (obrigatória)",
     "passwordRequired": "obrigatório pelo servidor",
     "uploading": "Criptografando e enviando...",
     "encryptingProgress": "Criptografando...",

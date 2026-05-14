@@ -288,7 +288,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
                 type={showNotePassword ? "text" : "password"}
                 value={notePassword}
                 onChange={(e) => setNotePassword(e.target.value)}
-                placeholder={t("upload.passwordPlaceholder")}
+                placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
                 autoComplete="off"
                 disabled={isSubmitting}
               />

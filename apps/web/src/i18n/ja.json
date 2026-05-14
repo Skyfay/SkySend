@@ -7,7 +7,8 @@
       "auth.logout",
       "auth.loggedInAs",
       "auth.loginNavButton",
-      "nav.menu"
+      "nav.menu",
+      "upload.passwordPlaceholderRequired"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -77,6 +78,7 @@
     "downloads": "最大ダウンロード数",
     "password": "パスワード保護",
     "passwordPlaceholder": "パスワードを入力（任意）",
+    "passwordPlaceholderRequired": "パスワードを入力（必須）",
     "passwordRequired": "サーバーによる必須設定",
     "uploading": "暗号化・アップロード中...",
     "encryptingProgress": "暗号化中...",

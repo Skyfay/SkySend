@@ -70,6 +70,7 @@
     "downloads": "Maks nedlastinger",
     "password": "Passordbeskyttelse",
     "passwordPlaceholder": "Skriv inn passord (valgfritt)",
+    "passwordPlaceholderRequired": "Skriv inn passord (påkrevd)",
     "passwordRequired": "påkrevd av serveren",
     "uploading": "Krypterer og laster opp...",
     "encryptingProgress": "Krypterer...",

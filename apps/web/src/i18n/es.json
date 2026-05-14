@@ -70,6 +70,7 @@
     "downloads": "Máximo de descargas",
     "password": "Protección con contraseña",
     "passwordPlaceholder": "Introduzca contraseña (opcional)",
+    "passwordPlaceholderRequired": "Introduzca contraseña (obligatoria)",
     "passwordRequired": "requerido por el servidor",
     "uploading": "Cifrando y subiendo...",
     "encryptingProgress": "Cifrando...",

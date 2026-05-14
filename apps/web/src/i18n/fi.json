@@ -70,6 +70,7 @@
     "downloads": "Latauskerrat",
     "password": "Salasanasuojaus",
     "passwordPlaceholder": "Syötä salasana (valinnainen)",
+    "passwordPlaceholderRequired": "Syötä salasana (pakollinen)",
     "passwordRequired": "palvelimen vaatima",
     "uploading": "Salataan ja lähetetään...",
     "encryptingProgress": "Salataan...",

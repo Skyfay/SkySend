@@ -352,7 +352,7 @@ export function UploadPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("upload.passwordPlaceholder")}
+                    placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
                     autoComplete="off"
                   />
                   <button

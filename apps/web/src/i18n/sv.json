@@ -70,6 +70,7 @@
     "downloads": "Max nedladdningar",
     "password": "Lösenordsskydd",
     "passwordPlaceholder": "Ange lösenord (valfritt)",
+    "passwordPlaceholderRequired": "Ange lösenord (obligatoriskt)",
     "passwordRequired": "krävs av servern",
     "uploading": "Krypterar och laddar upp...",
     "encryptingProgress": "Krypterar...",

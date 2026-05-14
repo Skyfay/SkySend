@@ -65,6 +65,7 @@
     "downloads": "Max downloads",
     "password": "Password protection",
     "passwordPlaceholder": "Enter password (optional)",
+    "passwordPlaceholderRequired": "Enter password (required)",
     "passwordRequired": "required by server",
     "uploading": "Encrypting & uploading...",
     "encryptingProgress": "Encrypting...",

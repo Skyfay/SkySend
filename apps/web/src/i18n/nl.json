@@ -70,6 +70,7 @@
     "downloads": "Max downloads",
     "password": "Wachtwoordbeveiliging",
     "passwordPlaceholder": "Voer wachtwoord in (optioneel)",
+    "passwordPlaceholderRequired": "Voer wachtwoord in (verplicht)",
     "passwordRequired": "vereist door de server",
     "uploading": "Versleutelen en uploaden...",
     "encryptingProgress": "Versleutelen...",

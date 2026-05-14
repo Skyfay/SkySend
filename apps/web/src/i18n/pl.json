@@ -70,6 +70,7 @@
     "downloads": "Maks. pobrań",
     "password": "Ochrona hasłem",
     "passwordPlaceholder": "Wprowadź hasło (opcjonalnie)",
+    "passwordPlaceholderRequired": "Wprowadź hasło (wymagane)",
     "passwordRequired": "wymagane przez serwer",
     "uploading": "Szyfrowanie i przesyłanie...",
     "encryptingProgress": "Szyfrowanie...",
