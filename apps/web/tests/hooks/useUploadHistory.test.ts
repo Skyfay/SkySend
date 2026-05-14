@@ -150,7 +150,8 @@ describe("useUploadHistory", () => {
 
     await waitFor(() => {
       const upload = result.current.uploads.find((u) => u.id === "e-1");
-      return upload !== undefined && !upload.loading;
+      expect(upload).toBeDefined();
+      expect(upload?.loading).toBe(false);
     });
 
     expect(result.current.uploads).toHaveLength(1);

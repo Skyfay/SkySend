@@ -147,7 +147,8 @@ describe("useNoteHistory", () => {
 
     await waitFor(() => {
       const note = result.current.notes.find((n) => n.id === "e-1");
-      return note !== undefined && !note.loading;
+      expect(note).toBeDefined();
+      expect(note?.loading).toBe(false);
     });
 
     expect(result.current.notes).toHaveLength(1);
