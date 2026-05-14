@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { Upload, FolderOpen, LogOut, Menu, X } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,15 +86,21 @@ export function Layout() {
               authLoading ? (
                 <Skeleton className="h-8 w-8 rounded-md" />
               ) : (
-                <button
-                  type="button"
-                  onClick={logout}
-                  title={`${user?.name} - ${t("auth.logout")}`}
-                  aria-label={t("auth.logout")}
-                  className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={logout}
+                      aria-label={t("auth.logout")}
+                      className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {user?.name} - {t("auth.logout")}
+                  </TooltipContent>
+                </Tooltip>
               )
             )}
           </nav>
