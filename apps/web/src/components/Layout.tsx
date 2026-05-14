@@ -118,14 +118,14 @@ export function Layout() {
             </button>
 
             {mobileMenuOpen && (
-              <div className="absolute right-4 top-14 z-50 min-w-45 rounded-lg border border-border bg-background py-1 shadow-lg">
+              <div className="absolute right-4 top-14 z-50 min-w-45 rounded-lg border border-border bg-background p-1 shadow-lg">
                 {navItems.map(({ to, label, icon: Icon }) => (
                   <Link
                     key={to}
                     to={to}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                       (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to))
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground",
@@ -135,21 +135,21 @@ export function Layout() {
                     {label}
                   </Link>
                 ))}
-                <div className="my-1 border-t border-border" />
+                <div className="-mx-1 my-1 h-px bg-border" />
                 <LanguageSwitcher mobile />
                 <ThemeToggle mobile />
                 {oidcEnabled && isLoggedIn && (
                   <>
-                    <div className="my-1 border-t border-border" />
+                    <div className="-mx-1 my-1 h-px bg-border" />
                     {authLoading ? (
-                      <div className="px-4 py-2.5">
+                      <div className="px-3 py-2">
                         <Skeleton className="h-7 w-20 rounded-md" />
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => { logout(); setMobileMenuOpen(false); }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         <LogOut className="h-4 w-4" />
                         <span className="max-w-40 truncate">{user?.name}</span>

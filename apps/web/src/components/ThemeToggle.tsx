@@ -22,7 +22,7 @@ export function ThemeToggle({ mobile }: { mobile?: boolean }) {
 
   const trigger = mobile ? (
     <button
-      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
+      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
       aria-label={label(theme)}
     >
       <CurrentIcon className="h-4 w-4" />
