@@ -207,6 +207,22 @@ SkySend supports optional single sign-on via any OIDC-compliant provider. When e
 
 All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-discovered** from the issuer URL. You never need to specify individual endpoint URLs manually.
 
+### What to register at your provider
+
+When you create a new application/client at your OIDC provider, you only need to configure **one redirect/callback URL**, regardless of whether users access SkySend via the web browser or the CLI client:
+
+```
+https://skysend.example.com/auth/callback
+```
+
+Replace `skysend.example.com` with your actual domain (the value of `BASE_URL`).
+
+**No additional URLs are needed for the CLI.** The CLI piggybacks on the same server callback - SkySend handles the provider redirect first and then forwards the session token to the CLI's temporary local listener. The provider never talks to the CLI directly.
+
+::: tip Grant type
+Register the application as a **confidential client** with the **authorization code** grant type and PKCE support. You need both a client ID and a client secret.
+:::
+
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
 | `OIDC_PROVIDER` | ❌ | `generic` | Provider preset. One of `generic`, `pocketid`, `authentik`, `keycloak`. Controls which token claims are used for the display name. |

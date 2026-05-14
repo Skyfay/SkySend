@@ -18,7 +18,10 @@ All notable changes to SkySend are documented here.
 - **web**: Added a hamburger menu for mobile screens. All navigation links, the language switcher, theme toggle, and OIDC login/logout are now accessible in a collapsible dropdown on small viewports.
 
 ### 📝 Documentation
-- **docs**: Documented all OIDC environment variables in the configuration reference, including per-provider setup examples for PocketID, Authentik, and Generic providers.
+
+- **docs**: Added OIDC Authentication page to the Developer Guide API Reference, covering the full PKCE login flow, auth/callback/logout/session endpoints, the OIDC guard middleware, protected vs. always-public endpoints, provider adapters, session JWT format, and the CLI device-browser login flow.
+- **docs**: Added OIDC/SSO to the features list on the landing page.
+- **docs**: Extended the API Overview with the `/auth/*` endpoint table and a link to the new OIDC page.
 - **docs**: Added `auth login`, `auth logout`, and `auth status` to the client CLI command reference, including the OIDC login flow explanation and token storage details.
 
 ### 🐳 Docker

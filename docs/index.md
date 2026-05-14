@@ -29,6 +29,9 @@ features:
   - icon: 🔑
     title: Password Protection
     details: Protect uploads with a password using Argon2id (WASM). Memory-hard, GPU-resistant key derivation.
+  - icon: 👥
+    title: OIDC / SSO Authentication
+    details: Optionally restrict who can upload by connecting any OIDC-compatible provider (PocketID, Authentik, Keycloak, or generic). Download links always remain accessible without login.
   - icon: 📁
     title: Multi-File & Folder Uploads
     details: Upload multiple files or entire folders. Files are zipped client-side with fflate before encryption - the server sees only one encrypted blob.
