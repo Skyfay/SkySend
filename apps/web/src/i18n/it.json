@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Carica",
-    "myUploads": "I miei caricamenti"
+    "myUploads": "I miei caricamenti",
+    "menu": "Menu"
   },
   "tab": {
     "file": "File",

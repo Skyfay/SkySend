@@ -7,7 +7,8 @@
       "auth.loginButton",
       "auth.logout",
       "auth.loggedInAs",
-      "auth.loginNavButton"
+      "auth.loginNavButton",
+      "nav.menu"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -30,7 +31,8 @@
   },
   "nav": {
     "upload": "Enviar",
-    "myUploads": "Meus Envios"
+    "myUploads": "Meus Envios",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Arquivo",

@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Subir",
-    "myUploads": "Mis subidas"
+    "myUploads": "Mis subidas",
+    "menu": "Menú"
   },
   "tab": {
     "file": "Archivo",

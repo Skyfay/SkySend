@@ -34,7 +34,7 @@ function detectBrowserLanguage(): string {
   return languages.some((l) => l.code === base) ? base : "en";
 }
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
   const { i18n } = useTranslation();
 
   const isAuto = !getSavedLanguage();
@@ -52,17 +52,32 @@ export function LanguageSwitcher() {
     i18n.changeLanguage(browserLang);
   };
 
+  const currentLabel = isAuto ? "Auto" : current.name;
+
+  const trigger = mobile ? (
+    <button
+      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
+      aria-label="Change language"
+    >
+      <Globe className="h-4 w-4" />
+      <span className="flex-1 text-left">{currentLabel}</span>
+      <ChevronDown className="h-3.5 w-3.5 opacity-50 mr-1" />
+    </button>
+  ) : (
+    <button
+      className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
+      aria-label="Change language"
+    >
+      <Globe className="h-4 w-4" />
+      <span className="hidden sm:inline uppercase">{current.code}</span>
+      <ChevronDown className="h-3 w-3 opacity-50" />
+    </button>
+  );
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-          aria-label="Change language"
-        >
-          <Globe className="h-4 w-4" />
-          <span className="hidden sm:inline uppercase">{current.code}</span>
-          <ChevronDown className="h-3 w-3 opacity-50" />
-        </button>
+        {trigger}
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>

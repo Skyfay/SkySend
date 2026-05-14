@@ -6,7 +6,8 @@
       "auth.loginButton",
       "auth.logout",
       "auth.loggedInAs",
-      "auth.loginNavButton"
+      "auth.loginNavButton",
+      "nav.menu"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -29,7 +30,8 @@
   },
   "nav": {
     "upload": "アップロード",
-    "myUploads": "アップロード履歴"
+    "myUploads": "アップロード履歴",
+    "menu": "メニュー"
   },
   "tab": {
     "file": "ファイル",

@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Last opp",
-    "myUploads": "Mine opplastinger"
+    "myUploads": "Mine opplastinger",
+    "menu": "Meny"
   },
   "tab": {
     "file": "Fil",

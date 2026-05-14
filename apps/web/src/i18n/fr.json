@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Téléverser",
-    "myUploads": "Mes envois"
+    "myUploads": "Mes envois",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Fichier",

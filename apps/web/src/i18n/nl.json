@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Uploaden",
-    "myUploads": "Mijn uploads"
+    "myUploads": "Mijn uploads",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Bestand",

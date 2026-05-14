@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Lähetä",
-    "myUploads": "Omat lähetykset"
+    "myUploads": "Omat lähetykset",
+    "menu": "Valikko"
   },
   "tab": {
     "file": "Tiedosto",

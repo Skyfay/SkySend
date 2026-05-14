@@ -18,7 +18,8 @@
   },
   "nav": {
     "upload": "Upload",
-    "myUploads": "My Uploads"
+    "myUploads": "My Uploads",
+    "menu": "Menu"
   },
   "tab": {
     "file": "File",

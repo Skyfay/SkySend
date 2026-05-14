@@ -18,7 +18,8 @@
   },
   "nav": {
     "upload": "Hochladen",
-    "myUploads": "Meine Uploads"
+    "myUploads": "Meine Uploads",
+    "menu": "Menü"
   },
   "tab": {
     "file": "Datei",

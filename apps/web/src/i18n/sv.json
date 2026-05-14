@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Ladda upp",
-    "myUploads": "Mina uppladdningar"
+    "myUploads": "Mina uppladdningar",
+    "menu": "Meny"
   },
   "tab": {
     "file": "Fil",

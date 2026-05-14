@@ -23,7 +23,8 @@
   },
   "nav": {
     "upload": "Prześlij",
-    "myUploads": "Moje przesyłki"
+    "myUploads": "Moje przesyłki",
+    "menu": "Menu"
   },
   "tab": {
     "file": "Plik",
