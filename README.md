@@ -73,6 +73,16 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 - **Burn After Reading** - notes that self-destruct after a single view
 - **View Limits** - configurable maximum number of views (including unlimited)
 
+### 👥 OIDC / SSO Authentication
+
+- **Optional SSO** - restrict who can upload by connecting any OIDC-compliant provider
+- **Supported Providers** - built-in presets for PocketID, Authentik, Keycloak, and any generic OIDC provider
+- **Granular Protection** - independently require login for file uploads and/or note creation via `OIDC_PROTECT_FILES` / `OIDC_PROTECT_NOTES`
+- **Downloads always public** - authentication only gates the upload action, consistent with the zero-knowledge design
+- **Stateless sessions** - signed JWT cookies, no database changes required
+- **CLI support** - the CLI automatically opens a browser for login when the server requires it; tokens are cached per-server in `~/.config/skysend/`
+- **PKCE flow** - uses authorization code grant with PKCE for all clients
+
 ### 📊 Upload Dashboard
 
 - **No Account Needed** - upload and note history stored locally in IndexedDB
@@ -103,6 +113,9 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 - **`skysend note <text>`** - create encrypted notes (text, password, code, markdown, sshkey)
 - **`skysend note:view <url>`** - view encrypted notes
 - **`skysend update`** - self-update from GitHub Releases with checksum verification
+- **`skysend auth login`** - authenticate against an OIDC-protected server
+- **`skysend auth logout`** - remove the stored session token
+- **`skysend auth status`** - show the current session state
 - **Scriptable** - `--json` flag for machine-readable output
 - **WebSocket & HTTP** - same dual transport as the web client
 
@@ -185,6 +198,9 @@ skysend download https://your-instance.com/file/abc123#secret
 
 # Create an encrypted note
 skysend note "This is a secret message" --type text --expires 24h
+
+# Login to an OIDC-protected server
+skysend auth login
 
 # Self-update
 skysend update
