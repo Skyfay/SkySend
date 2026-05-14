@@ -85,7 +85,20 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
       return c.json({ error: "OIDC provider is currently unreachable - try again later" }, 503);
     }
 
-    const pkce = await createPkceState();
+    // Optional CLI callback URL - strictly validated to prevent open redirects.
+    // Only http://localhost:{port} and http://127.0.0.1:{port} are accepted.
+    const cliCallbackParam = c.req.query("cli_callback");
+    let cliCallback: string | undefined;
+    if (cliCallbackParam !== undefined) {
+      const localhostPattern = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}(\/[\w%\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
+      if (!localhostPattern.test(cliCallbackParam)) {
+        return c.json({ error: "Invalid cli_callback: only http://localhost or http://127.0.0.1 is allowed" }, 400);
+      }
+      cliCallback = cliCallbackParam;
+    }
+
+    const pkceBase = await createPkceState();
+    const pkce = cliCallback ? { ...pkceBase, cliCallback } : pkceBase;
     const scopes = config.OIDC_SCOPES.split(" ").filter(Boolean);
 
     const authUrl = buildAuthorizationUrl(oidcConfig, {
@@ -150,9 +163,18 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
     const user = adapter.extractUser(claims as Record<string, unknown>);
     const sessionJwt = await createSessionJwt(user, config.OIDC_SESSION_SECRET!, config.OIDC_SESSION_DURATION);
 
+    c.header("Set-Cookie", `${PKCE_COOKIE}=; ${clearCookieOptions()}`, { append: true });
+
+    // If this is a CLI-initiated login, deliver the token via redirect to the
+    // local callback server instead of setting a browser cookie.
+    if (pkce.cliCallback) {
+      const callbackUrl = new URL(pkce.cliCallback);
+      callbackUrl.searchParams.set("token", sessionJwt);
+      return c.redirect(callbackUrl.href, 302);
+    }
+
     const sessionOpts = sessionCookieOptions(config.BASE_URL, config.OIDC_SESSION_DURATION);
     c.header("Set-Cookie", `${SESSION_COOKIE}=${sessionJwt}; ${sessionOpts}`, { append: true });
-    c.header("Set-Cookie", `${PKCE_COOKIE}=; ${clearCookieOptions()}`, { append: true });
 
     return c.redirect("/", 302);
   });

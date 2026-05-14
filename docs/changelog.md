@@ -9,6 +9,7 @@ All notable changes to SkySend are documented here.
 
 - **server**: Added optional OIDC/SSO authentication via a plugin adapter system. Supports Generic, PocketID, Authentik, and Keycloak providers via the `OIDC_PROVIDER` env var. File uploads and note creation can each be independently protected using `OIDC_PROTECT_FILES` and `OIDC_PROTECT_NOTES`. Both HTTP and WebSocket upload transports are guarded. Sessions are stateless JWT cookies - no database changes required.
 - **web**: Added inline auth blocks on the upload page when OIDC is enabled and the user is not logged in. A user indicator with logout button is shown in the navigation header when authenticated.
+- **client**: Added OIDC authentication support for the CLI. When a server has `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` enabled, the CLI automatically opens a browser for login before uploading or creating notes. Session tokens are stored per-server in `~/.config/skysend/tokens.json` and reused until they expire. New `auth` subcommands (`login`, `logout`, `status`) allow explicit session management.
 
 ### 🎨 Improvements
 
@@ -17,6 +18,7 @@ All notable changes to SkySend are documented here.
 
 ### 📝 Documentation
 - **docs**: Documented all OIDC environment variables in the configuration reference, including per-provider setup examples for PocketID, Authentik, and Generic providers.
+- **docs**: Added `auth login`, `auth logout`, and `auth status` to the client CLI command reference, including the OIDC login flow explanation and token storage details.
 
 ### 🐳 Docker
 

@@ -31,6 +31,9 @@ const configResponseSchema = z.object({
   customLinkName: z.string().nullable(),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
+  oidcEnabled: z.boolean().optional().default(false),
+  oidcProtectFiles: z.boolean().optional().default(false),
+  oidcProtectNotes: z.boolean().optional().default(false),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;
@@ -126,10 +129,15 @@ export async function fetchQuota(server: string): Promise<QuotaStatus> {
 export async function uploadInit(
   server: string,
   headers: Record<string, string>,
+  oidcToken?: string,
 ): Promise<{ id: string }> {
+  const reqHeaders: Record<string, string> = { ...headers };
+  if (oidcToken) {
+    reqHeaders["Authorization"] = `Bearer ${oidcToken}`;
+  }
   const res = await fetch(apiUrl(server, "/api/upload/init"), {
     method: "POST",
-    headers,
+    headers: reqHeaders,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: "Upload init failed" }));
@@ -302,10 +310,15 @@ export interface CreateNoteRequest {
 export async function createNote(
   server: string,
   data: CreateNoteRequest,
+  oidcToken?: string,
 ): Promise<{ id: string; expiresAt: string }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (oidcToken) {
+    headers["Authorization"] = `Bearer ${oidcToken}`;
+  }
   const res = await fetch(apiUrl(server, "/api/note"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(data),
   });
   if (!res.ok) {

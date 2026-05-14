@@ -21,6 +21,7 @@ import {
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
 import { resolveServer, getWebSocket } from "../lib/config.js";
+import { ensureOidcAuth } from "../lib/oidc.js";
 import {
   formatBytes,
   formatSpeed,
@@ -54,10 +55,11 @@ async function uploadHttpTransport(
   _encryptedSize: number,
   maxConcurrent: number,
   onProgress: (loaded: number) => void,
+  oidcToken?: string,
 ): Promise<{ id: string }> {
   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  const { id: uploadId } = await uploadInit(server, headers);
+  const { id: uploadId } = await uploadInit(server, headers, oidcToken);
 
   const reader = encryptedStream.getReader();
   let loaded = 0;
@@ -217,6 +219,13 @@ export function registerUploadCommand(program: Command): void {
         // Fetch server config for limits
         const config = await fetchConfig(server);
 
+        // Authenticate with OIDC if the server requires it for file uploads
+        let oidcToken: string | undefined;
+        if (config.oidcProtectFiles) {
+          if (!options.json) writeLine("Server requires authentication...");
+          oidcToken = await ensureOidcAuth(server);
+        }
+
         // Resolve password
         let password: string | undefined;
         if (options.password === true) {
@@ -347,14 +356,14 @@ export function registerUploadCommand(program: Command): void {
             );
             uploadResult = await uploadHttpTransport(
               server, headers, creds.ownerTokenB64, retryEncStream,
-              encryptedSize, config.fileUploadConcurrentChunks, onProgress,
+              encryptedSize, config.fileUploadConcurrentChunks, onProgress, oidcToken,
             );
             uploadEndTime = Date.now();
           }
         } else {
           uploadResult = await uploadHttpTransport(
             server, headers, creds.ownerTokenB64, encryptedStream,
-            encryptedSize, config.fileUploadConcurrentChunks, onProgress,
+            encryptedSize, config.fileUploadConcurrentChunks, onProgress, oidcToken,
           );
           uploadEndTime = Date.now();
         }

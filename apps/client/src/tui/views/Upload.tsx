@@ -24,6 +24,7 @@ import { useAccent } from "../theme.js";
 import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 import { uploadWsTransport } from "../../lib/ws-upload.js";
 import { getWebSocket } from "../../lib/config.js";
+import { ensureOidcAuth } from "../../lib/oidc.js";
 
 type Phase =
   | "file-select"
@@ -32,6 +33,7 @@ type Phase =
   | "password-ask"
   | "password-input"
   | "confirm"
+  | "authenticating"
   | "packing"
   | "uploading"
   | "done"
@@ -127,6 +129,13 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const doUpload = useCallback(async () => {
     let zipCleanup: (() => void) | undefined;
     try {
+      // Authenticate with OIDC before uploading if the server requires it.
+      let oidcToken: string | undefined;
+      if (config.oidcProtectFiles) {
+        setPhase("authenticating");
+        oidcToken = await ensureOidcAuth(server);
+      }
+
       setPhase("uploading");
       setIsFinalizing(false);
       setAvgSpeed("");
@@ -170,6 +179,9 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
       if (creds.hasPassword && creds.passwordSalt && creds.passwordAlgo) {
         headers["X-Password-Salt"] = toBase64url(creds.passwordSalt);
         headers["X-Password-Algo"] = creds.passwordAlgo;
+      }
+      if (oidcToken) {
+        headers["Authorization"] = `Bearer ${oidcToken}`;
       }
 
       // Upload with progress tracking
@@ -324,7 +336,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     } finally {
       zipCleanup?.();
     }
-  }, [files, password, maxDownloads, expireSec, server, totalSize, config.fileUploadSpeedLimit, config.fileUploadWs]);
+  }, [files, password, maxDownloads, expireSec, server, totalSize, config.fileUploadSpeedLimit, config.fileUploadWs, config.oidcProtectFiles]);
 
   // Done / Error view - press any key to go back
   useInput((input, key) => {
@@ -453,6 +465,19 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
             }}
           />
         </Box>
+      </Box>
+    );
+  }
+
+  // Authenticating (browser OIDC flow)
+  if (phase === "authenticating") {
+    return (
+      <Box flexDirection="column" paddingX={1}>
+        <Box marginBottom={1}>
+          <Text bold>Waiting for browser login...</Text>
+        </Box>
+        <Text dimColor>A browser window has been opened for authentication.</Text>
+        <Text dimColor>Complete the login and return here.</Text>
       </Box>
     );
   }

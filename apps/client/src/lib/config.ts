@@ -135,3 +135,48 @@ export function getWebSocket(_serverUrl?: string): boolean {
 export function setWebSocket(_serverUrl: string, _enabled: boolean): void {
   // no-op - see getWebSocket comment above
 }
+
+// ── OIDC Token Storage ─────────────────────────────────
+
+function getTokensPath(): string {
+  return path.join(getConfigDir(), "tokens.json");
+}
+
+function loadTokens(): Record<string, string> {
+  const tokensPath = getTokensPath();
+  if (!fs.existsSync(tokensPath)) return {};
+  try {
+    const raw = fs.readFileSync(tokensPath, "utf-8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTokens(tokens: Record<string, string>): void {
+  const dir = getConfigDir();
+  fs.mkdirSync(dir, { recursive: true });
+  const tokensPath = getTokensPath();
+  fs.writeFileSync(tokensPath, JSON.stringify(tokens, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
+}
+
+export function getStoredToken(serverUrl: string): string | undefined {
+  const tokens = loadTokens();
+  return tokens[serverUrl.replace(/\/+$/, "")];
+}
+
+export function saveStoredToken(serverUrl: string, token: string): void {
+  const tokens = loadTokens();
+  tokens[serverUrl.replace(/\/+$/, "")] = token;
+  writeTokens(tokens);
+}
+
+export function clearStoredToken(serverUrl: string): void {
+  const tokens = loadTokens();
+  delete tokens[serverUrl.replace(/\/+$/, "")];
+  writeTokens(tokens);
+}

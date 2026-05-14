@@ -63,6 +63,8 @@ export interface PkceState {
   nonce: string;
   codeVerifier: string;
   codeChallenge: string;
+  /** Optional CLI callback URL (only http://localhost or http://127.0.0.1). */
+  cliCallback?: string;
 }
 
 /**
@@ -79,13 +81,22 @@ export async function createPkceState(): Promise<PkceState> {
 
 /**
  * Sign a short-lived PKCE JWT (5 minutes) for the state + codeVerifier.
+ * Optionally embeds a CLI callback URL for the device-browser flow.
  */
 export async function createPkceJwt(
   pkce: PkceState,
   secret: string,
 ): Promise<string> {
   const key = await importSecret(secret);
-  return new SignJWT({ state: pkce.state, nonce: pkce.nonce, codeVerifier: pkce.codeVerifier })
+  const payload: Record<string, string> = {
+    state: pkce.state,
+    nonce: pkce.nonce,
+    codeVerifier: pkce.codeVerifier,
+  };
+  if (pkce.cliCallback) {
+    payload["cliCallback"] = pkce.cliCallback;
+  }
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("5m")
@@ -93,12 +104,12 @@ export async function createPkceJwt(
 }
 
 /**
- * Verify the PKCE cookie JWT. Returns `{ state, codeVerifier }` or null.
+ * Verify the PKCE cookie JWT. Returns the state bundle or null.
  */
 export async function verifyPkceJwt(
   token: string,
   secret: string,
-): Promise<{ state: string; nonce: string; codeVerifier: string } | null> {
+): Promise<{ state: string; nonce: string; codeVerifier: string; cliCallback?: string } | null> {
   try {
     const key = await importSecret(secret);
     const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
@@ -107,7 +118,12 @@ export async function verifyPkceJwt(
       typeof payload["nonce"] === "string" &&
       typeof payload["codeVerifier"] === "string"
     ) {
-      return { state: payload["state"], nonce: payload["nonce"], codeVerifier: payload["codeVerifier"] };
+      return {
+        state: payload["state"],
+        nonce: payload["nonce"],
+        codeVerifier: payload["codeVerifier"],
+        cliCallback: typeof payload["cliCallback"] === "string" ? payload["cliCallback"] : undefined,
+      };
     }
     return null;
   } catch {

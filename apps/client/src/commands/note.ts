@@ -8,6 +8,7 @@ import { fetchConfig, createNote } from "../lib/api.js";
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
 import { resolveServer } from "../lib/config.js";
+import { ensureOidcAuth } from "../lib/oidc.js";
 import {
   formatExpiry,
   parseDuration,
@@ -43,6 +44,13 @@ export function registerNoteCommand(program: Command): void {
       try {
         const server = resolveServer(options.server);
         const config = await fetchConfig(server);
+
+        // Authenticate with OIDC if the server requires it for notes
+        let oidcToken: string | undefined;
+        if (config.oidcProtectNotes) {
+          if (!options.json) writeLine("Server requires authentication...");
+          oidcToken = await ensureOidcAuth(server);
+        }
 
         // Validate content type
         const contentType = (options.type ?? "text") as NoteContentType;
@@ -109,7 +117,7 @@ export function registerNoteCommand(program: Command): void {
           hasPassword: creds.hasPassword,
           passwordSalt: creds.passwordSalt ? toBase64url(creds.passwordSalt) : undefined,
           passwordAlgo: creds.passwordAlgo,
-        });
+        }, oidcToken);
 
         // Build share URL
         const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);

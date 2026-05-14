@@ -14,12 +14,23 @@ export interface OidcGuardVariables {
 /**
  * Factory that creates a Hono middleware which enforces OIDC authentication.
  *
- * If the session cookie is valid, the resolved user is placed in `c.var.oidcUser`
+ * Accepts authentication via:
+ * 1. `skysend-auth` session cookie (browser / web clients)
+ * 2. `Authorization: Bearer <token>` header (CLI clients)
+ *
+ * If the token is valid, the resolved user is placed in `c.var.oidcUser`
  * and the request continues. Otherwise a 401 JSON response is returned.
  */
 export function createOidcGuard(config: Config) {
   return createMiddleware<{ Variables: OidcGuardVariables }>(async (c, next) => {
-    const token = getCookie(c, SESSION_COOKIE);
+    // Prefer the session cookie; fall back to Bearer token for CLI clients.
+    let token = getCookie(c, SESSION_COOKIE);
+    if (!token) {
+      const authHeader = c.req.header("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.slice(7);
+      }
+    }
     if (!token) {
       return c.json({ error: "Authentication required" }, 401);
     }

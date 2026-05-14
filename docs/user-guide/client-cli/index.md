@@ -11,6 +11,7 @@ The CLI client (`skysend`) lets you:
 - **Create** encrypted notes (text, password, code, markdown, SSH keys)
 - **View** encrypted notes from the terminal
 - **Delete** uploads and notes using the owner token
+- **Authenticate** with OIDC/SSO when required by the server (`auth login`, `auth logout`, `auth status`)
 - **Self-update** to the latest version from GitHub Releases
 - **Interactive mode** with menu-driven TUI - displays server config, limits, and quota
 

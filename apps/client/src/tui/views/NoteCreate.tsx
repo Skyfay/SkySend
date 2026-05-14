@@ -9,6 +9,7 @@ import { addNote } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
 import { generatePassword } from "../../lib/password-generator.js";
 import { generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "../../lib/ssh-keygen.js";
+import { ensureOidcAuth } from "../../lib/oidc.js";
 import { SelectList, type SelectItem } from "../components/SelectList.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import { MultiLineInput } from "../components/MultiLineInput.js";
@@ -20,7 +21,7 @@ import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 type Phase =
   // Common
   | "type" | "expiry" | "views" | "password-ask" | "password-input"
-  | "creating" | "done" | "error"
+  | "authenticating" | "creating" | "done" | "error"
   // Text/Code/Markdown
   | "text-source" | "text-editor" | "text-file"
   // Password note
@@ -74,6 +75,12 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   const doCreate = useCallback(async (passwordOverride?: string) => {
     const effectivePassword = passwordOverride !== undefined ? passwordOverride : password;
     try {
+      // Authenticate with OIDC before creating the note if the server requires it.
+      let oidcToken: string | undefined;
+      if (config.oidcProtectNotes) {
+        setPhase("authenticating");
+        oidcToken = await ensureOidcAuth(server);
+      }
       setPhase("creating");
       const creds = await prepareUpload(effectivePassword);
       const encrypted = await encryptNoteContent(content, creds.keys.metaKey);
@@ -89,7 +96,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         ...(creds.hasPassword && creds.passwordSalt && creds.passwordAlgo
           ? { passwordSalt: toBase64url(creds.passwordSalt), passwordAlgo: creds.passwordAlgo }
           : {}),
-      });
+      }, oidcToken);
 
       const url = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
       setShareUrl(url);
@@ -106,7 +113,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, [content, contentType, maxViews, expireSec, password, server]);
+  }, [content, contentType, maxViews, expireSec, password, server, config.oidcProtectNotes]);
 
   useInput((input, key) => {
     if (phase === "done" && input === "q") {
@@ -530,6 +537,18 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         onCancel={() => setPhase("password-ask")}
         validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
       />
+    );
+  }
+
+  if (phase === "authenticating") {
+    return (
+      <Box flexDirection="column" paddingX={1}>
+        <Box marginBottom={1}>
+          <Text bold>Waiting for browser login...</Text>
+        </Box>
+        <Text dimColor>A browser window has been opened for authentication.</Text>
+        <Text dimColor>Complete the login and return here.</Text>
+      </Box>
     );
   }
 
