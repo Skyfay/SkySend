@@ -14,54 +14,34 @@ Complete reference of all environment variables supported by SkySend.
 | `TRUST_PROXY` | ❌ | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
 | `CORS_ORIGINS` | ❌ | _(empty)_ | Additional CORS origins, comma-separated. |
 
-## File Upload Limits
+## File
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
 | `FILE_MAX_SIZE` | ❌ | `2GB` | Maximum file upload size. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `FILE_MAX_FILES_PER_UPLOAD` | ❌ | `32` | Maximum number of files per multi-file upload. |
-
-## File Expiry Options
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
 | `FILE_EXPIRE_OPTIONS_SEC` | ❌ | `300,3600,86400,604800` | Comma-separated list of selectable expiry times in seconds. |
 | `FILE_DEFAULT_EXPIRE_SEC` | ❌ | `86400` | Default expiry time (must be one of `FILE_EXPIRE_OPTIONS_SEC`). |
-
-The default options translate to:
-- 5 minutes (`300`)
-- 1 hour (`3600`)
-- 1 day (`86400`) - default
-- 7 days (`604800`)
-
-## File Download Limits
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
 | `FILE_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,4,5,10,20,50,100` | Comma-separated list of selectable download limits. |
 | `FILE_DEFAULT_DOWNLOAD` | ❌ | `1` | Default download limit (must be one of `FILE_DOWNLOAD_OPTIONS`). |
-
-## File Upload Quota
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
 | `FILE_UPLOAD_QUOTA_BYTES` | ❌ | `0` (unlimited) | Maximum file upload volume per user per window. `0` disables the quota. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `FILE_UPLOAD_QUOTA_WINDOW` | ❌ | `86400` | Quota time window in seconds (default: 24 hours). |
-
-::: info Privacy-Preserving Quotas
-Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
-:::
-
-## Upload Performance
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
 | `FILE_UPLOAD_CONCURRENT_CHUNKS` | ❌ | `3` | Number of parallel chunk uploads per session (1-20). Increase to improve upload speed in Chromium browsers (Chrome, Edge, Brave) through HTTP/2 reverse proxies. |
 | `FILE_UPLOAD_SPEED_LIMIT` | ❌ | `0` (unlimited) | Maximum upload speed per session in bytes per second. `0` disables the limit. Supports units: `B`, `KB`, `MB`, `GB` (e.g. `100MB` for 100 MB/s). |
 | `FILE_UPLOAD_WS` | ❌ | `true` | Enable the WebSocket upload transport. Uploads are streamed over a single persistent connection, bypassing HTTP/2 multiplexing bottlenecks in reverse proxies (Traefik, Nginx) and significantly improving upload speed in Chromium browsers. Clients automatically fall back to HTTP chunked uploads when the WebSocket handshake fails. Set to `false` in environments where WebSockets are blocked or terminated. |
 | `FILE_UPLOAD_WS_MAX_BUFFER` | ❌ | `16MB` | Maximum bytes the server may buffer per WebSocket upload session before aborting it. Only relevant when the storage backend cannot keep up with the incoming frame rate. Supports units: `B`, `KB`, `MB`, `GB`. Minimum `1MB`. |
 
-## Note Settings
+The default expiry options translate to:
+- 5 minutes (`300`)
+- 1 hour (`3600`)
+- 1 day (`86400`) - default
+- 7 days (`604800`)
+
+::: info Privacy-Preserving Quotas
+Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+:::
+
+## Notes
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
