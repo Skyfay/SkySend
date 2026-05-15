@@ -1,148 +1,40 @@
 # Docker Setup
 
-This guide covers the Docker deployment of SkySend in detail.
-
-## Docker Compose (Recommended)
-
-The simplest way to run SkySend is with Docker Compose:
-
-```yaml
-services:
-  skysend:
-    build: .
-    restart: always
-    ports:
-      - "${PORT:-3000}:3000"
-    volumes:
-      - ./data:/data
-      - ./uploads:/uploads
-    env_file:
-      - .env
-    environment:
-      - BASE_URL=https://send.example.com
-      - DATA_DIR=/data
-      - UPLOADS_DIR=/uploads
-      - PUID=${PUID:-1001}
-      - PGID=${PGID:-1001}
-```
-
-Start with:
-
-```bash
-docker compose up -d
-```
-
-## Environment Variables
-
-Pass environment variables via `.env` file or directly:
-
-```bash
-# .env
-BASE_URL=https://send.example.com
-PORT=3000
-FILE_MAX_SIZE=2GB
-FILE_DEFAULT_EXPIRE_SEC=86400
-FILE_UPLOAD_QUOTA_BYTES=10737418240  # 10 GB per user per day
-```
-
-See [Environment Variables](/user-guide/configuration/environment-variables) for the complete reference.
-
-## S3 Storage Backend
-
-By default, SkySend stores files on the local filesystem. You can optionally use S3-compatible object storage for file uploads:
-
-```yaml
-services:
-  skysend:
-    build: .
-    restart: always
-    ports:
-      - "${PORT:-3000}:3000"
-    volumes:
-      - ./data:/data
-    environment:
-      - BASE_URL=https://send.example.com
-      - DATA_DIR=/data
-      - STORAGE_BACKEND=s3
-      - S3_BUCKET=skysend-uploads
-      - S3_REGION=auto
-      - S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-```
-
-::: tip
-When using S3, the `/uploads` volume is no longer needed - only the `/data` volume for the SQLite database.
-:::
-
-::: warning
-When using S3 storage, you must configure a **CORS policy** on your S3 bucket at your provider (Cloudflare R2, AWS, MinIO, etc.) to allow browser downloads. The policy must allow `GET` and `HEAD` methods from your SkySend domain. See [Storage Backend](/user-guide/configuration/environment-variables#storage-backend) for examples.
-:::
-
-See [Environment Variables](/user-guide/configuration/environment-variables#storage-backend) for all S3 configuration options and provider examples.
-
-## Data Persistence
-
-SkySend uses two separate volumes:
-
-| Volume | Container Path | Content |
-| --- | --- | --- |
-| Database | `/data` | SQLite database at `/data/db/skysend.db` |
-| Uploads | `/uploads` | Encrypted upload files |
-
-```
-./data/                  # Mount to /data
-  db/
-    skysend.db           # SQLite database + WAL files
-./uploads/               # Mount to /uploads
-  <uuid>.bin             # Encrypted upload files
-```
-
-::: warning Backups
-To back up SkySend, copy both the `data/` and `uploads/` directories. The SQLite database uses WAL mode, so it is safe to copy while the server is running.
-:::
-
-## Building the Image
-
-SkySend uses a multi-stage Dockerfile:
-
-1. **base** - Node.js 24 Alpine with pnpm
-2. **build** - Installs all dependencies and builds the project
-3. **deploy** - Production image with only runtime dependencies
-
-```bash
-docker build -t skysend .
-```
-
-The final image contains:
-- Built server (`apps/server/dist`)
-- Built frontend (`apps/web/dist`)
-- Production dependencies only
-- Non-root user (`skysend`, UID 1001)
-- Health check on `/api/health`
+For basic installation see [Installation](/user-guide/installation). This page covers advanced Docker configuration topics.
 
 ## Custom Port
 
-To run on a different port:
+The `PORT` environment variable changes the port the server listens on **inside the container**. You also need to update the port mapping to expose it on the host.
+
+The simplest approach is to keep the internal port at `3000` and only change the host-side mapping:
+
+```yaml
+ports:
+  - "8080:3000"  # host:container
+```
+
+If you also want to change the internal port, set `PORT` and match both sides:
+
+```yaml
+ports:
+  - "8080:8080"
+environment:
+  - PORT=8080
+```
+
+Or via the command line:
 
 ```bash
 PORT=8080 docker compose up -d
 ```
 
-Or in your `.env`:
-
-```bash
-PORT=8080
-```
-
 ## Updating
 
-To update to a new version:
+Before updating, it is recommended to back up your data directory - see [Data & Backups](/user-guide/self-hosting/data-backups). Check the [Changelog](/changelog) for release notes and any breaking changes before pulling a new version.
 
 ```bash
-git pull
-docker compose build
+docker compose pull
 docker compose up -d
 ```
 
-Your data is preserved in the mounted volume.
+Your data is preserved in the mounted volumes.

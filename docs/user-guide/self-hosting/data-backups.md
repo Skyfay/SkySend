@@ -1,18 +1,24 @@
 # Data & Backups
 
-SkySend stores all persistent data in a single directory. This makes backups straightforward.
+SkySend stores persistent data in two separate locations. Both need to be backed up.
 
 ## Data Directory
 
-By default, SkySend stores data in `./data` (configurable via `DATA_DIR`):
+The database lives in `./data` (configurable via `DATA_DIR`):
 
 ```
 data/
-  skysend.db          # SQLite database (upload metadata)
-  skysend.db-wal      # Write-ahead log (temporary)
-  skysend.db-shm      # Shared memory file (temporary)
-  uploads/            # Encrypted upload files
-    <uuid>.bin         # One file per upload
+  db/
+    skysend.db          # SQLite database (upload metadata)
+    skysend.db-wal      # Write-ahead log (temporary)
+    skysend.db-shm      # Shared memory file (temporary)
+```
+
+Encrypted upload files are stored separately in `./uploads` by default (configurable via `UPLOADS_DIR`). In the Docker image, this defaults to `/uploads` as a dedicated volume:
+
+```
+uploads/
+  <uuid>.bin            # One encrypted file per upload
 ```
 
 ## What Is Stored
@@ -34,24 +40,24 @@ The database contains only encrypted metadata and hashed tokens. No plaintext fi
 
 ### Simple Copy
 
-The simplest backup method is to copy the entire data directory:
+Copy both directories. SQLite with WAL mode supports safe concurrent reads, so you can copy the database while SkySend is running:
 
 ```bash
 cp -r ./data ./data-backup-$(date +%Y%m%d)
+cp -r ./uploads ./uploads-backup-$(date +%Y%m%d)
 ```
-
-SQLite with WAL mode supports safe concurrent reads, so you can copy the database while SkySend is running.
 
 ### Docker Volume
 
-If using Docker, the volume is configured in `docker-compose.yml`:
+In Docker both volumes are mounted from the host:
 
 ```yaml
 volumes:
-  - "${DATA_DIR:-./data}:/app/data"
+  - ./data:/data
+  - ./uploads:/uploads
 ```
 
-Back up the host-side directory.
+Back up both host-side directories.
 
 ## Restore
 
@@ -63,8 +69,9 @@ To restore from a backup:
 
 ```bash
 docker compose down
-rm -rf ./data
+rm -rf ./data ./uploads
 cp -r ./data-backup-20250101 ./data
+cp -r ./uploads-backup-20250101 ./uploads
 docker compose up -d
 ```
 

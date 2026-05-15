@@ -73,8 +73,6 @@ When using `--json`, the output includes all details needed for scripting:
 The `ownerToken` is required to delete an upload. When using `--json`, save the output so you can delete the upload later with `skysend delete`.
 :::
 
----
-
 ## download
 
 Download and decrypt a file from a SkySend share URL.
@@ -122,8 +120,6 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 - If the file is password-protected, you will be prompted for the password (or provide it via `--password`).
 - Progress is displayed with a bar, speed, and ETA.
 - The original filename is extracted from the encrypted metadata. For multi-file uploads, the downloaded file will be a `.zip` archive.
-
----
 
 ## note
 
@@ -186,8 +182,6 @@ skysend note "secret data" --password --expires 24h --views 5
 Note content types affect how the note is rendered in the **web UI**. In the terminal, `note:view` always displays the raw content.
 :::
 
----
-
 ## note:view
 
 View and decrypt an encrypted note.
@@ -225,8 +219,6 @@ skysend note:view https://instance.com/note/abc123#secret --json
 ::: warning Burn After Reading
 If the note has a view limit of 1 (burn-after-reading), viewing it will permanently destroy it. There is no way to view it again.
 :::
-
----
 
 ## delete
 
@@ -268,8 +260,6 @@ skysend upload ./file.txt --json
 ```
 :::
 
----
-
 ## ls
 
 List upload and note history stored locally on the client.
@@ -305,8 +295,6 @@ skysend ls --json
 ::: tip
 History is stored at `~/.config/skysend/history.json` and holds up to 100 uploads and 100 notes. Expired entries are automatically cleaned up.
 :::
-
----
 
 ## config
 
@@ -347,8 +335,6 @@ The configuration file is stored at:
 - **Linux/macOS**: `~/.config/skysend/config.json`
 - **Custom**: `$XDG_CONFIG_HOME/skysend/config.json`
 - **Windows**: `%USERPROFILE%\.config\skysend\config.json`
-
----
 
 ## update
 
@@ -392,8 +378,6 @@ sudo skysend update
 Alternatively, re-run the install script.
 :::
 
----
-
 ## auth
 
 Manage OIDC authentication sessions for a server. When a server has OIDC enabled and requires authentication for file uploads or note creation, the CLI opens a browser automatically. Use the `auth` commands to manage sessions explicitly.
@@ -419,8 +403,6 @@ skysend auth login
 skysend auth login --server https://send.company.com
 ```
 
----
-
 ### auth logout
 
 ```bash
@@ -441,8 +423,6 @@ Removes the stored session token for a server. The next upload or note command w
 skysend auth logout
 skysend auth logout --server https://send.company.com
 ```
-
----
 
 ### auth status
 
@@ -473,8 +453,6 @@ Expires: 5/15/2026, 10:30:00 AM
 Status:  active
 ```
 
----
-
 ### How OIDC auth works
 
 When you run `skysend upload` or `skysend note` on an OIDC-protected server:
@@ -490,8 +468,6 @@ In the **interactive TUI mode**, a "Waiting for browser login..." screen is show
 ::: tip Token Storage
 Session tokens are stored per-server in `~/.config/skysend/tokens.json` with `600` file permissions (owner read/write only). Tokens are JWT session tokens issued by the SkySend server - they are not your OIDC provider credentials.
 :::
-
----
 
 ## interactive (default)
 
@@ -531,8 +507,6 @@ All uploads and notes created via the CLI (both interactive and direct commands)
 ```bash
 skysend interactive --server https://send.example.com
 ```
-
----
 
 ## Global Options
 

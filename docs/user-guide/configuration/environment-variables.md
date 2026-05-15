@@ -112,61 +112,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `S3_PART_SIZE` | ❌ | `25MB` | Size of each S3 multipart upload part. Larger values reduce round-trips but use more memory. Minimum is `5MB` (S3 requirement). |
 | `S3_CONCURRENCY` | ❌ | `4` | Number of S3 parts uploaded in parallel. Higher values improve throughput but use more memory and bandwidth. Range: 1-16. |
 
-::: info S3-Compatible Providers
-SkySend works with any S3-compatible storage provider: AWS S3, Cloudflare R2, Hetzner Object Storage, MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, Scaleway, and more. Just set the `S3_ENDPOINT` to your provider's endpoint URL.
-:::
-
-::: tip Example: Cloudflare R2
-```yaml
-environment:
-  STORAGE_BACKEND: s3
-  S3_BUCKET: skysend-uploads
-  S3_REGION: auto
-  S3_ENDPOINT: "https://<account-id>.r2.cloudflarestorage.com"
-  S3_ACCESS_KEY: your-access-key
-  S3_SECRET_KEY: your-secret-key
-```
-:::
-
-::: tip Example: MinIO (Self-Hosted)
-```yaml
-environment:
-  STORAGE_BACKEND: s3
-  S3_BUCKET: skysend-uploads
-  S3_REGION: us-east-1
-  S3_ENDPOINT: "https://minio.example.com:9000"
-  S3_ACCESS_KEY: your-access-key
-  S3_SECRET_KEY: your-secret-key
-  S3_FORCE_PATH_STYLE: "true"
-```
-:::
-
-::: warning S3 CORS Configuration
-When using S3 storage, your S3 bucket needs a **CORS policy** configured at your provider to allow browser downloads. Without it, downloads will fail with `No 'Access-Control-Allow-Origin' header` errors. The policy must allow `GET` and `HEAD` methods.
-
-**Cloudflare R2:** Go to **R2** > your bucket > **Settings** > **CORS Policy** and add:
-
-```json
-[
-  {
-    "AllowedOrigins": [
-      "http://localhost:3000",
-      "https://skysend.example.com"
-    ],
-    "AllowedMethods": [
-      "GET",
-      "HEAD"
-    ]
-  }
-]
-```
-
-**AWS S3:** Go to your bucket > **Permissions** > **CORS configuration**.
-
-**MinIO:** Use `mc admin config set` or the MinIO Console.
-
-Replace `https://your-skysend-domain.com` with your actual SkySend URL. For local development, add `http://localhost:5173`.
-:::
+→ See [S3 Storage](/user-guide/configuration/s3) for provider examples and CORS configuration.
 
 ## Branding & Customization
 
@@ -203,25 +149,9 @@ The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are v
 
 ## SSO / OIDC Authentication
 
-SkySend supports optional single sign-on via any OIDC-compliant provider. When enabled, file uploads and/or note creation require users to authenticate first. Downloads are always public - authentication only gates the upload action.
+When `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set, OIDC authentication is activated. Downloads are always public - authentication only gates the upload action.
 
-All OIDC endpoints (authorization, token, userinfo, end-session) are **auto-discovered** from the issuer URL. You never need to specify individual endpoint URLs manually.
-
-### What to register at your provider
-
-When you create a new application/client at your OIDC provider, you only need to configure **one redirect/callback URL**, regardless of whether users access SkySend via the web browser or the CLI client:
-
-```
-https://skysend.example.com/auth/callback
-```
-
-Replace `skysend.example.com` with your actual domain (the value of `BASE_URL`).
-
-**No additional URLs are needed for the CLI.** The CLI piggybacks on the same server callback - SkySend handles the provider redirect first and then forwards the session token to the CLI's temporary local listener. The provider never talks to the CLI directly.
-
-::: tip Grant type
-Register the application as a **confidential client** with the **authorization code** grant type and PKCE support. You need both a client ID and a client secret.
-:::
+→ See [OIDC Authentication](/user-guide/configuration/oidc) for provider setup guides and examples.
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
@@ -237,86 +167,6 @@ Register the application as a **confidential client** with the **authorization c
 | `OIDC_SESSION_DURATION` | ❌ | `86400` | Session cookie lifetime in seconds (default: 24 hours). |
 
 > ⚠️ The three variables marked ⚠️ (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`) must all be set together. Setting any one of them without the others will cause SkySend to refuse to start.
-
-::: tip Session secret and restarts
-If `OIDC_SESSION_SECRET` is not set, SkySend generates a cryptographically random secret at startup. This means every logged-in user will be signed out whenever the server restarts or the container is recreated. If you want sessions to survive restarts, set a fixed value:
-
-```sh
-# generate once, then paste the output into your environment
-openssl rand -base64 48
-```
-:::
-
-### Provider: Keycloak
-
-Set `OIDC_ISSUER` to the realm-specific issuer URL. You can find this in the Keycloak Admin Console under **Realm Settings** > **General** > **OpenID Endpoint Configuration** - the `issuer` field is the value to use.
-
-```yaml
-environment:
-  OIDC_PROVIDER: keycloak
-  OIDC_ISSUER: "https://keycloak.example.com/realms/myrealm"
-  OIDC_CLIENT_ID: "skysend"
-  OIDC_CLIENT_SECRET: "your-client-secret"
-```
-
-In Keycloak, create a new client with:
-- **Client type**: OpenID Connect
-- **Valid redirect URIs**: `https://your-skysend-domain.com/auth/callback`
-- **Client authentication**: On (confidential client)
-
-### Provider: PocketID
-
-Set `OIDC_ISSUER` to the root URL of your PocketID instance. PocketID exposes the discovery document at `/.well-known/openid-configuration` on the root, so the issuer URL is simply the base URL.
-
-```yaml
-environment:
-  OIDC_PROVIDER: pocketid
-  OIDC_ISSUER: "https://auth.example.com"
-  OIDC_CLIENT_ID: "your-client-id"
-  OIDC_CLIENT_SECRET: "your-client-secret"
-```
-
-In PocketID, the callback URL to register in the application settings is `https://your-skysend-domain.com/auth/callback`.
-
-### Provider: Authentik
-
-Set `OIDC_ISSUER` to the application-specific path, which includes the application slug. You can find this URL in the Authentik admin panel under **Applications** > your application > **Edit** > **OpenID Configuration Issuer**.
-
-```yaml
-environment:
-  OIDC_PROVIDER: authentik
-  OIDC_ISSUER: "https://auth.example.com/application/o/skysend/"
-  OIDC_CLIENT_ID: "your-client-id"
-  OIDC_CLIENT_SECRET: "your-client-secret"
-```
-
-In Authentik, set the redirect URI in the OAuth2/OIDC provider to `https://your-skysend-domain.com/auth/callback`.
-
-### Provider: Generic
-
-Use `generic` for any other OIDC-compliant provider (Keycloak, Zitadel, Kanidm, Dex, etc.). Set `OIDC_ISSUER` to the issuer URL shown in your provider's OIDC configuration panel or discovery document. The value must match the `issuer` field returned by `/.well-known/openid-configuration`.
-
-```yaml
-environment:
-  OIDC_PROVIDER: generic
-  OIDC_ISSUER: "https://auth.example.com/realms/myrealm"
-  OIDC_CLIENT_ID: "your-client-id"
-  OIDC_CLIENT_SECRET: "your-client-secret"
-```
-
-::: tip What is the Issuer URL?
-Open `{OIDC_ISSUER}/.well-known/openid-configuration` in a browser. If you get a JSON document with an `authorization_endpoint` field, the URL is correct. SkySend reads this document automatically at login time.
-:::
-
-::: info Partial protection
-You can allow anonymous access to one service type while requiring login for the other:
-
-```yaml
-# Require login for file uploads, but allow anonymous notes
-OIDC_PROTECT_FILES: "true"
-OIDC_PROTECT_NOTES: "false"
-```
-:::
 
 ## Docker
 

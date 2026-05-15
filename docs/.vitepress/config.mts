@@ -91,6 +91,8 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: 'Environment Variables', link: '/user-guide/configuration/environment-variables' },
+            { text: 'S3 Storage', link: '/user-guide/configuration/s3' },
+            { text: 'OIDC / SSO', link: '/user-guide/configuration/oidc' },
             { text: 'Upload Limits', link: '/user-guide/configuration/upload-limits' },
             { text: 'Rate Limiting & Quotas', link: '/user-guide/configuration/rate-limiting' }
           ]
