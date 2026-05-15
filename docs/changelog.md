@@ -11,6 +11,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐛 Bug Fixes
 
+- **web**: Fixed invisible burn-after-reading warning text in light mode. The warning box now uses `text-destructive` (colored) instead of `text-destructive-foreground` (white), making the text readable on the light semi-transparent red background.
 - **web**: Fixed syntax highlighting in code snippets for light mode. The code block now uses the GitHub light theme in light mode (`#f6f8fa` background) and the Arta dark theme in dark mode (`#222` background), ensuring all tokens are readable in both themes. ([#45](https://github.com/Skyfay/SkySend/issues/45))
 
 ### 🐳 Docker
