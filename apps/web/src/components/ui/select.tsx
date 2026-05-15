@@ -53,6 +53,9 @@ const SelectContent = React.forwardRef<
       >
         {children}
       </SelectPrimitive.Viewport>
+      <SelectPrimitive.ScrollDownButton className="pointer-events-none flex h-6 items-end justify-center bg-linear-to-t from-popover to-transparent pb-1">
+        <ChevronDown className="h-3 w-3 text-muted-foreground opacity-60" />
+      </SelectPrimitive.ScrollDownButton>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));

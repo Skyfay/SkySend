@@ -219,7 +219,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
 
           {blocks.map((block, index) => (
             <div key={index} className="space-y-2 rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   type="text"
                   value={block.title}
@@ -229,6 +229,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
                   disabled={isSubmitting}
                   autoComplete="off"
                 />
+                <div className="flex items-center gap-2">
                 <LanguageSelect
                   value={block.language}
                   onValueChange={(v) => updateBlock(index, "language", v)}
@@ -247,6 +248,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
                     <X className="h-4 w-4" />
                   </Button>
                 )}
+                </div>
               </div>
               <Textarea
                 value={block.code}
