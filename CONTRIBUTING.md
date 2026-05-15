@@ -1,6 +1,12 @@
 # Contributing to SkySend
 
-Thank you for your interest in contributing!
+Contributions are welcome! Before submitting a pull request, please:
+
+1. Check existing issues and discussions to avoid duplicates
+2. For significant changes, open an issue first to discuss the approach
+3. More information can be found in the [Developer Guide](https://docs.skysend.ch/developer-guide/) for setup instructions
+
+Small fixes (language translations, typos, documentation improvements) can be submitted directly as PRs.
 
 ## Development Setup
 
@@ -27,6 +33,7 @@ apps/
   server/    # Hono backend (API + static file serving)
   web/       # React SPA (Vite + Shadcn UI)
   cli/       # Admin CLI tool
+  client/    # Official CLI client for uploads and notes
 packages/
   crypto/    # Shared encryption library (Web Crypto API)
 docs/        # VitePress documentation
@@ -37,7 +44,10 @@ docs/        # VitePress documentation
 ```bash
 pnpm dev          # Start development servers
 pnpm build        # Build all packages
-pnpm test         # Run all tests
+pnpm validate     # Run all tests (unit, lint, typecheck)
+pnpm lint         # Run linters
+pnpm typecheck    # Run TypeScript type checks
+pnpm test         # Run unit tests
 ```
 
 ## Guidelines

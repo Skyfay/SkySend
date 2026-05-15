@@ -261,7 +261,7 @@ pnpm dev
 pnpm validate
 ```
 
-For contribution guidelines, see the [Developer Guide](https://docs.skysend.ch/developer-guide/) and [CONTRIBUTING.md](CONTRIBUTING.md).
+For contribution guidelines, see the [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 💬 Community & Support
 
