@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed syntax highlighting in code snippets for light mode. The code block now uses the GitHub light theme in light mode (`#f6f8fa` background) and the Arta dark theme in dark mode (`#222` background), ensuring all tokens are readable in both themes. ([#45](https://github.com/Skyfay/SkySend/issues/45))
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.8.0 - OIDC/SSO Authentication, General Improvements, Security & Dependency Patches
 *Released: May 14, 2026*
 

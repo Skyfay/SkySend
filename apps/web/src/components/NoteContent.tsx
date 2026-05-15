@@ -20,7 +20,7 @@ const sanitizeSchema = {
 import { Button } from "@/components/ui/button";
 import type { NoteContentType } from "@skysend/crypto";
 import hljs from "highlight.js/lib/core";
-import "highlight.js/styles/github-dark.min.css";
+import "highlight.js/styles/github.min.css";
 
 // Register commonly used languages
 import javascript from "highlight.js/lib/languages/javascript";
@@ -347,14 +347,14 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
 
     return (
       <div className="space-y-3">
-        <div className="relative overflow-hidden rounded-lg border bg-[#0d1117]">
+        <div className="relative overflow-hidden rounded-lg border bg-[#f6f8fa] dark:bg-[#222] text-[#24292e] dark:text-[#aaa]">
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full border-collapse text-sm font-mono">
               <tbody>
                 {highlightedCode.split("\n").map((line, i) => (
-                  <tr key={i} className="hover:bg-white/5">
+                  <tr key={i} className="hover:bg-black/5 dark:hover:bg-white/5">
                     <td
-                      className="select-none border-r border-white/10 px-3 py-0.5 text-right text-muted-foreground/50"
+                      className="select-none border-r border-black/10 dark:border-white/10 px-3 py-0.5 text-right text-muted-foreground/50"
                       style={{ minWidth: `${lineNumberWidth + 2}ch` }}
                     >
                       {i + 1}
