@@ -69,7 +69,7 @@ server {
 ```
 
 ::: tip Important Nginx Settings
-- `client_max_body_size` must match your `MAX_FILE_SIZE` setting
+- `client_max_body_size` must match your `FILE_MAX_SIZE` setting
 - `proxy_request_buffering off` is required for streaming uploads
 - `proxy_buffering off` is required for streaming downloads
 - The `Upgrade` / `Connection` headers and the `$connection_upgrade` map are required for the WebSocket upload transport (`FILE_UPLOAD_WS`, default on)

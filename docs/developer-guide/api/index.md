@@ -39,7 +39,7 @@ http://localhost:3000/api
 
 ### OIDC Auth Endpoints
 
-These routes are only active when `OIDC_ENABLED=true`. They live outside the `/api` prefix.
+These routes are only active when OIDC is configured (i.e., when `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set). They live outside the `/api` prefix.
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |

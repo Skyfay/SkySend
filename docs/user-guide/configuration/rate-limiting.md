@@ -41,19 +41,19 @@ Upload quotas limit the total volume of data a single user can upload within a t
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `UPLOAD_QUOTA_BYTES` | `0` | Maximum bytes per user per window. `0` = disabled |
-| `UPLOAD_QUOTA_WINDOW` | `86400` | Window size in seconds (default: 24 hours) |
+| `FILE_UPLOAD_QUOTA_BYTES` | `0` | Maximum bytes per user per window. `0` = disabled |
+| `FILE_UPLOAD_QUOTA_WINDOW` | `86400` | Window size in seconds (default: 24 hours) |
 
 ### Configuration Examples
 
 ```bash
 # 10 GB per user per day
-UPLOAD_QUOTA_BYTES=10737418240
-UPLOAD_QUOTA_WINDOW=86400
+FILE_UPLOAD_QUOTA_BYTES=10737418240
+FILE_UPLOAD_QUOTA_WINDOW=86400
 
 # 1 GB per user per hour
-UPLOAD_QUOTA_BYTES=1073741824
-UPLOAD_QUOTA_WINDOW=3600
+FILE_UPLOAD_QUOTA_BYTES=1073741824
+FILE_UPLOAD_QUOTA_WINDOW=3600
 ```
 
 ### Privacy

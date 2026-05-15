@@ -40,9 +40,9 @@ Pass environment variables via `.env` file or directly:
 # .env
 BASE_URL=https://send.example.com
 PORT=3000
-MAX_FILE_SIZE=2GB
-DEFAULT_EXPIRE_SEC=86400
-UPLOAD_QUOTA_BYTES=10737418240  # 10 GB per user per day
+FILE_MAX_SIZE=2GB
+FILE_DEFAULT_EXPIRE_SEC=86400
+FILE_UPLOAD_QUOTA_BYTES=10737418240  # 10 GB per user per day
 ```
 
 See [Environment Variables](/user-guide/configuration/environment-variables) for the complete reference.

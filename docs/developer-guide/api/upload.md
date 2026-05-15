@@ -31,10 +31,10 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 ### Validation
 
 - `X-Salt` must decode to 16 or 32 bytes
-- `Content-Length` must not exceed `MAX_FILE_SIZE`
-- `X-File-Count` must not exceed `MAX_FILES_PER_UPLOAD`
-- `X-Expire-Sec` must be one of the configured `EXPIRE_OPTIONS_SEC`
-- `X-Max-Downloads` must be one of the configured `DOWNLOAD_OPTIONS`
+- `Content-Length` must not exceed `FILE_MAX_SIZE`
+- `X-File-Count` must not exceed `FILE_MAX_FILES_PER_UPLOAD`
+- `X-Expire-Sec` must be one of the configured `FILE_EXPIRE_OPTIONS_SEC`
+- `X-Max-Downloads` must be one of the configured `FILE_DOWNLOAD_OPTIONS`
 - Body size must match `Content-Length` exactly
 
 ### Response
