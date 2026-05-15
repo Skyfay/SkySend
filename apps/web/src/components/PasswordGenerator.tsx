@@ -55,7 +55,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
             const v = parseInt(e.target.value, 10);
             if (v >= 1 && v <= 128) setLength(v);
           }}
-          className="h-8 w-16 text-center font-mono text-sm"
+          className="h-8 w-20 text-center font-mono text-sm"
           disabled={disabled}
         />
       </div>

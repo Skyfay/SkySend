@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.9.0 - Multi-block Code Notes and UI Improvements
+*Released: May 15, 2026*
 
 ### ✨ Features
 
@@ -11,13 +11,14 @@ All notable changes to SkySend are documented here.
 
 ### 🐛 Bug Fixes
 
-- **web**: Fixed invisible burn-after-reading warning text in light mode. The warning box now uses `text-destructive` (colored) instead of `text-destructive-foreground` (white), making the text readable on the light semi-transparent red background.
+- **web**: Fixed the password generator length input being slightly clipped for three-digit values (100+). The field width was increased from `w-16` to `w-20` so numbers like 106 or 128 are fully visible.
+- **web**: Fixed invisible burn-after-reading warning text in light mode. The warning box now uses `text-destructive` (colored) instead of `text-destructive-foreground` (white), making the text readable on the light semi-transparent red background. ([#46](https://github.com/Skyfay/SkySend/issues/46))
 - **web**: Fixed syntax highlighting in code snippets for light mode. The code block now uses the GitHub light theme in light mode (`#f6f8fa` background) and the Arta dark theme in dark mode (`#222` background), ensuring all tokens are readable in both themes. ([#45](https://github.com/Skyfay/SkySend/issues/45))
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.9.0`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
