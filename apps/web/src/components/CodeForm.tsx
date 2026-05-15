@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff, Send, Loader2, Plus, X } from "lucide-react";
+import { Lock, Eye, EyeOff, Send, Loader2, Plus, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,6 +79,68 @@ interface CodeBlock {
   title: string;
   language: string;
   code: string;
+}
+
+function LanguageSelect({
+  value,
+  onValueChange,
+  disabled,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filtered = CODE_LANGUAGES.filter(
+    (l) => l.value === "auto" || l.label.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <Select
+      value={value}
+      onValueChange={onValueChange}
+      disabled={disabled}
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setSearch("");
+      }}
+    >
+      <SelectTrigger className="h-8 w-44 text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent
+        header={
+          <div className="p-1 pb-0">
+            <div className="flex items-center gap-1.5 rounded-sm border border-input px-2 py-1">
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input
+                className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                placeholder={t("language.search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        }
+      >
+        {filtered.map((lang) => (
+          <SelectItem key={lang.value} value={lang.value} className="text-xs">
+            {lang.value === "auto" ? t("code.auto") : lang.label}
+          </SelectItem>
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-4 text-center text-xs text-muted-foreground">
+            {t("language.search")}
+          </div>
+        )}
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function CodeForm({ forcePassword = false }: { forcePassword?: boolean }) {
@@ -167,22 +229,11 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
                   disabled={isSubmitting}
                   autoComplete="off"
                 />
-                <Select
+                <LanguageSelect
                   value={block.language}
                   onValueChange={(v) => updateBlock(index, "language", v)}
                   disabled={isSubmitting}
-                >
-                  <SelectTrigger className="h-8 w-44 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CODE_LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.value} value={lang.value} className="text-xs">
-                        {lang.value === "auto" ? t("code.auto") : lang.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 {blocks.length > 1 && (
                   <Button
                     type="button"
