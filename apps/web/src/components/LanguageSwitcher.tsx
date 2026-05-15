@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -57,6 +57,27 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
   };
 
   const currentLabel = isAuto ? "Auto" : current.name;
+
+  const [showScrollHint, setShowScrollHint] = useState(true);
+  const scrollCleanupRef = useRef<(() => void) | null>(null);
+
+  const containerCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    scrollCleanupRef.current?.();
+    scrollCleanupRef.current = null;
+    if (!node) return;
+    const viewport = node.querySelector<HTMLElement>(
+      "[data-radix-scroll-area-viewport]",
+    );
+    if (!viewport) return;
+    const check = () => {
+      setShowScrollHint(
+        viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 8,
+      );
+    };
+    check();
+    viewport.addEventListener("scroll", check);
+    scrollCleanupRef.current = () => viewport.removeEventListener("scroll", check);
+  }, []);
 
   const filteredLanguages = languages.filter(
     (l) =>
@@ -118,6 +139,7 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
 
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
 
+          <div ref={containerCallbackRef} className="relative">
           <ScrollArea className="h-60">
             <div className="p-1 pt-0">
               {showAuto && (
@@ -156,6 +178,10 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
               ))}
             </div>
           </ScrollArea>
+          {showScrollHint && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 rounded-b-md bg-linear-to-t from-popover to-transparent" />
+          )}
+          </div>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

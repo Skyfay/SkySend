@@ -38,6 +38,7 @@ All notable changes to SkySend are documented here.
 
 - **web**: The password input placeholder no longer says "(optional)" when `FORCE_FILE_PASSWORD` or `FORCE_NOTE_PASSWORD` is enabled - it now correctly says "(required)".
 - **web**: The navigation header title now truncates with an ellipsis when a custom title is very long, preventing layout overflow on all screen sizes.
+- **web**: Added a fade gradient at the bottom of the language switcher dropdown to indicate that the list is scrollable. The gradient disappears automatically when scrolled to the bottom.
 - **web**: Added a hamburger menu for mobile screens. All navigation links, the language switcher, theme toggle, and OIDC login/logout are now accessible in a collapsible dropdown on small viewports.
 - **web**: The language selector dropdown now has a fixed max height with a scrollable list (using shadcn ScrollArea) and a search input at the top, so all languages are accessible on small screens without getting cut off.
 - **web**: The logout button tooltip in the navigation header now uses the shadcn Tooltip component instead of a native browser `title` attribute.
