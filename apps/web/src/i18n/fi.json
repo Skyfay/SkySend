@@ -203,6 +203,18 @@
     "passwordNumber": "Salasana {{number}}",
     "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)"
   },
+  "code": {
+    "blocks": "Koodilohkot",
+    "titlePlaceholder": "Tiedostonimi (esim. docker-compose.yaml, valinnainen)",
+    "placeholder": "Liitä koodisi tähän...",
+    "auto": "Automaattinen tunnistus",
+    "language": "Kieli",
+    "addBlock": "Lisää koodilohko",
+    "noTitle": "Koodilohko {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Laajenna kaikki",
+    "collapseAll": "Tiivistä kaikki"
+  },
   "sshKey": {
     "algorithm": "Algoritmi",
     "comment": "Kommentti",

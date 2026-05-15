@@ -7,7 +7,17 @@
       "auth.logout",
       "nav.menu",
       "upload.passwordPlaceholderRequired",
-      "language.search"
+      "language.search",
+      "code.blocks",
+      "code.titlePlaceholder",
+      "code.placeholder",
+      "code.auto",
+      "code.language",
+      "code.addBlock",
+      "code.noTitle",
+      "code.detectedAs",
+      "code.expandAll",
+      "code.collapseAll"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -209,6 +219,18 @@
     "addAnother": "パスワードを追加",
     "passwordNumber": "パスワード {{number}}",
     "labelPlaceholder": "パスワード {{number}} のラベル（任意）"
+  },
+  "code": {
+    "blocks": "コードブロック",
+    "titlePlaceholder": "ファイル名（例: docker-compose.yaml、任意）",
+    "placeholder": "コードをここに貼り付けてください...",
+    "auto": "自動検出",
+    "language": "言語",
+    "addBlock": "コードブロックを追加",
+    "noTitle": "コードブロック {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "すべて展開",
+    "collapseAll": "すべて折りたたむ"
   },
   "sshKey": {
     "algorithm": "アルゴリズム",

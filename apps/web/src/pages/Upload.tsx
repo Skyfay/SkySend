@@ -13,6 +13,7 @@ import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
 import { QuotaBar } from "@/components/QuotaBar";
 import { NoteForm } from "@/components/NoteForm";
+import { CodeForm } from "@/components/CodeForm";
 import { PasswordForm } from "@/components/PasswordForm";
 import { SSHKeyForm } from "@/components/SSHKeyForm";
 import { useUpload } from "@/hooks/useUpload";
@@ -419,7 +420,7 @@ export function UploadPage() {
         <>
       {activeTab === "text" && <NoteForm contentType="text" forcePassword={config.forceNotePassword} />}
       {activeTab === "password" && <PasswordForm forcePassword={config.forceNotePassword} />}
-      {activeTab === "code" && <NoteForm contentType="code" forcePassword={config.forceNotePassword} />}
+      {activeTab === "code" && <CodeForm forcePassword={config.forceNotePassword} />}
       {activeTab === "sshkey" && <SSHKeyForm forcePassword={config.forceNotePassword} />}
         </>
       )}

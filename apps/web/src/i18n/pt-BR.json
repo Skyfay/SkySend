@@ -8,7 +8,17 @@
       "auth.logout",
       "nav.menu",
       "upload.passwordPlaceholderRequired",
-      "language.search"
+      "language.search",
+      "code.blocks",
+      "code.titlePlaceholder",
+      "code.placeholder",
+      "code.auto",
+      "code.language",
+      "code.addBlock",
+      "code.noTitle",
+      "code.detectedAs",
+      "code.expandAll",
+      "code.collapseAll"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -210,6 +220,18 @@
     "addAnother": "Adicionar outra senha",
     "passwordNumber": "Senha {{number}}",
     "labelPlaceholder": "Rótulo para senha {{number}} (opcional)"
+  },
+  "code": {
+    "blocks": "Blocos de código",
+    "titlePlaceholder": "Nome do arquivo (ex. docker-compose.yaml, opcional)",
+    "placeholder": "Cole seu código aqui...",
+    "auto": "Detecção automática",
+    "language": "Linguagem",
+    "addBlock": "Adicionar bloco de código",
+    "noTitle": "Bloco de código {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Expandir tudo",
+    "collapseAll": "Recolher tudo"
   },
   "sshKey": {
     "algorithm": "Algoritmo",

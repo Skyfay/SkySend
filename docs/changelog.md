@@ -5,6 +5,10 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### ✨ Features
+
+- **web**: Added multi-block code notes. The Code tab now supports multiple code blocks per note, each with an optional filename/title and a language selector (Auto-detect or one of 44 supported languages). On the view page, blocks show a detected language badge and can be collapsed individually or all at once - single-block notes expand by default, multi-block notes start collapsed. ([#45](https://github.com/Skyfay/SkySend/issues/45))
+
 ### 🐛 Bug Fixes
 
 - **web**: Fixed syntax highlighting in code snippets for light mode. The code block now uses the GitHub light theme in light mode (`#f6f8fa` background) and the Arta dark theme in dark mode (`#222` background), ensuring all tokens are readable in both themes. ([#45](https://github.com/Skyfay/SkySend/issues/45))

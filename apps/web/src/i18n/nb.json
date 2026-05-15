@@ -203,6 +203,18 @@
     "passwordNumber": "Passord {{number}}",
     "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)"
   },
+  "code": {
+    "blocks": "Kodeblokker",
+    "titlePlaceholder": "Filnavn (f.eks. docker-compose.yaml, valgfritt)",
+    "placeholder": "Lim inn koden din her...",
+    "auto": "Automatisk gjenkjenning",
+    "language": "Språk",
+    "addBlock": "Legg til kodeblokk",
+    "noTitle": "Kodeblokk {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Utvid alle",
+    "collapseAll": "Skjul alle"
+  },
   "sshKey": {
     "algorithm": "Algoritme",
     "comment": "Kommentar",

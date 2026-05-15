@@ -203,6 +203,18 @@
     "passwordNumber": "Mot de passe {{number}}",
     "labelPlaceholder": "Libellé du mot de passe {{number}} (facultatif)"
   },
+  "code": {
+    "blocks": "Blocs de code",
+    "titlePlaceholder": "Nom de fichier (ex. docker-compose.yaml, optionnel)",
+    "placeholder": "Collez votre code ici...",
+    "auto": "Détection automatique",
+    "language": "Langage",
+    "addBlock": "Ajouter un bloc de code",
+    "noTitle": "Bloc de code {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Tout développer",
+    "collapseAll": "Tout réduire"
+  },
   "sshKey": {
     "algorithm": "Algorithme",
     "comment": "Commentaire",

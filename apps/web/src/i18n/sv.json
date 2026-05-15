@@ -203,6 +203,18 @@
     "passwordNumber": "Lösenord {{number}}",
     "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)"
   },
+  "code": {
+    "blocks": "Kodblock",
+    "titlePlaceholder": "Filnamn (t.ex. docker-compose.yaml, valfritt)",
+    "placeholder": "Klistra in din kod här...",
+    "auto": "Automatisk igenkänning",
+    "language": "Språk",
+    "addBlock": "Lägg till kodblock",
+    "noTitle": "Kodblock {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Expandera alla",
+    "collapseAll": "Komprimera alla"
+  },
   "sshKey": {
     "algorithm": "Algoritm",
     "comment": "Kommentar",
