@@ -2,6 +2,26 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.9.0 - Multi-block Code Notes and UI Improvements
+*Released: May 15, 2026*
+
+### ✨ Features
+
+- **web**: Added multi-block code notes. The Code tab now supports multiple code blocks per note, each with an optional filename/title and a language selector (Auto-detect or one of 44 supported languages). On the view page, blocks show a detected language badge and can be collapsed individually or all at once - single-block notes expand by default, multi-block notes start collapsed. ([#45](https://github.com/Skyfay/SkySend/issues/45))
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed the password generator length input being slightly clipped for three-digit values (100+). The field width was increased from `w-16` to `w-20` so numbers like 106 or 128 are fully visible.
+- **web**: Fixed invisible burn-after-reading warning text in light mode. The warning box now uses `text-destructive` (colored) instead of `text-destructive-foreground` (white), making the text readable on the light semi-transparent red background. ([#46](https://github.com/Skyfay/SkySend/issues/46))
+- **web**: Fixed syntax highlighting in code snippets for light mode. The code block now uses the GitHub light theme in light mode (`#f6f8fa` background) and the Arta dark theme in dark mode (`#222` background), ensuring all tokens are readable in both themes. ([#45](https://github.com/Skyfay/SkySend/issues/45))
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.9.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.8.0 - OIDC/SSO Authentication, General Improvements, Security & Dependency Patches
 *Released: May 14, 2026*
 
@@ -20,6 +40,7 @@ All notable changes to SkySend are documented here.
 
 - **web**: The password input placeholder no longer says "(optional)" when `FORCE_FILE_PASSWORD` or `FORCE_NOTE_PASSWORD` is enabled - it now correctly says "(required)".
 - **web**: The navigation header title now truncates with an ellipsis when a custom title is very long, preventing layout overflow on all screen sizes.
+- **web**: Added a fade gradient at the bottom of the language switcher dropdown to indicate that the list is scrollable. The gradient disappears automatically when scrolled to the bottom.
 - **web**: Added a hamburger menu for mobile screens. All navigation links, the language switcher, theme toggle, and OIDC login/logout are now accessible in a collapsible dropdown on small viewports.
 - **web**: The language selector dropdown now has a fixed max height with a scrollable list (using shadcn ScrollArea) and a search input at the top, so all languages are accessible on small screens without getting cut off.
 - **web**: The logout button tooltip in the navigation header now uses the shadcn Tooltip component instead of a native browser `title` attribute.

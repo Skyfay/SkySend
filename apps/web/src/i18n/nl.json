@@ -203,6 +203,18 @@
     "passwordNumber": "Wachtwoord {{number}}",
     "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)"
   },
+  "code": {
+    "blocks": "Codeblokken",
+    "titlePlaceholder": "Bestandsnaam (bijv. docker-compose.yaml, optioneel)",
+    "placeholder": "Plak uw code hier...",
+    "auto": "Automatisch detecteren",
+    "language": "Taal",
+    "addBlock": "Codeblok toevoegen",
+    "noTitle": "Codeblok {{number}}",
+    "detectedAs": "{{lang}}",
+    "expandAll": "Alles uitvouwen",
+    "collapseAll": "Alles invouwen"
+  },
   "sshKey": {
     "algorithm": "Algoritme",
     "comment": "Opmerking",
