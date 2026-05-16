@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed large file downloads in Firefox being truncated at ~40-50% when using Service Worker streaming. The hidden `<iframe>` navigation trigger has been replaced with an `<a>` click (no `download` attribute), matching Mozilla Send's approach. Firefox was cutting the SW stream during the iframe-to-download-manager handoff, resulting in incomplete files.
+
+### 🔄 Changed
+
+- **docs**: The Domain has moved from `skysend.ch` to `skysend.app`. All documentation, API references, and examples have been updated to reflect the new domain. The old `skysend.ch` URLs will continue to work and redirect to `skysend.app` for the foreseeable future.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.0 - Multi-block Code Notes and UI Improvements
 *Released: May 15, 2026*
 
