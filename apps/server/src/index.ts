@@ -329,7 +329,11 @@ app.get("*", async (c, next) => {
     cachedIndexHtml = await readFile(indexHtmlPath, "utf-8");
   }
   const html = cachedIndexHtml.replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE);
-  return c.html(html);
+  // no-cache: browsers and intermediate proxies (e.g. Traefik with caching middleware)
+  // must revalidate index.html before serving it. Without this, a cached old index.html
+  // referencing a previous JS bundle hash will 500 after a new deployment because the
+  // old assets no longer exist on the server.
+  return c.html(html, 200, { "Cache-Control": "no-cache, must-revalidate" });
 });
 
 // Serve all static files from the Vite build output (logo.svg, favicon.svg,

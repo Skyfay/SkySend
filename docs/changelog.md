@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🎨 Improvements
+
+- **server**: The SPA entry point (`index.html`) is now served with `Cache-Control: no-cache, must-revalidate`. This prevents browsers and reverse proxies (e.g. Traefik with a caching middleware) from serving a stale `index.html` after a deployment. Without this, a cached old `index.html` referencing a previous JS bundle hash would cause 500 errors for the JS assets because the old filenames no longer exist on the new server.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.1 - Fixes for Large File Downloads in Firefox and SEO Meta Tag Improvements
 *Released: May 16, 2026*
 
