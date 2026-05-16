@@ -12,7 +12,7 @@ interface Env {
 }
 
 const KV_KEY = 'instances'
-const DEFAULT_INSTANCES_URL = 'https://docs.skysend.ch/instances.json'
+const DEFAULT_INSTANCES_URL = 'https://docs.skysend.app/instances.json'
 const FETCH_TIMEOUT_MS = 8000
 
 /* ---------- Types ---------- */
