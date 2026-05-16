@@ -184,6 +184,16 @@ export function Layout() {
               </svg>
               {t("footer.source")}
             </a>
+            {config?.customReportUrl && (
+              <a
+                href={config.customReportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-foreground"
+              >
+                {t("footer.report")}
+              </a>
+            )}
             {config?.customLegal && (
               <a
                 href={config.customLegal}

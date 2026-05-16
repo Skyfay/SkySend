@@ -188,7 +188,8 @@
   "footer": {
     "privacy": "Personvernerklæring",
     "legal": "Juridisk informasjon",
-    "source": "Kildekode"
+    "source": "Kildekode",
+    "report": "Meld"
   },
   "passwordGenerator": {
     "title": "Passordgenerator",

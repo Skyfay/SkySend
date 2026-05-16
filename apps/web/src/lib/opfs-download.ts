@@ -290,35 +290,39 @@ export async function streamDownloadViaSw(
     });
   });
 
-  // Trigger download via hidden iframe instead of <a download>.
-  // Chrome/Edge/Safari/Brave do NOT fire the SW fetch event for <a download> clicks.
-  // An iframe navigation IS always intercepted by the SW in all browsers.
-  // The SW responds with Content-Disposition: attachment, so the browser
-  // starts a download without affecting the parent page.
-  const iframe = document.createElement("iframe");
-  iframe.hidden = true;
-  iframe.style.display = "none";
-  iframe.src = `/__skysend_download__/${downloadId}`;
-  document.body.appendChild(iframe);
+  // Trigger download via <a> navigation (no download attribute).
+  // Without the download attribute the browser treats this as a regular navigation,
+  // which the SW intercepts and answers with Content-Disposition: attachment -
+  // so the browser hands it to the download manager natively.
+  //
+  // We do NOT use <a download> because Chrome/Edge/Brave do not fire the SW
+  // fetch event for <a download> clicks.
+  //
+  // We do NOT use an iframe because Firefox truncates SW streams during the
+  // iframe -> download manager handoff, cutting large files at ~40-50%.
+  // (Mozilla Send uses this same <a> approach for the same reason.)
+  const a = document.createElement("a");
+  a.href = `/__skysend_download__/${downloadId}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 
   // Wait for SW to signal completion (dl-done or dl-error).
   // Messages are filtered by downloadId (not clientId, which is empty for navigations).
   await new Promise<void>((resolve, reject) => {
     let gotFirstMessage = false;
 
-    // If the SW never responds (e.g. CSP blocks the iframe, SW not active),
+    // If the SW never responds (e.g. SW not active),
     // reject quickly so fallback tiers can take over.
     const initialTimeout = setTimeout(() => {
       if (!gotFirstMessage) {
         navigator.serviceWorker.removeEventListener("message", handler);
-        iframe.remove();
         reject(new Error("Service Worker did not respond"));
       }
     }, 10_000);
 
     const completionTimeout = setTimeout(() => {
       navigator.serviceWorker.removeEventListener("message", handler);
-      iframe.remove();
       resolve(); // Don't error on timeout - download may have completed
     }, 86_400_000);
 
@@ -336,12 +340,10 @@ export async function streamDownloadViaSw(
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
         navigator.serviceWorker.removeEventListener("message", handler);
-        iframe.remove();
         resolve();
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
         navigator.serviceWorker.removeEventListener("message", handler);
-        iframe.remove();
         reject(new Error(msg.error || "Download failed in SW"));
       }
     };

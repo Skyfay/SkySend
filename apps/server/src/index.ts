@@ -6,6 +6,7 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
 
 import { loadConfig } from "./lib/config.js";
 import { initDatabase, closeDatabase } from "./db/index.js";
@@ -310,15 +311,33 @@ app.use(
   serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
 );
 
+// SPA fallback with runtime-injected config values.
+// Must come BEFORE the catch-all serveStatic because serveStatic serves
+// index.html directly for directory requests (e.g. GET /), bypassing any
+// handler registered after it.
+// Requests for paths with a file extension (logo.svg, robots.txt, etc.)
+// are passed through to the static file middleware below.
+const indexHtmlPath = resolve(webDistPath, "index.html");
+let cachedIndexHtml: string | null = null;
+
+app.get("*", async (c, next) => {
+  const reqPath = c.req.path;
+  if (reqPath !== "/" && /\.[^/]+$/.test(reqPath)) {
+    return next();
+  }
+  if (!cachedIndexHtml) {
+    cachedIndexHtml = await readFile(indexHtmlPath, "utf-8");
+  }
+  const html = cachedIndexHtml.replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE);
+  return c.html(html);
+});
+
 // Serve all static files from the Vite build output (logo.svg, favicon.svg,
-// download-sw.js, robots.txt, .well-known/*, etc.) before the SPA fallback.
+// download-sw.js, robots.txt, .well-known/*, etc.)
 app.use(
   "*",
   serveStatic({ root: webDistPath }),
 );
-
-// SPA fallback - serve index.html for all non-API routes
-app.get("*", serveStatic({ root: webDistPath, path: "/index.html" }));
 
 // ── Start Server ───────────────────────────────────────
 

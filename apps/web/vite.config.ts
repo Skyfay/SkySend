@@ -8,8 +8,27 @@ const rootPkg = JSON.parse(
   readFileSync(resolve(__dirname, "../../package.json"), "utf-8"),
 );
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
+export default defineConfig(({ command }) => {
+  const ogImage = process.env.VITE_OG_IMAGE ?? "/logo.png";
+  // In dev mode (Vite dev server) the server middleware is not involved,
+  // so replace the placeholder directly with the env value.
+  const customTitle = command === "serve"
+    ? (process.env.CUSTOM_TITLE ?? "SkySend")
+    : "__CUSTOM_TITLE__";
+
+  return {
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: "inject-html-vars",
+      transformIndexHtml(html) {
+        return html
+          .replace(/%VITE_OG_IMAGE%/g, ogImage)
+          .replace(/__CUSTOM_TITLE__/g, customTitle);
+      },
+    },
+  ],
   test: {
     coverage: {
       include: ["src/lib/**/*.ts", "src/hooks/**/*.ts"],
@@ -53,4 +72,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });

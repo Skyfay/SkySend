@@ -188,7 +188,8 @@
   "footer": {
     "privacy": "Integritetspolicy",
     "legal": "Juridisk information",
-    "source": "Källkod"
+    "source": "Källkod",
+    "report": "Anmäl"
   },
   "passwordGenerator": {
     "title": "Lösenordsgenerator",

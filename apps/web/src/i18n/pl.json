@@ -188,7 +188,8 @@
   "footer": {
     "privacy": "Polityka prywatności",
     "legal": "Informacje prawne",
-    "source": "Kod źródłowy"
+    "source": "Kod źródłowy",
+    "report": "Zgłoś"
   },
   "passwordGenerator": {
     "title": "Generator haseł",

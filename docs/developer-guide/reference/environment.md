@@ -347,6 +347,16 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Max 50 characters |
 | Description | Display text for the custom footer link defined by `CUSTOM_LINK_URL`. Both variables must be set for the link to appear. |
 
+### CUSTOM_REPORT_URL
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL |
+| Default | - (not shown in footer) |
+| Validation | Must be a valid URL (`https://...`) |
+| Description | URL to a report or abuse page. When set, a "Report" link is displayed in the footer. |
+
 ### STORAGE_BACKEND
 
 | Property | Value |
@@ -481,3 +491,4 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL
 - `CUSTOM_LINK_NAME` must be at most 50 characters
+- `CUSTOM_REPORT_URL` must be a valid URL

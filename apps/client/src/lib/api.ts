@@ -29,6 +29,7 @@ const configResponseSchema = z.object({
   customLegal: z.string().nullable(),
   customLinkUrl: z.string().nullable(),
   customLinkName: z.string().nullable(),
+  customReportUrl: z.string().nullable(),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
   oidcEnabled: z.boolean().optional().default(false),

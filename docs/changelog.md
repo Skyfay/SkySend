@@ -2,6 +2,31 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.9.1 - Fixes for Large File Downloads in Firefox and SEO Meta Tag Improvements
+*Released: May 16, 2026*
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed large file downloads in Firefox being truncated at ~40-50% when using Service Worker streaming. The hidden `<iframe>` navigation trigger has been replaced with an `<a>` click (no `download` attribute), matching Mozilla Send's approach. Firefox was cutting the SW stream during the iframe-to-download-manager handoff, resulting in incomplete files.
+
+### 🎨 Improvements
+
+- **web**: Updated SEO meta tags (title, description, Open Graph, Twitter Card) to mention both file and note sharing. Added `og:image` and `twitter:image` for rich link previews on Discord and other platforms. The image defaults to `/logo.png` and can be overridden with the `VITE_OG_IMAGE` environment variable at build time.
+- **web**: The page `<title>` and OG/Twitter title tags now reflect `CUSTOM_TITLE` at runtime. When `CUSTOM_TITLE=MyShare` is set, the preview title becomes "MyShare | Encrypted File & Note Transfer" instead of "SkySend | ...".
+- **server**: The SPA fallback route now injects `CUSTOM_TITLE` into the served `index.html` at request time (cached after first read) so link-preview scrapers see the correct title without a separate build-time variable.
+
+### 🔄 Changed
+
+- **docs**: The Domain has moved from `skysend.ch` to `skysend.app`. All documentation, API references, and examples have been updated to reflect the new domain. The old `skysend.ch` URLs will continue to work and redirect to `skysend.app` for the foreseeable future.
+- **server**: Added `CUSTOM_REPORT_URL` environment variable. When set, a "Report" link appears in the footer pointing to the configured URL - intended for abuse/report pages. Instance operators who do not set this variable will not show the link.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.9.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.0 - Multi-block Code Notes and UI Improvements
 *Released: May 15, 2026*
 

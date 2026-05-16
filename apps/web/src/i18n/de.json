@@ -183,7 +183,8 @@
   "footer": {
     "privacy": "Datenschutz",
     "legal": "Impressum",
-    "source": "Quellcode"
+    "source": "Quellcode",
+    "report": "Melden"
   },
   "passwordGenerator": {
     "title": "Passwort-Generator",
