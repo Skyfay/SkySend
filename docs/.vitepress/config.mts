@@ -8,7 +8,7 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   sitemap: {
-    hostname: 'https://docs.skysend.ch'
+    hostname: 'https://docs.skysend.app'
   },
   ignoreDeadLinks: [
     /localhost/

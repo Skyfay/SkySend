@@ -23,12 +23,12 @@
 </p>
 
 <p align="center">
-  <a href="https://skysend.ch">Website</a> •
-  <a href="https://docs.skysend.ch">Documentation</a> •
-  <a href="https://docs.skysend.ch/user-guide/getting-started">Quick Start</a> •
-  <a href="https://docs.skysend.ch/instances">Public Instances</a> •
-  <a href="https://docs.skysend.ch/changelog">Changelog</a> •
-  <a href="https://docs.skysend.ch/roadmap">Roadmap</a>
+  <a href="https://skysend.app">Website</a> •
+  <a href="https://docs.skysend.app">Documentation</a> •
+  <a href="https://docs.skysend.app/user-guide/getting-started">Quick Start</a> •
+  <a href="https://docs.skysend.app/instances">Public Instances</a> •
+  <a href="https://docs.skysend.app/changelog">Changelog</a> •
+  <a href="https://docs.skysend.app/roadmap">Roadmap</a>
 </p>
 
 ### What is SkySend?
@@ -39,7 +39,7 @@ This Project is community ready to get self hosted and for those who don't want 
 
 Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send) and [PrivateBin](https://privatebin.info/), SkySend is built from scratch with higher security standards, more features, and a minimal, maintainable codebase.
 
-We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern security practices to create a fast, secure, and user-friendly experience. Check out our [Benchmarks](https://docs.skysend.ch/benchmarks).
+We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern security practices to create a fast, secure, and user-friendly experience. Check out our [Benchmarks](https://docs.skysend.app/benchmarks).
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/screenshots/overview.png" alt="SkySend Screenshot" width="800">
@@ -153,7 +153,7 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
-      # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # All environment variables: https://docs.skysend.app/user-guide/configuration/environment-variables
       # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
@@ -163,7 +163,7 @@ docker compose up -d
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-📖 **Full installation guide**: [docs.skysend.ch/user-guide/getting-started](https://docs.skysend.ch/user-guide/getting-started)
+📖 **Full installation guide**: [docs.skysend.app/user-guide/getting-started](https://docs.skysend.app/user-guide/getting-started)
 
 ## 💻 Client CLI
 
@@ -172,13 +172,13 @@ Upload and download files from the terminal with the same end-to-end encryption 
 **Install (Linux/macOS):**
 
 ```bash
-curl -fsSL https://skysend.ch/install.sh | sh
+curl -fsSL https://skysend.app/install.sh | sh
 ```
 
 **Install (Windows PowerShell):**
 
 ```powershell
-irm https://skysend.ch/install.ps1 | iex
+irm https://skysend.app/install.ps1 | iex
 ```
 
 **Usage:**
@@ -206,7 +206,7 @@ skysend auth login
 skysend update
 ```
 
-📖 **Full CLI documentation**: [docs.skysend.ch/user-guide/client-cli](https://docs.skysend.ch/user-guide/client-cli/)
+📖 **Full CLI documentation**: [docs.skysend.app/user-guide/client-cli](https://docs.skysend.app/user-guide/client-cli/)
 
 ## 🔒 Security Design
 
@@ -221,7 +221,7 @@ skysend update
 | Auth Token | HMAC-SHA256 |
 | Password KDF | Argon2id (WASM) |
 
-The complete crypto design is publicly documented at [docs.skysend.ch/developer-guide/crypto](https://docs.skysend.ch/developer-guide/crypto/).
+The complete crypto design is publicly documented at [docs.skysend.app/developer-guide/crypto](https://docs.skysend.app/developer-guide/crypto/).
 
 ## 🛠️ Tech Stack
 
@@ -240,12 +240,12 @@ The complete crypto design is publicly documented at [docs.skysend.ch/developer-
 
 ## 📚 Documentation
 
-Full documentation is available at **[docs.skysend.ch](https://docs.skysend.ch)**:
+Full documentation is available at **[docs.skysend.app](https://docs.skysend.app)**:
 
-- [User Guide](https://docs.skysend.ch/user-guide/getting-started) - Installation, configuration, usage
-- [Developer Guide](https://docs.skysend.ch/developer-guide/) - Architecture, crypto design, contributing
-- [Changelog](https://docs.skysend.ch/changelog) - Release history
-- [Roadmap](https://docs.skysend.ch/roadmap) - Planned features
+- [User Guide](https://docs.skysend.app/user-guide/getting-started) - Installation, configuration, usage
+- [Developer Guide](https://docs.skysend.app/developer-guide/) - Architecture, crypto design, contributing
+- [Changelog](https://docs.skysend.app/changelog) - Release history
+- [Roadmap](https://docs.skysend.app/roadmap) - Planned features
 
 ## 🛠️ Development
 
@@ -266,10 +266,10 @@ For contribution guidelines, see the [CONTRIBUTING.md](CONTRIBUTING.md).
 ## 💬 Community & Support
 
 - 💬 **Discord**: Join our community at [https://dc.skyfay.ch](https://dc.skyfay.ch)
-- 📝 **Documentation**: Full guides at [docs.skysend.ch](https://docs.skysend.ch)
+- 📝 **Documentation**: Full guides at [docs.skysend.app](https://docs.skysend.app)
 - 🐛 **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/Skyfay/SkySend/issues)
-- 📧 **Support**: General questions and support via [support@skysend.ch](mailto:support@skysend.ch)
-- 🔒 **Security**: Report vulnerabilities responsibly via [security@skysend.ch](mailto:security@skysend.ch) (please do **not** open public issues for security reports)
+- 📧 **Support**: General questions and support via [support@skysend.app](mailto:support@skysend.app)
+- 🔒 **Security**: Report vulnerabilities responsibly via [security@skysend.app](mailto:security@skysend.app) (please do **not** open public issues for security reports)
 
 ## 🤖 AI Development Transparency
 
@@ -283,9 +283,9 @@ The application code was generated by AI coding agents following detailed archit
 
 ### Open for Review
 
-SkySend is thoroughly tested and used in production, but a formal manual security audit by an external developer has not yet been completed. The entire cryptographic design is [publicly documented](https://docs.skysend.ch/developer-guide/crypto/) to facilitate independent review. If you are a software developer or cybersecurity professional, your expertise is highly welcome! We invite the open-source community to review the code, submit PRs, and help us elevate SkySend to a fully verified standard.
+SkySend is thoroughly tested and used in production, but a formal manual security audit by an external developer has not yet been completed. The entire cryptographic design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to facilitate independent review. If you are a software developer or cybersecurity professional, your expertise is highly welcome! We invite the open-source community to review the code, submit PRs, and help us elevate SkySend to a fully verified standard.
 
-> **Security Disclosure**: If you discover a security vulnerability, please **do not** open a public GitHub issue. Instead, report it responsibly via email to **[security@skysend.ch](mailto:security@skysend.ch)**.
+> **Security Disclosure**: If you discover a security vulnerability, please **do not** open a public GitHub issue. Instead, report it responsibly via email to **[security@skysend.app](mailto:security@skysend.app)**.
 
 ## 📝 License
 

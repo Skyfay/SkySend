@@ -4,7 +4,7 @@ Contributions are welcome! Before submitting a pull request, please:
 
 1. Check existing issues and discussions to avoid duplicates
 2. For significant changes, open an issue first to discuss the approach
-3. More information can be found in the [Developer Guide](https://docs.skysend.ch/developer-guide/) for setup instructions
+3. More information can be found in the [Developer Guide](https://docs.skysend.app/developer-guide/) for setup instructions
 
 Small fixes (language translations, typos, documentation improvements) can be submitted directly as PRs.
 

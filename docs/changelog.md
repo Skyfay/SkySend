@@ -378,7 +378,7 @@ All notable changes to SkySend are documented here.
 - **client**: Fixed `Cannot find package 'react-devtools-core'` runtime error when running compiled CLI binaries - replaced `--external` flag with a bundled no-op stub so Ink's optional devtools import resolves inside the binary
 
 ### 📝 Documentation
-- **docs**: Shortened CLI install URLs from raw GitHub links to `skysend.ch/install.sh` and `skysend.ch/install.ps1` redirects across README, docs, and install scripts
+- **docs**: Shortened CLI install URLs from raw GitHub links to `skysend.app/install.sh` and `skysend.app/install.ps1` redirects across README, docs, and install scripts
 
 ### 🐳 Docker
 
@@ -571,7 +571,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Added skeleton loading animation while instance data is being fetched
 - **docs**: Instance list is now maintained via `docs/public/instances.json` - users can add instances via pull request
 - **docs**: Instance cards show separate Files and Notes stats sections, each only visible when the service is enabled
-- **docs**: Instance cards show "Official" or "Community" badge, with official instances (skysend.ch) always sorted first
+- **docs**: Instance cards show "Official" or "Community" badge, with official instances (skysend.app) always sorted first
 - **web**: Added language switcher dropdown in the navbar with country flag icons via `flag-icons` library
 - **web**: Manual language selection is persisted in a cookie so it survives page reloads and sessions
 - **web**: Added optional custom labels for password notes so users can describe what each password is for

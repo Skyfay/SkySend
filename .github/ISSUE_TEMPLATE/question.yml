@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Have a question about SkySend? Check the [documentation](https://docs.skysend.ch) first - your answer might already be there.
+        Have a question about SkySend? Check the [documentation](https://docs.skysend.app) first - your answer might already be there.
 
   - type: textarea
     id: question

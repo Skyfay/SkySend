@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-const WORKER_URL = 'https://instances.skysend.ch'
+const WORKER_URL = 'https://instances.skysend.app'
 
 interface Instance {
   name: string
@@ -35,7 +35,7 @@ const filter = ref<'all' | 'file' | 'note'>('all')
 
 function isOfficial(url: string): boolean {
   try {
-    return new URL(url).hostname.endsWith('skysend.ch')
+    return new URL(url).hostname.endsWith('skysend.app')
   } catch {
     return false
   }

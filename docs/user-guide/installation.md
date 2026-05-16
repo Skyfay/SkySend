@@ -32,7 +32,7 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
-      # All environment variables: https://docs.skysend.ch/user-guide/configuration/environment-variables
+      # All environment variables: https://docs.skysend.app/user-guide/configuration/environment-variables
       # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
@@ -102,13 +102,13 @@ The SkySend CLI client lets you upload and download files from the terminal with
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://skysend.ch/install.sh | sh
+curl -fsSL https://skysend.app/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://skysend.ch/install.ps1 | iex
+irm https://skysend.app/install.ps1 | iex
 ```
 
 ### Verify Installation

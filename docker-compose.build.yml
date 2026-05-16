@@ -25,9 +25,9 @@ services:
       - CUSTOM_COLOR=ff5f5a
     #  - CUSTOM_LOGO=https://cdn-icons-png.flaticon.com/512/10296/10296100.png
       #CUSTOM_LOGO=
-      - CUSTOM_PRIVACY=https://skysend.ch
-      - CUSTOM_LEGAL=https://skysend.ch
-      - CUSTOM_LINK_URL=https://skysend.ch
+      - CUSTOM_PRIVACY=https://skysend.app
+      - CUSTOM_LEGAL=https://skysend.app
+      - CUSTOM_LINK_URL=https://skysend.app
       - CUSTOM_LINK_NAME=Build
       - TRUST_PROXY=true
     volumes:
