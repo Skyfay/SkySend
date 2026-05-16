@@ -120,6 +120,12 @@ export default defineConfig({
             { text: 'Encryption Design', link: '/user-guide/security/encryption' },
             { text: 'Threat Model', link: '/user-guide/security/threat-model' }
           ]
+        },
+        {
+          text: 'Help',
+          items: [
+            { text: 'Troubleshooting', link: '/user-guide/troubleshooting' }
+          ]
         }
       ],
       '/developer-guide/': [
