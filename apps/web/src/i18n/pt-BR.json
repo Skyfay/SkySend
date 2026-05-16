@@ -18,7 +18,8 @@
       "code.noTitle",
       "code.detectedAs",
       "code.expandAll",
-      "code.collapseAll"
+      "code.collapseAll",
+      "footer.report"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -206,7 +207,8 @@
   "footer": {
     "privacy": "Política de Privacidade",
     "legal": "Aviso Legal",
-    "source": "Código Fonte"
+    "source": "Código Fonte",
+    "report": "Denunciar"
   },
   "passwordGenerator": {
     "title": "Gerador de Senhas",

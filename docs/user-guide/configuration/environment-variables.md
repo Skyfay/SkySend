@@ -105,6 +105,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_LEGAL` | ❌ | _(none)_ | URL to your legal notice / impressum page. Shown as a link in the footer if set. |
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
 | `CUSTOM_LINK_NAME` | ❌ | _(none)_ | Display text for the custom footer link (max 50 characters). |
+| `CUSTOM_REPORT_URL` | ❌ | _(none)_ | URL to a report/abuse page. When set, a "Report" link is shown in the footer. |
 | `DEFAULT_THEME` | ❌ | `system` | Default theme for users who have not set a preference. One of `dark`, `light`, or `system`. Users can still override this in the UI. |
 | `DEFAULT_TAB` | ❌ | `file` | Default upload tab shown when opening the app. One of `file`, `text`, `password`, `code`, or `sshkey`. Falls back to the first available tab if the configured tab is not enabled via `ENABLED_SERVICES`. |
 | `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
@@ -177,6 +178,7 @@ SkySend validates all environment variables on startup using Zod:
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL
 - `CUSTOM_LINK_NAME` must be at most 50 characters
+- `CUSTOM_REPORT_URL` must be a valid URL
 - When any OIDC variable is set, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` must all be present
 - If `OIDC_SESSION_SECRET` is set, it must be at least 32 characters
 - `OIDC_ISSUER` and `OIDC_REDIRECT_URI` must be valid URLs when set

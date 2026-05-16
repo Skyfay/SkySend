@@ -39,6 +39,7 @@ configRoute.get("/", (c) => {
     customLegal: config.CUSTOM_LEGAL ?? null,
     customLinkUrl: config.CUSTOM_LINK_URL ?? null,
     customLinkName: config.CUSTOM_LINK_NAME ?? null,
+    customReportUrl: config.CUSTOM_REPORT_URL ?? null,
     // UI defaults
     defaultTheme: config.DEFAULT_THEME,
     defaultTab: config.DEFAULT_TAB,

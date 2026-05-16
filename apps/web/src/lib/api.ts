@@ -30,6 +30,7 @@ const configResponseSchema = z.object({
   customLegal: z.string().nullable(),
   customLinkUrl: z.string().nullable(),
   customLinkName: z.string().nullable(),
+  customReportUrl: z.string().nullable(),
   // UI defaults
   defaultTheme: z.enum(["dark", "light", "system"]).optional().default("system"),
   defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),

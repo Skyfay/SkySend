@@ -239,6 +239,11 @@ const configSchema = z.object({
 
   CUSTOM_LINK_NAME: z.string().max(50).optional(),
 
+  CUSTOM_REPORT_URL: z
+    .string()
+    .url("Must be a valid URL (https://...)")
+    .optional(),
+
   // --- UI defaults ---
 
   DEFAULT_THEME: z

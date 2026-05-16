@@ -17,7 +17,8 @@
       "code.noTitle",
       "code.detectedAs",
       "code.expandAll",
-      "code.collapseAll"
+      "code.collapseAll",
+      "footer.report"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -205,7 +206,8 @@
   "footer": {
     "privacy": "プライバシーポリシー",
     "legal": "法的事項",
-    "source": "ソースコード"
+    "source": "ソースコード",
+    "report": "通報"
   },
   "passwordGenerator": {
     "title": "パスワードジェネレーター",

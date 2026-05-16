@@ -183,7 +183,8 @@
   "footer": {
     "privacy": "Privacy Policy",
     "legal": "Legal Notice",
-    "source": "Source Code"
+    "source": "Source Code",
+    "report": "Report"
   },
   "passwordGenerator": {
     "title": "Password Generator",

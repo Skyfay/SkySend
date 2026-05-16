@@ -188,7 +188,8 @@
   "footer": {
     "privacy": "Privacybeleid",
     "legal": "Juridische kennisgeving",
-    "source": "Broncode"
+    "source": "Broncode",
+    "report": "Melden"
   },
   "passwordGenerator": {
     "title": "Wachtwoordgenerator",

@@ -12,6 +12,7 @@ All notable changes to SkySend are documented here.
 ### 🔄 Changed
 
 - **docs**: The Domain has moved from `skysend.ch` to `skysend.app`. All documentation, API references, and examples have been updated to reflect the new domain. The old `skysend.ch` URLs will continue to work and redirect to `skysend.app` for the foreseeable future.
+- **server**: Added `CUSTOM_REPORT_URL` environment variable. When set, a "Report" link appears in the footer pointing to the configured URL - intended for abuse/report pages. Instance operators who do not set this variable will not show the link.
 
 ### 🐳 Docker
 
