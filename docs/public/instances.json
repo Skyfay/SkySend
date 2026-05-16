@@ -6,7 +6,8 @@
     "flag": "🇨🇭",
     "contact": {
       "label": "Contact",
-      "url": "https://docs.skysend.app/#%F0%9F%92%AC-community-support"
+      "url": "https://docs.skysend.app/#%F0%9F%92%AC-community-support",
+      "abuse": "abuse@skysend.app"
     }
   },
   {
@@ -16,7 +17,8 @@
     "flag": "🇩🇪",
     "contact": {
       "label": "Contact",
-      "url": "https://adminforge.de/kontakt"
+      "url": "https://adminforge.de/kontakt",
+      "abuse": ""
     }
   }
 ]
