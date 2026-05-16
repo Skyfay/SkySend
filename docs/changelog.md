@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.9.1 - Fixes for Large File Downloads in Firefox and SEO Meta Tag Improvements
+*Released: May 16, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -22,8 +22,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.9.1`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
