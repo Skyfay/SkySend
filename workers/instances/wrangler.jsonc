@@ -7,8 +7,8 @@
   "preview_urls": false,
   "routes": [
     {
-      "pattern": "instances.skysend.ch",
-      "zone_name": "skysend.ch",
+      "pattern": "instances.skysend.app",
+      "zone_name": "skysend.app",
       "custom_domain": true
     }
   ],
