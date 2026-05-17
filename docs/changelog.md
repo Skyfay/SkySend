@@ -2,17 +2,21 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.9.3 - Debugging Service Worker Download Stalling in Firefox
+*Released: May 17, 2026*
 
 ### 🐛 Bug Fixes
 
 - **web**: Fixed Service Worker downloads stalling at a random percentage (e.g. 0%, 13%, 21%) on Firefox with fast network connections. The `pull()` handler was processing all buffered ECE records in a single call, enqueuing multiple chunks at once. Firefox v128+ enforces the `highWaterMark: 0` pull-based contract more strictly and loses its backpressure state when `pull()` enqueues more than one chunk, causing the ReadableStream to stop requesting more data mid-download. The inner loop is now replaced with a single-record-per-`pull()` pattern followed by an early `return`, which gives Firefox's download manager time to consume each chunk before the next one is produced.
 
+### 🧪 Tests
+
+- **web**: Added `console.debug` diagnostic logging to the Service Worker's `pull()` and `readMore()` functions.
+
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.9.3`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 

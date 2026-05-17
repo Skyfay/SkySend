@@ -199,6 +199,7 @@ async function handleDownload(config, downloadId, streamDone) {
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
+  let pullCount = 0;
 
   // Compact buffer: shift unread data to front when waste exceeds 512KB
   function compactBuffer() {
@@ -241,6 +242,7 @@ async function handleDownload(config, downloadId, streamDone) {
     } else {
       loaded += value.byteLength;
       appendToBuf(value);
+      console.debug(`[SW-dl:${downloadId}] readMore +${value.byteLength}B (loaded=${loaded}B)`);
 
       // Report progress (throttled)
       const now = Date.now();
@@ -254,6 +256,8 @@ async function handleDownload(config, downloadId, streamDone) {
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
+      const pullIdx = ++pullCount;
+      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
       // Ensure buffer has enough data
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
@@ -275,6 +279,7 @@ async function handleDownload(config, downloadId, streamDone) {
         }
       }
 
+      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} ready: bufLen=${bufLen()}B (~${Math.floor(bufLen() / ENCRYPTED_RECORD_SIZE)} complete records buffered)`);
       // Process exactly ONE complete record per pull() call, then return.
       //
       // Previously this was a while-loop that processed ALL buffered records in
@@ -296,6 +301,7 @@ async function handleDownload(config, downloadId, streamDone) {
           record,
         );
         controller.enqueue(new Uint8Array(plain));
+        console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} enqueued record #${counter - 1}`);
         return; // Firefox calls pull() again for the next record
       }
 
@@ -309,6 +315,7 @@ async function handleDownload(config, downloadId, streamDone) {
           remaining,
         );
         controller.enqueue(new Uint8Array(plain));
+        console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
         await broadcast({ type: "dl-progress", downloadId, progress: 100 });
         await broadcast({ type: "dl-done", downloadId });
         controller.close();
@@ -324,6 +331,7 @@ async function handleDownload(config, downloadId, streamDone) {
     },
 
     cancel() {
+      console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
       broadcast({ type: "dl-error", downloadId, error: "cancelled" });
       streamDone();
