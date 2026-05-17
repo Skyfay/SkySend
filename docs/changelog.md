@@ -2,12 +2,13 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.9.2 - Firefox Hotfix release & Browser Cache fix
+*Released: May 17, 2026*
 
 ### 🐛 Bug Fixes
 
 - **web**: Fixed Firefox hanging on Service Worker-streamed downloads for files >= 2 GiB. Firefox has a long-standing signed 32-bit integer overflow in its internal download pipeline that triggers when `Content-Length` is >= 2^31 bytes, causing the download manager to stall or cancel at the end. The `Content-Length` header is now omitted for files >= 2 GiB so Firefox falls back to reading until EOF. Files below 2 GiB and all other browsers are unaffected. Thanks @Dominion0815
+- **web**: Fixed the Service Worker download progress not reaching 100% and the UI not transitioning to "done" after the download completes. The `dl-done` broadcast was fire-and-forget - Firefox terminates the SW as soon as `waitUntil` resolves, abandoning the still-pending `clients.matchAll()` call before the message is delivered. All completion broadcasts are now awaited before `streamDone()` is called.
 
 ### 🎨 Improvements
 
@@ -15,8 +16,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.9.2`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
