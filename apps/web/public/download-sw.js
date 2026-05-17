@@ -171,8 +171,16 @@ async function handleDownload(config, downloadId, streamDone) {
   // Content-Length of the DECRYPTED output. Critical for Safari:
   // without it Safari buffers the entire ReadableStream in RAM
   // instead of streaming to disk.
+  //
+  // BUT: Firefox hangs SW-streamed downloads when Content-Length >= 2 GiB
+  // (internal signed 32-bit integer overflow in the download pipeline).
+  // For files at or above that threshold we omit the header - Firefox then
+  // falls back to chunked read-until-EOF. Safari is already handled by its
+  // own warning + Tier-3 Blob fallback path so it does not hit this branch
+  // for huge files anyway.
+  const TWO_GIB = 2 * 1024 * 1024 * 1024;
   const decryptedSize = computeDecryptedSize(totalSize);
-  if (decryptedSize > 0) {
+  if (decryptedSize > 0 && decryptedSize < TWO_GIB) {
     headers.set("Content-Length", String(decryptedSize));
   }
 
@@ -254,7 +262,7 @@ async function handleDownload(config, downloadId, streamDone) {
       // Extract nonce header on first call
       if (baseNonce === null) {
         if (bufLen() < NONCE_LENGTH) {
-          broadcast({ type: "dl-done", downloadId });
+          await broadcast({ type: "dl-done", downloadId });
           controller.close();
           streamDone();
           return;
@@ -290,15 +298,15 @@ async function handleDownload(config, downloadId, streamDone) {
           remaining,
         );
         controller.enqueue(new Uint8Array(plain));
-        broadcast({ type: "dl-progress", downloadId, progress: 100 });
-        broadcast({ type: "dl-done", downloadId });
+        await broadcast({ type: "dl-progress", downloadId, progress: 100 });
+        await broadcast({ type: "dl-done", downloadId });
         controller.close();
         streamDone();
         return;
       }
 
       if (readerDone && bufLen() <= TAG_LENGTH) {
-        broadcast({ type: "dl-done", downloadId });
+        await broadcast({ type: "dl-done", downloadId });
         controller.close();
         streamDone();
       }

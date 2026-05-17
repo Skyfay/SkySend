@@ -53,9 +53,12 @@ describe("createSessionJwt + verifySessionJwt", () => {
 
   it("returns null for a tampered payload", async () => {
     const token = await createSessionJwt(TEST_USER, SECRET, 3600);
-    // Flip one character in the signature (last segment)
+    // Flip the first character of the signature (not the last - its 2 LSBs are
+    // base64url padding and are silently ignored by decoders, so a flip there
+    // may leave the decoded bytes unchanged and produce a still-valid signature).
     const parts = token.split(".");
-    parts[2] = parts[2]!.slice(0, -1) + (parts[2]!.slice(-1) === "a" ? "b" : "a");
+    const sig = parts[2]!;
+    parts[2] = (sig[0] === "a" ? "b" : "a") + sig.slice(1);
     const tampered = parts.join(".");
     const result = await verifySessionJwt(tampered, SECRET);
     expect(result).toBeNull();

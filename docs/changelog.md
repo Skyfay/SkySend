@@ -2,6 +2,25 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.9.2 - Firefox Hotfix release & Browser Cache fix
+*Released: May 17, 2026*
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed Firefox hanging on Service Worker-streamed downloads for files >= 2 GiB. Firefox has a long-standing signed 32-bit integer overflow in its internal download pipeline that triggers when `Content-Length` is >= 2^31 bytes, causing the download manager to stall or cancel at the end. The `Content-Length` header is now omitted for files >= 2 GiB so Firefox falls back to reading until EOF. Files below 2 GiB and all other browsers are unaffected. Thanks @Dominion0815
+- **web**: Fixed the Service Worker download progress not reaching 100% and the UI not transitioning to "done" after the download completes. The `dl-done` broadcast was fire-and-forget - Firefox terminates the SW as soon as `waitUntil` resolves, abandoning the still-pending `clients.matchAll()` call before the message is delivered. All completion broadcasts are now awaited before `streamDone()` is called.
+
+### 🎨 Improvements
+
+- **server**: The SPA entry point (`index.html`) is now served with `Cache-Control: no-cache, must-revalidate`. This prevents browsers and reverse proxies (e.g. Traefik with a caching middleware) from serving a stale `index.html` after a deployment. Without this, a cached old `index.html` referencing a previous JS bundle hash would cause 500 errors for the JS assets because the old filenames no longer exist on the new server.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.9.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.1 - Fixes for Large File Downloads in Firefox and SEO Meta Tag Improvements
 *Released: May 16, 2026*
 
