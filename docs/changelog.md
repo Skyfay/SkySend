@@ -5,6 +5,10 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### 🐛 Bug Fixes
+
+- **web**: Fixed Firefox hanging on Service Worker-streamed downloads for files >= 2 GiB. Firefox has a long-standing signed 32-bit integer overflow in its internal download pipeline that triggers when `Content-Length` is >= 2^31 bytes, causing the download manager to stall or cancel at the end. The `Content-Length` header is now omitted for files >= 2 GiB so Firefox falls back to reading until EOF. Files below 2 GiB and all other browsers are unaffected. Thanks @Dominion0815
+
 ### 🎨 Improvements
 
 - **server**: The SPA entry point (`index.html`) is now served with `Cache-Control: no-cache, must-revalidate`. This prevents browsers and reverse proxies (e.g. Traefik with a caching middleware) from serving a stale `index.html` after a deployment. Without this, a cached old `index.html` referencing a previous JS bundle hash would cause 500 errors for the JS assets because the old filenames no longer exist on the new server.
