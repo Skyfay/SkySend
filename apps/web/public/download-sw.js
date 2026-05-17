@@ -275,9 +275,19 @@ async function handleDownload(config, downloadId, streamDone) {
         }
       }
 
-      // Process ALL complete records in buffer (not just one)
-      // This keeps the buffer small instead of accumulating data
-      while (bufLen() > ENCRYPTED_RECORD_SIZE) {
+      // Process exactly ONE complete record per pull() call, then return.
+      //
+      // Previously this was a while-loop that processed ALL buffered records in
+      // a single pull() call. That violated the pull-based contract of
+      // highWaterMark: 0 (= one chunk per pull). Firefox v128+ enforces this
+      // more strictly: if pull() enqueues multiple chunks at once, the
+      // ReadableStream controller loses its backpressure state and stops
+      // calling pull() mid-download, stalling the transfer at a random
+      // percentage. The stall point varies with network chunk size (larger
+      // chunks = more records buffered = higher chance of triggering the bug),
+      // which is why it only manifests on native hardware with fast connections
+      // and not in VMs or on older Firefox ESR.
+      if (bufLen() > ENCRYPTED_RECORD_SIZE) {
         const record = readFromBuf(ENCRYPTED_RECORD_SIZE);
         const nonce = nonceXorCounter(baseNonce, counter++);
         const plain = await crypto.subtle.decrypt(
@@ -286,6 +296,7 @@ async function handleDownload(config, downloadId, streamDone) {
           record,
         );
         controller.enqueue(new Uint8Array(plain));
+        return; // Firefox calls pull() again for the next record
       }
 
       // Final record: stream ended, process remaining data
