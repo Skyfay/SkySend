@@ -23,6 +23,16 @@ body:
       description: Which version are you running? (optional)
       placeholder: e.g. v2.5.4
 
+  - type: dropdown
+    id: instance_type
+    attributes:
+      label: Instance Type
+      description: Are you using a self-hosted instance or a public instance (e.g. ch.skysend.app)?
+      options:
+        - Self-hosted instance
+        - Public instance (ch.skysend.app or other community instance)
+        - Not applicable
+
   - type: textarea
     id: context
     attributes:

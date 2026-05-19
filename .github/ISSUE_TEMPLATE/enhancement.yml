@@ -57,3 +57,13 @@ body:
     attributes:
       label: Additional Context
       description: Any other context, screenshots, or mockups.
+
+  - type: dropdown
+    id: instance_type
+    attributes:
+      label: Instance Type
+      description: Are you using a self-hosted instance or a public instance (e.g. ch.skysend.app)?
+      options:
+        - Self-hosted instance
+        - Public instance (ch.skysend.app or other community instance)
+        - Not applicable
