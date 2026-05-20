@@ -2,6 +2,21 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.9.5
+*Release: In Progress*
+
+### 🎨 Improvements
+
+- **server**: Changed `Cache-Control` for `index.html` and `download-sw.js` from `no-cache, must-revalidate` to `no-store`. `no-cache` permits storing the response and requires proxy revalidation via ETag or Last-Modified headers, which SkySend does not set - causing Traefik's caching middleware to fall back to its own TTL and serve stale HTML after a deployment. `no-store` is unconditional and prevents any proxy from storing the response, eliminating the need for a Traefik restart after updates.
+- **server**: Added a global `Cache-Control: no-store` middleware to all `/api/*` routes. Previously only the successful download stream response carried this header. Error responses from any API endpoint (e.g. a transient 500 from the download route) had no cache directive, allowing Traefik to cache them. A single cached error response caused all subsequent requests to the same URL to receive the cached error until the proxy was restarted.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.9.5`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.4 - Service Worker Download Fixes for Firefox & Improved Caching
 *Released: May 20, 2026*
 

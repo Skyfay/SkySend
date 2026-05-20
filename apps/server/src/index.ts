@@ -181,6 +181,17 @@ app.onError((err, c) => {
 
 const api = new Hono();
 
+// Prevent caching proxies (e.g. Traefik with a caching middleware) from storing
+// any API response. Without this, a transient error response (e.g. a 500 from
+// the download route) gets cached and is served to all subsequent clients until
+// the proxy is restarted. The streaming download response already carries
+// Cache-Control: no-store individually, but all other routes and error responses
+// (returned via c.json()) do not - this middleware covers all of them globally.
+api.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("Cache-Control", "no-store");
+});
+
 // Rate limiter on API routes (not static assets).
 // S-2 (Security Audit): Chunk upload requests are intentionally exempt from the
 // global rate limiter. This is NOT a security gap - it is a deliberate design
@@ -329,20 +340,21 @@ app.get("*", async (c, next) => {
     cachedIndexHtml = await readFile(indexHtmlPath, "utf-8");
   }
   const html = cachedIndexHtml.replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE);
-  // no-cache: browsers and intermediate proxies (e.g. Traefik with caching middleware)
-  // must revalidate index.html before serving it. Without this, a cached old index.html
-  // referencing a previous JS bundle hash will 500 after a new deployment because the
-  // old assets no longer exist on the server.
-  return c.html(html, 200, { "Cache-Control": "no-cache, must-revalidate" });
+  // no-store: browsers and intermediate proxies (e.g. Traefik with a caching middleware)
+  // must never cache index.html. no-cache would allow storage with revalidation, but
+  // revalidation requires ETag/Last-Modified headers which we do not set - leaving some
+  // proxy implementations to fall back to their own TTL and serve stale HTML. no-store
+  // is unconditional and requires no conditional-request support from the proxy.
+  return c.html(html, 200, { "Cache-Control": "no-store" });
 });
 
-// Serve download-sw.js with no-cache so browsers always byte-check for an
-// updated Service Worker on the next navigation after a deployment. Without
-// this, a proxy or browser cache could serve the old SW file for its entire
-// TTL, keeping users on an outdated version.
+// Serve download-sw.js with no-store so browsers and proxies never cache it.
+// no-store is unconditional - unlike no-cache it does not require ETag/Last-Modified
+// support from the proxy to work correctly. Browsers will always fetch the current
+// file, picking up the updated Service Worker immediately after a deployment.
 app.use("/download-sw.js", async (c, next) => {
   await next();
-  c.res.headers.set("Cache-Control", "no-cache, must-revalidate");
+  c.res.headers.set("Cache-Control", "no-store");
 });
 
 // Serve all static files from the Vite build output (logo.svg, favicon.svg,
