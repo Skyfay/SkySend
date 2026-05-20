@@ -211,8 +211,17 @@ async function handleDownload(config, downloadId, streamDone) {
     return bufTotal - chunkOffset;
   }
 
-  function readFromBuf(len) {
-    const result = new Uint8Array(len);
+  // Pre-allocated scratch buffer for ECE record decryption.
+  // crypto.subtle.decrypt copies its input synchronously on dispatch, so this
+  // buffer is safe to reuse: pull() awaits decrypt before returning, and pull()
+  // is only called again after the previous call returns.
+  const scratchRecord = new Uint8Array(ENCRYPTED_RECORD_SIZE);
+
+  // When dst is provided the bytes are written into dst and a correctly-sized
+  // subarray view is returned (no allocation). Used for record decryption to
+  // avoid allocating a fresh 65 KB buffer on every pull() call.
+  function readFromBuf(len, dst) {
+    const result = dst !== undefined ? dst : new Uint8Array(len);
     let pos = 0;
     while (pos < len && chunks.length > 0) {
       const chunk = chunks[0];
@@ -227,7 +236,7 @@ async function handleDownload(config, downloadId, streamDone) {
         chunkOffset = 0;
       }
     }
-    return result;
+    return dst !== undefined ? dst.subarray(0, len) : result;
   }
 
   function appendToBuf(data) {
@@ -304,7 +313,7 @@ async function handleDownload(config, downloadId, streamDone) {
       // which is why it only manifests on native hardware with fast connections
       // and not in VMs or on older Firefox ESR.
       if (bufLen() > ENCRYPTED_RECORD_SIZE) {
-        const record = readFromBuf(ENCRYPTED_RECORD_SIZE);
+        const record = readFromBuf(ENCRYPTED_RECORD_SIZE, scratchRecord);
         const nonce = nonceXorCounter(baseNonce, counter++);
         let plain;
         try {
@@ -327,7 +336,7 @@ async function handleDownload(config, downloadId, streamDone) {
 
       // Final record: stream ended, process remaining data
       if (readerDone && bufLen() > TAG_LENGTH) {
-        const remaining = readFromBuf(bufLen());
+        const remaining = readFromBuf(bufLen(), scratchRecord);
         const nonce = nonceXorCounter(baseNonce, counter++);
         let plain;
         try {

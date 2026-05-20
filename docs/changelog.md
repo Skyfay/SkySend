@@ -13,6 +13,7 @@ All notable changes to SkySend are documented here.
 ### 🎨 Improvements
 
 - **web**: Replaced the single-buffer copy strategy in the Service Worker ECE decryption pipeline with a zero-copy chunk queue. Previously `appendToBuf()` copied both the leftover bytes from the previous chunk (~65 KB) and the newly received chunk (~65 KB) into a fresh combined buffer on every `pull()` call - generating ~5 GB of unnecessary allocations for a 2.4 GB file. The new implementation pushes incoming `reader.read()` chunks into a queue by reference. `readFromBuf()` copies only the bytes required for the current decrypt call (one record, 65552 bytes), reducing GC pressure by roughly 2.5x and eliminating the speed oscillation and browser sluggishness during large downloads.
+- **web**: Eliminated the per-record `Uint8Array` allocation in `readFromBuf()` by introducing a pre-allocated `scratchRecord` buffer (`ENCRYPTED_RECORD_SIZE` bytes) that is reused across all `pull()` calls. `crypto.subtle.decrypt` copies its input synchronously before returning the Promise, making the buffer safe to reuse as soon as the `await` resolves. This removes a further ~2.4 GB of GC-managed allocations per large file download, reducing peak heap pressure and Firefox RAM consumption.
 
 ### 🐳 Docker
 
