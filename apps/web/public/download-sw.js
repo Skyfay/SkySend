@@ -122,9 +122,9 @@ self.addEventListener("fetch", (event) => {
  * Everything inside respondWith() - Firefox propagates backpressure here.
  *
  * Optimizations for low RAM:
- * - Process ALL complete records per pull() call (don't leave data in buffer)
- * - Use offset-based buffer reads instead of slice+copy
- * - highWaterMark: 0 prevents ReadableStream from buffering ahead
+ * - Process exactly ONE record per pull() call (highWaterMark: 2 manages pipelining)
+ * - Zero-copy chunk queue: incoming network chunks are referenced, not copied
+ * - Pre-allocated scratchRecord reused for all decrypt input copies
  * - Report progress and completion back to main thread
  */
 async function handleDownload(config, downloadId, streamDone) {
@@ -193,45 +193,55 @@ async function handleDownload(config, downloadId, streamDone) {
   const reader = response.body.getReader();
 
   let baseNonce = null;
-  let buffer = new Uint8Array(0);
-  let bufOffset = 0; // read position in buffer (avoid copying on slice)
   let counter = 0;
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
   let pullCount = 0;
+  let cancelled = false;
 
-  // Compact buffer: shift unread data to front when waste exceeds 512KB
-  function compactBuffer() {
-    if (bufOffset > 524288) {
-      buffer = buffer.slice(bufOffset);
-      bufOffset = 0;
-    }
-  }
+  // Chunk queue: incoming network chunks are held by reference with zero copy.
+  // readFromBuf allocates only the bytes needed for the current operation
+  // (one record at a time), cutting GC pressure to roughly the plaintext size.
+  let chunks = [];    // queue of Uint8Array chunks from reader.read()
+  let chunkOffset = 0; // read position within chunks[0]
+  let bufTotal = 0;    // sum of all chunk lengths (O(1) bufLen)
 
   function bufLen() {
-    return buffer.length - bufOffset;
+    return bufTotal - chunkOffset;
   }
 
-  function readFromBuf(len) {
-    const result = buffer.slice(bufOffset, bufOffset + len);
-    bufOffset += len;
-    compactBuffer();
-    return result;
+  // Pre-allocated scratch buffer for ECE record decryption.
+  // crypto.subtle.decrypt copies its input synchronously on dispatch, so this
+  // buffer is safe to reuse: pull() awaits decrypt before returning, and pull()
+  // is only called again after the previous call returns.
+  const scratchRecord = new Uint8Array(ENCRYPTED_RECORD_SIZE);
+
+  // When dst is provided the bytes are written into dst and a correctly-sized
+  // subarray view is returned (no allocation). Used for record decryption to
+  // avoid allocating a fresh 65 KB buffer on every pull() call.
+  function readFromBuf(len, dst) {
+    const result = dst !== undefined ? dst : new Uint8Array(len);
+    let pos = 0;
+    while (pos < len && chunks.length > 0) {
+      const chunk = chunks[0];
+      const available = chunk.length - chunkOffset;
+      const take = Math.min(len - pos, available);
+      result.set(chunk.subarray(chunkOffset, chunkOffset + take), pos);
+      pos += take;
+      chunkOffset += take;
+      if (chunkOffset >= chunk.length) {
+        bufTotal -= chunk.length;
+        chunks.shift();
+        chunkOffset = 0;
+      }
+    }
+    return dst !== undefined ? dst.subarray(0, len) : result;
   }
 
   function appendToBuf(data) {
-    if (bufLen() === 0) {
-      buffer = data;
-      bufOffset = 0;
-    } else {
-      const remaining = buffer.slice(bufOffset);
-      const combined = new Uint8Array(remaining.length + data.length);
-      combined.set(remaining, 0);
-      combined.set(data, remaining.length);
-      buffer = combined;
-      bufOffset = 0;
-    }
+    chunks.push(data);
+    bufTotal += data.length;
   }
 
   async function readMore() {
@@ -256,11 +266,18 @@ async function handleDownload(config, downloadId, streamDone) {
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
+      if (cancelled) return;
       const pullIdx = ++pullCount;
       console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
-      // Ensure buffer has enough data
+      // Ensure the buffer has enough data for one full encrypted record before
+      // attempting to decrypt. The while-loop is required: without it pull()
+      // would return without enqueuing, causing the stream to call pull() again
+      // immediately in a tight CPU-spinning loop until network data arrives.
+      // The loop must run until bufLen > ENCRYPTED_RECORD_SIZE so that the
+      // record-processing branch below can always enqueue without returning empty.
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
+        if (cancelled) return;
       }
 
       // Extract nonce header on first call
@@ -276,6 +293,7 @@ async function handleDownload(config, downloadId, streamDone) {
         // Read more if needed for first record
         while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
           await readMore();
+          if (cancelled) return;
         }
       }
 
@@ -293,13 +311,22 @@ async function handleDownload(config, downloadId, streamDone) {
       // which is why it only manifests on native hardware with fast connections
       // and not in VMs or on older Firefox ESR.
       if (bufLen() > ENCRYPTED_RECORD_SIZE) {
-        const record = readFromBuf(ENCRYPTED_RECORD_SIZE);
+        const record = readFromBuf(ENCRYPTED_RECORD_SIZE, scratchRecord);
         const nonce = nonceXorCounter(baseNonce, counter++);
-        const plain = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-          fileKey,
-          record,
-        );
+        let plain;
+        try {
+          plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+            fileKey,
+            record,
+          );
+        } catch (e) {
+          console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
+          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          controller.error(e);
+          streamDone();
+          return;
+        }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} enqueued record #${counter - 1}`);
         return; // Firefox calls pull() again for the next record
@@ -307,13 +334,22 @@ async function handleDownload(config, downloadId, streamDone) {
 
       // Final record: stream ended, process remaining data
       if (readerDone && bufLen() > TAG_LENGTH) {
-        const remaining = readFromBuf(bufLen());
+        const remaining = readFromBuf(bufLen(), scratchRecord);
         const nonce = nonceXorCounter(baseNonce, counter++);
-        const plain = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-          fileKey,
-          remaining,
-        );
+        let plain;
+        try {
+          plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+            fileKey,
+            remaining,
+          );
+        } catch (e) {
+          console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
+          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          controller.error(e);
+          streamDone();
+          return;
+        }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
         await broadcast({ type: "dl-progress", downloadId, progress: 100 });
@@ -331,12 +367,22 @@ async function handleDownload(config, downloadId, streamDone) {
     },
 
     cancel() {
+      cancelled = true;
       console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
       broadcast({ type: "dl-error", downloadId, error: "cancelled" });
       streamDone();
     },
-  }, { highWaterMark: 0 }); // No internal buffering - pure pull
+  // highWaterMark: 2 keeps 2 pre-decrypted records in the stream's internal
+  // queue. Firefox's download manager reads from this queue instantly without
+  // waiting for pull() to complete. This eliminates the synchronous IPC stall
+  // that occurs with highWaterMark: 0, where every consumer read() blocks the
+  // main browser thread until pull() enqueues - causing multi-second (or
+  // multi-minute on slow connections) browser UI freezes.
+  // pull() still enqueues exactly ONE record per call, so Firefox's backpressure
+  // tracking remains correct and the stall-at-random-percentage bug from v2.9.2
+  // (caused by multiple enqueues per pull()) cannot recur.
+  }, { highWaterMark: 2 });
 
   return new Response(decryptStream, { headers });
 }

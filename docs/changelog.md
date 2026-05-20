@@ -2,6 +2,27 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.9.4 - Service Worker Download Fixes for Firefox & Improved Caching
+*Released: May 20, 2026*
+
+### 🐛 Bug Fixes
+
+- **web**: Added `try/catch` around both `crypto.subtle.decrypt` calls in the Service Worker. An unauthenticated or corrupted encrypted record caused the decrypt call to throw, which rejected the `pull()` promise and let Firefox mark the download as completed with the incorrect partial file size. The stream is now explicitly errored via `controller.error()` and a `dl-error` broadcast is sent to the UI on failure.
+- **web**: Added a `cancelled` flag to the Service Worker's `cancel()` handler, checked at every `await` boundary in `pull()`. Previously, calling `cancel()` while `pull()` was awaiting `readMore()` let `pull()` continue executing on an already-cancelled stream, which could reach `controller.close()` and throw.
+
+### 🎨 Improvements
+
+- **web**: Changed the Service Worker ReadableStream from `highWaterMark: 0` to `highWaterMark: 2` to address reported Firefox browser freezes during large-file downloads. With `highWaterMark: 0`, `pull()` is only triggered by a pending consumer `read()`, which may cause Firefox's download pipeline to block until a decrypted record is ready. With `highWaterMark: 2`, `pull()` runs proactively and keeps up to two pre-decrypted records in the internal queue, reducing the chance of a synchronous stall. `pull()` still enqueues exactly one record per call, so the stall-at-random-percentage behavior from v2.9.2 cannot recur.
+- **server**: `download-sw.js` is now served with `Cache-Control: no-cache, must-revalidate`. Previously the file was served by the static file middleware with no explicit cache header, allowing browsers and intermediate proxies to apply heuristic caching. With `no-cache`, browsers byte-check the Service Worker file on every navigation and register any updated version immediately after a deployment, so users are never stuck running an outdated SW.
+- **web**: Replaced the single-buffer copy strategy in the Service Worker ECE decryption pipeline with a zero-copy chunk queue. Previously `appendToBuf()` copied both the leftover bytes from the previous chunk (~65 KB) and the newly received chunk (~65 KB) into a fresh combined buffer on every `pull()` call - generating ~5 GB of unnecessary allocations for a 2.4 GB file. The new implementation pushes incoming `reader.read()` chunks into a queue by reference. `readFromBuf()` copies only the bytes required for the current decrypt call (one record, 65552 bytes), reducing GC pressure by roughly 2.5x and eliminating the speed oscillation and browser sluggishness during large downloads.
+- **web**: Eliminated the per-record `Uint8Array` allocation in `readFromBuf()` by introducing a pre-allocated `scratchRecord` buffer (`ENCRYPTED_RECORD_SIZE` bytes) that is reused across all `pull()` calls. `crypto.subtle.decrypt` copies its input synchronously before returning the Promise, making the buffer safe to reuse as soon as the `await` resolves. This removes a further ~2.4 GB of GC-managed allocations per large file download, reducing peak heap pressure and Firefox RAM consumption.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.9.4`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v2.9.3 - Debugging Service Worker Download Stalling in Firefox
 *Released: May 17, 2026*
 
