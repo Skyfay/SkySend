@@ -336,6 +336,15 @@ app.get("*", async (c, next) => {
   return c.html(html, 200, { "Cache-Control": "no-cache, must-revalidate" });
 });
 
+// Serve download-sw.js with no-cache so browsers always byte-check for an
+// updated Service Worker on the next navigation after a deployment. Without
+// this, a proxy or browser cache could serve the old SW file for its entire
+// TTL, keeping users on an outdated version.
+app.use("/download-sw.js", async (c, next) => {
+  await next();
+  c.res.headers.set("Cache-Control", "no-cache, must-revalidate");
+});
+
 // Serve all static files from the Vite build output (logo.svg, favicon.svg,
 // download-sw.js, robots.txt, .well-known/*, etc.)
 app.use(
