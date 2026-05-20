@@ -193,45 +193,46 @@ async function handleDownload(config, downloadId, streamDone) {
   const reader = response.body.getReader();
 
   let baseNonce = null;
-  let buffer = new Uint8Array(0);
-  let bufOffset = 0; // read position in buffer (avoid copying on slice)
   let counter = 0;
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
   let pullCount = 0;
+  let cancelled = false;
 
-  // Compact buffer: shift unread data to front when waste exceeds 512KB
-  function compactBuffer() {
-    if (bufOffset > 524288) {
-      buffer = buffer.slice(bufOffset);
-      bufOffset = 0;
-    }
-  }
+  // Chunk queue: incoming network chunks are held by reference with zero copy.
+  // readFromBuf allocates only the bytes needed for the current operation
+  // (one record at a time), cutting GC pressure to roughly the plaintext size.
+  let chunks = [];    // queue of Uint8Array chunks from reader.read()
+  let chunkOffset = 0; // read position within chunks[0]
+  let bufTotal = 0;    // sum of all chunk lengths (O(1) bufLen)
 
   function bufLen() {
-    return buffer.length - bufOffset;
+    return bufTotal - chunkOffset;
   }
 
   function readFromBuf(len) {
-    const result = buffer.slice(bufOffset, bufOffset + len);
-    bufOffset += len;
-    compactBuffer();
+    const result = new Uint8Array(len);
+    let pos = 0;
+    while (pos < len && chunks.length > 0) {
+      const chunk = chunks[0];
+      const available = chunk.length - chunkOffset;
+      const take = Math.min(len - pos, available);
+      result.set(chunk.subarray(chunkOffset, chunkOffset + take), pos);
+      pos += take;
+      chunkOffset += take;
+      if (chunkOffset >= chunk.length) {
+        bufTotal -= chunk.length;
+        chunks.shift();
+        chunkOffset = 0;
+      }
+    }
     return result;
   }
 
   function appendToBuf(data) {
-    if (bufLen() === 0) {
-      buffer = data;
-      bufOffset = 0;
-    } else {
-      const remaining = buffer.slice(bufOffset);
-      const combined = new Uint8Array(remaining.length + data.length);
-      combined.set(remaining, 0);
-      combined.set(data, remaining.length);
-      buffer = combined;
-      bufOffset = 0;
-    }
+    chunks.push(data);
+    bufTotal += data.length;
   }
 
   async function readMore() {
@@ -256,11 +257,20 @@ async function handleDownload(config, downloadId, streamDone) {
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
+      if (cancelled) return;
       const pullIdx = ++pullCount;
       console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
-      // Ensure buffer has enough data
+      // Ensure buffer has enough data for at least one full encrypted record.
+      // The while-loop is required by the ReadableStream pull-based contract:
+      // pull() MUST enqueue something (or close/error the stream) before
+      // returning, otherwise the consumer's pending read() is never fulfilled
+      // and pull() is never called again - causing a permanent stall. An
+      // early return without enqueuing is only safe if the consumer
+      // immediately re-submits a new read(), which it does NOT do with
+      // highWaterMark: 0 while a previous read is still pending.
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
+        if (cancelled) return;
       }
 
       // Extract nonce header on first call
@@ -276,6 +286,7 @@ async function handleDownload(config, downloadId, streamDone) {
         // Read more if needed for first record
         while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
           await readMore();
+          if (cancelled) return;
         }
       }
 
@@ -295,11 +306,20 @@ async function handleDownload(config, downloadId, streamDone) {
       if (bufLen() > ENCRYPTED_RECORD_SIZE) {
         const record = readFromBuf(ENCRYPTED_RECORD_SIZE);
         const nonce = nonceXorCounter(baseNonce, counter++);
-        const plain = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-          fileKey,
-          record,
-        );
+        let plain;
+        try {
+          plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+            fileKey,
+            record,
+          );
+        } catch (e) {
+          console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
+          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          controller.error(e);
+          streamDone();
+          return;
+        }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} enqueued record #${counter - 1}`);
         return; // Firefox calls pull() again for the next record
@@ -309,11 +329,20 @@ async function handleDownload(config, downloadId, streamDone) {
       if (readerDone && bufLen() > TAG_LENGTH) {
         const remaining = readFromBuf(bufLen());
         const nonce = nonceXorCounter(baseNonce, counter++);
-        const plain = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-          fileKey,
-          remaining,
-        );
+        let plain;
+        try {
+          plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
+            fileKey,
+            remaining,
+          );
+        } catch (e) {
+          console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
+          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          controller.error(e);
+          streamDone();
+          return;
+        }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
         await broadcast({ type: "dl-progress", downloadId, progress: 100 });
@@ -331,6 +360,7 @@ async function handleDownload(config, downloadId, streamDone) {
     },
 
     cancel() {
+      cancelled = true;
       console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
       broadcast({ type: "dl-error", downloadId, error: "cancelled" });

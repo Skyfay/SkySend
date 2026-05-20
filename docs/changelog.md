@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed Service Worker `pull()` silently erroring the stream when AES-GCM decryption fails. An unauthenticated or corrupted encrypted record caused `crypto.subtle.decrypt` to throw, which rejected the `pull()` promise and let Firefox mark the download as completed with the incorrect partial file size. Both the non-final and final record decrypt paths are now wrapped in `try/catch`. On failure the stream is explicitly errored via `controller.error()` and a `dl-error` broadcast is sent to the UI.
+- **web**: Fixed a race condition in the Service Worker `cancel()` handler. Calling `cancel()` while `pull()` was awaiting `readMore()` caused the in-flight `reader.read()` to resolve with `done: true`, letting `pull()` continue executing on an already-cancelled stream and calling `controller.close()` - which throws. A `cancelled` flag is now set at the start of `cancel()` and checked at every `await` boundary in `pull()`.
+
+### 🎨 Improvements
+
+- **web**: Replaced the single-buffer copy strategy in the Service Worker ECE decryption pipeline with a zero-copy chunk queue. Previously `appendToBuf()` copied both the leftover bytes from the previous chunk (~65 KB) and the newly received chunk (~65 KB) into a fresh combined buffer on every `pull()` call - generating ~5 GB of unnecessary allocations for a 2.4 GB file. The new implementation pushes incoming `reader.read()` chunks into a queue by reference. `readFromBuf()` copies only the bytes required for the current decrypt call (one record, 65552 bytes), reducing GC pressure by roughly 2.5x and eliminating the speed oscillation and browser sluggishness during large downloads.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v2.9.3 - Debugging Service Worker Download Stalling in Firefox
 *Released: May 17, 2026*
 
