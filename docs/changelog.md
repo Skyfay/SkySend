@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## v2.9.5
-*Release: In Progress*
+## v2.9.5 - Cache-Control Fixes for Stale Content and Traefik Caching
+*Released: May 20, 2026*
 
 ### 🎨 Improvements
 
