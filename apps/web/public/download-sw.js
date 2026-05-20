@@ -122,9 +122,9 @@ self.addEventListener("fetch", (event) => {
  * Everything inside respondWith() - Firefox propagates backpressure here.
  *
  * Optimizations for low RAM:
- * - Process ALL complete records per pull() call (don't leave data in buffer)
- * - Use offset-based buffer reads instead of slice+copy
- * - highWaterMark: 0 prevents ReadableStream from buffering ahead
+ * - Process exactly ONE record per pull() call (highWaterMark: 2 manages pipelining)
+ * - Zero-copy chunk queue: incoming network chunks are referenced, not copied
+ * - Pre-allocated scratchRecord reused for all decrypt input copies
  * - Report progress and completion back to main thread
  */
 async function handleDownload(config, downloadId, streamDone) {
@@ -269,14 +269,12 @@ async function handleDownload(config, downloadId, streamDone) {
       if (cancelled) return;
       const pullIdx = ++pullCount;
       console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
-      // Ensure buffer has enough data for at least one full encrypted record.
-      // The while-loop is required by the ReadableStream pull-based contract:
-      // pull() MUST enqueue something (or close/error the stream) before
-      // returning, otherwise the consumer's pending read() is never fulfilled
-      // and pull() is never called again - causing a permanent stall. An
-      // early return without enqueuing is only safe if the consumer
-      // immediately re-submits a new read(), which it does NOT do with
-      // highWaterMark: 0 while a previous read is still pending.
+      // Ensure the buffer has enough data for one full encrypted record before
+      // attempting to decrypt. The while-loop is required: without it pull()
+      // would return without enqueuing, causing the stream to call pull() again
+      // immediately in a tight CPU-spinning loop until network data arrives.
+      // The loop must run until bufLen > ENCRYPTED_RECORD_SIZE so that the
+      // record-processing branch below can always enqueue without returning empty.
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
         if (cancelled) return;
@@ -375,7 +373,16 @@ async function handleDownload(config, downloadId, streamDone) {
       broadcast({ type: "dl-error", downloadId, error: "cancelled" });
       streamDone();
     },
-  }, { highWaterMark: 0 }); // No internal buffering - pure pull
+  // highWaterMark: 2 keeps 2 pre-decrypted records in the stream's internal
+  // queue. Firefox's download manager reads from this queue instantly without
+  // waiting for pull() to complete. This eliminates the synchronous IPC stall
+  // that occurs with highWaterMark: 0, where every consumer read() blocks the
+  // main browser thread until pull() enqueues - causing multi-second (or
+  // multi-minute on slow connections) browser UI freezes.
+  // pull() still enqueues exactly ONE record per call, so Firefox's backpressure
+  // tracking remains correct and the stall-at-random-percentage bug from v2.9.2
+  // (caused by multiple enqueues per pull()) cannot recur.
+  }, { highWaterMark: 2 });
 
   return new Response(decryptStream, { headers });
 }
