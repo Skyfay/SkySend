@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.9.4 - Service Worker Download Fixes for Firefox & Improved Caching
+*Released: May 20, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -19,8 +19,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.9.4`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 ## v2.9.3 - Debugging Service Worker Download Stalling in Firefox
