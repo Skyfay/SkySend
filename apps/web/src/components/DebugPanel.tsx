@@ -105,10 +105,9 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
                   <DebugRow label={t("debug.swPath")} value={t("debug.swPathStream")} />
                 )}
                 <DebugRow label={t("debug.browser")} value={downloadInfo.browser} />
-                <DebugRow
-                  label={t("debug.devtools")}
-                  value={downloadInfo.devtools ? t("debug.devtoolsDetected") : t("debug.devtoolsNotDetected")}
-                />
+                {downloadInfo.devtools && (
+                  <DebugRow label={t("debug.devtools")} value={t("debug.devtoolsDetected")} />
+                )}
                 {downloadInfo.fileSize != null && (
                   <DebugRow label={t("debug.fileSize")} value={formatBytes(downloadInfo.fileSize)} />
                 )}
