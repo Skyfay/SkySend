@@ -191,13 +191,14 @@ async function handleDownload(config, downloadId, streamDone) {
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
   const reader = response.body.getReader();
+  console.debug(`[SW-dl:${downloadId}] stream start: totalSize=${totalSize}B decryptedSize=${decryptedSize}B`);
 
   let baseNonce = null;
   let counter = 0;
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
-  let pullCount = 0;
+  let lastCheckpointTime = Date.now();
   let cancelled = false;
 
   // Chunk queue: incoming network chunks are held by reference with zero copy.
@@ -246,13 +247,19 @@ async function handleDownload(config, downloadId, streamDone) {
 
   async function readMore() {
     if (readerDone) return;
+    const readStart = Date.now();
     const { done, value } = await reader.read();
+    const readMs = Date.now() - readStart;
     if (done) {
       readerDone = true;
     } else {
       loaded += value.byteLength;
       appendToBuf(value);
-      console.debug(`[SW-dl:${downloadId}] readMore +${value.byteLength}B (loaded=${loaded}B)`);
+      // Log reads that take unusually long - indicates network jitter or
+      // connection stalls independent of the double-readMore drift pattern.
+      if (readMs > 1000) {
+        console.debug(`[SW-dl:${downloadId}] slow-read +${value.byteLength}B readMs=${readMs} loaded=${loaded}B`);
+      }
 
       // Report progress (throttled)
       const now = Date.now();
@@ -267,17 +274,24 @@ async function handleDownload(config, downloadId, streamDone) {
   const decryptStream = new ReadableStream({
     async pull(controller) {
       if (cancelled) return;
-      const pullIdx = ++pullCount;
-      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
       // Ensure the buffer has enough data for one full encrypted record before
       // attempting to decrypt. The while-loop is required: without it pull()
       // would return without enqueuing, causing the stream to call pull() again
       // immediately in a tight CPU-spinning loop until network data arrives.
       // The loop must run until bufLen > ENCRYPTED_RECORD_SIZE so that the
       // record-processing branch below can always enqueue without returning empty.
+      let readMoreCalls = 0;
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
+        readMoreCalls++;
         if (cancelled) return;
+      }
+      // Double-readMore: ECE records (65552 B) and network chunks (65536 B) differ
+      // by 16 B, so the ciphertext buffer drifts down by 16 B per record. Every
+      // ~4096 records the buffer falls below ENCRYPTED_RECORD_SIZE after one read,
+      // requiring a second sequential read before decryption can proceed.
+      if (readMoreCalls > 1) {
+        console.debug(`[SW-dl:${downloadId}] double-readMore: record=${counter} calls=${readMoreCalls} bufLen=${bufLen()}B loaded=${loaded}B`);
       }
 
       // Extract nonce header on first call
@@ -297,7 +311,6 @@ async function handleDownload(config, downloadId, streamDone) {
         }
       }
 
-      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} ready: bufLen=${bufLen()}B (~${Math.floor(bufLen() / ENCRYPTED_RECORD_SIZE)} complete records buffered)`);
       // Process exactly ONE complete record per pull() call, then return.
       //
       // Previously this was a while-loop that processed ALL buffered records in
@@ -328,7 +341,15 @@ async function handleDownload(config, downloadId, streamDone) {
           return;
         }
         controller.enqueue(new Uint8Array(plain));
-        console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} enqueued record #${counter - 1}`);
+        // Periodic checkpoint: ~40 logs per 2.5 GiB download instead of ~150 K.
+        // Shows elapsed time since last checkpoint so a freeze shows as an
+        // abnormally large gap (e.g. 120 000 ms instead of the usual ~500 ms).
+        if (counter % 1000 === 0) {
+          const now = Date.now();
+          const elapsed = now - lastCheckpointTime;
+          lastCheckpointTime = now;
+          console.debug(`[SW-dl:${downloadId}] checkpoint record=${counter} loaded=${loaded}B elapsed=${elapsed}ms`);
+        }
         return; // Firefox calls pull() again for the next record
       }
 
@@ -373,16 +394,20 @@ async function handleDownload(config, downloadId, streamDone) {
       broadcast({ type: "dl-error", downloadId, error: "cancelled" });
       streamDone();
     },
-  // highWaterMark: 2 keeps 2 pre-decrypted records in the stream's internal
-  // queue. Firefox's download manager reads from this queue instantly without
-  // waiting for pull() to complete. This eliminates the synchronous IPC stall
-  // that occurs with highWaterMark: 0, where every consumer read() blocks the
-  // main browser thread until pull() enqueues - causing multi-second (or
-  // multi-minute on slow connections) browser UI freezes.
+  // highWaterMark: 8 keeps up to 8 pre-decrypted records (~512 KB plaintext)
+  // in the stream's internal queue. Firefox's download manager reads from this
+  // queue instantly without waiting for pull() to complete. The larger queue
+  // (vs the previous value of 2) absorbs occasional double-readMore() stalls:
+  // because ECE records are 65552 B but network chunks are 65536 B, the
+  // ciphertext buffer drifts down by 16 B per record and roughly every
+  // 4096 records one pull() call must perform two sequential reader.read()s
+  // before it can enqueue. On slow or jittery connections that ~2x-chunk-time
+  // stall could exhaust a 2-record queue and freeze Firefox's UI for several
+  // seconds. 8 records provides enough slack down to ~5 Mbps connections.
   // pull() still enqueues exactly ONE record per call, so Firefox's backpressure
   // tracking remains correct and the stall-at-random-percentage bug from v2.9.2
   // (caused by multiple enqueues per pull()) cannot recur.
-  }, { highWaterMark: 2 });
+  }, { highWaterMark: 8 });
 
   return new Response(decryptStream, { headers });
 }

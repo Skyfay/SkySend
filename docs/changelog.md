@@ -2,6 +2,25 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline (~150,000 calls per 2.5 GiB download). Firefox buffers SW console output via IPC to the parent process even when DevTools are closed, which overwhelmed the parent process and caused the multi-minute browser UI freezes reported by several users.
+
+### 🎨 Improvements
+
+- **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` (~512 KB of pre-decrypted plaintext queued). This absorbs occasional double-`readMore()` stalls caused by a 16-byte drift per ECE record, preventing brief download UI freezes on slow or jittery connections.
+- **web**: Added lightweight diagnostic logging to the Service Worker: a stream-start summary, per-1000-record checkpoints with elapsed time, slow-read alerts (>1 s per chunk), and double-`readMore()` event detection. Replaces the removed per-record spam with roughly 60 targeted log lines per 2.5 GiB download for future freeze analysis.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.5 - Cache-Control Fixes for Stale Content and Traefik Caching
 *Released: May 20, 2026*
 
