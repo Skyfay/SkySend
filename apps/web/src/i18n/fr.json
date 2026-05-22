@@ -244,8 +244,32 @@
     "loginRequired": "Connexion requise pour téléverser",
     "loginButton": "Se connecter avec SSO",
     "logout": "Se déconnecter"
-  },
-  "language": {
+  },  "debug": {
+    "title": "Informations techniques",
+    "download": "T\u00e9l\u00e9chargement",
+    "upload": "Envoi",
+    "tier": "Niveau",
+    "swPath": "Chemin SW",
+    "browser": "Navigateur",
+    "devtools": "DevTools",
+    "devtoolsDetected": "d\u00e9tect\u00e9",
+    "devtoolsNotDetected": "non d\u00e9tect\u00e9",
+    "fileSize": "Taille du fichier",
+    "transport": "Transport",
+    "fallback": "Repli",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS \u00e9chou\u00e9 \u2192 HTTP",
+    "tierSw": "Stream SW",
+    "tierFilePicker": "S\u00e9lecteur de sauvegarde",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Fragments HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Copier dans le presse-papiers",
+    "copied": "Copi\u00e9 !",
+    "timeline": "Historique",
+    "close": "Fermer"
+  },  "language": {
     "search": "Rechercher une langue..."
   }
 }

@@ -245,6 +245,32 @@
     "loginButton": "Accedi con SSO",
     "logout": "Disconnetti"
   },
+  "debug": {
+    "title": "Informazioni tecniche",
+    "download": "Download",
+    "upload": "Caricamento",
+    "tier": "Livello",
+    "swPath": "Percorso SW",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "rilevato",
+    "devtoolsNotDetected": "non rilevato",
+    "fileSize": "Dimensione file",
+    "transport": "Trasporto",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS fallito \u2192 HTTP",
+    "tierSw": "Stream SW",
+    "tierFilePicker": "Selettore salvataggio",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Blocchi HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Copia negli appunti",
+    "copied": "Copiato!",
+    "timeline": "Cronologia",
+    "close": "Chiudi"
+  },
   "language": {
     "search": "Cerca lingua..."
   }

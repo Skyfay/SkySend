@@ -71,3 +71,21 @@ export function isDevToolsOpen(): boolean {
 
 /** 256 MB - files above this threshold show a warning on Safari */
 export const SAFARI_BIG_SIZE = 256 * 1024 * 1024;
+
+/**
+ * Returns a human-readable browser name and major version string,
+ * e.g. "Firefox 127", "Chrome 124", "Safari 17", "Edge 124".
+ * Falls back to "Unknown Browser" if the UA cannot be parsed.
+ */
+export function getBrowserInfo(): string {
+  const ua = navigator.userAgent;
+  const edgeMatch = ua.match(/Edg\/(\d+)/);
+  if (edgeMatch) return `Edge ${edgeMatch[1]}`;
+  const firefoxMatch = ua.match(/Firefox\/(\d+)/);
+  if (firefoxMatch) return `Firefox ${firefoxMatch[1]}`;
+  const chromeMatch = ua.match(/Chrome\/(\d+)/);
+  if (chromeMatch) return `Chrome ${chromeMatch[1]}`;
+  const safariMatch = ua.match(/Version\/(\d+).*Safari/);
+  if (safariMatch) return `Safari ${safariMatch[1]}`;
+  return "Unknown Browser";
+}

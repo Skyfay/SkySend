@@ -11,6 +11,7 @@ import { UploadZone } from "@/components/UploadZone";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
+import { DebugPanel } from "@/components/DebugPanel";
 import { QuotaBar } from "@/components/QuotaBar";
 import { NoteForm } from "@/components/NoteForm";
 import { CodeForm } from "@/components/CodeForm";
@@ -164,7 +165,12 @@ export function UploadPage() {
 
   // Show share link when done
   if (uploadHook.phase === "done" && uploadHook.shareLink) {
-    return <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload} />;
+    return (
+      <div className="space-y-2">
+        <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload} />
+        <DebugPanel uploadInfo={uploadHook.debugInfo} />
+      </div>
+    );
   }
 
   // Dedicated upload-in-progress view
@@ -207,6 +213,8 @@ export function UploadPage() {
               progress={uploadHook.progress}
               speed={uploadHook.speed}
             />
+
+            <DebugPanel uploadInfo={uploadHook.debugInfo} />
 
             {/* Cancel button */}
             <Button

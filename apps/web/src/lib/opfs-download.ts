@@ -256,6 +256,7 @@ export async function streamDownloadViaSw(
   mimeType: string,
   encryptedSize: number,
   onProgress: (progress: number) => void,
+  onDebugInfo?: (swPath: string) => void,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -338,6 +339,8 @@ export async function streamDownloadViaSw(
 
       if (msg.type === "dl-progress") {
         onProgress(msg.progress);
+      } else if (msg.type === "dl-tier") {
+        onDebugInfo?.(msg.swPath);
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
         downloadBc.removeEventListener("message", handler);

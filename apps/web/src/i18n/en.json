@@ -240,6 +240,32 @@
     "loginButton": "Login with SSO",
     "logout": "Logout"
   },
+  "debug": {
+    "title": "Technical Info",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Tier",
+    "swPath": "SW-Path",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "detected",
+    "devtoolsNotDetected": "not detected",
+    "fileSize": "File size",
+    "transport": "Transport",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS failed \u2192 HTTP",
+    "tierSw": "SW Stream",
+    "tierFilePicker": "Save File Picker",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP Chunks",
+    "swPathStream": "ReadableStream",
+    "copy": "Copy to clipboard",
+    "copied": "Copied!",
+    "timeline": "Timeline",
+    "close": "Close"
+  },
   "language": {
     "search": "Search language..."
   }

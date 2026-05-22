@@ -7,6 +7,7 @@ All notable changes to SkySend are documented here.
 
 ### ✨ Features
 
+- **web**: Added an in-app Debug Info Panel accessible via an `(i)` button next to the download and upload progress indicators. The panel shows the active download tier (SW Stream, Save File Picker, or Blob), the Service Worker decryption path, browser name and version, DevTools detection status, file size, upload transport (WebSocket or HTTP Chunks), fallback status, and a timestamped event timeline. All values reflect actual runtime decisions rather than heuristics. Includes a "Copy to clipboard" button for easy bug report sharing.
 - **web**: Added a Firefox DevTools detection warning on the download page. When Firefox DevTools are docked (bottom, left, or right panel) at the time a download is initiated, a warning modal is shown asking the user to close them before proceeding. Includes a retry button that re-checks the detection and a secondary escape-hatch button to proceed anyway in case of a false positive.
 
 ### 🐛 Bug Fixes

@@ -191,6 +191,10 @@ async function handleDownload(config, downloadId, streamDone) {
   );
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
+  // Inform main thread which decryption path was chosen.
+  // Currently always "stream" (ReadableStream inside respondWith).
+  bc.postMessage({ type: "dl-tier", downloadId, swPath: "stream" });
+
   const reader = response.body.getReader();
   console.debug(`[SW-dl:${downloadId}] stream start: totalSize=${totalSize}B decryptedSize=${decryptedSize}B`);
 

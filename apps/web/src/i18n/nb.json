@@ -245,6 +245,32 @@
     "loginButton": "Logg inn med SSO",
     "logout": "Logg ut"
   },
+  "debug": {
+    "title": "Teknisk informasjon",
+    "download": "Nedlasting",
+    "upload": "Opplasting",
+    "tier": "Nivå",
+    "swPath": "SW-sti",
+    "browser": "Nettleser",
+    "devtools": "Utviklerverktøy",
+    "devtoolsDetected": "oppdaget",
+    "devtoolsNotDetected": "ikke oppdaget",
+    "fileSize": "Filstørrelse",
+    "transport": "Transport",
+    "fallback": "Reserveløsning",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS feilet → HTTP",
+    "tierSw": "SW-strøm",
+    "tierFilePicker": "Lagre-dialog",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-biter",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopier til utklippstavle",
+    "copied": "Kopiert!",
+    "timeline": "Tidslinje",
+    "close": "Lukk"
+  },
   "language": {
     "search": "Søk etter språk..."
   }

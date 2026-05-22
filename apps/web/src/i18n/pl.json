@@ -244,8 +244,32 @@
     "loginRequired": "Wymagane logowanie do przesyłania",
     "loginButton": "Zaloguj przez SSO",
     "logout": "Wyloguj"
-  },
-  "language": {
+  },  "debug": {
+    "title": "Informacje techniczne",
+    "download": "Pobieranie",
+    "upload": "Wysy\u0142anie",
+    "tier": "Poziom",
+    "swPath": "\u015acie\u017cka SW",
+    "browser": "Przegl\u0105darka",
+    "devtools": "DevTools",
+    "devtoolsDetected": "wykryto",
+    "devtoolsNotDetected": "nie wykryto",
+    "fileSize": "Rozmiar pliku",
+    "transport": "Transport",
+    "fallback": "Rezerwa",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS nieudany \u2192 HTTP",
+    "tierSw": "Strumie\u0144 SW",
+    "tierFilePicker": "Okno zapisu",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Fragmenty HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopiuj do schowka",
+    "copied": "Skopiowano!",
+    "timeline": "O\u015b czasu",
+    "close": "Zamknij"
+  },  "language": {
     "search": "Wyszukaj język..."
   }
 }

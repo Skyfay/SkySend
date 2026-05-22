@@ -14,7 +14,7 @@ import {
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
-import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
+import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes, getBrowserInfo } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
@@ -27,6 +27,15 @@ export type DownloadPhase =
   | "done"
   | "error";
 
+export interface DownloadDebugInfo {
+  tier: "sw" | "file-picker" | "blob" | null;
+  swPath: string | null;
+  browser: string;
+  devtools: boolean;
+  fileSize: number | null;
+  events: Array<{ time: string; message: string }>;
+}
+
 interface DownloadState {
   phase: DownloadPhase;
   progress: number;
@@ -34,6 +43,7 @@ interface DownloadState {
   error: string | null;
   info: api.UploadInfo | null;
   metadata: FileMetadata | null;
+  debugInfo: DownloadDebugInfo | null;
   /** Stashed args so Safari warning can resume the download */
   pendingDownloadArgs: { id: string; secretB64: string; password?: string; argon2id?: Argon2idHashFn } | null;
 }
@@ -46,6 +56,7 @@ export function useDownload() {
     error: null,
     info: null,
     metadata: null,
+    debugInfo: null,
     pendingDownloadArgs: null,
   });
 
@@ -213,6 +224,16 @@ export function useDownload() {
           if (sw) {
             console.info("[SkySend] Download tier: 1 (SW stream)");
 
+            const tier1DebugInfo: DownloadDebugInfo = {
+              tier: "sw",
+              swPath: null,
+              browser: getBrowserInfo(),
+              devtools: isDevToolsOpen(),
+              fileSize: info.size,
+              events: [{ time: new Date().toISOString(), message: "SW stream started" }],
+            };
+            setState((s) => ({ ...s, debugInfo: tier1DebugInfo }));
+
             const apiBase = import.meta.env.DEV
               ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
               : window.location.origin;
@@ -239,6 +260,14 @@ export function useDownload() {
                 const loaded = Math.round((progress / 100) * info.size);
                 updateProgress(progress, loaded);
               },
+              (swPath) => {
+                setState((s) => ({
+                  ...s,
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, swPath }
+                    : null,
+                }));
+              },
             );
             downloaded = true;
           }
@@ -250,6 +279,17 @@ export function useDownload() {
         if (!downloaded && typeof window.showSaveFilePicker === "function") {
           try {
             console.info("[SkySend] Download tier: 2 (showSaveFilePicker)");
+            setState((s) => ({
+              ...s,
+              debugInfo: {
+                tier: "file-picker",
+                swPath: null,
+                browser: getBrowserInfo(),
+                devtools: isDevToolsOpen(),
+                fileSize: info.size,
+                events: [{ time: new Date().toISOString(), message: "Save File Picker started" }],
+              },
+            }));
             const fileHandle = await window.showSaveFilePicker({
               suggestedName: filename,
               types: mimeType !== "application/octet-stream"
@@ -288,6 +328,17 @@ export function useDownload() {
         // Tier 3: Blob fallback (uses RAM - last resort / Safari default)
         if (!downloaded) {
           console.warn(`[SkySend] Download tier: 3 (Blob fallback${safari ? " - Safari" : ""})`);
+          setState((s) => ({
+            ...s,
+            debugInfo: {
+              tier: "blob",
+              swPath: null,
+              browser: getBrowserInfo(),
+              devtools: isDevToolsOpen(),
+              fileSize: info.size,
+              events: [{ time: new Date().toISOString(), message: `Blob fallback started${safari ? " (Safari)" : ""}` }],
+            },
+          }));
           const { stream, size } = await api.downloadFile(id, authTokenB64);
 
           let loaded = 0;
@@ -354,6 +405,7 @@ export function useDownload() {
       error: null,
       info: null,
       metadata: null,
+      debugInfo: null,
       pendingDownloadArgs: null,
     });
   }, []);

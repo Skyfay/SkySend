@@ -245,6 +245,32 @@
     "loginButton": "Logga in med SSO",
     "logout": "Logga ut"
   },
+  "debug": {
+    "title": "Teknisk info",
+    "download": "Nedladdning",
+    "upload": "Uppladdning",
+    "tier": "Nivå",
+    "swPath": "SW-sökväg",
+    "browser": "Webbläsare",
+    "devtools": "Utvecklarverktyg",
+    "devtoolsDetected": "detekterad",
+    "devtoolsNotDetected": "ej detekterad",
+    "fileSize": "Filstorlek",
+    "transport": "Transport",
+    "fallback": "Reservlösning",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS misslyckades → HTTP",
+    "tierSw": "SW-ström",
+    "tierFilePicker": "Spara-dialog",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-block",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopiera till urklipp",
+    "copied": "Kopierat!",
+    "timeline": "Tidslinje",
+    "close": "Stäng"
+  },
   "language": {
     "search": "Sök språk..."
   }

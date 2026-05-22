@@ -244,8 +244,32 @@
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
     "loginButton": "Kirjaudu SSO:lla",
     "logout": "Kirjaudu ulos"
-  },
-  "language": {
+  },  "debug": {
+    "title": "Tekniset tiedot",
+    "download": "Lataus",
+    "upload": "L\u00e4hetys",
+    "tier": "Taso",
+    "swPath": "SW-polku",
+    "browser": "Selain",
+    "devtools": "Kehitt\u00e4j\u00e4ty\u00f6kalut",
+    "devtoolsDetected": "havaittu",
+    "devtoolsNotDetected": "ei havaittu",
+    "fileSize": "Tiedostokoko",
+    "transport": "Siirtotapa",
+    "fallback": "Vararatkaisu",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS ep\u00e4onnistui \u2192 HTTP",
+    "tierSw": "SW-virta",
+    "tierFilePicker": "Tallenna tiedosto -valintaikkuna",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-lohkot",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopioi leikep\u00f6yd\u00e4lle",
+    "copied": "Kopioitu!",
+    "timeline": "Aikajana",
+    "close": "Sulje"
+  },  "language": {
     "search": "Hae kieltä..."
   }
 }

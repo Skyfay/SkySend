@@ -245,6 +245,32 @@
     "loginButton": "Inloggen met SSO",
     "logout": "Uitloggen"
   },
+  "debug": {
+    "title": "Technische info",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Niveau",
+    "swPath": "SW-pad",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "gedetecteerd",
+    "devtoolsNotDetected": "niet gedetecteerd",
+    "fileSize": "Bestandsgrootte",
+    "transport": "Transport",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS mislukt \u2192 HTTP",
+    "tierSw": "SW-stream",
+    "tierFilePicker": "Bestand opslaan",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-chunks",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopi\u00ebren naar klembord",
+    "copied": "Gekopie\u00ebrd!",
+    "timeline": "Tijdlijn",
+    "close": "Sluiten"
+  },
   "language": {
     "search": "Taal zoeken..."
   }
