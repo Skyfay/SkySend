@@ -49,5 +49,36 @@ export function isSafari(): boolean {
   return /safari/i.test(ua) && !/chrome|chromium|edg|opr|opera|brave/i.test(ua);
 }
 
+/** Detect Firefox (excludes SeaMonkey and other Gecko-based browsers). */
+export function isFirefox(): boolean {
+  const ua = navigator.userAgent;
+  return /firefox/i.test(ua) && !/seamonkey/i.test(ua);
+}
+
+/**
+ * Heuristic check for docked Firefox DevTools using window dimension deltas.
+ *
+ * When DevTools is docked (bottom or side panel), the browser outer dimensions
+ * stay fixed while the inner viewport shrinks by the panel size (~300 px).
+ * Normal browser chrome (tabs + address bar) accounts for ~74-100 px of height
+ * delta, so a threshold of 200 px for height and 160 px for width leaves a
+ * comfortable margin.
+ *
+ * Limitations:
+ * - Does NOT detect undocked (floating window) DevTools.
+ * - Responsive Design Mode also shrinks the viewport, but that mode itself
+ *   requires DevTools to be open, so it is correct to warn then too.
+ */
+export function isFirefoxDevToolsOpen(): boolean {
+  if (!isFirefox()) return false;
+  return (
+    window.outerWidth - window.innerWidth > 160 ||
+    window.outerHeight - window.innerHeight > 200
+  );
+}
+
 /** 256 MB - files above this threshold show a warning on Safari */
 export const SAFARI_BIG_SIZE = 256 * 1024 * 1024;
+
+/** 256 MB - files above this threshold show a DevTools warning on Firefox */
+export const FIREFOX_DEVTOOLS_BIG_SIZE = 256 * 1024 * 1024;

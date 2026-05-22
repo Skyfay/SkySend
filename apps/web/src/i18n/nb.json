@@ -111,7 +111,10 @@
     "safariCopyLink": "Kopier lenke for en annen nettleser",
     "safariContinue": "Last ned likevel",
     "safariLinkCopied": "Lenke kopiert!",
-    "swStalled": "Nedlastingen stoppet. Hvis Firefox DevTools (F12) var åpent under nedlastingen, lukk det, start Firefox på nytt og prøv igjen."
+    "swStalled": "Nedlastingen stoppet. Hvis Firefox DevTools (F12) var åpent under nedlastingen, lukk det, start Firefox på nytt og prøv igjen.",
+    "firefoxDevToolsWarning": "Firefox DevTools er åpent.",
+    "firefoxDevToolsWarningDesc": "Når DevTools er åpent, legger Firefox til feilsøkingssporing i nedlastingspipelinen, noe som kan føre til at nedlasting av store filer henger seg permanent. Lukk DevTools (F12) før du starter nedlastingen.",
+    "firefoxDevToolsDownload": "Last ned likevel"
   },
   "myUploads": {
     "title": "Mine opplastinger",

@@ -111,7 +111,10 @@
     "safariCopyLink": "Kopiuj link dla innej przeglądarki",
     "safariContinue": "Pobierz mimo to",
     "safariLinkCopied": "Link skopiowany!",
-    "swStalled": "Pobieranie utknęło. Jeśli Firefox DevTools (F12) był otwarty podczas pobierania, zamknij go, uruchom Firefox ponownie i spróbuj jeszcze raz."
+    "swStalled": "Pobieranie utknęło. Jeśli Firefox DevTools (F12) był otwarty podczas pobierania, zamknij go, uruchom Firefox ponownie i spróbuj jeszcze raz.",
+    "firefoxDevToolsWarning": "Firefox DevTools jest otwarty.",
+    "firefoxDevToolsWarningDesc": "Gdy DevTools jest otwarty, Firefox dodaje śledzenie debugowania do potoku pobierania, co może spowodować trwałe zablokowanie pobierania dużych plików. Zamknij DevTools (F12) przed rozpoczęciem pobierania.",
+    "firefoxDevToolsDownload": "Pobierz mimo to"
   },
   "myUploads": {
     "title": "Moje przesyłki",

@@ -111,7 +111,10 @@
     "safariCopyLink": "Kopiera länk för annan webbläsare",
     "safariContinue": "Ladda ner ändå",
     "safariLinkCopied": "Länk kopierad!",
-    "swStalled": "Nedladdningen fastnade. Om Firefox DevTools (F12) var öppet under nedladdningen, stäng det, starta om Firefox och försök igen."
+    "swStalled": "Nedladdningen fastnade. Om Firefox DevTools (F12) var öppet under nedladdningen, stäng det, starta om Firefox och försök igen.",
+    "firefoxDevToolsWarning": "Firefox DevTools är öppet.",
+    "firefoxDevToolsWarningDesc": "När DevTools är öppet lägger Firefox till debugspårning i nedladdningspipelinen, vilket kan göra att nedladdningen av stora filer hänger sig permanent. Stäng DevTools (F12) innan du startar nedladdningen.",
+    "firefoxDevToolsDownload": "Ladda ned ändå"
   },
   "myUploads": {
     "title": "Mina uppladdningar",

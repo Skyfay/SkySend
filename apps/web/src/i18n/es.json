@@ -111,7 +111,10 @@
     "safariCopyLink": "Copiar enlace para otro navegador",
     "safariContinue": "Descargar de todos modos",
     "safariLinkCopied": "¡Enlace copiado!",
-    "swStalled": "La descarga se bloqueó. Si Firefox DevTools (F12) estaba abierto durante la descarga, ciérralo, reinicia Firefox e inténtalo de nuevo."
+    "swStalled": "La descarga se bloqueó. Si Firefox DevTools (F12) estaba abierto durante la descarga, ciérralo, reinicia Firefox e inténtalo de nuevo.",
+    "firefoxDevToolsWarning": "Firefox DevTools está abierto.",
+    "firefoxDevToolsWarningDesc": "Con DevTools abierto, Firefox añade seguimiento de depuración a la tubería de descarga, lo que puede bloquear permanentemente la descarga de archivos grandes. Cierra DevTools (F12) antes de iniciar la descarga.",
+    "firefoxDevToolsDownload": "Descargar de todos modos"
   },
   "myUploads": {
     "title": "Mis subidas",

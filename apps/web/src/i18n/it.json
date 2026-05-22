@@ -111,7 +111,10 @@
     "safariCopyLink": "Copia link per un altro browser",
     "safariContinue": "Scarica comunque",
     "safariLinkCopied": "Link copiato!",
-    "swStalled": "Il download si è bloccato. Se Firefox DevTools (F12) era aperto durante il download, chiudilo, riavvia Firefox e riprova."
+    "swStalled": "Il download si è bloccato. Se Firefox DevTools (F12) era aperto durante il download, chiudilo, riavvia Firefox e riprova.",
+    "firefoxDevToolsWarning": "Firefox DevTools è aperto.",
+    "firefoxDevToolsWarningDesc": "Con DevTools aperto, Firefox aggiunge il tracciamento del debug alla pipeline di download, il che può bloccare definitivamente il download di file di grandi dimensioni. Chiudi DevTools (F12) prima di avviare il download.",
+    "firefoxDevToolsDownload": "Scarica comunque"
   },
   "myUploads": {
     "title": "I miei caricamenti",

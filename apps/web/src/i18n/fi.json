@@ -111,7 +111,10 @@
     "safariCopyLink": "Kopioi linkki toiselle selaimelle",
     "safariContinue": "Lataa silti",
     "safariLinkCopied": "Linkki kopioitu!",
-    "swStalled": "Lataus jumittui. Jos Firefox DevTools (F12) oli auki latauksen aikana, sulje se, käynnistä Firefox uudelleen ja yritä uudelleen."
+    "swStalled": "Lataus jumittui. Jos Firefox DevTools (F12) oli auki latauksen aikana, sulje se, käynnistä Firefox uudelleen ja yritä uudelleen.",
+    "firefoxDevToolsWarning": "Firefox DevTools on auki.",
+    "firefoxDevToolsWarningDesc": "Kun DevTools on auki, Firefox lisää virheenjäljitystä latausputkeen, mikä voi aiheuttaa suurten tiedostojen latauksen jäätymisen pysyvästi. Sulje DevTools (F12) ennen latauksen aloittamista.",
+    "firefoxDevToolsDownload": "Lataa silti"
   },
   "myUploads": {
     "title": "Omat lähetykset",

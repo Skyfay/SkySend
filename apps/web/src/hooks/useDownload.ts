@@ -15,7 +15,7 @@ import {
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
-import { isSafari, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
+import { isSafari, SAFARI_BIG_SIZE, isFirefoxDevToolsOpen, FIREFOX_DEVTOOLS_BIG_SIZE, formatBytes } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
@@ -23,6 +23,7 @@ export type DownloadPhase =
   | "needs-password"
   | "verifying-password"
   | "safari-warning"
+  | "firefox-devtools-warning"
   | "downloading"
   | "done"
   | "error";
@@ -74,6 +75,8 @@ export function useDownload() {
       argon2id?: Argon2idHashFn,
       /** Skip the Safari large-file warning (user chose "continue anyway") */
       forceSafari = false,
+      /** Skip the Firefox DevTools warning (user chose "download anyway") */
+      forceFirefoxDevtools = false,
     ) => {
       try {
         const info = state.info ?? (await api.fetchInfo(id));
@@ -85,6 +88,18 @@ export function useDownload() {
           setState((s) => ({
             ...s,
             phase: "safari-warning",
+            info,
+            pendingDownloadArgs: { id, secretB64, password, argon2id },
+          }));
+          return;
+        }
+
+        // Firefox DevTools warning: docked DevTools detected + large file.
+        // When DevTools is attached to the SW context the decrypt loop stalls.
+        if (!forceFirefoxDevtools && isFirefoxDevToolsOpen() && info.size > FIREFOX_DEVTOOLS_BIG_SIZE) {
+          setState((s) => ({
+            ...s,
+            phase: "firefox-devtools-warning",
             info,
             pendingDownloadArgs: { id, secretB64, password, argon2id },
           }));
@@ -363,5 +378,27 @@ export function useDownload() {
     setState((s) => ({ ...s, phase: "idle", pendingDownloadArgs: null }));
   }, []);
 
-  return { ...state, loadInfo, download, reset, confirmSafariDownload, dismissSafariWarning };
+  /** User chose "Download anyway" on the Firefox DevTools warning */
+  const confirmFirefoxDevToolsDownload = useCallback(() => {
+    const args = state.pendingDownloadArgs;
+    if (!args) return;
+    setState((s) => ({ ...s, pendingDownloadArgs: null }));
+    download(args.id, args.secretB64, args.password, args.argon2id, false, true);
+  }, [state.pendingDownloadArgs, download]);
+
+  /** User dismissed the Firefox DevTools warning */
+  const dismissFirefoxDevToolsWarning = useCallback(() => {
+    setState((s) => ({ ...s, phase: "idle", pendingDownloadArgs: null }));
+  }, []);
+
+  return {
+    ...state,
+    loadInfo,
+    download,
+    reset,
+    confirmSafariDownload,
+    dismissSafariWarning,
+    confirmFirefoxDevToolsDownload,
+    dismissFirefoxDevToolsWarning,
+  };
 }

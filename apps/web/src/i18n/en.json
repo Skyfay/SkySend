@@ -106,7 +106,10 @@
     "safariCopyLink": "Copy link for another browser",
     "safariContinue": "Download anyway",
     "safariLinkCopied": "Link copied!",
-    "swStalled": "The download stalled. If Firefox DevTools (F12) was open during the download, close it, restart Firefox, and try again."
+    "swStalled": "The download stalled. If Firefox DevTools (F12) was open during the download, close it, restart Firefox, and try again.",
+    "firefoxDevToolsWarning": "Firefox DevTools is open.",
+    "firefoxDevToolsWarningDesc": "With DevTools open, Firefox attaches debug tracking to the download pipeline, which can cause the download to stall permanently on large files. Close DevTools (F12) before starting the download.",
+    "firefoxDevToolsDownload": "Download anyway"
   },
   "myUploads": {
     "title": "My Uploads",

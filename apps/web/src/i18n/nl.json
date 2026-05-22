@@ -111,7 +111,10 @@
     "safariCopyLink": "Link kopiëren voor andere browser",
     "safariContinue": "Toch downloaden",
     "safariLinkCopied": "Link gekopieerd!",
-    "swStalled": "De download is vastgelopen. Als Firefox DevTools (F12) open was tijdens de download, sluit het dan, herstart Firefox en probeer het opnieuw."
+    "swStalled": "De download is vastgelopen. Als Firefox DevTools (F12) open was tijdens de download, sluit het dan, herstart Firefox en probeer het opnieuw.",
+    "firefoxDevToolsWarning": "Firefox DevTools is open.",
+    "firefoxDevToolsWarningDesc": "Wanneer DevTools open is, voegt Firefox debugtracking toe aan de downloadpipeline, wat bij grote bestanden kan leiden tot een permanente blokkade. Sluit DevTools (F12) voordat u de download start.",
+    "firefoxDevToolsDownload": "Toch downloaden"
   },
   "myUploads": {
     "title": "Mijn uploads",

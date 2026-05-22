@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
+import { FirefoxDevToolsWarning } from "@/components/FirefoxDevToolsWarning";
 import { useDownload } from "@/hooks/useDownload";
 import { hashWasmArgon2 } from "@/lib/argon2";
 
@@ -148,10 +149,19 @@ export function DownloadPage() {
             />
           )}
 
+          {/* Firefox DevTools warning */}
+          {downloadHook.phase === "firefox-devtools-warning" && (
+            <FirefoxDevToolsWarning
+              onContinue={downloadHook.confirmFirefoxDevToolsDownload}
+              onDismiss={downloadHook.dismissFirefoxDevToolsWarning}
+            />
+          )}
+
           {/* Download card when info is available and no password needed (or already unlocked) */}
           {downloadHook.info &&
             downloadHook.phase !== "needs-password" &&
-            downloadHook.phase !== "safari-warning" && (
+            downloadHook.phase !== "safari-warning" &&
+            downloadHook.phase !== "firefox-devtools-warning" && (
               <DownloadCard
                 info={downloadHook.info}
                 metadata={downloadHook.metadata}

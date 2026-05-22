@@ -20,7 +20,10 @@
       "code.expandAll",
       "code.collapseAll",
       "footer.report",
-      "download.swStalled"
+      "download.swStalled",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsDownload"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -131,7 +134,10 @@
     "safariCopyLink": "Copiar link para outro navegador",
     "safariContinue": "Baixar mesmo assim",
     "safariLinkCopied": "Link copiado!",
-    "swStalled": "O download travou. Se o Firefox DevTools (F12) estava aberto durante o download, feche-o, reinicie o Firefox e tente novamente."
+    "swStalled": "O download travou. Se o Firefox DevTools (F12) estava aberto durante o download, feche-o, reinicie o Firefox e tente novamente.",
+    "firefoxDevToolsWarning": "O Firefox DevTools está aberto.",
+    "firefoxDevToolsWarningDesc": "Com o DevTools aberto, o Firefox adiciona rastreamento de depuração ao pipeline de download, o que pode fazer com que o download de arquivos grandes trave permanentemente. Feche o DevTools (F12) antes de iniciar o download.",
+    "firefoxDevToolsDownload": "Baixar mesmo assim"
   },
   "myUploads": {
     "title": "Meus Envios",

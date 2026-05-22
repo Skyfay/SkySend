@@ -19,7 +19,10 @@
       "code.expandAll",
       "code.collapseAll",
       "footer.report",
-      "download.swStalled"
+      "download.swStalled",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsDownload"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -130,7 +133,10 @@
     "safariCopyLink": "別のブラウザ用にリンクをコピー",
     "safariContinue": "このままダウンロード",
     "safariLinkCopied": "リンクをコピーしました！",
-    "swStalled": "ダウンロードが停止しました。ダウンロード中にFirefox DevTools（F12）が開いていた場合は、閉じてFirefoxを再起動し、もう一度お試しください。"
+    "swStalled": "ダウンロードが停止しました。ダウンロード中にFirefox DevTools（F12）が開いていた場合は、閉じてFirefoxを再起動し、もう一度お試しください。",
+    "firefoxDevToolsWarning": "Firefox DevToolsが開いています。",
+    "firefoxDevToolsWarningDesc": "DevToolsが開いていると、Firefoxはダウンロードパイプラインにデバッグトラッキングを追加します。大きなファイルではダウンロードが永久に停止する可能性があります。ダウンロードを開始する前にDevTools（F12）を閉じてください。",
+    "firefoxDevToolsDownload": "そのままダウンロード"
   },
   "myUploads": {
     "title": "アップロード履歴",

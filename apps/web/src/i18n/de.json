@@ -106,7 +106,10 @@
     "safariCopyLink": "Link fur anderen Browser kopieren",
     "safariContinue": "Trotzdem herunterladen",
     "safariLinkCopied": "Link kopiert!",
-    "swStalled": "Der Download ist eingefroren. Falls Firefox DevTools (F12) während des Downloads geöffnet war, schliesse es, starte Firefox neu und versuche es erneut."
+    "swStalled": "Der Download ist eingefroren. Falls Firefox DevTools (F12) während des Downloads geöffnet war, schliesse es, starte Firefox neu und versuche es erneut.",
+    "firefoxDevToolsWarning": "Firefox DevTools ist geöffnet.",
+    "firefoxDevToolsWarningDesc": "Wenn DevTools geöffnet ist, hängt Firefox Debug-Tracking in die Download-Pipeline ein, was bei grossen Dateien dazu führen kann, dass der Download permanent einfriert. Schliesse DevTools (F12) bevor du den Download startest.",
+    "firefoxDevToolsDownload": "Trotzdem herunterladen"
   },
   "myUploads": {
     "title": "Meine Uploads",
