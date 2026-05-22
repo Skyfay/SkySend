@@ -18,7 +18,8 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.swStalled"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -128,7 +129,8 @@
     "safariWarningDesc": "Safariはファイル全体をメモリに読み込んでから保存します。大きなファイルではダウンロードが失敗する場合があります。",
     "safariCopyLink": "別のブラウザ用にリンクをコピー",
     "safariContinue": "このままダウンロード",
-    "safariLinkCopied": "リンクをコピーしました！"
+    "safariLinkCopied": "リンクをコピーしました！",
+    "swStalled": "ダウンロードが停止しました。ダウンロード中にFirefox DevTools（F12）が開いていた場合は、閉じてFirefoxを再起動し、もう一度お試しください。"
   },
   "myUploads": {
     "title": "アップロード履歴",

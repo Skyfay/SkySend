@@ -110,7 +110,8 @@
     "safariWarningDesc": "Safari laster ned hele filen til minnet før den lagres. For store filer kan dette føre til at nedlastingen mislykkes.",
     "safariCopyLink": "Kopier lenke for en annen nettleser",
     "safariContinue": "Last ned likevel",
-    "safariLinkCopied": "Lenke kopiert!"
+    "safariLinkCopied": "Lenke kopiert!",
+    "swStalled": "Nedlastingen stoppet. Hvis Firefox DevTools (F12) var åpent under nedlastingen, lukk det, start Firefox på nytt og prøv igjen."
   },
   "myUploads": {
     "title": "Mine opplastinger",

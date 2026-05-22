@@ -110,7 +110,8 @@
     "safariWarningDesc": "Safari télécharge le fichier entier en mémoire avant de l'enregistrer. Pour les fichiers volumineux, cela peut entraîner l'échec du téléchargement.",
     "safariCopyLink": "Copier le lien pour un autre navigateur",
     "safariContinue": "Télécharger quand même",
-    "safariLinkCopied": "Lien copié !"
+    "safariLinkCopied": "Lien copié !",
+    "swStalled": "Le téléchargement s'est bloqué. Si Firefox DevTools (F12) était ouvert pendant le téléchargement, fermez-le, redémarrez Firefox, puis réessayez."
   },
   "myUploads": {
     "title": "Mes envois",

@@ -110,7 +110,8 @@
     "safariWarningDesc": "Safari pobiera cały plik do pamięci przed zapisaniem. W przypadku dużych plików może to spowodować niepowodzenie pobierania.",
     "safariCopyLink": "Kopiuj link dla innej przeglądarki",
     "safariContinue": "Pobierz mimo to",
-    "safariLinkCopied": "Link skopiowany!"
+    "safariLinkCopied": "Link skopiowany!",
+    "swStalled": "Pobieranie utknęło. Jeśli Firefox DevTools (F12) był otwarty podczas pobierania, zamknij go, uruchom Firefox ponownie i spróbuj jeszcze raz."
   },
   "myUploads": {
     "title": "Moje przesyłki",

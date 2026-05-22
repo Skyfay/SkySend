@@ -347,7 +347,13 @@ export async function streamDownloadViaSw(
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
         channel.close();
-        reject(new Error(msg.error || "Download failed in SW"));
+        if (msg.error === "stalled") {
+          const e = new Error("sw-stalled");
+          (e as unknown as Record<string, unknown>).isStall = true;
+          reject(e);
+        } else {
+          reject(new Error(msg.error || "Download failed in SW"));
+        }
       }
     };
   });

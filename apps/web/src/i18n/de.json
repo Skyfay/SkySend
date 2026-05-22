@@ -105,7 +105,8 @@
     "safariWarningDesc": "Safari ladt die gesamte Datei in den Arbeitsspeicher, bevor sie gespeichert wird. Bei grossen Dateien kann der Download fehlschlagen.",
     "safariCopyLink": "Link fur anderen Browser kopieren",
     "safariContinue": "Trotzdem herunterladen",
-    "safariLinkCopied": "Link kopiert!"
+    "safariLinkCopied": "Link kopiert!",
+    "swStalled": "Der Download ist eingefroren. Falls Firefox DevTools (F12) während des Downloads geöffnet war, schliesse es, starte Firefox neu und versuche es erneut."
   },
   "myUploads": {
     "title": "Meine Uploads",

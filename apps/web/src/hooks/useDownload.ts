@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   deriveKeys,
   computeAuthToken,
@@ -38,6 +39,7 @@ interface DownloadState {
 }
 
 export function useDownload() {
+  const { t } = useTranslation();
   const [state, setState] = useState<DownloadState>({
     phase: "idle",
     progress: 0,
@@ -228,6 +230,9 @@ export function useDownload() {
             downloaded = true;
           }
         } catch (swErr) {
+          if (swErr instanceof Error && (swErr as Error & { isStall?: boolean }).isStall) {
+            throw swErr; // Stall errors go straight to user - do not silently fall to Blob
+          }
           console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
         }
 
@@ -320,11 +325,13 @@ export function useDownload() {
           setState((s) => ({ ...s, phase: "needs-password", error: "rate-limited" }));
           return;
         }
-        const message = err instanceof api.ApiError
-          ? err.message
-          : err instanceof Error
+        const message = err instanceof Error && (err as Error & { isStall?: boolean }).isStall
+          ? t("download.swStalled")
+          : err instanceof api.ApiError
             ? err.message
-            : "Download failed";
+            : err instanceof Error
+              ? err.message
+              : "Download failed";
         setState((s) => ({ ...s, phase: "error", error: message }));
       }
     },

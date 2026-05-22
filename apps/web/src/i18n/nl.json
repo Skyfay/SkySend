@@ -110,7 +110,8 @@
     "safariWarningDesc": "Safari downloadt het volledige bestand naar het geheugen voordat het wordt opgeslagen. Voor grote bestanden kan de download hierdoor mislukken.",
     "safariCopyLink": "Link kopiëren voor andere browser",
     "safariContinue": "Toch downloaden",
-    "safariLinkCopied": "Link gekopieerd!"
+    "safariLinkCopied": "Link gekopieerd!",
+    "swStalled": "De download is vastgelopen. Als Firefox DevTools (F12) open was tijdens de download, sluit het dan, herstart Firefox en probeer het opnieuw."
   },
   "myUploads": {
     "title": "Mijn uploads",

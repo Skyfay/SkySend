@@ -1,7 +1,7 @@
 # docker compose -f docker-compose.build.yml up --build
 services:
   skysend:
-    build: .
+    image: skyfay/skysend:v2.8.0
     container_name: skysend-test
     restart: always
     expose:
@@ -10,13 +10,12 @@ services:
       - BASE_URL=http://localhost
       - DATA_DIR=/data
       - UPLOADS_DIR=/uploads
-      - FILE_MAX_SIZE=10GB
+      - FILE_MAX_SIZE=100GB
       - FILE_MAX_FILES_PER_UPLOAD=10
       - FILE_EXPIRE_OPTIONS_SEC=300,3600,3434
       - FILE_DEFAULT_EXPIRE_SEC=3600
       - FILE_DOWNLOAD_OPTIONS=10,50,1000
       - FILE_DEFAULT_DOWNLOAD=50
-      - FILE_UPLOAD_QUOTA_BYTES=10GB
       - FILE_UPLOAD_CONCURRENT_CHUNKS=10
     # - FILE_UPLOAD_SPEED_LIMIT=50MB
     #  - PUID=${PUID:-1001}

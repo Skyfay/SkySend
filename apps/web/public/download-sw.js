@@ -291,6 +291,43 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
   let bufTotal = 0;
   const scratchRecord = new Uint8Array(ENCRYPTED_RECORD_SIZE);
 
+  // Stall watchdog: if no plaintext record is produced for 30 s after the first
+  // record, the SW event loop is too saturated to make progress. This happens
+  // when Firefox DevTools async-task-tracking overhead is attached to the SW
+  // context and persists even after DevTools is closed - the only recovery
+  // without this watchdog is a full browser restart.
+  //
+  // The watchdog is armed only after the first successful enqueue so that
+  // a slow network (no data for >30 s at the very start) does not trigger it.
+  //
+  // When the stall is detected:
+  //   1. reader.cancel() releases the buffered encrypted data from memory.
+  //   2. dl-error:"stalled" is broadcast so the frontend can show the user
+  //      a clear error message with instructions to restart their browser.
+  let lastEnqueueTime = 0;
+  let watchdogArmed = false;
+  let streamCtrl = null;
+  let streamFinished = false;
+
+  function finish() {
+    if (streamFinished) return;
+    streamFinished = true;
+    clearInterval(stallTimer);
+    streamDone();
+  }
+
+  const stallTimer = setInterval(() => {
+    if (watchdogArmed && !streamFinished && Date.now() - lastEnqueueTime > 30_000) {
+      cancelled = true;
+      reader.cancel();
+      bc.postMessage({ type: "dl-error", downloadId, error: "stalled" });
+      if (streamCtrl) {
+        try { streamCtrl.error(new Error("stalled")); } catch { /* already errored */ }
+      }
+      finish();
+    }
+  }, 5_000);
+
   function bufLen() { return bufTotal - chunkOffset; }
 
   function appendToBuf(data) {
@@ -319,8 +356,8 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
 
   async function readMore() {
     if (readerDone) return;
-    const { done, value } = await reader.read();
-    if (done) {
+    const { done: rdDone, value } = await reader.read();
+    if (rdDone) {
       readerDone = true;
     } else {
       loaded += value.byteLength;
@@ -338,6 +375,12 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
   }
 
   const decryptStream = new ReadableStream({
+    start(controller) {
+      // Capture controller reference so the stall watchdog can error the stream
+      // from outside pull() when a timeout fires.
+      streamCtrl = controller;
+    },
+
     async pull(controller) {
       if (cancelled) return;
 
@@ -350,7 +393,7 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
         if (bufLen() < NONCE_LENGTH) {
           bc.postMessage({ type: "dl-done", downloadId });
           controller.close();
-          streamDone();
+          finish();
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
@@ -373,9 +416,11 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
         } catch (e) {
           bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          finish();
           return;
         }
+        lastEnqueueTime = Date.now(); // reset stall timer on each successful record
+        watchdogArmed = true;
         controller.enqueue(new Uint8Array(plain));
         return;
       }
@@ -393,21 +438,23 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
         } catch (e) {
           bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          finish();
           return;
         }
+        lastEnqueueTime = Date.now();
+        watchdogArmed = true;
         controller.enqueue(new Uint8Array(plain));
         bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
         bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        finish();
         return;
       }
 
       if (readerDone) {
         bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        finish();
       }
     },
 
@@ -415,7 +462,7 @@ function decryptWithReadableStream(response, fileKey, totalSize, headers, downlo
       cancelled = true;
       reader.cancel();
       bc.postMessage({ type: "dl-error", downloadId, error: "cancelled" });
-      streamDone();
+      finish();
     },
   }, { highWaterMark: 8 });
 

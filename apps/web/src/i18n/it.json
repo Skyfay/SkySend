@@ -110,7 +110,8 @@
     "safariWarningDesc": "Safari scarica l'intero file in memoria prima di salvarlo. Per file grandi questo può causare il fallimento del download.",
     "safariCopyLink": "Copia link per un altro browser",
     "safariContinue": "Scarica comunque",
-    "safariLinkCopied": "Link copiato!"
+    "safariLinkCopied": "Link copiato!",
+    "swStalled": "Il download si è bloccato. Se Firefox DevTools (F12) era aperto durante il download, chiudilo, riavvia Firefox e riprova."
   },
   "myUploads": {
     "title": "I miei caricamenti",

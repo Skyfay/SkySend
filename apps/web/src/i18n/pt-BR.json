@@ -19,7 +19,8 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.swStalled"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -129,7 +130,8 @@
     "safariWarningDesc": "O Safari baixa o arquivo inteiro para a memória antes de salvar. Para arquivos grandes, isso pode causar falha no download.",
     "safariCopyLink": "Copiar link para outro navegador",
     "safariContinue": "Baixar mesmo assim",
-    "safariLinkCopied": "Link copiado!"
+    "safariLinkCopied": "Link copiado!",
+    "swStalled": "O download travou. Se o Firefox DevTools (F12) estava aberto durante o download, feche-o, reinicie o Firefox e tente novamente."
   },
   "myUploads": {
     "title": "Meus Envios",
