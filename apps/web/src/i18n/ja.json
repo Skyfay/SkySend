@@ -18,7 +18,11 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsRetry",
+      "download.firefoxDevToolsContinue"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -128,7 +132,11 @@
     "safariWarningDesc": "Safariはファイル全体をメモリに読み込んでから保存します。大きなファイルではダウンロードが失敗する場合があります。",
     "safariCopyLink": "別のブラウザ用にリンクをコピー",
     "safariContinue": "このままダウンロード",
-    "safariLinkCopied": "リンクをコピーしました！"
+    "safariLinkCopied": "リンクをコピーしました！",
+    "firefoxDevToolsWarning": "開発者ツールが開いています",
+    "firefoxDevToolsWarningDesc": "ダウンロード中に開発者ツールが開いていると、Firefoxが遅くなったり応答しなくなる場合があります。閉じてから再試行してください。",
+    "firefoxDevToolsRetry": "DevToolsを閉じました - 再試行",
+    "firefoxDevToolsContinue": "このままダウンロード"
   },
   "myUploads": {
     "title": "アップロード履歴",

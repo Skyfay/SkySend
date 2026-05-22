@@ -5,6 +5,10 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### ✨ Features
+
+- **web**: Added a Firefox DevTools detection warning on the download page. When Firefox DevTools are docked (bottom, left, or right panel) at the time a download is initiated, a warning modal is shown asking the user to close them before proceeding. Includes a retry button that re-checks the detection and a secondary escape-hatch button to proceed anyway in case of a false positive.
+
 ### 🐛 Bug Fixes
 
 - **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline (~150,000 calls per 2.5 GiB download). Firefox buffers SW console output via IPC to the parent process even when DevTools are closed, which overwhelmed the parent process and caused the multi-minute browser UI freezes reported by several users.

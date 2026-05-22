@@ -19,7 +19,11 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsRetry",
+      "download.firefoxDevToolsContinue"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -129,7 +133,11 @@
     "safariWarningDesc": "O Safari baixa o arquivo inteiro para a memória antes de salvar. Para arquivos grandes, isso pode causar falha no download.",
     "safariCopyLink": "Copiar link para outro navegador",
     "safariContinue": "Baixar mesmo assim",
-    "safariLinkCopied": "Link copiado!"
+    "safariLinkCopied": "Link copiado!",
+    "firefoxDevToolsWarning": "As Ferramentas do Desenvolvedor estão abertas",
+    "firefoxDevToolsWarningDesc": "O Firefox pode ficar lento ou parar de responder quando as Ferramentas do Desenvolvedor estão abertas durante um download. Feche-as e tente novamente.",
+    "firefoxDevToolsRetry": "Fechei o DevTools - Tentar novamente",
+    "firefoxDevToolsContinue": "Baixar mesmo assim"
   },
   "myUploads": {
     "title": "Meus Envios",

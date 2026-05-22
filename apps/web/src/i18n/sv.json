@@ -110,7 +110,11 @@
     "safariWarningDesc": "Safari laddar ner hela filen till minnet innan den sparas. För stora filer kan detta göra att nedladdningen misslyckas.",
     "safariCopyLink": "Kopiera länk för annan webbläsare",
     "safariContinue": "Ladda ner ändå",
-    "safariLinkCopied": "Länk kopierad!"
+    "safariLinkCopied": "Länk kopierad!",
+    "firefoxDevToolsWarning": "Utvecklarverktyg är öppna",
+    "firefoxDevToolsWarningDesc": "Firefox kan bli långsamt eller sluta svara när utvecklarverktygen är öppna under en nedladdning. Stäng dem och försök igen.",
+    "firefoxDevToolsRetry": "Jag stängde DevTools - Försök igen",
+    "firefoxDevToolsContinue": "Ladda ner ändå"
   },
   "myUploads": {
     "title": "Mina uppladdningar",

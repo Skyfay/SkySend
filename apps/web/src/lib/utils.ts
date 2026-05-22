@@ -49,5 +49,25 @@ export function isSafari(): boolean {
   return /safari/i.test(ua) && !/chrome|chromium|edg|opr|opera|brave/i.test(ua);
 }
 
+/** Detect Firefox. */
+export function isFirefox(): boolean {
+  return /firefox/i.test(navigator.userAgent);
+}
+
+/**
+ * Detect whether browser DevTools are currently open by measuring the
+ * difference between outer and inner window dimensions. A docked DevTools
+ * panel (bottom/left/right) creates a gap larger than the threshold.
+ *
+ * Limitation: undocked DevTools in a separate window are not detectable.
+ */
+export function isDevToolsOpen(): boolean {
+  const threshold = 160;
+  return (
+    window.outerWidth - window.innerWidth > threshold ||
+    window.outerHeight - window.innerHeight > threshold
+  );
+}
+
 /** 256 MB - files above this threshold show a warning on Safari */
 export const SAFARI_BIG_SIZE = 256 * 1024 * 1024;

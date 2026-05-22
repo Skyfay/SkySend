@@ -110,7 +110,11 @@
     "safariWarningDesc": "Safari downloadt het volledige bestand naar het geheugen voordat het wordt opgeslagen. Voor grote bestanden kan de download hierdoor mislukken.",
     "safariCopyLink": "Link kopiëren voor andere browser",
     "safariContinue": "Toch downloaden",
-    "safariLinkCopied": "Link gekopieerd!"
+    "safariLinkCopied": "Link gekopieerd!",
+    "firefoxDevToolsWarning": "Ontwikkelaarstools zijn geopend",
+    "firefoxDevToolsWarningDesc": "Firefox kan traag worden of niet meer reageren wanneer de ontwikkelaarstools open zijn tijdens een download. Sluit ze en probeer opnieuw.",
+    "firefoxDevToolsRetry": "Ik heb DevTools gesloten - Opnieuw proberen",
+    "firefoxDevToolsContinue": "Toch downloaden"
   },
   "myUploads": {
     "title": "Mijn uploads",

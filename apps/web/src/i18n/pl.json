@@ -110,7 +110,11 @@
     "safariWarningDesc": "Safari pobiera cały plik do pamięci przed zapisaniem. W przypadku dużych plików może to spowodować niepowodzenie pobierania.",
     "safariCopyLink": "Kopiuj link dla innej przeglądarki",
     "safariContinue": "Pobierz mimo to",
-    "safariLinkCopied": "Link skopiowany!"
+    "safariLinkCopied": "Link skopiowany!",
+    "firefoxDevToolsWarning": "Narzędzia deweloperskie są otwarte",
+    "firefoxDevToolsWarningDesc": "Firefox może stać się wolny lub przestać odpowiadać, gdy narzędzia deweloperskie są otwarte podczas pobierania. Zamknij je i spróbuj ponownie.",
+    "firefoxDevToolsRetry": "Zamknąłem DevTools - Spróbuj ponownie",
+    "firefoxDevToolsContinue": "Pobierz mimo to"
   },
   "myUploads": {
     "title": "Moje przesyłki",

@@ -110,7 +110,11 @@
     "safariWarningDesc": "Safari lataa koko tiedoston muistiin ennen tallentamista. Suurille tiedostoille tämä voi aiheuttaa latauksen epäonnistumisen.",
     "safariCopyLink": "Kopioi linkki toiselle selaimelle",
     "safariContinue": "Lataa silti",
-    "safariLinkCopied": "Linkki kopioitu!"
+    "safariLinkCopied": "Linkki kopioitu!",
+    "firefoxDevToolsWarning": "Kehittäjätyökalut ovat auki",
+    "firefoxDevToolsWarningDesc": "Firefox voi muuttua hitaaksi tai lakata reagoimasta, kun kehittäjätyökalut ovat auki latauksen aikana. Sulje ne ja yritä uudelleen.",
+    "firefoxDevToolsRetry": "Suljin DevToolsin - Yritä uudelleen",
+    "firefoxDevToolsContinue": "Lataa silti"
   },
   "myUploads": {
     "title": "Omat lähetykset",

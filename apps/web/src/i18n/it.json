@@ -110,7 +110,11 @@
     "safariWarningDesc": "Safari scarica l'intero file in memoria prima di salvarlo. Per file grandi questo può causare il fallimento del download.",
     "safariCopyLink": "Copia link per un altro browser",
     "safariContinue": "Scarica comunque",
-    "safariLinkCopied": "Link copiato!"
+    "safariLinkCopied": "Link copiato!",
+    "firefoxDevToolsWarning": "Gli strumenti per sviluppatori sono aperti",
+    "firefoxDevToolsWarningDesc": "Firefox può diventare lento o non rispondere quando gli strumenti per sviluppatori sono aperti durante un download. Chiudili e riprova.",
+    "firefoxDevToolsRetry": "Ho chiuso i DevTools - Riprova",
+    "firefoxDevToolsContinue": "Scarica comunque"
   },
   "myUploads": {
     "title": "I miei caricamenti",

@@ -105,7 +105,11 @@
     "safariWarningDesc": "Safari ladt die gesamte Datei in den Arbeitsspeicher, bevor sie gespeichert wird. Bei grossen Dateien kann der Download fehlschlagen.",
     "safariCopyLink": "Link fur anderen Browser kopieren",
     "safariContinue": "Trotzdem herunterladen",
-    "safariLinkCopied": "Link kopiert!"
+    "safariLinkCopied": "Link kopiert!",
+    "firefoxDevToolsWarning": "Entwickler-Tools sind geöffnet",
+    "firefoxDevToolsWarningDesc": "Firefox kann während eines Downloads langsam werden oder einfrieren, wenn die Entwickler-Tools geöffnet sind. Schliesse sie und versuche es erneut.",
+    "firefoxDevToolsRetry": "DevTools geschlossen - Nochmals versuchen",
+    "firefoxDevToolsContinue": "Trotzdem herunterladen"
   },
   "myUploads": {
     "title": "Meine Uploads",
