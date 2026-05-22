@@ -11,6 +11,7 @@ All notable changes to SkySend are documented here.
 
 ### 🎨 Improvements
 
+- **web**: Replaced the `clients.matchAll()` broadcast mechanism in the Service Worker with a `BroadcastChannel("skysend-download")`. All SW-to-main-thread messages (`dl-progress`, `dl-done`, `dl-error`, `config-ok`) and main-to-SW config messages now use the channel directly, removing the async `clients.matchAll()` overhead and the dependency on `event.source` for replies.
 - **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` (~512 KB of pre-decrypted plaintext queued). This absorbs occasional double-`readMore()` stalls caused by a 16-byte drift per ECE record, preventing brief download UI freezes on slow or jittery connections.
 - **web**: Added lightweight diagnostic logging to the Service Worker: a stream-start summary, per-1000-record checkpoints with elapsed time, slow-read alerts (>1 s per chunk), and double-`readMore()` event detection. Replaces the removed per-record spam with roughly 60 targeted log lines per 2.5 GiB download for future freeze analysis.
 

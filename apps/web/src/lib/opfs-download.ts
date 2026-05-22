@@ -12,6 +12,7 @@
  */
 
 let _opfsSupported: boolean | null = null;
+const downloadBc = new BroadcastChannel("skysend-download");
 
 /**
  * Pre-flight: tests OPFS support on the MAIN THREAD.
@@ -139,20 +140,20 @@ export async function triggerSwDownload(
   // Send config to SW and wait for ACK
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       reject(new Error("SW config timeout"));
     }, 5000);
 
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
         clearTimeout(timeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
-    sw!.postMessage({ type: "config", id: downloadId, tempName, filename, mimeType });
+    downloadBc.addEventListener("message", handler);
+    downloadBc.postMessage({ type: "config", id: downloadId, tempName, filename, mimeType });
   });
 
   // Navigate to SW-intercepted URL - browser downloads natively
@@ -264,20 +265,20 @@ export async function streamDownloadViaSw(
   // Send config to SW and wait for ACK
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       reject(new Error("SW config timeout"));
     }, 5000);
 
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
         clearTimeout(timeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
-    sw.postMessage({
+    downloadBc.addEventListener("message", handler);
+    downloadBc.postMessage({
       type: "config",
       id: downloadId,
       url,
@@ -316,13 +317,13 @@ export async function streamDownloadViaSw(
     // reject quickly so fallback tiers can take over.
     const initialTimeout = setTimeout(() => {
       if (!gotFirstMessage) {
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         reject(new Error("Service Worker did not respond"));
       }
     }, 10_000);
 
     const completionTimeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       resolve(); // Don't error on timeout - download may have completed
     }, 86_400_000);
 
@@ -339,15 +340,15 @@ export async function streamDownloadViaSw(
         onProgress(msg.progress);
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         reject(new Error(msg.error || "Download failed in SW"));
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
+    downloadBc.addEventListener("message", handler);
   });
 }

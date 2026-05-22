@@ -67,6 +67,7 @@ async function deriveFileKey(secret, salt) {
 
 /** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number}>} */
 const pending = new Map();
+const bc = new BroadcastChannel("skysend-download");
 
 // ── SW Lifecycle ───────────────────────────────────────
 
@@ -78,7 +79,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("message", (event) => {
+bc.onmessage = (event) => {
   const msg = event.data || {};
   if (msg.type === "config" && msg.id) {
     pending.set(msg.id, {
@@ -90,9 +91,9 @@ self.addEventListener("message", (event) => {
       mimeType: msg.mimeType,
       size: msg.size || 0,
     });
-    event.source.postMessage({ type: "config-ok", id: msg.id });
+    bc.postMessage({ type: "config-ok", id: msg.id });
   }
-});
+};
 
 // ── Fetch Interception ─────────────────────────────────
 
@@ -138,7 +139,7 @@ async function handleDownload(config, downloadId, streamDone) {
   });
 
   if (!apiResponse.ok) {
-    broadcast({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
+    bc.postMessage({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
     streamDone();
     return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
   }
@@ -154,7 +155,7 @@ async function handleDownload(config, downloadId, streamDone) {
     totalSize = data.size || size;
     response = await fetch(data.url);
     if (!response.ok) {
-      broadcast({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
+      bc.postMessage({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
       streamDone();
       return new Response(`S3 download failed: ${response.status}`, { status: 502 });
     }
@@ -266,7 +267,7 @@ async function handleDownload(config, downloadId, streamDone) {
       if (now - lastProgressTime > 300 && totalSize > 0) {
         lastProgressTime = now;
         const pct = Math.min(99, Math.round((loaded / totalSize) * 100));
-        broadcast({ type: "dl-progress", downloadId, progress: pct });
+        bc.postMessage({ type: "dl-progress", downloadId, progress: pct });
       }
     }
   }
@@ -297,7 +298,7 @@ async function handleDownload(config, downloadId, streamDone) {
       // Extract nonce header on first call
       if (baseNonce === null) {
         if (bufLen() < NONCE_LENGTH) {
-          await broadcast({ type: "dl-done", downloadId });
+          bc.postMessage({ type: "dl-done", downloadId });
           controller.close();
           streamDone();
           return;
@@ -335,7 +336,7 @@ async function handleDownload(config, downloadId, streamDone) {
           );
         } catch (e) {
           console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
           streamDone();
           return;
@@ -366,22 +367,22 @@ async function handleDownload(config, downloadId, streamDone) {
           );
         } catch (e) {
           console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
           streamDone();
           return;
         }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
-        await broadcast({ type: "dl-progress", downloadId, progress: 100 });
-        await broadcast({ type: "dl-done", downloadId });
+        bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
+        bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
         streamDone();
         return;
       }
 
       if (readerDone && bufLen() <= TAG_LENGTH) {
-        await broadcast({ type: "dl-done", downloadId });
+        bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
         streamDone();
       }
@@ -391,7 +392,7 @@ async function handleDownload(config, downloadId, streamDone) {
       cancelled = true;
       console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
-      broadcast({ type: "dl-error", downloadId, error: "cancelled" });
+      bc.postMessage({ type: "dl-error", downloadId, error: "cancelled" });
       streamDone();
     },
   // highWaterMark: 8 keeps up to 8 pre-decrypted records (~512 KB plaintext)
@@ -412,14 +413,4 @@ async function handleDownload(config, downloadId, streamDone) {
   return new Response(decryptStream, { headers });
 }
 
-/** Broadcast message to ALL window clients (not filtered by clientId).
- *  Navigation requests (iframe, location.href) have empty clientId in most browsers,
- *  so we use downloadId-based filtering on the receiver side instead. */
-async function broadcast(msg) {
-  try {
-    const clients = await self.clients.matchAll({ type: "window" });
-    for (const client of clients) {
-      client.postMessage(msg);
-    }
-  } catch { /* ignore */ }
-}
+
