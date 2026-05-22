@@ -1,15 +1,25 @@
 /**
  * Download Service Worker - zero RAM streaming decryption.
  *
- * Like Mozilla Send: ALL work happens inside respondWith().
- * The SW fetches the encrypted file, decrypts it with ECE (AES-256-GCM),
- * and returns a streaming Response to the browser's download manager.
+ * Architecture (Chrome 84+, Firefox 128+):
+ *   SW intercepts /__skysend_download__/{id}
+ *   → derives AES-256-GCM key
+ *   → fetches encrypted file
+ *   → creates TransformStream
+ *   → spawns decrypt-worker.js and transfers encrypted ReadableStream + WritableStream
+ *   → returns new Response(readable) to the browser's download manager
  *
- * This is the ONLY approach that gives true backpressure in Firefox:
- * fetch() inside respondWith() is part of the browser's download pipeline,
- * so Firefox naturally controls the read rate and doesn't buffer everything.
+ * The Worker runs in its own thread, completely isolated from the SW context.
+ * The SW event loop stays lean: key derivation (2 awaits), initial fetch
+ * (1 await), and Response construction (sync). All hot-path async work
+ * (reader.read, crypto.subtle.decrypt, writer.write) executes in the Worker.
  *
- * crypto.subtle is fully available in Service Workers.
+ * Progress is delivered via BroadcastChannel("skysend-dl") - the Worker
+ * broadcasts directly without routing through the SW event loop. This also
+ * avoids the variable latency of clients.matchAll() when Firefox DevTools is
+ * open (DevTools window gets included in results, adding ~2-5 ms per call).
+ *
+ * Browser support: Chrome 84+, Firefox 128+ (Worker-in-SW context)
  */
 
 // ── ECE Constants (must match @skysend/crypto) ─────────
@@ -34,16 +44,7 @@ function computeDecryptedSize(encryptedSize) {
   return fullRecords * RECORD_SIZE + (remainder - TAG_LENGTH);
 }
 
-// ── Crypto Helpers ─────────────────────────────────────
-
-function nonceXorCounter(baseNonce, counter) {
-  const nonce = new Uint8Array(baseNonce);
-  nonce[8] ^= (counter >>> 24) & 0xff;
-  nonce[9] ^= (counter >>> 16) & 0xff;
-  nonce[10] ^= (counter >>> 8) & 0xff;
-  nonce[11] ^= counter & 0xff;
-  return nonce;
-}
+// ── HKDF Key Derivation ────────────────────────────────
 
 async function deriveFileKey(secret, salt) {
   const baseKey = await crypto.subtle.importKey(
@@ -62,6 +63,12 @@ async function deriveFileKey(secret, salt) {
     ["decrypt"],
   );
 }
+
+// ── BroadcastChannel ───────────────────────────────────
+
+// Shared channel for all download progress, completion and error events.
+// The Worker posts directly to this channel, bypassing the SW event loop.
+const bc = new BroadcastChannel("skysend-dl");
 
 // ── Pending Downloads ──────────────────────────────────
 
@@ -109,7 +116,8 @@ self.addEventListener("fetch", (event) => {
   // Wrap handleDownload so we can track when the stream finishes.
   // respondWith() resolves once the Response object is returned (headers only),
   // but the body stream may still be consumed. waitUntil() keeps the SW alive
-  // until the stream is fully read - critical for Safari which terminates SWs aggressively.
+  // until the Worker signals completion - critical for Safari which terminates
+  // SWs aggressively.
   let streamDone;
   const donePromise = new Promise((resolve) => { streamDone = resolve; });
 
@@ -117,15 +125,15 @@ self.addEventListener("fetch", (event) => {
   event.waitUntil(donePromise);
 });
 
+// ── Download Handler ───────────────────────────────────
+
 /**
- * Fetch encrypted file, decrypt with ECE, return streaming Response.
- * Everything inside respondWith() - Firefox propagates backpressure here.
+ * Fetch encrypted file, spawn decrypt-worker.js, return streaming Response.
  *
- * Optimizations for low RAM:
- * - Process exactly ONE record per pull() call (highWaterMark: 2 manages pipelining)
- * - Zero-copy chunk queue: incoming network chunks are referenced, not copied
- * - Pre-allocated scratchRecord reused for all decrypt input copies
- * - Report progress and completion back to main thread
+ * The SW itself only performs a handful of awaits (key derivation + one fetch),
+ * then hands off all hot-path async work to the Worker. The Worker writes
+ * decrypted plaintext to the writable side of a TransformStream and the SW
+ * returns the readable side as the Response body.
  */
 async function handleDownload(config, downloadId, streamDone) {
   const { url, authToken, secret, salt, filename, mimeType, size } = config;
@@ -138,7 +146,7 @@ async function handleDownload(config, downloadId, streamDone) {
   });
 
   if (!apiResponse.ok) {
-    broadcast({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
+    bc.postMessage({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
     streamDone();
     return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
   }
@@ -154,7 +162,7 @@ async function handleDownload(config, downloadId, streamDone) {
     totalSize = data.size || size;
     response = await fetch(data.url);
     if (!response.ok) {
-      broadcast({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
+      bc.postMessage({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
       streamDone();
       return new Response(`S3 download failed: ${response.status}`, { status: 502 });
     }
@@ -162,6 +170,12 @@ async function handleDownload(config, downloadId, streamDone) {
     // Filesystem backend: use the stream directly
     response = apiResponse;
     totalSize = totalSize || parseInt(response.headers.get("Content-Length") || "0", 10);
+  }
+
+  if (!response.body) {
+    bc.postMessage({ type: "dl-error", downloadId, error: "empty-response" });
+    streamDone();
+    return new Response("Empty response body", { status: 502 });
   }
 
   const headers = new Headers({
@@ -190,236 +204,57 @@ async function handleDownload(config, downloadId, streamDone) {
   );
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
-  const reader = response.body.getReader();
-  console.debug(`[SW-dl:${downloadId}] stream start: totalSize=${totalSize}B decryptedSize=${decryptedSize}B`);
+  // TransformStream acts as a pipe: Worker writes plaintext to the writable
+  // side, browser download manager reads plaintext from the readable side.
+  //
+  // Readable side: highWaterMark 8 → up to 512 KB pre-decrypted records in
+  // the queue, absorbing Worker scheduling jitter without stalling the
+  // download manager on slow or jittery connections.
+  //
+  // Writable side: highWaterMark 1 → Worker's await writer.write() suspends
+  // when the readable queue is full, preventing unbounded memory growth.
+  const { readable, writable } = new TransformStream(
+    undefined,
+    new CountQueuingStrategy({ highWaterMark: 1 }),
+    new CountQueuingStrategy({ highWaterMark: 8 }),
+  );
 
-  let baseNonce = null;
-  let counter = 0;
-  let readerDone = false;
-  let loaded = 0;
-  let lastProgressTime = 0;
-  let lastCheckpointTime = Date.now();
-  let cancelled = false;
-
-  // Chunk queue: incoming network chunks are held by reference with zero copy.
-  // readFromBuf allocates only the bytes needed for the current operation
-  // (one record at a time), cutting GC pressure to roughly the plaintext size.
-  let chunks = [];    // queue of Uint8Array chunks from reader.read()
-  let chunkOffset = 0; // read position within chunks[0]
-  let bufTotal = 0;    // sum of all chunk lengths (O(1) bufLen)
-
-  function bufLen() {
-    return bufTotal - chunkOffset;
-  }
-
-  // Pre-allocated scratch buffer for ECE record decryption.
-  // crypto.subtle.decrypt copies its input synchronously on dispatch, so this
-  // buffer is safe to reuse: pull() awaits decrypt before returning, and pull()
-  // is only called again after the previous call returns.
-  const scratchRecord = new Uint8Array(ENCRYPTED_RECORD_SIZE);
-
-  // When dst is provided the bytes are written into dst and a correctly-sized
-  // subarray view is returned (no allocation). Used for record decryption to
-  // avoid allocating a fresh 65 KB buffer on every pull() call.
-  function readFromBuf(len, dst) {
-    const result = dst !== undefined ? dst : new Uint8Array(len);
-    let pos = 0;
-    while (pos < len && chunks.length > 0) {
-      const chunk = chunks[0];
-      const available = chunk.length - chunkOffset;
-      const take = Math.min(len - pos, available);
-      result.set(chunk.subarray(chunkOffset, chunkOffset + take), pos);
-      pos += take;
-      chunkOffset += take;
-      if (chunkOffset >= chunk.length) {
-        bufTotal -= chunk.length;
-        chunks.shift();
-        chunkOffset = 0;
-      }
-    }
-    return dst !== undefined ? dst.subarray(0, len) : result;
-  }
-
-  function appendToBuf(data) {
-    chunks.push(data);
-    bufTotal += data.length;
-  }
-
-  async function readMore() {
-    if (readerDone) return;
-    const readStart = Date.now();
-    const { done, value } = await reader.read();
-    const readMs = Date.now() - readStart;
-    if (done) {
-      readerDone = true;
-    } else {
-      loaded += value.byteLength;
-      appendToBuf(value);
-      // Log reads that take unusually long - indicates network jitter or
-      // connection stalls independent of the double-readMore drift pattern.
-      if (readMs > 1000) {
-        console.debug(`[SW-dl:${downloadId}] slow-read +${value.byteLength}B readMs=${readMs} loaded=${loaded}B`);
-      }
-
-      // Report progress (throttled)
-      const now = Date.now();
-      if (now - lastProgressTime > 300 && totalSize > 0) {
-        lastProgressTime = now;
-        const pct = Math.min(99, Math.round((loaded / totalSize) * 100));
-        broadcast({ type: "dl-progress", downloadId, progress: pct });
-      }
-    }
-  }
-
-  const decryptStream = new ReadableStream({
-    async pull(controller) {
-      if (cancelled) return;
-      // Ensure the buffer has enough data for one full encrypted record before
-      // attempting to decrypt. The while-loop is required: without it pull()
-      // would return without enqueuing, causing the stream to call pull() again
-      // immediately in a tight CPU-spinning loop until network data arrives.
-      // The loop must run until bufLen > ENCRYPTED_RECORD_SIZE so that the
-      // record-processing branch below can always enqueue without returning empty.
-      let readMoreCalls = 0;
-      while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
-        await readMore();
-        readMoreCalls++;
-        if (cancelled) return;
-      }
-      // Double-readMore: ECE records (65552 B) and network chunks (65536 B) differ
-      // by 16 B, so the ciphertext buffer drifts down by 16 B per record. Every
-      // ~4096 records the buffer falls below ENCRYPTED_RECORD_SIZE after one read,
-      // requiring a second sequential read before decryption can proceed.
-      if (readMoreCalls > 1) {
-        console.debug(`[SW-dl:${downloadId}] double-readMore: record=${counter} calls=${readMoreCalls} bufLen=${bufLen()}B loaded=${loaded}B`);
-      }
-
-      // Extract nonce header on first call
-      if (baseNonce === null) {
-        if (bufLen() < NONCE_LENGTH) {
-          await broadcast({ type: "dl-done", downloadId });
-          controller.close();
-          streamDone();
-          return;
-        }
-        baseNonce = readFromBuf(NONCE_LENGTH);
-
-        // Read more if needed for first record
-        while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
-          await readMore();
-          if (cancelled) return;
-        }
-      }
-
-      // Process exactly ONE complete record per pull() call, then return.
-      //
-      // Previously this was a while-loop that processed ALL buffered records in
-      // a single pull() call. That violated the pull-based contract of
-      // highWaterMark: 0 (= one chunk per pull). Firefox v128+ enforces this
-      // more strictly: if pull() enqueues multiple chunks at once, the
-      // ReadableStream controller loses its backpressure state and stops
-      // calling pull() mid-download, stalling the transfer at a random
-      // percentage. The stall point varies with network chunk size (larger
-      // chunks = more records buffered = higher chance of triggering the bug),
-      // which is why it only manifests on native hardware with fast connections
-      // and not in VMs or on older Firefox ESR.
-      if (bufLen() > ENCRYPTED_RECORD_SIZE) {
-        const record = readFromBuf(ENCRYPTED_RECORD_SIZE, scratchRecord);
-        const nonce = nonceXorCounter(baseNonce, counter++);
-        let plain;
-        try {
-          plain = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-            fileKey,
-            record,
-          );
-        } catch (e) {
-          console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
-          controller.error(e);
-          streamDone();
-          return;
-        }
-        controller.enqueue(new Uint8Array(plain));
-        // Periodic checkpoint: ~40 logs per 2.5 GiB download instead of ~150 K.
-        // Shows elapsed time since last checkpoint so a freeze shows as an
-        // abnormally large gap (e.g. 120 000 ms instead of the usual ~500 ms).
-        if (counter % 1000 === 0) {
-          const now = Date.now();
-          const elapsed = now - lastCheckpointTime;
-          lastCheckpointTime = now;
-          console.debug(`[SW-dl:${downloadId}] checkpoint record=${counter} loaded=${loaded}B elapsed=${elapsed}ms`);
-        }
-        return; // Firefox calls pull() again for the next record
-      }
-
-      // Final record: stream ended, process remaining data
-      if (readerDone && bufLen() > TAG_LENGTH) {
-        const remaining = readFromBuf(bufLen(), scratchRecord);
-        const nonce = nonceXorCounter(baseNonce, counter++);
-        let plain;
-        try {
-          plain = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: nonce, tagLength: TAG_LENGTH * 8 },
-            fileKey,
-            remaining,
-          );
-        } catch (e) {
-          console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
-          controller.error(e);
-          streamDone();
-          return;
-        }
-        controller.enqueue(new Uint8Array(plain));
-        console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
-        await broadcast({ type: "dl-progress", downloadId, progress: 100 });
-        await broadcast({ type: "dl-done", downloadId });
-        controller.close();
-        streamDone();
-        return;
-      }
-
-      if (readerDone && bufLen() <= TAG_LENGTH) {
-        await broadcast({ type: "dl-done", downloadId });
-        controller.close();
-        streamDone();
-      }
-    },
-
-    cancel() {
-      cancelled = true;
-      console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
-      reader.cancel();
-      broadcast({ type: "dl-error", downloadId, error: "cancelled" });
-      streamDone();
-    },
-  // highWaterMark: 8 keeps up to 8 pre-decrypted records (~512 KB plaintext)
-  // in the stream's internal queue. Firefox's download manager reads from this
-  // queue instantly without waiting for pull() to complete. The larger queue
-  // (vs the previous value of 2) absorbs occasional double-readMore() stalls:
-  // because ECE records are 65552 B but network chunks are 65536 B, the
-  // ciphertext buffer drifts down by 16 B per record and roughly every
-  // 4096 records one pull() call must perform two sequential reader.read()s
-  // before it can enqueue. On slow or jittery connections that ~2x-chunk-time
-  // stall could exhaust a 2-record queue and freeze Firefox's UI for several
-  // seconds. 8 records provides enough slack down to ~5 Mbps connections.
-  // pull() still enqueues exactly ONE record per call, so Firefox's backpressure
-  // tracking remains correct and the stall-at-random-percentage bug from v2.9.2
-  // (caused by multiple enqueues per pull()) cannot recur.
-  }, { highWaterMark: 8 });
-
-  return new Response(decryptStream, { headers });
-}
-
-/** Broadcast message to ALL window clients (not filtered by clientId).
- *  Navigation requests (iframe, location.href) have empty clientId in most browsers,
- *  so we use downloadId-based filtering on the receiver side instead. */
-async function broadcast(msg) {
+  // Spawn Worker. If Worker-in-SW is not supported (Firefox < 128, very old
+  // Chrome) the constructor throws and we surface a dl-error so the frontend
+  // can fall back to the OPFS or Blob download tier.
+  let worker;
   try {
-    const clients = await self.clients.matchAll({ type: "window" });
-    for (const client of clients) {
-      client.postMessage(msg);
-    }
-  } catch { /* ignore */ }
+    worker = new Worker("/decrypt-worker.js");
+  } catch {
+    bc.postMessage({ type: "dl-error", downloadId, error: "worker-unavailable" });
+    streamDone();
+    return new Response("Worker not available", { status: 500 });
+  }
+
+  // Transfer response.body and writable to the Worker (zero-copy).
+  // After postMessage both streams are detached in the SW context -
+  // the Worker has exclusive ownership of both.
+  worker.postMessage(
+    { downloadId, fileKey, body: response.body, output: writable, totalSize },
+    [response.body, writable],
+  );
+
+  // The Worker signals completion (type "done") or an unrecoverable error
+  // (type "error") via self.postMessage(). Either way the SW can release
+  // the waitUntil hold and let the Worker be GC-ed.
+  worker.addEventListener("message", () => {
+    worker.terminate();
+    streamDone();
+  });
+
+  // onerror fires for uncaught exceptions inside the Worker (distinct from
+  // the Worker explicitly sending type "error"). Broadcast an error so the
+  // frontend does not wait forever for a dl-done that will never arrive.
+  worker.addEventListener("error", () => {
+    bc.postMessage({ type: "dl-error", downloadId, error: "worker-crashed" });
+    worker.terminate();
+    streamDone();
+  });
+
+  return new Response(readable, { headers });
 }

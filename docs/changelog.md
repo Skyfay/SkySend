@@ -11,8 +11,9 @@ All notable changes to SkySend are documented here.
 
 ### 🎨 Improvements
 
-- **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` (~512 KB of pre-decrypted plaintext queued). This absorbs occasional double-`readMore()` stalls caused by a 16-byte drift per ECE record, preventing brief download UI freezes on slow or jittery connections.
-- **web**: Added lightweight diagnostic logging to the Service Worker: a stream-start summary, per-1000-record checkpoints with elapsed time, slow-read alerts (>1 s per chunk), and double-`readMore()` event detection. Replaces the removed per-record spam with roughly 60 targeted log lines per 2.5 GiB download for future freeze analysis.
+- **web**: Replaced `clients.matchAll()` in the Service Worker with a `BroadcastChannel("skysend-dl")`. `clients.matchAll()` is an async operation that enumerates all attached browser clients including the DevTools window - when Firefox DevTools is open this caused variable latency (~2-5 ms per call) on every progress update, making the download speed display jump erratically. `BroadcastChannel.postMessage()` is synchronous and does not enumerate clients.
+- **web**: Moved all hot-path async work (ECE record read, `crypto.subtle.decrypt`, stream write) out of the Service Worker context and into a dedicated `decrypt-worker.js` Worker. When Firefox DevTools is open, the browser attaches async-task-tracking to the SW context and generates a DevTools IPC roundtrip for every `await`. The decrypt loop runs at roughly 2 awaits per record - at 1 500 records/s on fast hardware that was ~3 000 DevTools roundtrips/s, saturating the SW event loop and throttling downloads to 40-80 MB/s. The Worker thread is not affected by SW-context DevTools overhead, so download speed is now consistent regardless of whether DevTools is open.
+- **server**: Added `Cache-Control: no-store` for `decrypt-worker.js` to ensure the new Worker file is always fetched fresh after a deployment, matching the existing behavior for `download-sw.js`.
 
 ### 🐳 Docker
 

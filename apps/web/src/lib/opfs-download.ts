@@ -308,25 +308,28 @@ export async function streamDownloadViaSw(
   a.remove();
 
   // Wait for SW to signal completion (dl-done or dl-error).
-  // Messages are filtered by downloadId (not clientId, which is empty for navigations).
+  // Messages are delivered via BroadcastChannel("skysend-dl") - the Worker
+  // posts progress and completion directly to the channel, bypassing the SW
+  // event loop. This avoids routing overhead and DevTools IPC inflation.
   await new Promise<void>((resolve, reject) => {
     let gotFirstMessage = false;
+    const channel = new BroadcastChannel("skysend-dl");
 
     // If the SW never responds (e.g. SW not active),
     // reject quickly so fallback tiers can take over.
     const initialTimeout = setTimeout(() => {
       if (!gotFirstMessage) {
-        navigator.serviceWorker.removeEventListener("message", handler);
+        channel.close();
         reject(new Error("Service Worker did not respond"));
       }
     }, 10_000);
 
     const completionTimeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      channel.close();
       resolve(); // Don't error on timeout - download may have completed
     }, 86_400_000);
 
-    const handler = (e: MessageEvent) => {
+    channel.onmessage = (e: MessageEvent) => {
       const msg = e.data;
       if (msg?.downloadId !== downloadId) return;
 
@@ -339,15 +342,13 @@ export async function streamDownloadViaSw(
         onProgress(msg.progress);
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        channel.close();
         resolve();
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        channel.close();
         reject(new Error(msg.error || "Download failed in SW"));
       }
     };
-
-    navigator.serviceWorker.addEventListener("message", handler);
   });
 }

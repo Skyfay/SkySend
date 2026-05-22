@@ -357,6 +357,14 @@ app.use("/download-sw.js", async (c, next) => {
   c.res.headers.set("Cache-Control", "no-store");
 });
 
+// Serve decrypt-worker.js with no-store for the same reason: after a deployment
+// the Worker must be fetched fresh so any decryption logic changes take effect
+// immediately without requiring a browser restart or cache invalidation.
+app.use("/decrypt-worker.js", async (c, next) => {
+  await next();
+  c.res.headers.set("Cache-Control", "no-store");
+});
+
 // Serve all static files from the Vite build output (logo.svg, favicon.svg,
 // download-sw.js, robots.txt, .well-known/*, etc.)
 app.use(
