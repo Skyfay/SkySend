@@ -82,3 +82,17 @@ export const SAFARI_BIG_SIZE = 256 * 1024 * 1024;
 
 /** 256 MB - files above this threshold show a DevTools warning on Firefox */
 export const FIREFOX_DEVTOOLS_BIG_SIZE = 256 * 1024 * 1024;
+
+/** Returns a short human-readable browser name + major version string. */
+export function getBrowserInfo(): string {
+  const ua = navigator.userAgent;
+  const edgeMatch = ua.match(/Edg\/([\d]+)/);
+  const firefoxMatch = ua.match(/Firefox\/([\d]+)/);
+  const safariMatch = ua.match(/Version\/([\d]+).*Safari/);
+  const chromeMatch = ua.match(/Chrome\/([\d]+)/);
+  if (edgeMatch) return `Edge ${edgeMatch[1]}`;
+  if (firefoxMatch && !/Seamonkey/i.test(ua)) return `Firefox ${firefoxMatch[1]}`;
+  if (safariMatch && !/Chrome/i.test(ua)) return `Safari ${safariMatch[1]}`;
+  if (chromeMatch) return `Chrome ${chromeMatch[1]}`;
+  return "Unknown";
+}

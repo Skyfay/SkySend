@@ -22,7 +22,25 @@
       "download.swStalled",
       "download.firefoxDevToolsWarning",
       "download.firefoxDevToolsWarningDesc",
-      "download.firefoxDevToolsDownload"
+      "download.firefoxDevToolsDownload",
+      "debug.title",
+      "debug.download",
+      "debug.upload",
+      "debug.downloadTier",
+      "debug.swPath",
+      "debug.uploadTransport",
+      "debug.browser",
+      "debug.devToolsDetected",
+      "debug.yes",
+      "debug.no",
+      "debug.tierSw",
+      "debug.tierFilePicker",
+      "debug.tierBlob",
+      "debug.swPathWorker",
+      "debug.swPathStream",
+      "debug.transportWs",
+      "debug.transportHttp",
+      "debug.wsFailed"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -269,5 +287,25 @@
   },
   "language": {
     "search": "言語を検索..."
+  },
+  "debug": {
+    "title": "技術情報",
+    "download": "ダウンロード",
+    "upload": "アップロード",
+    "downloadTier": "方法",
+    "swPath": "SW復号化パス",
+    "uploadTransport": "トランスポート",
+    "browser": "ブラウザ",
+    "devToolsDetected": "DevTools検出",
+    "yes": "はい",
+    "no": "いいえ",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "ファイル保存ダイアログ",
+    "tierBlob": "Blob (メモリ上)",
+    "swPathWorker": "Workerスレッド",
+    "swPathStream": "ReadableStream (フォールバック)",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTPチャンク",
+    "wsFailed": "HTTPチャンク (WS失敗)"
   }
 }

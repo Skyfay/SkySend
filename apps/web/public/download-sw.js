@@ -224,10 +224,12 @@ async function handleDownload(config, downloadId, streamDone) {
   try {
     worker = new Worker("/decrypt-worker.js");
   } catch {
+    bc.postMessage({ type: "dl-tier", downloadId, swPath: "stream" });
     return decryptWithReadableStream(
       response, fileKey, totalSize, headers, downloadId, streamDone,
     );
   }
+  bc.postMessage({ type: "dl-tier", downloadId, swPath: "worker" });
 
   // TransformStream pipe: Worker writes plaintext → SW returns readable as Response body.
   // Readable: highWaterMark 8 → up to 512 KB pre-decrypted in queue.

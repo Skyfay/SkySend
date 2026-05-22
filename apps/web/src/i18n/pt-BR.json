@@ -23,7 +23,25 @@
       "download.swStalled",
       "download.firefoxDevToolsWarning",
       "download.firefoxDevToolsWarningDesc",
-      "download.firefoxDevToolsDownload"
+      "download.firefoxDevToolsDownload",
+      "debug.title",
+      "debug.download",
+      "debug.upload",
+      "debug.downloadTier",
+      "debug.swPath",
+      "debug.uploadTransport",
+      "debug.browser",
+      "debug.devToolsDetected",
+      "debug.yes",
+      "debug.no",
+      "debug.tierSw",
+      "debug.tierFilePicker",
+      "debug.tierBlob",
+      "debug.swPathWorker",
+      "debug.swPathStream",
+      "debug.transportWs",
+      "debug.transportHttp",
+      "debug.wsFailed"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -270,5 +288,25 @@
   },
   "language": {
     "search": "Buscar idioma..."
+  },
+  "debug": {
+    "title": "Informações técnicas",
+    "download": "Download",
+    "upload": "Upload",
+    "downloadTier": "Método",
+    "swPath": "Descriptografia SW",
+    "uploadTransport": "Transporte",
+    "browser": "Navegador",
+    "devToolsDetected": "DevTools detectado",
+    "yes": "Sim",
+    "no": "Não",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Seletor de arquivo",
+    "tierBlob": "Blob (na RAM)",
+    "swPathWorker": "Thread worker",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "Fragmentos HTTP",
+    "wsFailed": "Fragmentos HTTP (WS falhou)"
   }
 }

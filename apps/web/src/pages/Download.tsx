@@ -18,6 +18,7 @@ import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
 import { FirefoxDevToolsWarning } from "@/components/FirefoxDevToolsWarning";
 import { useDownload } from "@/hooks/useDownload";
+import { DebugPanel } from "@/components/DebugPanel";
 import { hashWasmArgon2 } from "@/lib/argon2";
 
 export function DownloadPage() {
@@ -173,6 +174,7 @@ export function DownloadPage() {
               />
             )}
         </CardContent>
+        <DebugPanel download={downloadHook.debugInfo} />
       </Card>
     </div>
   );

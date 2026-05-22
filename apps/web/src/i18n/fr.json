@@ -247,5 +247,25 @@
   },
   "language": {
     "search": "Rechercher une langue..."
+  },
+  "debug": {
+    "title": "Informations techniques",
+    "download": "Téléchargement",
+    "upload": "Envoi",
+    "downloadTier": "Méthode",
+    "swPath": "Décryptage SW",
+    "uploadTransport": "Transport",
+    "browser": "Navigateur",
+    "devToolsDetected": "DevTools détectés",
+    "yes": "Oui",
+    "no": "Non",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Sélecteur de fichier",
+    "tierBlob": "Blob (en RAM)",
+    "swPathWorker": "Thread worker",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "Chunks HTTP",
+    "wsFailed": "Chunks HTTP (WS échoué)"
   }
 }

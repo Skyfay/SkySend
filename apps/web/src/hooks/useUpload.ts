@@ -6,7 +6,13 @@ import {
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, getBrowserInfo } from "@/lib/utils";
+
+export interface UploadDebugInfo {
+  transport: "ws" | "http";
+  wsFailed: boolean;
+  browser: string;
+}
 
 export type UploadPhase =
   | "idle"
@@ -24,6 +30,7 @@ interface UploadState {
   shareLink: string | null;
   error: string | null;
   uploadId: string | null;
+  debugInfo: UploadDebugInfo | null;
 }
 
 interface UploadOptions {
@@ -55,6 +62,7 @@ export function useUpload() {
     shareLink: null,
     error: null,
     uploadId: null,
+    debugInfo: null,
   });
   const workerRef = useRef<Worker | null>(null);
 
@@ -69,6 +77,7 @@ export function useUpload() {
       shareLink: null,
       error: null,
       uploadId: null,
+      debugInfo: null,
     });
   }, []);
 
@@ -83,6 +92,7 @@ export function useUpload() {
       shareLink: null,
       error: null,
       uploadId: null,
+      debugInfo: null,
     });
   }, []);
 
@@ -193,6 +203,16 @@ export function useUpload() {
             }
             case "done":
               resolve(msg);
+              break;
+            case "transport":
+              setState((s) => ({
+                ...s,
+                debugInfo: {
+                  transport: msg.transport,
+                  wsFailed: msg.wsFailed,
+                  browser: getBrowserInfo(),
+                },
+              }));
               break;
             case "error":
               reject(new Error(msg.message));

@@ -247,5 +247,25 @@
   },
   "language": {
     "search": "Cerca lingua..."
+  },
+  "debug": {
+    "title": "Informazioni tecniche",
+    "download": "Download",
+    "upload": "Upload",
+    "downloadTier": "Metodo",
+    "swPath": "Decrittazione SW",
+    "uploadTransport": "Trasporto",
+    "browser": "Browser",
+    "devToolsDetected": "DevTools rilevati",
+    "yes": "Sì",
+    "no": "No",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Selettore file",
+    "tierBlob": "Blob (in RAM)",
+    "swPathWorker": "Thread worker",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "Chunked HTTP",
+    "wsFailed": "Chunked HTTP (WS fallito)"
   }
 }

@@ -242,5 +242,25 @@
   },
   "language": {
     "search": "Search language..."
+  },
+  "debug": {
+    "title": "Technical Info",
+    "download": "Download",
+    "upload": "Upload",
+    "downloadTier": "Method",
+    "swPath": "SW decrypt path",
+    "uploadTransport": "Transport",
+    "browser": "Browser",
+    "devToolsDetected": "DevTools detected",
+    "yes": "Yes",
+    "no": "No",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Save File Picker",
+    "tierBlob": "Blob (in RAM)",
+    "swPathWorker": "Worker thread",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP chunks",
+    "wsFailed": "HTTP chunks (WS failed)"
   }
 }

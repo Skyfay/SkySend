@@ -247,5 +247,25 @@
   },
   "language": {
     "search": "Sök språk..."
+  },
+  "debug": {
+    "title": "Teknisk info",
+    "download": "Nedladdning",
+    "upload": "Uppladdning",
+    "downloadTier": "Metod",
+    "swPath": "SW-dekryptering",
+    "uploadTransport": "Transport",
+    "browser": "Webbläsare",
+    "devToolsDetected": "DevTools hittades",
+    "yes": "Ja",
+    "no": "Nej",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Filväljare",
+    "tierBlob": "Blob (i RAM)",
+    "swPathWorker": "Worker-tråd",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-delar",
+    "wsFailed": "HTTP-delar (WS misslyckades)"
   }
 }

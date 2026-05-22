@@ -247,5 +247,25 @@
   },
   "language": {
     "search": "Taal zoeken..."
+  },
+  "debug": {
+    "title": "Technische info",
+    "download": "Download",
+    "upload": "Upload",
+    "downloadTier": "Methode",
+    "swPath": "SW-ontsleuteling",
+    "uploadTransport": "Transport",
+    "browser": "Browser",
+    "devToolsDetected": "DevTools gedetecteerd",
+    "yes": "Ja",
+    "no": "Nee",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Bestandskiezer",
+    "tierBlob": "Blob (in RAM)",
+    "swPathWorker": "Worker-thread",
+    "swPathStream": "ReadableStream (fallback)",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-stukken",
+    "wsFailed": "HTTP-stukken (WS mislukt)"
   }
 }

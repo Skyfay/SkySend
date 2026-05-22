@@ -247,5 +247,25 @@
   },
   "language": {
     "search": "Hae kieltä..."
+  },
+  "debug": {
+    "title": "Tekniset tiedot",
+    "download": "Lataus",
+    "upload": "Lähetys",
+    "downloadTier": "Menetelmä",
+    "swPath": "SW-salauksen purku",
+    "uploadTransport": "Siirto",
+    "browser": "Selain",
+    "devToolsDetected": "DevTools havaittu",
+    "yes": "Kyllä",
+    "no": "Ei",
+    "tierSw": "Service Worker",
+    "tierFilePicker": "Tiedostonvalitsin",
+    "tierBlob": "Blob (muistissa)",
+    "swPathWorker": "Worker-säie",
+    "swPathStream": "ReadableStream (varasuunnitelma)",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-palaset",
+    "wsFailed": "HTTP-palaset (WS epäonnistui)"
   }
 }

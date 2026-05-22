@@ -17,6 +17,7 @@ import { CodeForm } from "@/components/CodeForm";
 import { PasswordForm } from "@/components/PasswordForm";
 import { SSHKeyForm } from "@/components/SSHKeyForm";
 import { useUpload } from "@/hooks/useUpload";
+import { DebugPanel } from "@/components/DebugPanel";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
@@ -207,6 +208,8 @@ export function UploadPage() {
               progress={uploadHook.progress}
               speed={uploadHook.speed}
             />
+
+            <DebugPanel upload={uploadHook.debugInfo} />
 
             {/* Cancel button */}
             <Button
