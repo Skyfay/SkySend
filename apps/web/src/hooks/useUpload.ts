@@ -293,6 +293,9 @@ export function useUpload() {
         shareLink,
         error: null,
         uploadId: result.id,
+        debugInfo: s.debugInfo
+          ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Upload complete · Ø ${averageSpeed}` : "Upload complete" }] }
+          : null,
       }));
     } catch (err) {
       workerRef.current?.terminate();

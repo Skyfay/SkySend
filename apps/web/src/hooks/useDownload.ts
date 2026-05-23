@@ -304,12 +304,39 @@ export function useDownload() {
             const { stream, size } = await api.downloadFile(id, authTokenB64);
 
             let loaded = 0;
+            let tier2StallTimer: ReturnType<typeof setTimeout> | null = null;
+            let tier2StallFired = false;
+            const resetTier2Stall = () => {
+              if (tier2StallFired) {
+                setState((s) => ({
+                  ...s,
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download resumed" }] }
+                    : null,
+                }));
+                tier2StallFired = false;
+              }
+              if (tier2StallTimer) clearTimeout(tier2StallTimer);
+              tier2StallTimer = setTimeout(() => {
+                tier2StallFired = true;
+                const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
+                setState((s) => ({
+                  ...s,
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: `Download stalled at ${pct}%` }] }
+                    : null,
+                }));
+              }, 5000);
+            };
+            resetTier2Stall();
+
             const progressStream = stream.pipeThrough(
               new TransformStream<Uint8Array, Uint8Array>({
                 transform(chunk, controller) {
                   loaded += chunk.byteLength;
                   const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
                   updateProgress(pct, loaded);
+                  resetTier2Stall();
                   controller.enqueue(chunk);
                 },
               }),
@@ -318,6 +345,7 @@ export function useDownload() {
             await progressStream
               .pipeThrough(createDecryptStream(keys.fileKey))
               .pipeTo(writable);
+            if (tier2StallTimer) clearTimeout(tier2StallTimer);
             downloaded = true;
           } catch (pickerErr) {
             // User cancelled = AbortError, rethrow to be caught by outer handler
@@ -348,12 +376,39 @@ export function useDownload() {
           const { stream, size } = await api.downloadFile(id, authTokenB64);
 
           let loaded = 0;
+          let blobStallTimer: ReturnType<typeof setTimeout> | null = null;
+          let blobStallFired = false;
+          const resetBlobStall = () => {
+            if (blobStallFired) {
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download resumed" }] }
+                  : null,
+              }));
+              blobStallFired = false;
+            }
+            if (blobStallTimer) clearTimeout(blobStallTimer);
+            blobStallTimer = setTimeout(() => {
+              blobStallFired = true;
+              const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: `Download stalled at ${pct}%` }] }
+                  : null,
+              }));
+            }, 5000);
+          };
+          resetBlobStall();
+
           const progressStream = stream.pipeThrough(
             new TransformStream<Uint8Array, Uint8Array>({
               transform(chunk, controller) {
                 loaded += chunk.byteLength;
                 const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
                 updateProgress(pct, loaded);
+                resetBlobStall();
                 controller.enqueue(chunk);
               },
             }),
@@ -370,6 +425,7 @@ export function useDownload() {
             if (done) break;
             chunks.push(value);
           }
+          if (blobStallTimer) clearTimeout(blobStallTimer);
           const blob = new Blob(chunks as BlobPart[], { type: mimeType });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -381,7 +437,14 @@ export function useDownload() {
           URL.revokeObjectURL(url);
         }
 
-        setState((s) => ({ ...s, phase: "done", progress: 100 }));
+        setState((s) => ({
+          ...s,
+          phase: "done",
+          progress: 100,
+          debugInfo: s.debugInfo
+            ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download complete" }] }
+            : null,
+        }));
       } catch (err) {
         // User cancelled the save dialog - not an error
         if (err instanceof DOMException && err.name === "AbortError") {
