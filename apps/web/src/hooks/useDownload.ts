@@ -287,7 +287,10 @@ export function useDownload() {
                 browser: getBrowserInfo(),
                 devtools: isDevToolsOpen(),
                 fileSize: info.size,
-                events: [{ time: new Date().toISOString(), message: "Save File Picker started" }],
+                events: [
+                  ...(s.debugInfo?.events ?? []),
+                  { time: new Date().toISOString(), message: "Save File Picker started" },
+                ],
               },
             }));
             const fileHandle = await window.showSaveFilePicker({
@@ -336,7 +339,10 @@ export function useDownload() {
               browser: getBrowserInfo(),
               devtools: isDevToolsOpen(),
               fileSize: info.size,
-              events: [{ time: new Date().toISOString(), message: `Blob fallback started${safari ? " (Safari)" : ""}` }],
+              events: [
+                ...(s.debugInfo?.events ?? []),
+                { time: new Date().toISOString(), message: `Blob fallback started${safari ? " (Safari)" : ""}` },
+              ],
             },
           }));
           const { stream, size } = await api.downloadFile(id, authTokenB64);
