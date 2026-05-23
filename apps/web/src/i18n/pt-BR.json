@@ -48,7 +48,8 @@
       "debug.copy",
       "debug.copied",
       "debug.timeline",
-      "debug.close"
+      "debug.close",
+      "common.view"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -64,6 +65,7 @@
     "share": "Compartilhar",
     "delete": "Excluir",
     "download": "Baixar",
+    "view": "Visualizar",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "close": "Fechar",

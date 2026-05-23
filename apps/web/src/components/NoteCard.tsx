@@ -135,6 +135,16 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
           <Button
             variant="outline"
             size="sm"
+            asChild
+          >
+            <a href={shareLink}>
+              <Eye className="h-4 w-4" />
+              <span className="sr-only">{t("common.view")}</span>
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowDeleteDialog(true)}
             className="px-2.5 text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >

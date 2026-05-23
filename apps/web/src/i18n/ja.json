@@ -47,7 +47,8 @@
       "debug.copy",
       "debug.copied",
       "debug.timeline",
-      "debug.close"
+      "debug.close",
+      "common.view"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -63,6 +64,7 @@
     "share": "共有",
     "delete": "削除",
     "download": "ダウンロード",
+    "view": "表示",
     "cancel": "キャンセル",
     "confirm": "確認",
     "close": "閉じる",
