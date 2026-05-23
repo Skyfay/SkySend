@@ -49,7 +49,8 @@
       "debug.copied",
       "debug.timeline",
       "debug.close",
-      "common.view"
+      "common.view",
+      "common.docs"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -69,7 +70,8 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "close": "Fechar",
-    "back": "Voltar"
+    "back": "Voltar",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Enviar",

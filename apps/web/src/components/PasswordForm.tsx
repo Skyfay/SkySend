@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   Lock,
   Eye,
@@ -33,6 +34,12 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
+
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      toast.error(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
 
   const [passwords, setPasswords] = useState<{ label: string; value: string }[]>([{ label: "", value: "" }]);
   const [showValues, setShowValues] = useState<boolean[]>([false]);
@@ -293,11 +300,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
         </div>
 
         {/* Error */}
-        {noteHook.phase === "error" && noteHook.error && (
-          <p className="text-sm text-destructive-foreground" role="alert">
-            {noteHook.error}
-          </p>
-        )}
+        {/* Error is shown via toast (see useEffect below) */}
 
         {/* Submit */}
         <Button

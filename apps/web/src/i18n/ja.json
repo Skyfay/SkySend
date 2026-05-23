@@ -48,7 +48,8 @@
       "debug.copied",
       "debug.timeline",
       "debug.close",
-      "common.view"
+      "common.view",
+      "common.docs"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -68,7 +69,8 @@
     "cancel": "キャンセル",
     "confirm": "確認",
     "close": "閉じる",
-    "back": "戻る"
+    "back": "戻る",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "アップロード",

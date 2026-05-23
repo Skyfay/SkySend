@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Lock, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/lib/markdownComponents";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,12 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const noteHook = useNoteUpload();
+
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      toast.error(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
 
   const [content, setContent] = useState("");
   const [markdownMode, setMarkdownMode] = useState(false);
@@ -347,11 +353,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
         </div>
 
         {/* Error */}
-        {noteHook.phase === "error" && noteHook.error && (
-          <p className="text-sm text-destructive-foreground" role="alert">
-            {noteHook.error}
-          </p>
-        )}
+        {/* Error is shown via toast (see useEffect below) */}
 
         {/* Submit */}
         <Button

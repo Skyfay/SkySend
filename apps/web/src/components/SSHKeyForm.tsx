@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Lock,
@@ -30,7 +30,7 @@ import { ShareLink } from "@/components/ShareLink";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import { toast } from "@/hooks/useToast";
+import { toast } from "sonner";
 import { formatDuration, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
@@ -64,7 +64,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
   // Generated keys
   const [keyPair, setKeyPair] = useState<SSHKeyPair | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
 
   // Share settings (used by both modes)
   const [sharePublicKey, setSharePublicKey] = useState(true);
@@ -97,6 +96,13 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
     [],
   );
 
+  // Show note upload errors via toast
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      toast.error(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
+
   if (!config) return null;
 
   const effectiveExpireSec = expireSec ?? config.noteDefaultExpire;
@@ -109,7 +115,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenError(null);
     try {
       const pair =
         algorithm === "ed25519"
@@ -124,12 +129,10 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
             );
       setKeyPair(pair);
       if (pair.warning) {
-        toast({ title: pair.warning, variant: "destructive" });
+        toast.warning(pair.warning);
       }
     } catch (err) {
-      setGenError(
-        err instanceof Error ? err.message : "Key generation failed",
-      );
+      toast.error(err instanceof Error ? err.message : "Key generation failed");
     } finally {
       setGenerating(false);
     }
@@ -137,7 +140,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
 
   const handleRegenerate = () => {
     setKeyPair(null);
-    setGenError(null);
   };
 
   // --- Content for note upload ---
@@ -278,11 +280,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
       </div>
 
       {/* Error */}
-      {noteHook.phase === "error" && noteHook.error && (
-        <p className="text-sm text-destructive-foreground" role="alert">
-          {noteHook.error}
-        </p>
-      )}
+      {/* Errors are shown via toast (see useEffect above) */}
     </>
   );
 
@@ -455,13 +453,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                 {t("sshKey.passphraseHint")}
               </p>
             </div>
-
-            {/* Error */}
-            {genError && (
-              <p className="text-sm text-destructive-foreground" role="alert">
-                {genError}
-              </p>
-            )}
 
             {/* Generate Button */}
             <Button

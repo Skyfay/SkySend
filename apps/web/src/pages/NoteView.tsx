@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   FileText,
   KeyRound,
@@ -46,6 +47,13 @@ export function NoteViewPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Show transient errors (e.g. decryption failure) as a toast instead of inline.
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.info && noteHook.error) {
+      toast.error(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.info, noteHook.error]);
 
   if (!id || !secret) {
     return (
@@ -244,22 +252,6 @@ export function NoteViewPage() {
     );
   }
 
-  // Error with info loaded
-  if (noteHook.phase === "error" && noteHook.info) {
-    return (
-      <div className="space-y-6">
-        <PageHeader contentType={noteHook.info.contentType} />
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive-foreground">
-              <AlertCircle className="h-5 w-5" />
-              <span>{noteHook.error}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return null;
 }

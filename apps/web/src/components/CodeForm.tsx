@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Lock, Send, Loader2, Plus, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -154,6 +155,12 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [password, setPassword] = useState("");
   const [passwordEnabled, setPasswordEnabled] = useState(forcePassword);
+
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      toast.error(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
 
   if (!config) return null;
 
@@ -355,11 +362,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
         </div>
 
         {/* Error */}
-        {noteHook.phase === "error" && noteHook.error && (
-          <p className="text-sm text-destructive-foreground" role="alert">
-            {noteHook.error}
-          </p>
-        )}
+        {/* Error is shown via toast (see useEffect below) */}
 
         {/* Submit */}
         <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full" size="lg">

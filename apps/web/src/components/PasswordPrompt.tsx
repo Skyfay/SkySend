@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +20,14 @@ export function PasswordPrompt({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (error === "wrong-password") {
+      toast.error(t("download.wrongPassword"), { id: "password-error" });
+    } else if (error === "rate-limited") {
+      toast.warning(t("download.tooManyAttempts"), { id: "password-error" });
+    }
+  }, [error, t]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,17 +72,6 @@ export function PasswordPrompt({
           {t("download.unlock")}
         </Button>
       </div>
-
-      {error === "wrong-password" && (
-        <p className="text-sm text-destructive-foreground" role="alert">
-          {t("download.wrongPassword")}
-        </p>
-      )}
-      {error === "rate-limited" && (
-        <p className="text-sm text-destructive-foreground" role="alert">
-          {t("download.tooManyAttempts")}
-        </p>
-      )}
     </form>
   );
 }

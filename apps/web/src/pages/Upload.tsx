@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Shield, Lock, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,12 @@ export function UploadPage() {
   const { config, loading: configLoading } = useServerConfig();
   const uploadHook = useUpload();
   const { isLoggedIn, loading: authLoading } = useAuth(config);
+
+  useEffect(() => {
+    if (uploadHook.phase === "error" && uploadHook.error) {
+      toast.error(t(`upload.${uploadHook.error}`, { defaultValue: uploadHook.error }));
+    }
+  }, [uploadHook.phase, uploadHook.error, t]);
 
   const [activeTab, setActiveTab] = useState<Tab>("file");
   const [files, setFiles] = useState<File[]>([]);
@@ -364,11 +370,7 @@ export function UploadPage() {
             </div>
 
             {/* Error */}
-            {uploadHook.phase === "error" && uploadHook.error && (
-              <p className="text-sm text-destructive-foreground" role="alert">
-                {t(`upload.${uploadHook.error}`, { defaultValue: uploadHook.error })}
-              </p>
-            )}
+            {/* Errors are shown via toast (see useEffect above) */}
 
             {/* Upload button */}
             <Button
