@@ -276,6 +276,7 @@
     "search": "Sök språk..."
   },
   "errors": {
-    "insecureContext": "HTTPS krävs"
+    "insecureContext": "HTTPS krävs",
+    "originNotAllowed": "Servern blockerade detta ursprung"
   }
 }

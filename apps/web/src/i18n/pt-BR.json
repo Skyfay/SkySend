@@ -329,6 +329,7 @@
     "search": "Buscar idioma..."
   },
   "errors": {
-    "insecureContext": "HTTPS obrigatório"
+    "insecureContext": "HTTPS obrigatório",
+    "originNotAllowed": "O servidor bloqueou esta origem"
   }
 }

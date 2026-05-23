@@ -329,6 +329,7 @@
     "search": "搜索语言..."
   },
   "errors": {
-    "insecureContext": "需要HTTPS"
+    "insecureContext": "需要 HTTPS",
+    "originNotAllowed": "服务器阻止了此来源"
   }
 }

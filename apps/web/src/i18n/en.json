@@ -273,6 +273,7 @@
     "search": "Search language..."
   },
   "errors": {
-    "insecureContext": "HTTPS required"
+    "insecureContext": "HTTPS required",
+    "originNotAllowed": "Server blocked this origin"
   }
 }

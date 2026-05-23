@@ -127,7 +127,7 @@ export function NoteViewPage() {
           <CardContent className="space-y-6 pt-6">
             <PasswordPrompt
               onSubmit={handlePasswordSubmit}
-              loading={noteHook.phase === "verifying-password"}
+              loading={false}
               error={noteHook.error}
             />
           </CardContent>

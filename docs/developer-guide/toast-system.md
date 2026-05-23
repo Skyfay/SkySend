@@ -58,6 +58,7 @@ For unknown errors it falls back to `toast.error(message)`.
 | Pattern | i18n title | Docs link |
 | --- | --- | --- |
 | `importKey` / `crypto.subtle` / `subtle is undefined` | `errors.insecureContext` | [Troubleshooting - HTTPS required](https://docs.skysend.app/user-guide/troubleshooting#crypto-subtle-is-undefined-cannot-read-properties-of-undefined-reading-importkey) |
+| `Origin not allowed` | `errors.originNotAllowed` | [Troubleshooting - Origin not allowed](https://docs.skysend.app/user-guide/troubleshooting#upload-fails-with-origin-not-allowed) |
 
 ### Adding a new known error
 

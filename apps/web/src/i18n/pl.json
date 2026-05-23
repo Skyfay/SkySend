@@ -276,6 +276,7 @@
     "search": "Wyszukaj język..."
   },
   "errors": {
-    "insecureContext": "Wymagane HTTPS"
+    "insecureContext": "Wymagane HTTPS",
+    "originNotAllowed": "Serwer zablokował to źródło"
   }
 }

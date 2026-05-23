@@ -278,6 +278,7 @@
     "search": "Cerca lingua..."
   },
   "errors": {
-    "insecureContext": "HTTPS richiesto"
+    "insecureContext": "HTTPS richiesto",
+    "originNotAllowed": "Il server ha bloccato questa origine"
   }
 }

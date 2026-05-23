@@ -9,6 +9,9 @@ import { ToastActionButtons, type ToastType } from "@/components/ui/custom-toast
 const INSECURE_CONTEXT_DOCS_URL =
   "https://docs.skysend.app/user-guide/troubleshooting#crypto-subtle-is-undefined-cannot-read-properties-of-undefined-reading-importkey";
 
+const ORIGIN_NOT_ALLOWED_DOCS_URL =
+  "https://docs.skysend.app/user-guide/troubleshooting#upload-fails-with-origin-not-allowed";
+
 /**
  * Returns true when the error message indicates that the Web Crypto API is
  * unavailable because the page is served over plain HTTP (insecure context).
@@ -23,6 +26,14 @@ export function isInsecureContextError(message: string): boolean {
     message.includes("crypto.subtle") ||
     message.includes("subtle is undefined")
   );
+}
+
+/**
+ * Returns true when the server rejected the WebSocket upload connection
+ * because the frontend's origin is not in the server's ALLOWED_ORIGINS list.
+ */
+export function isOriginNotAllowedError(message: string): boolean {
+  return message.includes("Origin not allowed");
 }
 
 /**
@@ -43,6 +54,15 @@ export function showKnownErrorToast(message: string): void {
       description: message,
       copyText: message,
       docsUrl: INSECURE_CONTEXT_DOCS_URL,
+    });
+    return;
+  }
+  if (isOriginNotAllowedError(message)) {
+    showToast(i18n.t("errors.originNotAllowed"), {
+      type: "error",
+      description: message,
+      copyText: message,
+      docsUrl: ORIGIN_NOT_ALLOWED_DOCS_URL,
     });
     return;
   }

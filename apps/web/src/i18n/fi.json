@@ -276,6 +276,7 @@
     "search": "Hae kieltä..."
   },
   "errors": {
-    "insecureContext": "HTTPS vaaditaan"
+    "insecureContext": "HTTPS vaaditaan",
+    "originNotAllowed": "Palvelin esti tämän alkuperän"
   }
 }

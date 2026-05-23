@@ -278,6 +278,7 @@
     "search": "Taal zoeken..."
   },
   "errors": {
-    "insecureContext": "HTTPS vereist"
+    "insecureContext": "HTTPS vereist",
+    "originNotAllowed": "Server heeft deze oorsprong geblokkeerd"
   }
 }

@@ -328,6 +328,7 @@
     "search": "言語を検索..."
   },
   "errors": {
-    "insecureContext": "HTTPSが必要です"
+    "insecureContext": "HTTPSが必要です",
+    "originNotAllowed": "サーバーがこのオリジンをブロックしました"
   }
 }
