@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import i18n from "i18next";
-import { CustomToast, type ToastType } from "@/components/ui/custom-toast";
+import { ToastActionButtons, type ToastType } from "@/components/ui/custom-toast";
 
 // ---------------------------------------------------------------------------
 // Known-error detection
@@ -91,33 +91,27 @@ export function showToast(message: string, options: ShowToastOptions = {}) {
   const { type = "default", description, copyText, docsUrl, duration, id } =
     options;
 
-  if (copyText === undefined && !docsUrl) {
-    const opts = { description, duration, id };
-    switch (type) {
-      case "error":
-        return toast.error(message, opts);
-      case "warning":
-        return toast.warning(message, opts);
-      case "info":
-        return toast.info(message, opts);
-      case "success":
-        return toast.success(message, opts);
-      default:
-        return toast(message, opts);
-    }
-  }
+  const hasActions = copyText !== undefined || !!docsUrl;
 
-  return toast.custom(
-    (toastId) => (
-      <CustomToast
-        onDismiss={() => toast.dismiss(toastId)}
-        type={type}
-        message={message}
-        description={description}
-        copyText={copyText}
-        docsUrl={docsUrl}
-      />
-    ),
-    { duration, id },
-  );
+  const descriptionNode = hasActions ? (
+    <>
+      {description && <span>{description}</span>}
+      <ToastActionButtons copyText={copyText} docsUrl={docsUrl} />
+    </>
+  ) : description;
+
+  const opts = { description: descriptionNode, duration, id };
+
+  switch (type) {
+    case "error":
+      return toast.error(message, opts);
+    case "warning":
+      return toast.warning(message, opts);
+    case "info":
+      return toast.info(message, opts);
+    case "success":
+      return toast.success(message, opts);
+    default:
+      return toast(message, opts);
+  }
 }
