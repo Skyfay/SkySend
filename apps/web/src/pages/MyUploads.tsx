@@ -8,7 +8,7 @@ import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import type { NoteContentType } from "@skysend/crypto";
-import { toast } from "@/hooks/useToast";
+import { toast } from "sonner";
 
 type Filter = "all" | "files" | "notes-text" | "notes-password" | "notes-code" | "notes-markdown" | "notes-sshkey";
 
@@ -37,24 +37,18 @@ export function MyUploadsPage() {
   const handleDeleteUpload = async (id: string, ownerToken: string) => {
     try {
       await deleteUpload(id, ownerToken);
-      toast({ title: t("myUploads.deleteSuccess"), variant: "success" });
+      toast.success(t("myUploads.deleteSuccess"));
     } catch {
-      toast({
-        title: t("myUploads.deleteFailed"),
-        variant: "destructive",
-      });
+      toast.error(t("myUploads.deleteFailed"));
     }
   };
 
   const handleDeleteNote = async (id: string, ownerToken: string) => {
     try {
       await deleteNote(id, ownerToken);
-      toast({ title: t("myUploads.deleteNoteSuccess"), variant: "success" });
+      toast.success(t("myUploads.deleteNoteSuccess"));
     } catch {
-      toast({
-        title: t("myUploads.deleteNoteFailed"),
-        variant: "destructive",
-      });
+      toast.error(t("myUploads.deleteNoteFailed"));
     }
   };
 

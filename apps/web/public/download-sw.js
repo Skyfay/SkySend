@@ -67,6 +67,9 @@ async function deriveFileKey(secret, salt) {
 
 /** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number}>} */
 const pending = new Map();
+/** @type {Map<string, () => void>} Maps downloadId to a cancel function that aborts the in-progress download. */
+const pendingCancels = new Map();
+const bc = new BroadcastChannel("skysend-download");
 
 // ── SW Lifecycle ───────────────────────────────────────
 
@@ -78,7 +81,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("message", (event) => {
+bc.onmessage = (event) => {
   const msg = event.data || {};
   if (msg.type === "config" && msg.id) {
     pending.set(msg.id, {
@@ -90,9 +93,12 @@ self.addEventListener("message", (event) => {
       mimeType: msg.mimeType,
       size: msg.size || 0,
     });
-    event.source.postMessage({ type: "config-ok", id: msg.id });
+    bc.postMessage({ type: "config-ok", id: msg.id });
   }
-});
+  if (msg.type === "cancel" && msg.id) {
+    pendingCancels.get(msg.id)?.();
+  }
+};
 
 // ── Fetch Interception ─────────────────────────────────
 
@@ -129,6 +135,10 @@ self.addEventListener("fetch", (event) => {
  */
 async function handleDownload(config, downloadId, streamDone) {
   const { url, authToken, secret, salt, filename, mimeType, size } = config;
+  const cleanup = () => {
+    pendingCancels.delete(downloadId);
+    streamDone();
+  };
 
   const fileKey = await deriveFileKey(secret, salt);
 
@@ -138,8 +148,8 @@ async function handleDownload(config, downloadId, streamDone) {
   });
 
   if (!apiResponse.ok) {
-    broadcast({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
-    streamDone();
+    bc.postMessage({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
+    cleanup();
     return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
   }
 
@@ -154,8 +164,8 @@ async function handleDownload(config, downloadId, streamDone) {
     totalSize = data.size || size;
     response = await fetch(data.url);
     if (!response.ok) {
-      broadcast({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
-      streamDone();
+      bc.postMessage({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
+      cleanup();
       return new Response(`S3 download failed: ${response.status}`, { status: 502 });
     }
   } else {
@@ -190,15 +200,43 @@ async function handleDownload(config, downloadId, streamDone) {
   );
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
+  // Inform main thread which decryption path was chosen.
+  // Currently always "stream" (ReadableStream inside respondWith).
+  bc.postMessage({ type: "dl-tier", downloadId, swPath: "stream" });
+
   const reader = response.body.getReader();
+  console.debug(`[SW-dl:${downloadId}] stream start: totalSize=${totalSize}B decryptedSize=${decryptedSize}B`);
 
   let baseNonce = null;
   let counter = 0;
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
-  let pullCount = 0;
+  let lastCheckpointTime = Date.now();
   let cancelled = false;
+  // Guard so cancelStream() / controller.error() is only called once.
+  let streamErrored = false;
+
+  // Called from both the user-cancel path (via pendingCancels) and from pull()
+  // when it detects cancelled=true. The guard prevents double controller.error().
+  function cancelStream(controller) {
+    if (streamErrored) return;
+    streamErrored = true;
+    reader.cancel().catch(() => {});
+    console.warn(`[SW-dl:${downloadId}] stream cancelled by user`);
+    controller.error(new DOMException("user-cancelled", "AbortError"));
+    bc.postMessage({ type: "dl-cancelled", downloadId });
+    cleanup();
+  }
+
+  // Register an external cancel function so bc.onmessage can abort this download.
+  // Sets cancelled=true and cancels the reader so the pending reader.read() inside
+  // readMore() resolves immediately with {done:true}, allowing pull() to detect
+  // cancelled and call cancelStream(controller) with the controller reference.
+  pendingCancels.set(downloadId, () => {
+    cancelled = true;
+    reader.cancel().catch(() => {});
+  });
 
   // Chunk queue: incoming network chunks are held by reference with zero copy.
   // readFromBuf allocates only the bytes needed for the current operation
@@ -246,46 +284,59 @@ async function handleDownload(config, downloadId, streamDone) {
 
   async function readMore() {
     if (readerDone) return;
+    const readStart = Date.now();
     const { done, value } = await reader.read();
+    const readMs = Date.now() - readStart;
     if (done) {
       readerDone = true;
     } else {
       loaded += value.byteLength;
       appendToBuf(value);
-      console.debug(`[SW-dl:${downloadId}] readMore +${value.byteLength}B (loaded=${loaded}B)`);
+      // Log reads that take unusually long - indicates network jitter or
+      // connection stalls independent of the double-readMore drift pattern.
+      if (readMs > 1000) {
+        console.debug(`[SW-dl:${downloadId}] slow-read +${value.byteLength}B readMs=${readMs} loaded=${loaded}B`);
+      }
 
       // Report progress (throttled)
       const now = Date.now();
       if (now - lastProgressTime > 300 && totalSize > 0) {
         lastProgressTime = now;
         const pct = Math.min(99, Math.round((loaded / totalSize) * 100));
-        broadcast({ type: "dl-progress", downloadId, progress: pct });
+        bc.postMessage({ type: "dl-progress", downloadId, progress: pct });
       }
     }
   }
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
-      if (cancelled) return;
-      const pullIdx = ++pullCount;
-      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} start: record=${counter}, bufLen=${bufLen()}B`);
+      if (cancelled) { cancelStream(controller); return; }
       // Ensure the buffer has enough data for one full encrypted record before
       // attempting to decrypt. The while-loop is required: without it pull()
       // would return without enqueuing, causing the stream to call pull() again
       // immediately in a tight CPU-spinning loop until network data arrives.
       // The loop must run until bufLen > ENCRYPTED_RECORD_SIZE so that the
       // record-processing branch below can always enqueue without returning empty.
+      let readMoreCalls = 0;
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
-        if (cancelled) return;
+        readMoreCalls++;
+        if (cancelled) { cancelStream(controller); return; }
+      }
+      // Double-readMore: ECE records (65552 B) and network chunks (65536 B) differ
+      // by 16 B, so the ciphertext buffer drifts down by 16 B per record. Every
+      // ~4096 records the buffer falls below ENCRYPTED_RECORD_SIZE after one read,
+      // requiring a second sequential read before decryption can proceed.
+      if (readMoreCalls > 1) {
+        console.debug(`[SW-dl:${downloadId}] double-readMore: record=${counter} calls=${readMoreCalls} bufLen=${bufLen()}B loaded=${loaded}B`);
       }
 
       // Extract nonce header on first call
       if (baseNonce === null) {
         if (bufLen() < NONCE_LENGTH) {
-          await broadcast({ type: "dl-done", downloadId });
+          bc.postMessage({ type: "dl-done", downloadId });
           controller.close();
-          streamDone();
+          cleanup();
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
@@ -293,11 +344,10 @@ async function handleDownload(config, downloadId, streamDone) {
         // Read more if needed for first record
         while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
           await readMore();
-          if (cancelled) return;
+          if (cancelled) { cancelStream(controller); return; }
         }
       }
 
-      console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} ready: bufLen=${bufLen()}B (~${Math.floor(bufLen() / ENCRYPTED_RECORD_SIZE)} complete records buffered)`);
       // Process exactly ONE complete record per pull() call, then return.
       //
       // Previously this was a while-loop that processed ALL buffered records in
@@ -322,13 +372,21 @@ async function handleDownload(config, downloadId, streamDone) {
           );
         } catch (e) {
           console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          cleanup();
           return;
         }
         controller.enqueue(new Uint8Array(plain));
-        console.debug(`[SW-dl:${downloadId}] pull #${pullIdx} enqueued record #${counter - 1}`);
+        // Periodic checkpoint: ~40 logs per 2.5 GiB download instead of ~150 K.
+        // Shows elapsed time since last checkpoint so a freeze shows as an
+        // abnormally large gap (e.g. 120 000 ms instead of the usual ~500 ms).
+        if (counter % 1000 === 0) {
+          const now = Date.now();
+          const elapsed = now - lastCheckpointTime;
+          lastCheckpointTime = now;
+          console.debug(`[SW-dl:${downloadId}] checkpoint record=${counter} loaded=${loaded}B elapsed=${elapsed}ms`);
+        }
         return; // Firefox calls pull() again for the next record
       }
 
@@ -345,24 +403,24 @@ async function handleDownload(config, downloadId, streamDone) {
           );
         } catch (e) {
           console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
-          await broadcast({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          cleanup();
           return;
         }
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
-        await broadcast({ type: "dl-progress", downloadId, progress: 100 });
-        await broadcast({ type: "dl-done", downloadId });
+        bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
+        bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        cleanup();
         return;
       }
 
       if (readerDone && bufLen() <= TAG_LENGTH) {
-        await broadcast({ type: "dl-done", downloadId });
+        bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        cleanup();
       }
     },
 
@@ -370,31 +428,25 @@ async function handleDownload(config, downloadId, streamDone) {
       cancelled = true;
       console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
-      broadcast({ type: "dl-error", downloadId, error: "cancelled" });
-      streamDone();
+      bc.postMessage({ type: "dl-error", downloadId, error: "cancelled" });
+      cleanup();
     },
-  // highWaterMark: 2 keeps 2 pre-decrypted records in the stream's internal
-  // queue. Firefox's download manager reads from this queue instantly without
-  // waiting for pull() to complete. This eliminates the synchronous IPC stall
-  // that occurs with highWaterMark: 0, where every consumer read() blocks the
-  // main browser thread until pull() enqueues - causing multi-second (or
-  // multi-minute on slow connections) browser UI freezes.
+  // highWaterMark: 8 keeps up to 8 pre-decrypted records (~512 KB plaintext)
+  // in the stream's internal queue. Firefox's download manager reads from this
+  // queue instantly without waiting for pull() to complete. The larger queue
+  // (vs the previous value of 2) absorbs occasional double-readMore() stalls:
+  // because ECE records are 65552 B but network chunks are 65536 B, the
+  // ciphertext buffer drifts down by 16 B per record and roughly every
+  // 4096 records one pull() call must perform two sequential reader.read()s
+  // before it can enqueue. On slow or jittery connections that ~2x-chunk-time
+  // stall could exhaust a 2-record queue and freeze Firefox's UI for several
+  // seconds. 8 records provides enough slack down to ~5 Mbps connections.
   // pull() still enqueues exactly ONE record per call, so Firefox's backpressure
   // tracking remains correct and the stall-at-random-percentage bug from v2.9.2
   // (caused by multiple enqueues per pull()) cannot recur.
-  }, { highWaterMark: 2 });
+  }, { highWaterMark: 8 });
 
   return new Response(decryptStream, { headers });
 }
 
-/** Broadcast message to ALL window clients (not filtered by clientId).
- *  Navigation requests (iframe, location.href) have empty clientId in most browsers,
- *  so we use downloadId-based filtering on the receiver side instead. */
-async function broadcast(msg) {
-  try {
-    const clients = await self.clients.matchAll({ type: "window" });
-    for (const client of clients) {
-      client.postMessage(msg);
-    }
-  } catch { /* ignore */ }
-}
+

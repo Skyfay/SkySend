@@ -12,6 +12,7 @@
  */
 
 let _opfsSupported: boolean | null = null;
+const downloadBc = new BroadcastChannel("skysend-download");
 
 /**
  * Pre-flight: tests OPFS support on the MAIN THREAD.
@@ -139,20 +140,20 @@ export async function triggerSwDownload(
   // Send config to SW and wait for ACK
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       reject(new Error("SW config timeout"));
     }, 5000);
 
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
         clearTimeout(timeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
-    sw!.postMessage({ type: "config", id: downloadId, tempName, filename, mimeType });
+    downloadBc.addEventListener("message", handler);
+    downloadBc.postMessage({ type: "config", id: downloadId, tempName, filename, mimeType });
   });
 
   // Navigate to SW-intercepted URL - browser downloads natively
@@ -255,29 +256,42 @@ export async function streamDownloadViaSw(
   mimeType: string,
   encryptedSize: number,
   onProgress: (progress: number) => void,
+  onDebugInfo?: (swPath: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
+
+  // If already aborted before we even start, bail out immediately.
+  if (signal?.aborted) throw new DOMException("Download cancelled", "AbortError");
 
   const downloadId = crypto.randomUUID();
 
   // Send config to SW and wait for ACK
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       reject(new Error("SW config timeout"));
     }, 5000);
+
+    const abortHandler = () => {
+      clearTimeout(timeout);
+      downloadBc.removeEventListener("message", handler);
+      reject(new DOMException("Download cancelled", "AbortError"));
+    };
+    signal?.addEventListener("abort", abortHandler, { once: true });
 
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
         clearTimeout(timeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        signal?.removeEventListener("abort", abortHandler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
-    sw.postMessage({
+    downloadBc.addEventListener("message", handler);
+    downloadBc.postMessage({
       type: "config",
       id: downloadId,
       url,
@@ -289,6 +303,13 @@ export async function streamDownloadViaSw(
       size: encryptedSize,
     });
   });
+
+  // When the caller aborts, tell the SW to cancel the in-progress download.
+  // The SW will set cancelled=true, cancel the reader, error the stream, and
+  // send back a "dl-cancelled" message so we can clean up the promise below.
+  signal?.addEventListener("abort", () => {
+    downloadBc.postMessage({ type: "cancel", id: downloadId });
+  }, { once: true });
 
   // Trigger download via <a> navigation (no download attribute).
   // Without the download attribute the browser treats this as a regular navigation,
@@ -307,7 +328,7 @@ export async function streamDownloadViaSw(
   a.click();
   a.remove();
 
-  // Wait for SW to signal completion (dl-done or dl-error).
+  // Wait for SW to signal completion (dl-done, dl-error, or dl-cancelled).
   // Messages are filtered by downloadId (not clientId, which is empty for navigations).
   await new Promise<void>((resolve, reject) => {
     let gotFirstMessage = false;
@@ -316,13 +337,13 @@ export async function streamDownloadViaSw(
     // reject quickly so fallback tiers can take over.
     const initialTimeout = setTimeout(() => {
       if (!gotFirstMessage) {
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         reject(new Error("Service Worker did not respond"));
       }
     }, 10_000);
 
     const completionTimeout = setTimeout(() => {
-      navigator.serviceWorker.removeEventListener("message", handler);
+      downloadBc.removeEventListener("message", handler);
       resolve(); // Don't error on timeout - download may have completed
     }, 86_400_000);
 
@@ -337,17 +358,26 @@ export async function streamDownloadViaSw(
 
       if (msg.type === "dl-progress") {
         onProgress(msg.progress);
+      } else if (msg.type === "dl-tier") {
+        onDebugInfo?.(msg.swPath);
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         resolve();
+      } else if (msg.type === "dl-cancelled") {
+        // User-initiated cancel via the cancel button - throw AbortError so the
+        // caller can distinguish a clean cancel from a real download error and
+        // skip fallback tiers.
+        clearTimeout(completionTimeout);
+        downloadBc.removeEventListener("message", handler);
+        reject(new DOMException("Download cancelled by user", "AbortError"));
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
-        navigator.serviceWorker.removeEventListener("message", handler);
+        downloadBc.removeEventListener("message", handler);
         reject(new Error(msg.error || "Download failed in SW"));
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handler);
+    downloadBc.addEventListener("message", handler);
   });
 }

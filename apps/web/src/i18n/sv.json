@@ -16,10 +16,12 @@
     "copied": "Kopierat!",
     "delete": "Ta bort",
     "download": "Ladda ner",
+    "view": "Visa",
     "cancel": "Avbryt",
     "confirm": "Bekräfta",
     "close": "Stäng",
-    "back": "Tillbaka"
+    "back": "Tillbaka",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Ladda upp",
@@ -102,15 +104,18 @@
     "wrongPassword": "Felaktigt lösenord",
     "tooManyAttempts": "För många misslyckade försök. Vänta några minuter och försök igen.",
     "download": "Ladda ner",
-    "downloading": "Dekrypterar och laddar ner...",
-    "decrypting": "Dekrypterar...",
+    "downloading": "Dekrypterar och laddar ner...",    "cancel": "Avbryt nedladdning",    "decrypting": "Dekrypterar...",
     "complete": "Nedladdning klar!",
     "failed": "Nedladdningen misslyckades",
     "safariWarning": "Denna webbläsare kanske inte kan ladda ner en så stor fil.",
     "safariWarningDesc": "Safari laddar ner hela filen till minnet innan den sparas. För stora filer kan detta göra att nedladdningen misslyckas.",
     "safariCopyLink": "Kopiera länk för annan webbläsare",
     "safariContinue": "Ladda ner ändå",
-    "safariLinkCopied": "Länk kopierad!"
+    "safariLinkCopied": "Länk kopierad!",
+    "firefoxDevToolsWarning": "Utvecklarverktyg är öppna",
+    "firefoxDevToolsWarningDesc": "Firefox kan bli långsamt eller sluta svara när utvecklarverktygen är öppna under en nedladdning. Stäng dem och försök igen.",
+    "firefoxDevToolsRetry": "Jag stängde DevTools - Försök igen",
+    "firefoxDevToolsContinue": "Ladda ner ändå"
   },
   "myUploads": {
     "title": "Mina uppladdningar",
@@ -241,7 +246,37 @@
     "loginButton": "Logga in med SSO",
     "logout": "Logga ut"
   },
+  "debug": {
+    "title": "Teknisk info",
+    "download": "Nedladdning",
+    "upload": "Uppladdning",
+    "tier": "Nivå",
+    "swPath": "SW-sökväg",
+    "browser": "Webbläsare",
+    "devtools": "Utvecklarverktyg",
+    "devtoolsDetected": "detekterad",
+    "devtoolsNotDetected": "ej detekterad",
+    "fileSize": "Filstorlek",
+    "transport": "Transport",
+    "fallback": "Reservlösning",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS misslyckades → HTTP",
+    "tierSw": "SW-ström",
+    "tierFilePicker": "Spara-dialog",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-block",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopiera till urklipp",
+    "copied": "Kopierat!",
+    "timeline": "Tidslinje",
+    "close": "Stäng"
+  },
   "language": {
     "search": "Sök språk..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS krävs",
+    "originNotAllowed": "Servern blockerade detta ursprung"
   }
 }

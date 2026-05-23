@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
+import { showKnownErrorToast } from "@/lib/toast";
+import { Shield, Lock, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { UploadZone } from "@/components/UploadZone";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
+import { DebugPanel } from "@/components/DebugPanel";
 import { QuotaBar } from "@/components/QuotaBar";
 import { NoteForm } from "@/components/NoteForm";
 import { CodeForm } from "@/components/CodeForm";
@@ -39,12 +41,22 @@ export function UploadPage() {
   const uploadHook = useUpload();
   const { isLoggedIn, loading: authLoading } = useAuth(config);
 
+  useEffect(() => {
+    if (uploadHook.phase === "error" && uploadHook.error) {
+      const raw = uploadHook.error;
+      if (raw === "fileNotReadable") {
+        showKnownErrorToast(t("upload.fileNotReadable"));
+      } else {
+        showKnownErrorToast(t(`upload.${raw}`, { defaultValue: raw }));
+      }
+    }
+  }, [uploadHook.phase, uploadHook.error, t]);
+
   const [activeTab, setActiveTab] = useState<Tab>("file");
   const [files, setFiles] = useState<File[]>([]);
   const [expireSec, setExpireSec] = useState<number>(0);
   const [maxDownloads, setMaxDownloads] = useState<number>(0);
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(false);
   const [quotaRefreshKey, setQuotaRefreshKey] = useState(0);
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
@@ -164,7 +176,11 @@ export function UploadPage() {
 
   // Show share link when done
   if (uploadHook.phase === "done" && uploadHook.shareLink) {
-    return <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload} />;
+    return (
+      <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload}>
+        <DebugPanel uploadInfo={uploadHook.debugInfo} />
+      </ShareLink>
+    );
   }
 
   // Dedicated upload-in-progress view
@@ -207,6 +223,8 @@ export function UploadPage() {
               progress={uploadHook.progress}
               speed={uploadHook.speed}
             />
+
+            <DebugPanel uploadInfo={uploadHook.debugInfo} />
 
             {/* Cancel button */}
             <Button
@@ -348,36 +366,16 @@ export function UploadPage() {
                 )}
               </div>
               {passwordEnabled && (
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                <PasswordProtectionInput
+                  value={password}
+                  onChange={setPassword}
+                  placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+                />
               )}
             </div>
 
             {/* Error */}
-            {uploadHook.phase === "error" && uploadHook.error && (
-              <p className="text-sm text-destructive-foreground" role="alert">
-                {t(`upload.${uploadHook.error}`, { defaultValue: uploadHook.error })}
-              </p>
-            )}
+            {/* Errors are shown via toast (see useEffect above) */}
 
             {/* Upload button */}
             <Button

@@ -11,10 +11,12 @@
     "share": "Teilen",
     "delete": "Löschen",
     "download": "Herunterladen",
+    "view": "Ansehen",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "close": "Schließen",
-    "back": "Zurück"
+    "back": "Zurück",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Hochladen",
@@ -98,6 +100,7 @@
     "tooManyAttempts": "Zu viele Fehlversuche. Bitte warte einige Minuten und versuche es erneut.",
     "download": "Herunterladen",
     "downloading": "Entschlüsseln und herunterladen...",
+    "cancel": "Download abbrechen",
     "decrypting": "Entschlüsseln...",
     "complete": "Download abgeschlossen!",
     "failed": "Download fehlgeschlagen",
@@ -105,7 +108,11 @@
     "safariWarningDesc": "Safari ladt die gesamte Datei in den Arbeitsspeicher, bevor sie gespeichert wird. Bei grossen Dateien kann der Download fehlschlagen.",
     "safariCopyLink": "Link fur anderen Browser kopieren",
     "safariContinue": "Trotzdem herunterladen",
-    "safariLinkCopied": "Link kopiert!"
+    "safariLinkCopied": "Link kopiert!",
+    "firefoxDevToolsWarning": "Entwickler-Tools sind geöffnet",
+    "firefoxDevToolsWarningDesc": "Firefox kann während eines Downloads langsam werden oder einfrieren, wenn die Entwickler-Tools geöffnet sind. Schliesse sie und versuche es erneut.",
+    "firefoxDevToolsRetry": "DevTools geschlossen - Nochmals versuchen",
+    "firefoxDevToolsContinue": "Trotzdem herunterladen"
   },
   "myUploads": {
     "title": "Meine Uploads",
@@ -236,7 +243,37 @@
     "loginButton": "Mit SSO anmelden",
     "logout": "Abmelden"
   },
+  "debug": {
+    "title": "Technische Info",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Tier",
+    "swPath": "SW-Pfad",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "erkannt",
+    "devtoolsNotDetected": "nicht erkannt",
+    "fileSize": "Dateigrösse",
+    "transport": "Transport",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS fehlgeschlagen \u2192 HTTP",
+    "tierSw": "SW-Stream",
+    "tierFilePicker": "Speichern-Dialog",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-Chunks",
+    "swPathStream": "ReadableStream",
+    "copy": "In Zwischenablage kopieren",
+    "copied": "Kopiert!",
+    "timeline": "Verlauf",
+    "close": "Schliessen"
+  },
   "language": {
     "search": "Sprache suchen..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS erforderlich",
+    "originNotAllowed": "Server hat diesen Ursprung blockiert"
   }
 }

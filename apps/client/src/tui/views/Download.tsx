@@ -27,6 +27,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
   const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
   const [resultPath, setResultPath] = useState("");
   const [resultSize, setResultSize] = useState(0);
+  const [avgSpeed, setAvgSpeed] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   // Stored parsed values
@@ -141,6 +142,10 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
 
       setResultPath(outputPath);
       setResultSize(totalWritten);
+      const elapsedSec = (Date.now() - startTime) / 1000;
+      if (elapsedSec > 0 && totalWritten > 0) {
+        setAvgSpeed(formatSpeed(totalWritten / elapsedSec));
+      }
       setPhase("done");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -215,6 +220,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         <Box flexDirection="column" marginLeft={2} marginTop={1}>
           <Text><Text dimColor>Saved: </Text>{resultPath}</Text>
           <Text><Text dimColor>Size:  </Text>{formatBytes(resultSize)}</Text>
+          {avgSpeed && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
           {metadata?.type === "archive" && (
             <Text><Text dimColor>Archive contains </Text>{metadata.files.length} files</Text>
           )}

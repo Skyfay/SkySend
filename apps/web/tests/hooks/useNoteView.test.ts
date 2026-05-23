@@ -247,4 +247,59 @@ describe("useNoteView", () => {
     expect(result.current.phase).toBe("viewing");
     expect(result.current.content).toBe("decrypted content");
   });
+
+  it("loadInfo() setzt error='Failed to load note info' bei generischem Fehler", async () => {
+    const { fetchNoteInfo } = await import("../../src/lib/api.js");
+    vi.mocked(fetchNoteInfo).mockRejectedValueOnce(new Error("Network failure"));
+
+    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+    const { result } = renderHook(() => useNoteView());
+
+    await act(async () => {
+      await result.current.loadInfo("n-1");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Failed to load note info");
+  });
+
+  it("view() ohne loadInfo(): fetchNoteInfo gibt null zurueck \u2192 phase='error'", async () => {
+    const api = await import("../../src/lib/api.js");
+    // Return null so the `if (!info) throw` branch fires
+    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(null as never);
+
+    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+    const { result } = renderHook(() => useNoteView());
+
+    // Do NOT call loadInfo() - state.info stays null, so the ?? fetchNoteInfo() branch is taken
+    await act(async () => {
+      await result.current.view("n-1", "secretb64");
+    });
+
+    expect(result.current.phase).toBe("error");
+  });
+
+  it("view() mit passwordAlgo='argon2id' und argon2id-Funktion \u2192 phase='viewing'", async () => {
+    const api = await import("../../src/lib/api.js");
+    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id" }),
+    );
+    vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
+    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
+
+    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+    const { result } = renderHook(() => useNoteView());
+
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.loadInfo("n-1");
+    });
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "correctpass", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("viewing");
+  });
 });

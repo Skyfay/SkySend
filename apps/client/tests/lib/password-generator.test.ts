@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { generatePassword } from "../../src/lib/password-generator.js";
 
 // Character set definitions (must match the implementation)
@@ -57,4 +57,32 @@ describe("generatePassword", () => {
     const b = generatePassword({ length: 20, uppercase: true, lowercase: true, numbers: true, symbols: true });
     expect(a).not.toBe(b);
   });
+
+  it("ueberspringt Werte >= limit (Rejection Sampling)", () => {
+    // Force the first batch to contain values above the rejection threshold
+    // so the false branch of `if (value < limit && ...)` is exercised.
+    let callCount = 0;
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((arr) => {
+      if (arr instanceof Uint32Array) {
+        if (callCount === 0) {
+          // All values above limit - will be rejected
+          arr.fill(0xFFFFFFFF);
+        } else {
+          // Valid values - will be accepted
+          arr.fill(0);
+        }
+        callCount++;
+      }
+      return arr as never;
+    });
+
+    const pw = generatePassword({ length: 1, uppercase: false, lowercase: true, numbers: false, symbols: false });
+    expect(pw).toHaveLength(1);
+    // value 0 % 26 = 0 = 'a'
+    expect(pw).toBe("a");
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });

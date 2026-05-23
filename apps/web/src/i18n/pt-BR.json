@@ -19,7 +19,39 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsRetry",
+      "download.firefoxDevToolsContinue",
+      "download.cancel",
+      "debug.title",
+      "debug.download",
+      "debug.upload",
+      "debug.tier",
+      "debug.swPath",
+      "debug.browser",
+      "debug.devtools",
+      "debug.devtoolsDetected",
+      "debug.devtoolsNotDetected",
+      "debug.fileSize",
+      "debug.transport",
+      "debug.fallback",
+      "debug.fallbackNone",
+      "debug.fallbackWsFailed",
+      "debug.tierSw",
+      "debug.tierFilePicker",
+      "debug.tierBlob",
+      "debug.transportWs",
+      "debug.transportHttp",
+      "debug.swPathStream",
+      "debug.copy",
+      "debug.copied",
+      "debug.timeline",
+      "debug.close",
+      "common.view",
+      "common.docs",
+      "errors.insecureContext"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -35,10 +67,12 @@
     "share": "Compartilhar",
     "delete": "Excluir",
     "download": "Baixar",
+    "view": "Visualizar",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "close": "Fechar",
-    "back": "Voltar"
+    "back": "Voltar",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Enviar",
@@ -122,6 +156,7 @@
     "tooManyAttempts": "Muitas tentativas falhas. Aguarde alguns minutos e tente novamente.",
     "download": "Baixar",
     "downloading": "Descriptografando e baixando...",
+    "cancel": "Cancelar download",
     "decrypting": "Descriptografando...",
     "complete": "Download concluído!",
     "failed": "Falha no download",
@@ -129,7 +164,11 @@
     "safariWarningDesc": "O Safari baixa o arquivo inteiro para a memória antes de salvar. Para arquivos grandes, isso pode causar falha no download.",
     "safariCopyLink": "Copiar link para outro navegador",
     "safariContinue": "Baixar mesmo assim",
-    "safariLinkCopied": "Link copiado!"
+    "safariLinkCopied": "Link copiado!",
+    "firefoxDevToolsWarning": "As Ferramentas do Desenvolvedor estão abertas",
+    "firefoxDevToolsWarningDesc": "O Firefox pode ficar lento ou parar de responder quando as Ferramentas do Desenvolvedor estão abertas durante um download. Feche-as e tente novamente.",
+    "firefoxDevToolsRetry": "Fechei o DevTools - Tentar novamente",
+    "firefoxDevToolsContinue": "Baixar mesmo assim"
   },
   "myUploads": {
     "title": "Meus Envios",
@@ -260,7 +299,37 @@
     "loginButton": "Entrar com SSO",
     "logout": "Sair"
   },
+  "debug": {
+    "title": "Informações técnicas",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Nível",
+    "swPath": "Caminho SW",
+    "browser": "Navegador",
+    "devtools": "DevTools",
+    "devtoolsDetected": "detectado",
+    "devtoolsNotDetected": "não detectado",
+    "fileSize": "Tamanho do arquivo",
+    "transport": "Transporte",
+    "fallback": "Alternativa",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS falhou → HTTP",
+    "tierSw": "Stream SW",
+    "tierFilePicker": "Salvar arquivo",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Blocos HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Copiar para área de transferência",
+    "copied": "Copiado!",
+    "timeline": "Histórico",
+    "close": "Fechar"
+  },
   "language": {
     "search": "Buscar idioma..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS obrigatório",
+    "originNotAllowed": "O servidor bloqueou esta origem"
   }
 }

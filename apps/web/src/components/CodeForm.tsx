@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff, Send, Loader2, Plus, X, Search } from "lucide-react";
+import { showKnownErrorToast } from "@/lib/toast";
+import { Lock, Send, Loader2, Plus, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { formatDuration, formatBytes } from "@/lib/utils";
@@ -152,8 +154,13 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(forcePassword);
+
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      showKnownErrorToast(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
 
   if (!config) return null;
 
@@ -345,33 +352,17 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
             )}
           </div>
           {passwordEnabled && (
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-                autoComplete="off"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+            <PasswordProtectionInput
+              value={password}
+              onChange={setPassword}
+              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+              disabled={isSubmitting}
+            />
           )}
         </div>
 
         {/* Error */}
-        {noteHook.phase === "error" && noteHook.error && (
-          <p className="text-sm text-destructive-foreground" role="alert">
-            {noteHook.error}
-          </p>
-        )}
+        {/* Error is shown via toast (see useEffect below) */}
 
         {/* Submit */}
         <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full" size="lg">

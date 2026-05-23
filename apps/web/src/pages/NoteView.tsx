@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { showKnownErrorToast } from "@/lib/toast";
 import {
   FileText,
   KeyRound,
@@ -46,6 +47,13 @@ export function NoteViewPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Show transient errors (e.g. decryption failure) as a toast instead of inline.
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.info && noteHook.error) {
+      showKnownErrorToast(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.info, noteHook.error]);
 
   if (!id || !secret) {
     return (
@@ -119,7 +127,7 @@ export function NoteViewPage() {
           <CardContent className="space-y-6 pt-6">
             <PasswordPrompt
               onSubmit={handlePasswordSubmit}
-              loading={noteHook.phase === "needs-password" && !!passwordInput}
+              loading={false}
               error={noteHook.error}
             />
           </CardContent>
@@ -244,22 +252,6 @@ export function NoteViewPage() {
     );
   }
 
-  // Error with info loaded
-  if (noteHook.phase === "error" && noteHook.info) {
-    return (
-      <div className="space-y-6">
-        <PageHeader contentType={noteHook.info.contentType} />
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive-foreground">
-              <AlertCircle className="h-5 w-5" />
-              <span>{noteHook.error}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return null;
 }

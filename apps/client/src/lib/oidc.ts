@@ -93,6 +93,7 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
     });
 
     const server = http.createServer((req, res) => {
+      /* v8 ignore next */
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
       const token = url.searchParams.get("token");
 
@@ -126,6 +127,7 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
             close: () => server.close(),
           });
         });
+        /* v8 ignore next */
         server.on("error", (err) => reject(err));
       })
       .catch(reject);

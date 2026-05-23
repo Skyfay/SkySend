@@ -16,10 +16,12 @@
     "copied": "Gekopieerd!",
     "delete": "Verwijderen",
     "download": "Downloaden",
+    "view": "Bekijken",
     "cancel": "Annuleren",
     "confirm": "Bevestigen",
     "close": "Sluiten",
-    "back": "Terug"
+    "back": "Terug",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Uploaden",
@@ -103,6 +105,7 @@
     "tooManyAttempts": "Te veel mislukte pogingen. Wacht een paar minuten en probeer het opnieuw.",
     "download": "Downloaden",
     "downloading": "Ontsleutelen en downloaden...",
+    "cancel": "Download annuleren",
     "decrypting": "Ontsleutelen...",
     "complete": "Download voltooid!",
     "failed": "Download mislukt",
@@ -110,7 +113,11 @@
     "safariWarningDesc": "Safari downloadt het volledige bestand naar het geheugen voordat het wordt opgeslagen. Voor grote bestanden kan de download hierdoor mislukken.",
     "safariCopyLink": "Link kopiëren voor andere browser",
     "safariContinue": "Toch downloaden",
-    "safariLinkCopied": "Link gekopieerd!"
+    "safariLinkCopied": "Link gekopieerd!",
+    "firefoxDevToolsWarning": "Ontwikkelaarstools zijn geopend",
+    "firefoxDevToolsWarningDesc": "Firefox kan traag worden of niet meer reageren wanneer de ontwikkelaarstools open zijn tijdens een download. Sluit ze en probeer opnieuw.",
+    "firefoxDevToolsRetry": "Ik heb DevTools gesloten - Opnieuw proberen",
+    "firefoxDevToolsContinue": "Toch downloaden"
   },
   "myUploads": {
     "title": "Mijn uploads",
@@ -241,7 +248,37 @@
     "loginButton": "Inloggen met SSO",
     "logout": "Uitloggen"
   },
+  "debug": {
+    "title": "Technische info",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Niveau",
+    "swPath": "SW-pad",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "gedetecteerd",
+    "devtoolsNotDetected": "niet gedetecteerd",
+    "fileSize": "Bestandsgrootte",
+    "transport": "Transport",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS mislukt \u2192 HTTP",
+    "tierSw": "SW-stream",
+    "tierFilePicker": "Bestand opslaan",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-chunks",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopi\u00ebren naar klembord",
+    "copied": "Gekopie\u00ebrd!",
+    "timeline": "Tijdlijn",
+    "close": "Sluiten"
+  },
   "language": {
     "search": "Taal zoeken..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS vereist",
+    "originNotAllowed": "Server heeft deze oorsprong geblokkeerd"
   }
 }

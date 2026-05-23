@@ -16,10 +16,12 @@
     "copied": "Copiato!",
     "delete": "Elimina",
     "download": "Scarica",
+    "view": "Visualizza",
     "cancel": "Annulla",
     "confirm": "Conferma",
     "close": "Chiudi",
-    "back": "Indietro"
+    "back": "Indietro",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Carica",
@@ -103,6 +105,7 @@
     "tooManyAttempts": "Troppi tentativi falliti. Attendi qualche minuto e riprova.",
     "download": "Scarica",
     "downloading": "Decrittografia e download...",
+    "cancel": "Annulla download",
     "decrypting": "Decrittografia...",
     "complete": "Download completato!",
     "failed": "Download fallito",
@@ -110,7 +113,11 @@
     "safariWarningDesc": "Safari scarica l'intero file in memoria prima di salvarlo. Per file grandi questo può causare il fallimento del download.",
     "safariCopyLink": "Copia link per un altro browser",
     "safariContinue": "Scarica comunque",
-    "safariLinkCopied": "Link copiato!"
+    "safariLinkCopied": "Link copiato!",
+    "firefoxDevToolsWarning": "Gli strumenti per sviluppatori sono aperti",
+    "firefoxDevToolsWarningDesc": "Firefox può diventare lento o non rispondere quando gli strumenti per sviluppatori sono aperti durante un download. Chiudili e riprova.",
+    "firefoxDevToolsRetry": "Ho chiuso i DevTools - Riprova",
+    "firefoxDevToolsContinue": "Scarica comunque"
   },
   "myUploads": {
     "title": "I miei caricamenti",
@@ -241,7 +248,37 @@
     "loginButton": "Accedi con SSO",
     "logout": "Disconnetti"
   },
+  "debug": {
+    "title": "Informazioni tecniche",
+    "download": "Download",
+    "upload": "Caricamento",
+    "tier": "Livello",
+    "swPath": "Percorso SW",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "rilevato",
+    "devtoolsNotDetected": "non rilevato",
+    "fileSize": "Dimensione file",
+    "transport": "Trasporto",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS fallito \u2192 HTTP",
+    "tierSw": "Stream SW",
+    "tierFilePicker": "Selettore salvataggio",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Blocchi HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Copia negli appunti",
+    "copied": "Copiato!",
+    "timeline": "Cronologia",
+    "close": "Chiudi"
+  },
   "language": {
     "search": "Cerca lingua..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS richiesto",
+    "originNotAllowed": "Il server ha bloccato questa origine"
   }
 }

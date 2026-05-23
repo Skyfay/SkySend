@@ -18,7 +18,39 @@
       "code.detectedAs",
       "code.expandAll",
       "code.collapseAll",
-      "footer.report"
+      "footer.report",
+      "download.firefoxDevToolsWarning",
+      "download.firefoxDevToolsWarningDesc",
+      "download.firefoxDevToolsRetry",
+      "download.firefoxDevToolsContinue",
+      "download.cancel",
+      "debug.title",
+      "debug.download",
+      "debug.upload",
+      "debug.tier",
+      "debug.swPath",
+      "debug.browser",
+      "debug.devtools",
+      "debug.devtoolsDetected",
+      "debug.devtoolsNotDetected",
+      "debug.fileSize",
+      "debug.transport",
+      "debug.fallback",
+      "debug.fallbackNone",
+      "debug.fallbackWsFailed",
+      "debug.tierSw",
+      "debug.tierFilePicker",
+      "debug.tierBlob",
+      "debug.transportWs",
+      "debug.transportHttp",
+      "debug.swPathStream",
+      "debug.copy",
+      "debug.copied",
+      "debug.timeline",
+      "debug.close",
+      "common.view",
+      "common.docs",
+      "errors.insecureContext"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -34,10 +66,12 @@
     "share": "共有",
     "delete": "削除",
     "download": "ダウンロード",
+    "view": "表示",
     "cancel": "キャンセル",
     "confirm": "確認",
     "close": "閉じる",
-    "back": "戻る"
+    "back": "戻る",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "アップロード",
@@ -121,6 +155,7 @@
     "tooManyAttempts": "試行回数が上限を超えました。数分後に再試行してください。",
     "download": "ダウンロード",
     "downloading": "復号してダウンロード中...",
+    "cancel": "ダウンロードをキャンセル",
     "decrypting": "復号中...",
     "complete": "ダウンロード完了！",
     "failed": "ダウンロードに失敗しました",
@@ -128,7 +163,11 @@
     "safariWarningDesc": "Safariはファイル全体をメモリに読み込んでから保存します。大きなファイルではダウンロードが失敗する場合があります。",
     "safariCopyLink": "別のブラウザ用にリンクをコピー",
     "safariContinue": "このままダウンロード",
-    "safariLinkCopied": "リンクをコピーしました！"
+    "safariLinkCopied": "リンクをコピーしました！",
+    "firefoxDevToolsWarning": "開発者ツールが開いています",
+    "firefoxDevToolsWarningDesc": "ダウンロード中に開発者ツールが開いていると、Firefoxが遅くなったり応答しなくなる場合があります。閉じてから再試行してください。",
+    "firefoxDevToolsRetry": "DevToolsを閉じました - 再試行",
+    "firefoxDevToolsContinue": "このままダウンロード"
   },
   "myUploads": {
     "title": "アップロード履歴",
@@ -259,7 +298,37 @@
     "loginButton": "SSOでログイン",
     "logout": "ログアウト"
   },
+  "debug": {
+    "title": "技術情報",
+    "download": "ダウンロード",
+    "upload": "アップロード",
+    "tier": "ティア",
+    "swPath": "SWパス",
+    "browser": "ブラウザ",
+    "devtools": "DevTools",
+    "devtoolsDetected": "検出済み",
+    "devtoolsNotDetected": "未検出",
+    "fileSize": "ファイルサイズ",
+    "transport": "転送方式",
+    "fallback": "フォールバック",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS失敗 → HTTP",
+    "tierSw": "SWストリーム",
+    "tierFilePicker": "ファイル保存ダイアログ",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTPチャンク",
+    "swPathStream": "ReadableStream",
+    "copy": "クリップボードにコピー",
+    "copied": "コピーしました！",
+    "timeline": "タイムライン",
+    "close": "閉じる"
+  },
   "language": {
     "search": "言語を検索..."
+  },
+  "errors": {
+    "insecureContext": "HTTPSが必要です",
+    "originNotAllowed": "サーバーがこのオリジンをブロックしました"
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Lock,
@@ -27,9 +27,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import { toast } from "@/hooks/useToast";
+import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import { formatDuration, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
@@ -63,7 +65,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
   // Generated keys
   const [keyPair, setKeyPair] = useState<SSHKeyPair | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
 
   // Share settings (used by both modes)
   const [sharePublicKey, setSharePublicKey] = useState(true);
@@ -72,7 +73,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [notePassword, setNotePassword] = useState("");
-  const [showNotePassword, setShowNotePassword] = useState(false);
   const [notePasswordEnabled, setNotePasswordEnabled] = useState(forcePassword);
 
   // Copy state
@@ -97,6 +97,13 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
     [],
   );
 
+  // Show note upload errors via toast
+  useEffect(() => {
+    if (noteHook.phase === "error" && noteHook.error) {
+      showKnownErrorToast(noteHook.error);
+    }
+  }, [noteHook.phase, noteHook.error]);
+
   if (!config) return null;
 
   const effectiveExpireSec = expireSec ?? config.noteDefaultExpire;
@@ -109,7 +116,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenError(null);
     try {
       const pair =
         algorithm === "ed25519"
@@ -124,12 +130,10 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
             );
       setKeyPair(pair);
       if (pair.warning) {
-        toast({ title: pair.warning, variant: "destructive" });
+        toast.warning(pair.warning);
       }
     } catch (err) {
-      setGenError(
-        err instanceof Error ? err.message : "Key generation failed",
-      );
+      showKnownErrorToast(err instanceof Error ? err.message : "Key generation failed");
     } finally {
       setGenerating(false);
     }
@@ -137,7 +141,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
 
   const handleRegenerate = () => {
     setKeyPair(null);
-    setGenError(null);
   };
 
   // --- Content for note upload ---
@@ -268,36 +271,17 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
           )}
         </div>
         {notePasswordEnabled && (
-          <div className="relative">
-            <Input
-              type={showNotePassword ? "text" : "password"}
-              value={notePassword}
-              onChange={(e) => setNotePassword(e.target.value)}
-              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-              autoComplete="off"
-              disabled={isSubmitting}
-            />
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-              onClick={() => setShowNotePassword(!showNotePassword)}
-            >
-              {showNotePassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+          <PasswordProtectionInput
+            value={notePassword}
+            onChange={setNotePassword}
+            placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+            disabled={isSubmitting}
+          />
         )}
       </div>
 
       {/* Error */}
-      {noteHook.phase === "error" && noteHook.error && (
-        <p className="text-sm text-destructive-foreground" role="alert">
-          {noteHook.error}
-        </p>
-      )}
+      {/* Errors are shown via toast (see useEffect above) */}
     </>
   );
 
@@ -471,13 +455,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
               </p>
             </div>
 
-            {/* Error */}
-            {genError && (
-              <p className="text-sm text-destructive-foreground" role="alert">
-                {genError}
-              </p>
-            )}
-
             {/* Generate Button */}
             <Button
               onClick={handleGenerate}
@@ -506,7 +483,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                   ? "Ed25519"
                   : `RSA-${rsaBits}`}
               </div>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
+              <p className="mt-1 font-mono text-xs text-muted-foreground break-all">
                 {keyPair.fingerprint}
               </p>
             </div>

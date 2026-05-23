@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { cn, formatBytes, formatDuration, formatTimeRemaining, isSafari } from "../../src/lib/utils.js";
+import { cn, formatBytes, formatDuration, formatTimeRemaining, isSafari, isFirefox, isDevToolsOpen, getBrowserInfo } from "../../src/lib/utils.js";
 
 // ── cn ────────────────────────────────────────────────────────────────────────
 
@@ -196,5 +196,112 @@ describe("isSafari", () => {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Brave/1.0",
     });
     expect(isSafari()).toBe(false);
+  });
+});
+
+// ── isFirefox ─────────────────────────────────────────────────────────────────
+
+describe("isFirefox", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns true for a Firefox user agent", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0",
+    });
+    expect(isFirefox()).toBe(true);
+  });
+
+  it("returns false for a Chrome user agent", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    });
+    expect(isFirefox()).toBe(false);
+  });
+});
+
+// ── isDevToolsOpen ────────────────────────────────────────────────────────────
+
+describe("isDevToolsOpen", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns true when devtools panel is docked (outer > inner + threshold)", () => {
+    vi.stubGlobal("window", {
+      outerWidth: 1600,
+      innerWidth: 1000,   // 600px gap - devtools docked to side
+      outerHeight: 900,
+      innerHeight: 895,
+    });
+    expect(isDevToolsOpen()).toBe(true);
+  });
+
+  it("returns true when devtools panel is docked at bottom", () => {
+    vi.stubGlobal("window", {
+      outerWidth: 1600,
+      innerWidth: 1595,
+      outerHeight: 900,
+      innerHeight: 500,   // 400px gap - devtools docked to bottom
+    });
+    expect(isDevToolsOpen()).toBe(true);
+  });
+
+  it("returns false when window dimensions are normal", () => {
+    vi.stubGlobal("window", {
+      outerWidth: 1600,
+      innerWidth: 1598,
+      outerHeight: 900,
+      innerHeight: 898,
+    });
+    expect(isDevToolsOpen()).toBe(false);
+  });
+});
+
+// ── getBrowserInfo ────────────────────────────────────────────────────────────
+
+describe("getBrowserInfo", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("identifies Edge", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124",
+    });
+    expect(getBrowserInfo()).toBe("Edge 124");
+  });
+
+  it("identifies Firefox", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0",
+    });
+    expect(getBrowserInfo()).toBe("Firefox 127");
+  });
+
+  it("identifies Chrome", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    });
+    expect(getBrowserInfo()).toBe("Chrome 124");
+  });
+
+  it("identifies Safari", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+    });
+    expect(getBrowserInfo()).toBe("Safari 17");
+  });
+
+  it("falls back to 'Unknown Browser' for unrecognised UA", () => {
+    vi.stubGlobal("navigator", { userAgent: "MyCustomBot/1.0" });
+    expect(getBrowserInfo()).toBe("Unknown Browser");
   });
 });

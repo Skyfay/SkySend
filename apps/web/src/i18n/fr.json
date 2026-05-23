@@ -16,10 +16,12 @@
     "copied": "Copié !",
     "delete": "Supprimer",
     "download": "Télécharger",
+    "view": "Voir",
     "cancel": "Annuler",
     "confirm": "Confirmer",
     "close": "Fermer",
-    "back": "Retour"
+    "back": "Retour",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Téléverser",
@@ -103,6 +105,7 @@
     "tooManyAttempts": "Trop de tentatives échouées. Veuillez patienter quelques minutes avant de réessayer.",
     "download": "Télécharger",
     "downloading": "Déchiffrement et téléchargement...",
+    "cancel": "Annuler le téléchargement",
     "decrypting": "Déchiffrement...",
     "complete": "Téléchargement terminé !",
     "failed": "Échec du téléchargement",
@@ -110,7 +113,11 @@
     "safariWarningDesc": "Safari télécharge le fichier entier en mémoire avant de l'enregistrer. Pour les fichiers volumineux, cela peut entraîner l'échec du téléchargement.",
     "safariCopyLink": "Copier le lien pour un autre navigateur",
     "safariContinue": "Télécharger quand même",
-    "safariLinkCopied": "Lien copié !"
+    "safariLinkCopied": "Lien copié !",
+    "firefoxDevToolsWarning": "Les outils de développement sont ouverts",
+    "firefoxDevToolsWarningDesc": "Firefox peut devenir lent ou ne plus répondre lorsque les outils de développement sont ouverts pendant un téléchargement. Fermez-les et réessayez.",
+    "firefoxDevToolsRetry": "J'ai fermé les DevTools - Réessayer",
+    "firefoxDevToolsContinue": "Télécharger quand même"
   },
   "myUploads": {
     "title": "Mes envois",
@@ -240,8 +247,36 @@
     "loginRequired": "Connexion requise pour téléverser",
     "loginButton": "Se connecter avec SSO",
     "logout": "Se déconnecter"
-  },
-  "language": {
+  },  "debug": {
+    "title": "Informations techniques",
+    "download": "T\u00e9l\u00e9chargement",
+    "upload": "Envoi",
+    "tier": "Niveau",
+    "swPath": "Chemin SW",
+    "browser": "Navigateur",
+    "devtools": "DevTools",
+    "devtoolsDetected": "d\u00e9tect\u00e9",
+    "devtoolsNotDetected": "non d\u00e9tect\u00e9",
+    "fileSize": "Taille du fichier",
+    "transport": "Transport",
+    "fallback": "Repli",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS \u00e9chou\u00e9 \u2192 HTTP",
+    "tierSw": "Stream SW",
+    "tierFilePicker": "S\u00e9lecteur de sauvegarde",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "Fragments HTTP",
+    "swPathStream": "ReadableStream",
+    "copy": "Copier dans le presse-papiers",
+    "copied": "Copi\u00e9 !",
+    "timeline": "Historique",
+    "close": "Fermer"
+  },  "language": {
     "search": "Rechercher une langue..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS requis",
+    "originNotAllowed": "Le serveur a bloqué cette origine"
   }
 }

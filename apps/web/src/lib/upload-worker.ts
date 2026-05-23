@@ -78,6 +78,7 @@ export interface UploadWorkerRequest {
 export type UploadWorkerMessage =
   | { type: "phase"; phase: string }
   | { type: "progress"; loaded: number; total: number }
+  | { type: "transport"; transport: "ws" | "http"; fallback: boolean }
   | {
       type: "done";
       id: string;
@@ -236,6 +237,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     if (wsUsable && wsInstance) {
       console.info("[upload-worker] transport=ws");
+      post({ type: "transport", transport: "ws", fallback: false });
       uploadResult = await uploadViaWebSocket({
         ws: wsInstance,
         headers: {
@@ -257,6 +259,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       });
     } else {
       console.info("[upload-worker] transport=http");
+      post({ type: "transport", transport: "http", fallback: wsEnabled && !wsUsable });
       uploadResult = await uploadViaHttpChunks({
         apiBase,
         headers,

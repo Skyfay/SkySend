@@ -6,7 +6,7 @@ import {
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, getBrowserInfo } from "@/lib/utils";
 
 export type UploadPhase =
   | "idle"
@@ -16,6 +16,13 @@ export type UploadPhase =
   | "done"
   | "error";
 
+export interface UploadDebugInfo {
+  transport: "ws" | "http" | null;
+  fallback: boolean;
+  browser: string;
+  events: Array<{ time: string; message: string }>;
+}
+
 interface UploadState {
   phase: UploadPhase;
   progress: number;
@@ -24,6 +31,7 @@ interface UploadState {
   shareLink: string | null;
   error: string | null;
   uploadId: string | null;
+  debugInfo: UploadDebugInfo | null;
 }
 
 interface UploadOptions {
@@ -43,6 +51,7 @@ function getApiBase(): string {
   if (import.meta.env.DEV) {
     return import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
   }
+  /* v8 ignore next */
   return "";
 }
 
@@ -55,6 +64,7 @@ export function useUpload() {
     shareLink: null,
     error: null,
     uploadId: null,
+    debugInfo: null,
   });
   const workerRef = useRef<Worker | null>(null);
 
@@ -69,6 +79,7 @@ export function useUpload() {
       shareLink: null,
       error: null,
       uploadId: null,
+      debugInfo: null,
     });
   }, []);
 
@@ -83,6 +94,7 @@ export function useUpload() {
       shareLink: null,
       error: null,
       uploadId: null,
+      debugInfo: null,
     });
   }, []);
 
@@ -132,7 +144,18 @@ export function useUpload() {
 
       // Spawn upload worker - zipping (if multi-file), encryption + upload
       // all run off the main thread.
-      setState((s) => ({ ...s, phase: files.length > 1 ? "zipping" : "uploading", progress: 0, speed: null }));
+      setState((s) => ({
+        ...s,
+        phase: files.length > 1 ? "zipping" : "uploading",
+        progress: 0,
+        speed: null,
+        debugInfo: {
+          transport: null,
+          fallback: false,
+          browser: getBrowserInfo(),
+          events: [],
+        },
+      }));
 
       const worker = new Worker(
         new URL("../lib/upload-worker.ts", import.meta.url),
@@ -194,6 +217,23 @@ export function useUpload() {
             case "done":
               resolve(msg);
               break;
+            case "transport": {
+              const event = msg.fallback
+                ? { time: new Date().toISOString(), message: "WS failed \u2192 HTTP fallback" }
+                : { time: new Date().toISOString(), message: msg.transport === "ws" ? "WebSocket transport active" : "HTTP chunks transport active" };
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? {
+                      ...s.debugInfo,
+                      transport: msg.transport,
+                      fallback: msg.fallback,
+                      events: [...s.debugInfo.events, event],
+                    }
+                  : null,
+              }));
+              break;
+            }
             case "error":
               reject(new Error(msg.message));
               break;
@@ -245,7 +285,8 @@ export function useUpload() {
         }
       }
 
-      setState({
+      setState((s) => ({
+        ...s,
         phase: "done",
         progress: 100,
         speed: null,
@@ -253,7 +294,10 @@ export function useUpload() {
         shareLink,
         error: null,
         uploadId: result.id,
-      });
+        debugInfo: s.debugInfo
+          ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Upload complete · Ø ${averageSpeed}` : "Upload complete" }] }
+          : null,
+      }));
     } catch (err) {
       workerRef.current?.terminate();
       workerRef.current = null;

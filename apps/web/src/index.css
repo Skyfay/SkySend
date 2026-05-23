@@ -143,3 +143,27 @@
   border-radius: 9999px;
   border: 1px solid transparent;
 }
+
+/* Sonner toast - match app design tokens */
+[data-sonner-toaster] {
+  /* Move close button to the right */
+  --toast-close-button-start: unset !important;
+  --toast-close-button-end: 0 !important;
+  --toast-close-button-transform: translate(35%, -35%) !important;
+  /* Background, border, and text use app card colors */
+  --normal-bg: var(--color-card) !important;
+  --normal-border: var(--color-border) !important;
+  --normal-text: var(--color-card-foreground) !important;
+  --error-bg: var(--color-card) !important;
+  --error-border: var(--color-border) !important;
+  --error-text: var(--color-card-foreground) !important;
+  --success-bg: var(--color-card) !important;
+  --success-border: var(--color-border) !important;
+  --success-text: var(--color-card-foreground) !important;
+  --warning-bg: var(--color-card) !important;
+  --warning-border: var(--color-border) !important;
+  --warning-text: var(--color-card-foreground) !important;
+  --info-bg: var(--color-card) !important;
+  --info-border: var(--color-border) !important;
+  --info-text: var(--color-card-foreground) !important;
+}

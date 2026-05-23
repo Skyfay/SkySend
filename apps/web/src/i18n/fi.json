@@ -16,10 +16,12 @@
     "copied": "Kopioitu!",
     "delete": "Poista",
     "download": "Lataa",
+    "view": "Näytä",
     "cancel": "Peruuta",
     "confirm": "Vahvista",
     "close": "Sulje",
-    "back": "Takaisin"
+    "back": "Takaisin",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Lähetä",
@@ -103,6 +105,7 @@
     "tooManyAttempts": "Liian monta epäonnistunutta yritystä. Odota muutama minuutti ja yritä uudelleen.",
     "download": "Lataa",
     "downloading": "Puretaan salausta ja ladataan...",
+    "cancel": "Peruuta lataus",
     "decrypting": "Puretaan salausta...",
     "complete": "Lataus valmis!",
     "failed": "Lataus epäonnistui",
@@ -110,7 +113,11 @@
     "safariWarningDesc": "Safari lataa koko tiedoston muistiin ennen tallentamista. Suurille tiedostoille tämä voi aiheuttaa latauksen epäonnistumisen.",
     "safariCopyLink": "Kopioi linkki toiselle selaimelle",
     "safariContinue": "Lataa silti",
-    "safariLinkCopied": "Linkki kopioitu!"
+    "safariLinkCopied": "Linkki kopioitu!",
+    "firefoxDevToolsWarning": "Kehittäjätyökalut ovat auki",
+    "firefoxDevToolsWarningDesc": "Firefox voi muuttua hitaaksi tai lakata reagoimasta, kun kehittäjätyökalut ovat auki latauksen aikana. Sulje ne ja yritä uudelleen.",
+    "firefoxDevToolsRetry": "Suljin DevToolsin - Yritä uudelleen",
+    "firefoxDevToolsContinue": "Lataa silti"
   },
   "myUploads": {
     "title": "Omat lähetykset",
@@ -240,8 +247,36 @@
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
     "loginButton": "Kirjaudu SSO:lla",
     "logout": "Kirjaudu ulos"
-  },
-  "language": {
+  },  "debug": {
+    "title": "Tekniset tiedot",
+    "download": "Lataus",
+    "upload": "L\u00e4hetys",
+    "tier": "Taso",
+    "swPath": "SW-polku",
+    "browser": "Selain",
+    "devtools": "Kehitt\u00e4j\u00e4ty\u00f6kalut",
+    "devtoolsDetected": "havaittu",
+    "devtoolsNotDetected": "ei havaittu",
+    "fileSize": "Tiedostokoko",
+    "transport": "Siirtotapa",
+    "fallback": "Vararatkaisu",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS ep\u00e4onnistui \u2192 HTTP",
+    "tierSw": "SW-virta",
+    "tierFilePicker": "Tallenna tiedosto -valintaikkuna",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-lohkot",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopioi leikep\u00f6yd\u00e4lle",
+    "copied": "Kopioitu!",
+    "timeline": "Aikajana",
+    "close": "Sulje"
+  },  "language": {
     "search": "Hae kieltä..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS vaaditaan",
+    "originNotAllowed": "Palvelin esti tämän alkuperän"
   }
 }

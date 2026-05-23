@@ -11,10 +11,12 @@
     "share": "Share",
     "delete": "Delete",
     "download": "Download",
+    "view": "View",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
-    "back": "Back"
+    "back": "Back",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Upload",
@@ -98,6 +100,7 @@
     "tooManyAttempts": "Too many failed attempts. Please wait a few minutes and try again.",
     "download": "Download",
     "downloading": "Decrypting and downloading...",
+    "cancel": "Cancel Download",
     "decrypting": "Decrypting...",
     "complete": "Download complete!",
     "failed": "Download failed",
@@ -105,7 +108,11 @@
     "safariWarningDesc": "Safari downloads the entire file into memory before saving. For large files this can cause the download to fail.",
     "safariCopyLink": "Copy link for another browser",
     "safariContinue": "Download anyway",
-    "safariLinkCopied": "Link copied!"
+    "safariLinkCopied": "Link copied!",
+    "firefoxDevToolsWarning": "Developer Tools are open",
+    "firefoxDevToolsWarningDesc": "Firefox may become slow or unresponsive when Developer Tools are open during a download. Close them and then retry.",
+    "firefoxDevToolsRetry": "I closed DevTools - Try again",
+    "firefoxDevToolsContinue": "Download anyway"
   },
   "myUploads": {
     "title": "My Uploads",
@@ -236,7 +243,37 @@
     "loginButton": "Login with SSO",
     "logout": "Logout"
   },
+  "debug": {
+    "title": "Technical Info",
+    "download": "Download",
+    "upload": "Upload",
+    "tier": "Tier",
+    "swPath": "SW-Path",
+    "browser": "Browser",
+    "devtools": "DevTools",
+    "devtoolsDetected": "detected",
+    "devtoolsNotDetected": "not detected",
+    "fileSize": "File size",
+    "transport": "Transport",
+    "fallback": "Fallback",
+    "fallbackNone": "\u2013",
+    "fallbackWsFailed": "WS failed \u2192 HTTP",
+    "tierSw": "SW Stream",
+    "tierFilePicker": "Save File Picker",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP Chunks",
+    "swPathStream": "ReadableStream",
+    "copy": "Copy to clipboard",
+    "copied": "Copied!",
+    "timeline": "Timeline",
+    "close": "Close"
+  },
   "language": {
     "search": "Search language..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS required",
+    "originNotAllowed": "Server blocked this origin"
   }
 }

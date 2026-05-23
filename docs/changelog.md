@@ -2,6 +2,49 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.10.0 - New Copy & Share Features, Download UX Improvements, and Bug Fixes
+*Released: May 24, 2026*
+
+### ✨ Features
+
+- **web**: Added a copy button and a password generator button to the "Password protection" input on all upload types.
+- **web**: Added a "View" button (eye icon) to note cards in "My Uploads" to open the share link directly in the browser.
+- **web**: The browser favicon now shows a circular progress indicator during active downloads and is restored once the download finishes, fails, or is cancelled.
+- **web**: Added a "Cancel Download" button that aborts the active download across all tiers (Service Worker, File System Access, Blob).
+- **web**: Added an in-app Debug Info Panel with runtime details (download tier, browser, DevTools status, file size, transport, event timeline) and a "Copy to clipboard" button.
+- **web**: Added a Firefox DevTools detection warning modal when DevTools are docked at download start, with a retry button and an escape-hatch to proceed anyway.
+- **web**: Average download speed is now shown in the download completion card (e.g. "Ø 85.3 MB/s"), matching the existing upload display.
+- **client**: Average download speed is now shown in the CLI output and TUI completion screen after a successful download.
+- **web**: Replaced inline error messages with a global toast notification system for upload, note, SSH key, and decryption errors.
+- **web**: Added a `showToast()` helper with optional Copy and Docs action buttons for enriched toast notifications.
+- **web**: Added `showKnownErrorToast()` that automatically enriches crypto pipeline errors (e.g. missing HTTPS) with a title, Copy button, and Docs link.
+- **web**: Added an `isOriginNotAllowedError()` pattern to `showKnownErrorToast()` for misconfigured `ALLOWED_ORIGINS` WebSocket rejections.
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed the note password input becoming permanently disabled after a wrong password attempt.
+- **web**: Fixed the SSH key fingerprint overflowing its container on narrow screens.
+- **web**: Fixed the remove button and file-size badge being pushed off-screen for files with very long names in the upload list.
+- **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline that caused multi-minute Firefox UI freezes on large files.
+
+### 🎨 Improvements
+
+- **web**: Replaced the `clients.matchAll()` broadcast in the Service Worker with a `BroadcastChannel("skysend-download")` for all SW-to-main-thread and config messages.
+- **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` to prevent brief download UI freezes on slow or jittery connections.
+- **web**: Added lightweight diagnostic logging to the Service Worker (stream-start summary, per-1000-record checkpoints, slow-read alerts, double-`readMore()` detection).
+
+### 🧪 Tests
+
+- **web**: Brought `apps/web` test coverage to 100% - added tests for `isFirefox`, `isDevToolsOpen`, and `getBrowserInfo` in utils, dismiss-all and multi-toast UPDATE in `useToast`, `loadInfo` non-`ApiError` path and `view()` without prior `loadInfo` in `useNoteView`, transport worker messages in `useUpload`, and 410/multi-upload branch coverage in `useUploadHistory`. Added `/* v8 ignore next */` annotations on dead-code and unreachable branches in `useUpload`, `useToast`, and `useNoteView`.
+- **client**: Brought `apps/client` test coverage to 100% - added token storage tests (array JSON, corrupt JSON, `clearStoredToken`) to `config`, rejection-sampling branch test to `password-generator`. Added `/* v8 ignore next */` annotations on dead-code branches in `progress` and `oidc`.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.10.0`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.9.5 - Cache-Control Fixes for Stale Content and Traefik Caching
 *Released: May 20, 2026*
 

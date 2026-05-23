@@ -16,13 +16,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
+import { FirefoxDevToolsWarning } from "@/components/FirefoxDevToolsWarning";
+import { DebugPanel } from "@/components/DebugPanel";
 import { useDownload } from "@/hooks/useDownload";
+import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { hashWasmArgon2 } from "@/lib/argon2";
 
 export function DownloadPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const downloadHook = useDownload();
+  useFaviconProgress(downloadHook.phase === "downloading" ? downloadHook.progress : null);
   const [passwordInput, setPasswordInput] = useState<string | undefined>();
 
   // Get secret from URL fragment - captured once at mount so that history.replaceState
@@ -148,20 +152,34 @@ export function DownloadPage() {
             />
           )}
 
+          {/* Firefox DevTools warning */}
+          {downloadHook.phase === "firefox-devtools-warning" && (
+            <FirefoxDevToolsWarning
+              onRetry={downloadHook.retryDevToolsCheck}
+              onForce={downloadHook.forceDownloadWithDevTools}
+              onDismiss={downloadHook.dismissDevToolsWarning}
+            />
+          )}
+
           {/* Download card when info is available and no password needed (or already unlocked) */}
           {downloadHook.info &&
             downloadHook.phase !== "needs-password" &&
-            downloadHook.phase !== "safari-warning" && (
+            downloadHook.phase !== "safari-warning" &&
+            downloadHook.phase !== "firefox-devtools-warning" && (
               <DownloadCard
                 info={downloadHook.info}
                 metadata={downloadHook.metadata}
                 phase={downloadHook.phase}
                 progress={downloadHook.progress}
                 speed={downloadHook.speed}
+                averageSpeed={downloadHook.averageSpeed}
                 error={downloadHook.error}
                 onDownload={handleDownload}
+                onCancel={downloadHook.cancel}
               />
             )}
+
+          <DebugPanel downloadInfo={downloadHook.debugInfo} />
         </CardContent>
       </Card>
     </div>

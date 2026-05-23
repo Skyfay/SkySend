@@ -15,6 +15,7 @@ import { prepareDownload } from "../lib/auth.js";
 import { parseShareUrl } from "../lib/url.js";
 import {
   formatBytes,
+  formatSpeed,
   renderProgress,
   clearLine,
   writeProgress,
@@ -158,6 +159,11 @@ export function registerDownloadCommand(program: Command): void {
 
         if (!options.json) { clearLine(); writeLine("Download complete."); }
 
+        const elapsedSec = (Date.now() - progressState.startTime) / 1000;
+        const avgSpeedSuffix = elapsedSec > 0 && totalWritten > 0
+          ? ` | Avg speed: ${formatSpeed(totalWritten / elapsedSec)}`
+          : "";
+
         if (options.json) {
           console.log(JSON.stringify({
             id: parsed.id,
@@ -167,7 +173,7 @@ export function registerDownloadCommand(program: Command): void {
             fileCount: info.fileCount,
           }));
         } else {
-          writeLine(`Saved: ${outputPath} (${formatBytes(totalWritten)})`);
+          writeLine(`Saved: ${outputPath} (${formatBytes(totalWritten)})${avgSpeedSuffix}`);
           if (metadata?.type === "archive") {
             writeLine(`Archive contains ${metadata.files.length} files`);
           }

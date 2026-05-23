@@ -16,10 +16,12 @@
     "copied": "Kopiert!",
     "delete": "Slett",
     "download": "Last ned",
+    "view": "Vis",
     "cancel": "Avbryt",
     "confirm": "Bekreft",
     "close": "Lukk",
-    "back": "Tilbake"
+    "back": "Tilbake",
+    "docs": "Docs"
   },
   "nav": {
     "upload": "Last opp",
@@ -103,6 +105,7 @@
     "tooManyAttempts": "For mange mislykkede forsøk. Vent noen minutter og prøv igjen.",
     "download": "Last ned",
     "downloading": "Dekrypterer og laster ned...",
+    "cancel": "Avbryt nedlasting",
     "decrypting": "Dekrypterer...",
     "complete": "Nedlasting fullført!",
     "failed": "Nedlasting mislyktes",
@@ -110,7 +113,11 @@
     "safariWarningDesc": "Safari laster ned hele filen til minnet før den lagres. For store filer kan dette føre til at nedlastingen mislykkes.",
     "safariCopyLink": "Kopier lenke for en annen nettleser",
     "safariContinue": "Last ned likevel",
-    "safariLinkCopied": "Lenke kopiert!"
+    "safariLinkCopied": "Lenke kopiert!",
+    "firefoxDevToolsWarning": "Utviklerverktøy er åpne",
+    "firefoxDevToolsWarningDesc": "Firefox kan bli tregt eller slutte å reagere når Utviklerverktøy er åpne under en nedlasting. Lukk dem og prøv igjen.",
+    "firefoxDevToolsRetry": "Jeg lukket DevTools - Prøv igjen",
+    "firefoxDevToolsContinue": "Last ned likevel"
   },
   "myUploads": {
     "title": "Mine opplastinger",
@@ -241,7 +248,37 @@
     "loginButton": "Logg inn med SSO",
     "logout": "Logg ut"
   },
+  "debug": {
+    "title": "Teknisk informasjon",
+    "download": "Nedlasting",
+    "upload": "Opplasting",
+    "tier": "Nivå",
+    "swPath": "SW-sti",
+    "browser": "Nettleser",
+    "devtools": "Utviklerverktøy",
+    "devtoolsDetected": "oppdaget",
+    "devtoolsNotDetected": "ikke oppdaget",
+    "fileSize": "Filstørrelse",
+    "transport": "Transport",
+    "fallback": "Reserveløsning",
+    "fallbackNone": "–",
+    "fallbackWsFailed": "WS feilet → HTTP",
+    "tierSw": "SW-strøm",
+    "tierFilePicker": "Lagre-dialog",
+    "tierBlob": "Blob",
+    "transportWs": "WebSocket",
+    "transportHttp": "HTTP-biter",
+    "swPathStream": "ReadableStream",
+    "copy": "Kopier til utklippstavle",
+    "copied": "Kopiert!",
+    "timeline": "Tidslinje",
+    "close": "Lukk"
+  },
   "language": {
     "search": "Søk etter språk..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS kreves",
+    "originNotAllowed": "Serveren blokkerte dette opphavet"
   }
 }
