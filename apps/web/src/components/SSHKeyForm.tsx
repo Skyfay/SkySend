@@ -506,7 +506,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                   ? "Ed25519"
                   : `RSA-${rsaBits}`}
               </div>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
+              <p className="mt-1 font-mono text-xs text-muted-foreground break-all">
                 {keyPair.fingerprint}
               </p>
             </div>

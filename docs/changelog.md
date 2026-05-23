@@ -16,6 +16,7 @@ All notable changes to SkySend are documented here.
 
 ### 🐛 Bug Fixes
 
+- **web**: Fixed the SSH key fingerprint overflowing its container. The `SHA256:...` string now wraps with `break-all`, consistent with the public and private key fields below it.
 - **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline (~150,000 calls per 2.5 GiB download). Firefox buffers SW console output via IPC to the parent process even when DevTools are closed, which overwhelmed the parent process and caused the multi-minute browser UI freezes reported by several users.
 
 ### 🎨 Improvements
