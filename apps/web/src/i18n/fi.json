@@ -274,5 +274,8 @@
     "close": "Sulje"
   },  "language": {
     "search": "Hae kieltä..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS vaaditaan"
   }
 }

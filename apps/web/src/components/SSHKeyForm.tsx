@@ -31,6 +31,7 @@ import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import { formatDuration, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
@@ -99,7 +100,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
   // Show note upload errors via toast
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.error) {
-      toast.error(noteHook.error);
+      showKnownErrorToast(noteHook.error);
     }
   }, [noteHook.phase, noteHook.error]);
 
@@ -132,7 +133,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
         toast.warning(pair.warning);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Key generation failed");
+      showKnownErrorToast(err instanceof Error ? err.message : "Key generation failed");
     } finally {
       setGenerating(false);
     }

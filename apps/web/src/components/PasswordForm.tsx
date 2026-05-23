@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import {
   Lock,
   Eye,
@@ -37,7 +37,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
 
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.error) {
-      toast.error(noteHook.error);
+      showKnownErrorToast(noteHook.error);
     }
   }, [noteHook.phase, noteHook.error]);
 

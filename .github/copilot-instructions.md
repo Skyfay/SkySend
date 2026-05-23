@@ -20,6 +20,46 @@
 - Validation: Use `zod` for all data validation (API requests, config, frontend forms)
 - i18n: Implement internationalization (e.g. `i18next`). Automatically detect browser language (e.g., `de-CH` -> `de`, `en-US` -> `en`) and always fallback to English.
 
+# Toast Notifications (Web UI)
+
+Use the helpers in `apps/web/src/lib/toast.tsx` for in-app notifications in `@skysend/web`.
+
+## Simple toasts (no action buttons)
+
+Call Sonner directly for plain success/error/info/warning toasts:
+```ts
+import { toast } from "sonner";
+toast.success(t("myUploads.deleteSuccess"));
+toast.error(t("download.wrongPassword"), { id: "password-error" });
+```
+
+## Toasts with Copy or Docs buttons
+
+Use `showToast()` when the toast needs a Copy button (copies text to clipboard) or a Docs button (links to a documentation article):
+```ts
+import { showToast } from "@/lib/toast";
+showToast(t("errors.insecureContext"), {
+  type: "error",
+  description: rawErrorMessage,
+  copyText: rawErrorMessage,
+  docsUrl: "https://docs.skysend.app/user-guide/troubleshooting#...",
+});
+```
+
+## Error toasts from the crypto pipeline
+
+Use `showKnownErrorToast()` instead of `toast.error()` wherever a raw Error message from the upload, download, or note hooks is shown. It detects known error patterns (e.g. `crypto.subtle` unavailable in an HTTP context) and automatically adds a docs link and copy button:
+```ts
+import { showKnownErrorToast } from "@/lib/toast";
+showKnownErrorToast(hook.error);  // enriches known errors, falls back to toast.error()
+```
+
+**When to add a new known error pattern:**
+1. Add a detector in `lib/toast.tsx` (`isInsecureContextError` is the existing example).
+2. Add a user-friendly i18n key in `errors.*` to `en.json` and `de.json`.
+3. Call `showToast()` with `type: "error"`, `copyText`, and the `docsUrl`.
+4. Document the pattern in `docs/developer-guide/toast-system.md`.
+
 # i18n Translation Files
 
 Translation files live in `apps/web/src/i18n/`. The source-of-truth languages are **English** (`en.json`) and **German** (`de.json`). Always add new keys to both of those files first.

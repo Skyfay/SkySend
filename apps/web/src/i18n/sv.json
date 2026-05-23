@@ -274,5 +274,8 @@
   },
   "language": {
     "search": "Sök språk..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS krävs"
   }
 }

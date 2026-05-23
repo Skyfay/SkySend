@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import { Shield, Lock, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -43,7 +43,12 @@ export function UploadPage() {
 
   useEffect(() => {
     if (uploadHook.phase === "error" && uploadHook.error) {
-      toast.error(t(`upload.${uploadHook.error}`, { defaultValue: uploadHook.error }));
+      const raw = uploadHook.error;
+      if (raw === "fileNotReadable") {
+        showKnownErrorToast(t("upload.fileNotReadable"));
+      } else {
+        showKnownErrorToast(t(`upload.${raw}`, { defaultValue: raw }));
+      }
     }
   }, [uploadHook.phase, uploadHook.error, t]);
 

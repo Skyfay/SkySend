@@ -50,7 +50,8 @@
       "debug.timeline",
       "debug.close",
       "common.view",
-      "common.docs"
+      "common.docs",
+      "errors.insecureContext"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -326,5 +327,8 @@
   },
   "language": {
     "search": "Buscar idioma..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS obrigatório"
   }
 }

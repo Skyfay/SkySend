@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import { Lock, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -43,7 +43,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
 
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.error) {
-      toast.error(noteHook.error);
+      showKnownErrorToast(noteHook.error);
     }
   }, [noteHook.phase, noteHook.error]);
 

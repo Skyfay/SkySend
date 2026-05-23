@@ -49,7 +49,8 @@
       "debug.timeline",
       "debug.close",
       "common.view",
-      "common.docs"
+      "common.docs",
+      "errors.insecureContext"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -325,5 +326,8 @@
   },
   "language": {
     "search": "言語を検索..."
+  },
+  "errors": {
+    "insecureContext": "HTTPSが必要です"
   }
 }

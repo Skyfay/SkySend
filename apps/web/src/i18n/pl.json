@@ -274,5 +274,8 @@
     "close": "Zamknij"
   },  "language": {
     "search": "Wyszukaj język..."
+  },
+  "errors": {
+    "insecureContext": "Wymagane HTTPS"
   }
 }

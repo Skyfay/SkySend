@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import { Lock, Send, Loader2, Plus, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -158,7 +158,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
 
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.error) {
-      toast.error(noteHook.error);
+      showKnownErrorToast(noteHook.error);
     }
   }, [noteHook.phase, noteHook.error]);
 

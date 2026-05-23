@@ -271,5 +271,8 @@
   },
   "language": {
     "search": "Search language..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS required"
   }
 }

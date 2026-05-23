@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { showKnownErrorToast } from "@/lib/toast";
 import {
   FileText,
   KeyRound,
@@ -51,7 +51,7 @@ export function NoteViewPage() {
   // Show transient errors (e.g. decryption failure) as a toast instead of inline.
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.info && noteHook.error) {
-      toast.error(noteHook.error);
+      showKnownErrorToast(noteHook.error);
     }
   }, [noteHook.phase, noteHook.info, noteHook.error]);
 

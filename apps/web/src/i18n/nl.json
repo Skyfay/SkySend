@@ -276,5 +276,8 @@
   },
   "language": {
     "search": "Taal zoeken..."
+  },
+  "errors": {
+    "insecureContext": "HTTPS vereist"
   }
 }
