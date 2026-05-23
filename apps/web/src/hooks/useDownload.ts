@@ -40,6 +40,7 @@ interface DownloadState {
   phase: DownloadPhase;
   progress: number;
   speed: string | null;
+  averageSpeed: string | null;
   error: string | null;
   info: api.UploadInfo | null;
   metadata: FileMetadata | null;
@@ -53,6 +54,7 @@ export function useDownload() {
     phase: "idle",
     progress: 0,
     speed: null,
+    averageSpeed: null,
     error: null,
     info: null,
     metadata: null,
@@ -211,6 +213,7 @@ export function useDownload() {
         // ReadableStream responses in RAM instead of streaming to disk.
         // For files > 256 MB we show a warning first (handled by caller).
         const safari = isSafari();
+        const downloadStartTime = performance.now();
 
         // ── Download Strategy (ordered by preference) ──────────
         // Tier 1: SW stream - fastest (Chrome, Edge, Brave, Firefox)
@@ -437,12 +440,21 @@ export function useDownload() {
           URL.revokeObjectURL(url);
         }
 
+        let averageSpeed: string | null = null;
+        if (info.size > 0) {
+          const totalSec = (performance.now() - downloadStartTime) / 1000;
+          if (totalSec > 0) {
+            averageSpeed = `${formatBytes(info.size / totalSec)}/s`;
+          }
+        }
+
         setState((s) => ({
           ...s,
           phase: "done",
           progress: 100,
+          averageSpeed,
           debugInfo: s.debugInfo
-            ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download complete" }] }
+            ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Download complete · Ø ${averageSpeed}` : "Download complete" }] }
             : null,
         }));
       } catch (err) {
@@ -471,6 +483,7 @@ export function useDownload() {
       phase: "idle",
       progress: 0,
       speed: null,
+      averageSpeed: null,
       error: null,
       info: null,
       metadata: null,

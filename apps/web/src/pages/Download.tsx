@@ -170,6 +170,7 @@ export function DownloadPage() {
                 phase={downloadHook.phase}
                 progress={downloadHook.progress}
                 speed={downloadHook.speed}
+                averageSpeed={downloadHook.averageSpeed}
                 error={downloadHook.error}
                 onDownload={handleDownload}
               />

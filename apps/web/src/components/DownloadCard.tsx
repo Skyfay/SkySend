@@ -23,6 +23,7 @@ interface DownloadCardProps {
   phase: DownloadPhase;
   progress: number;
   speed?: string | null;
+  averageSpeed?: string | null;
   error: string | null;
   onDownload: () => void;
 }
@@ -33,6 +34,7 @@ export function DownloadCard({
   phase,
   progress,
   speed,
+  averageSpeed,
   error,
   onDownload,
 }: DownloadCardProps) {
@@ -126,6 +128,11 @@ export function DownloadCard({
           <div className="flex items-center gap-2 text-lg font-semibold text-success">
             <CheckCircle2 className="h-5 w-5" />
             <span>{t("download.complete")}</span>
+            {averageSpeed && (
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                Ø {averageSpeed}
+              </span>
+            )}
           </div>
 
           <Button onClick={() => navigate("/")} variant="outline" className="w-full">
