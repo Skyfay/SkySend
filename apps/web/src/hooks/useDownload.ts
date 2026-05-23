@@ -289,6 +289,7 @@ export function useDownload() {
         if (!downloaded && typeof window.showSaveFilePicker === "function") {
           try {
             console.info("[SkySend] Download tier: 2 (showSaveFilePicker)");
+            setState((s) => ({ ...s, progress: 0 }));
             setState((s) => ({
               ...s,
               debugInfo: {
@@ -369,6 +370,7 @@ export function useDownload() {
         // Tier 3: Blob fallback (uses RAM - last resort / Safari default)
         if (!downloaded) {
           console.warn(`[SkySend] Download tier: 3 (Blob fallback${safari ? " - Safari" : ""})`);
+          setState((s) => ({ ...s, progress: 0 }));
           setState((s) => ({
             ...s,
             debugInfo: {
