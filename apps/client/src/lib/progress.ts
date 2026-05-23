@@ -82,6 +82,7 @@ export function parseDuration(input: string): number {
   const value = parseInt(match[1]!, 10);
   const unit = match[2]!.toLowerCase();
   const multiplier = DURATION_MAP[unit];
+  /* v8 ignore next */
   if (!multiplier) throw new Error(`Invalid duration unit: ${unit}`);
   return value * multiplier;
 }

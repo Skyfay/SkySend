@@ -43,6 +43,9 @@ vi.mock("../../src/lib/opfs-download.js", () => ({
 
 vi.mock("../../src/lib/utils.js", () => ({
   isSafari: vi.fn().mockReturnValue(false),
+  isFirefox: vi.fn().mockReturnValue(false),
+  isDevToolsOpen: vi.fn().mockReturnValue(false),
+  getBrowserInfo: vi.fn().mockReturnValue("test-browser"),
   SAFARI_BIG_SIZE: 100 * 1024 * 1024,
   formatBytes: vi.fn((n: number) => `${n} B`),
 }));

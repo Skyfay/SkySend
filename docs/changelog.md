@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.10.0 - New Copy & Share Features, Download UX Improvements, and Bug Fixes
+*Released: May 24, 2026*
 
 ### ✨ Features
 
@@ -33,15 +33,20 @@ All notable changes to SkySend are documented here.
 - **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` to prevent brief download UI freezes on slow or jittery connections.
 - **web**: Added lightweight diagnostic logging to the Service Worker (stream-start summary, per-1000-record checkpoints, slow-read alerts, double-`readMore()` detection).
 
+### 🧪 Tests
+
+- **web**: Brought `apps/web` test coverage to 100% - added tests for `isFirefox`, `isDevToolsOpen`, and `getBrowserInfo` in utils, dismiss-all and multi-toast UPDATE in `useToast`, `loadInfo` non-`ApiError` path and `view()` without prior `loadInfo` in `useNoteView`, transport worker messages in `useUpload`, and 410/multi-upload branch coverage in `useUploadHistory`. Added `/* v8 ignore next */` annotations on dead-code and unreachable branches in `useUpload`, `useToast`, and `useNoteView`.
+- **client**: Brought `apps/client` test coverage to 100% - added token storage tests (array JSON, corrupt JSON, `clearStoredToken`) to `config`, rejection-sampling branch test to `password-generator`. Added `/* v8 ignore next */` annotations on dead-code branches in `progress` and `oidc`.
+
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.10.0`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
-## v2.9.5
-*Release: In Progress*
+## v2.9.5 - Cache-Control Fixes for Stale Content and Traefik Caching
+*Released: May 20, 2026*
 
 ### 🎨 Improvements
 

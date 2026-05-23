@@ -275,4 +275,42 @@ describe("useUpload", () => {
     expect(result.current.averageSpeed).not.toBeNull();
     expect(result.current.averageSpeed).toMatch(/\/s$/);
   });
+
+  it("Worker 'transport'-Message (WebSocket, kein Fallback) \u2192 debugInfo aktualisiert", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "transport", transport: "ws", fallback: false });
+    });
+
+    expect(result.current.debugInfo?.transport).toBe("ws");
+    expect(result.current.debugInfo?.fallback).toBe(false);
+    expect(result.current.debugInfo?.events.some((e) => e.message === "WebSocket transport active")).toBe(true);
+  });
+
+  it("Worker 'transport'-Message (HTTP-Fallback) \u2192 debugInfo aktualisiert", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "transport", transport: "http", fallback: true });
+    });
+
+    expect(result.current.debugInfo?.transport).toBe("http");
+    expect(result.current.debugInfo?.fallback).toBe(true);
+    expect(result.current.debugInfo?.events.some((e) => e.message.includes("HTTP fallback"))).toBe(true);
+  });
 });

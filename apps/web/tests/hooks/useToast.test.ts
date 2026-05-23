@@ -128,4 +128,39 @@ describe("useToast", () => {
       });
     }).not.toThrow();
   });
+
+  it("dismiss() with no argument closes all toasts", () => {
+    const { result } = renderHook(() => useToast());
+
+    act(() => {
+      toast({ title: "Toast A" });
+      toast({ title: "Toast B" });
+    });
+    expect(result.current.toasts.length).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.dismiss();
+    });
+
+    expect(result.current.toasts.every((t) => t.open === false)).toBe(true);
+  });
+
+  it("update() mit mehreren Toasts: nur der passende Toast wird geaendert", () => {
+    const { result } = renderHook(() => useToast());
+
+    let handleA!: ReturnType<typeof toast>;
+    act(() => {
+      handleA = toast({ title: "Toast A" });
+      toast({ title: "Toast B" });
+    });
+
+    act(() => {
+      handleA.update({ title: "Toast A updated" });
+    });
+
+    const updated = result.current.toasts.find((t) => t.title === "Toast A updated");
+    const unchanged = result.current.toasts.find((t) => t.title === "Toast B");
+    expect(updated).toBeDefined();
+    expect(unchanged).toBeDefined();
+  });
 });

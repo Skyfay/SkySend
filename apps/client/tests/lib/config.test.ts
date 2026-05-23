@@ -229,3 +229,51 @@ describe("legacy single-server config migration", () => {
     expect(servers[0]).toMatchObject({ name: "Default", url: "https://legacy.example.com" });
   });
 });
+
+// ── OIDC Token Storage ────────────────────────────────────────────────────────
+
+describe("getStoredToken / saveStoredToken / clearStoredToken", () => {
+  it("getStoredToken returns undefined when no tokens are stored", async () => {
+    const { getStoredToken } = await freshConfig();
+    expect(getStoredToken("https://a.example.com")).toBeUndefined();
+  });
+
+  it("saveStoredToken persists a token and getStoredToken retrieves it", async () => {
+    const { saveStoredToken, getStoredToken } = await freshConfig();
+    saveStoredToken("https://a.example.com/", "tok-abc");
+    expect(getStoredToken("https://a.example.com")).toBe("tok-abc");
+  });
+
+  it("clearStoredToken removes a previously stored token", async () => {
+    const { saveStoredToken, clearStoredToken, getStoredToken } = await freshConfig();
+    saveStoredToken("https://a.example.com", "tok-abc");
+    expect(getStoredToken("https://a.example.com")).toBe("tok-abc");
+    clearStoredToken("https://a.example.com");
+    expect(getStoredToken("https://a.example.com")).toBeUndefined();
+  });
+
+  it("loadTokens returns empty object when tokens file contains an array (invalid shape)", async () => {
+    const { saveStoredToken, getStoredToken, getConfigFilePath } = await freshConfig();
+    // Ensure the tokens file exists first via saveStoredToken
+    saveStoredToken("https://a.example.com", "tok-abc");
+    // Overwrite tokens.json with an array (not an object)
+    const { writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const tokensPath = join(getConfigFilePath(), "..", "tokens.json");
+    writeFileSync(tokensPath, JSON.stringify(["not", "an", "object"]), "utf-8");
+    // After reload (fresh module), loadTokens should return {}
+    const { getStoredToken: getStoredToken2 } = await freshConfig();
+    expect(getStoredToken2("https://a.example.com")).toBeUndefined();
+  });
+
+  it("loadTokens returns empty object when tokens file contains corrupt JSON", async () => {
+    const { saveStoredToken, getConfigFilePath } = await freshConfig();
+    saveStoredToken("https://a.example.com", "tok-abc");
+    const { writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const tokensPath = join(getConfigFilePath(), "..", "tokens.json");
+    writeFileSync(tokensPath, "not { valid json", "utf-8");
+    const { getStoredToken: getStoredToken2 } = await freshConfig();
+    expect(getStoredToken2("https://a.example.com")).toBeUndefined();
+  });
+});

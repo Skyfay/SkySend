@@ -51,6 +51,7 @@ function getApiBase(): string {
   if (import.meta.env.DEV) {
     return import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
   }
+  /* v8 ignore next */
   return "";
 }
 

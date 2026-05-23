@@ -158,4 +158,50 @@ describe("useUploadHistory", () => {
     expect(result.current.uploads[0]?.loading).toBe(false);
     expect(result.current.uploads[0]?.gone).toBe(false);
   });
+
+  it("410-Fehler markiert Upload als 'gone', anderer Upload bleibt erhalten", async () => {
+    const { getAllUploads, removeUpload } = await import("../../src/lib/upload-store.js");
+    const api = await import("../../src/lib/api.js");
+
+    vi.mocked(getAllUploads).mockResolvedValueOnce([storedUpload("p-1"), storedUpload("p-2")]);
+    vi.mocked(api.fetchInfo)
+      .mockResolvedValueOnce(uploadInfo("p-1"))
+      .mockRejectedValueOnce(new api.ApiError(410, "Gone"));
+
+    const { useUploadHistory } = await import("../../src/hooks/useUploadHistory.js");
+    const { result } = renderHook(() => useUploadHistory());
+
+    // Wait until p-1 is done loading and p-2 has been removed (gone=true filters it out)
+    await waitFor(() => {
+      const p1 = result.current.uploads.find((u) => u.id === "p-1");
+      expect(p1?.loading).toBe(false);
+      expect(result.current.uploads.find((u) => u.id === "p-2")).toBeUndefined();
+    });
+
+    expect(result.current.uploads.find((u) => u.id === "p-1")?.info).toBeDefined();
+    expect(vi.mocked(removeUpload)).toHaveBeenCalledWith("p-2");
+  });
+
+  it("Netzwerkfehler bei einem von zwei Uploads: beide bleiben sichtbar", async () => {
+    const { getAllUploads } = await import("../../src/lib/upload-store.js");
+    const api = await import("../../src/lib/api.js");
+
+    vi.mocked(getAllUploads).mockResolvedValueOnce([storedUpload("q-1"), storedUpload("q-2")]);
+    vi.mocked(api.fetchInfo)
+      .mockResolvedValueOnce(uploadInfo("q-1"))
+      .mockRejectedValueOnce(new Error("Network error"));
+
+    const { useUploadHistory } = await import("../../src/hooks/useUploadHistory.js");
+    const { result } = renderHook(() => useUploadHistory());
+
+    await waitFor(() => {
+      const q1 = result.current.uploads.find((u) => u.id === "q-1");
+      const q2 = result.current.uploads.find((u) => u.id === "q-2");
+      expect(q1?.loading).toBe(false);
+      expect(q2?.loading).toBe(false);
+    });
+
+    expect(result.current.uploads).toHaveLength(2);
+    expect(result.current.uploads.find((u) => u.id === "q-2")?.gone).toBe(false);
+  });
 });
