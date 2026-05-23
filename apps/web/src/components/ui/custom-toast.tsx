@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
@@ -16,7 +15,7 @@ import { cn } from "@/lib/utils";
 export type ToastType = "error" | "warning" | "info" | "success" | "default";
 
 export interface CustomToastProps {
-  id: string | number;
+  onDismiss: () => void;
   type?: ToastType;
   message: string;
   description?: string;
@@ -38,7 +37,7 @@ const TYPE_CONFIG: Record<
 };
 
 export function CustomToast({
-  id,
+  onDismiss,
   type = "default",
   message,
   description,
@@ -47,20 +46,40 @@ export function CustomToast({
 }: CustomToastProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    onDismiss();
+  };
 
   const config = TYPE_CONFIG[type];
   const IconComponent = config.icon;
   const hasActions = copyText !== undefined || !!docsUrl;
 
   const handleCopy = async () => {
+    const text = copyText ?? message;
     try {
-      await navigator.clipboard.writeText(copyText ?? message);
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = text;
+        el.style.position = "fixed";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API not available
+      // Copy not possible
     }
   };
+
+  if (dismissed) return null;
 
   return (
     <div className="flex w-full flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-lg">
@@ -81,7 +100,9 @@ export function CustomToast({
           )}
         </div>
         <button
-          onClick={() => toast.dismiss(id)}
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleDismiss}
           className="ml-1 shrink-0 text-muted-foreground transition-colors hover:text-foreground"
           aria-label={t("common.close")}
         >
@@ -93,6 +114,7 @@ export function CustomToast({
         <div className={cn("flex gap-1.5", IconComponent ? "ml-7" : "")}>
           {copyText !== undefined && (
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={handleCopy}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >

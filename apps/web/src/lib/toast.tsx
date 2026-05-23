@@ -110,7 +110,7 @@ export function showToast(message: string, options: ShowToastOptions = {}) {
   return toast.custom(
     (toastId) => (
       <CustomToast
-        id={toastId}
+        onDismiss={() => toast.dismiss(toastId)}
         type={type}
         message={message}
         description={description}
