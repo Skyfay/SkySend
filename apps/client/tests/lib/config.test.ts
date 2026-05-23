@@ -253,7 +253,7 @@ describe("getStoredToken / saveStoredToken / clearStoredToken", () => {
   });
 
   it("loadTokens returns empty object when tokens file contains an array (invalid shape)", async () => {
-    const { saveStoredToken, getStoredToken, getConfigFilePath } = await freshConfig();
+    const { saveStoredToken, getStoredToken: _getStoredToken, getConfigFilePath } = await freshConfig();
     // Ensure the tokens file exists first via saveStoredToken
     saveStoredToken("https://a.example.com", "tok-abc");
     // Overwrite tokens.json with an array (not an object)

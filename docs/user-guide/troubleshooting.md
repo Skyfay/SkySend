@@ -22,7 +22,7 @@ If you need to allow additional origins on top of `BASE_URL` (for example when t
 CORS_ORIGINS=https://cdn.example.com,https://www.example.com
 ```
 
-See the [Environment Variables reference](/user-guide/environment-variables) for details.
+See the [Environment Variables reference](/user-guide/configuration/environment-variables) for details.
 
 ## `crypto.subtle is undefined` / `Cannot read properties of undefined (reading 'importKey')`
 
