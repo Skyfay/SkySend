@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, Lock, Eye, EyeOff, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
+import { Shield, Lock, X, FileIcon, FolderArchive, FileText, KeyRound, Code, Terminal, LogIn } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { UploadZone } from "@/components/UploadZone";
 import { ExpirySelector } from "@/components/ExpirySelector";
 import { UploadProgress } from "@/components/UploadProgress";
 import { ShareLink } from "@/components/ShareLink";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { DebugPanel } from "@/components/DebugPanel";
 import { QuotaBar } from "@/components/QuotaBar";
 import { NoteForm } from "@/components/NoteForm";
@@ -45,7 +46,6 @@ export function UploadPage() {
   const [expireSec, setExpireSec] = useState<number>(0);
   const [maxDownloads, setMaxDownloads] = useState<number>(0);
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(false);
   const [quotaRefreshKey, setQuotaRefreshKey] = useState(0);
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
@@ -355,27 +355,11 @@ export function UploadPage() {
                 )}
               </div>
               {passwordEnabled && (
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                <PasswordProtectionInput
+                  value={password}
+                  onChange={setPassword}
+                  placeholder={t(config.forceFilePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+                />
               )}
             </div>
 

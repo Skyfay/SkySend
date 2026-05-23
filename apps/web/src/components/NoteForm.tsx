@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
+import { Lock, Send, Loader2, Type, Heading, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/lib/markdownComponents";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { formatDuration, formatBytes } from "@/lib/utils";
@@ -47,7 +48,6 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
   const [expireSec, setExpireSec] = useState<number | null>(() => null);
   const [maxViews, setMaxViews] = useState<number | null>(() => null);
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordEnabled, setPasswordEnabled] = useState(forcePassword);
 
   // Initialize defaults when config loads
@@ -337,28 +337,12 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
             )}
           </div>
           {passwordEnabled && (
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-                autoComplete="off"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+            <PasswordProtectionInput
+              value={password}
+              onChange={setPassword}
+              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+              disabled={isSubmitting}
+            />
           )}
         </div>
 

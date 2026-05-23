@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
+import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { formatDuration, formatBytes } from "@/lib/utils";
@@ -40,7 +41,6 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
   const [notePassword, setNotePassword] = useState("");
-  const [showNotePassword, setShowNotePassword] = useState(false);
   const [notePasswordEnabled, setNotePasswordEnabled] = useState(forcePassword);
 
   if (!config) return null;
@@ -283,27 +283,12 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
             )}
           </div>
           {notePasswordEnabled && (
-            <div className="relative">
-              <Input
-                type={showNotePassword ? "text" : "password"}
-                value={notePassword}
-                onChange={(e) => setNotePassword(e.target.value)}
-                placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-                autoComplete="off"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowNotePassword(!showNotePassword)}
-              >
-                {showNotePassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+            <PasswordProtectionInput
+              value={notePassword}
+              onChange={setNotePassword}
+              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+              disabled={isSubmitting}
+            />
           )}
         </div>
 
