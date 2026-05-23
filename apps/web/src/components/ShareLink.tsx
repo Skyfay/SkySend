@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Link, Plus, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -10,9 +10,10 @@ interface ShareLinkProps {
   link: string;
   averageSpeed?: string | null;
   onNewUpload: () => void;
+  children?: ReactNode;
 }
 
-export function ShareLink({ link, averageSpeed, onNewUpload }: ShareLinkProps) {
+export function ShareLink({ link, averageSpeed, onNewUpload, children }: ShareLinkProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
@@ -111,6 +112,7 @@ export function ShareLink({ link, averageSpeed, onNewUpload }: ShareLinkProps) {
           <Plus className="mr-1 h-4 w-4" />
           {t("upload.newUpload")}
         </Button>
+        {children}
       </CardContent>
     </Card>
   );

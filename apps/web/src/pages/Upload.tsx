@@ -166,10 +166,9 @@ export function UploadPage() {
   // Show share link when done
   if (uploadHook.phase === "done" && uploadHook.shareLink) {
     return (
-      <div className="space-y-2">
-        <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload} />
+      <ShareLink link={uploadHook.shareLink} averageSpeed={uploadHook.averageSpeed} onNewUpload={handleNewUpload}>
         <DebugPanel uploadInfo={uploadHook.debugInfo} />
-      </div>
+      </ShareLink>
     );
   }
 

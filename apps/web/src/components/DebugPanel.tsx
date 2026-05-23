@@ -126,10 +126,9 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
               <p className="mb-1.5 font-medium text-foreground">{t("debug.upload")}</p>
               <div className="space-y-1 text-muted-foreground">
                 <DebugRow label={t("debug.transport")} value={transportLabel(uploadInfo.transport)} />
-                <DebugRow
-                  label={t("debug.fallback")}
-                  value={uploadInfo.fallback ? t("debug.fallbackWsFailed") : t("debug.fallbackNone")}
-                />
+                {uploadInfo.fallback && (
+                  <DebugRow label={t("debug.fallback")} value={t("debug.fallbackWsFailed")} />
+                )}
                 <DebugRow label={t("debug.browser")} value={uploadInfo.browser} />
               </div>
             </div>
