@@ -35,7 +35,7 @@ showToast(t("errors.insecureContext"), {
 | `duration` | `number` | Override the auto-dismiss timeout in milliseconds. |
 | `id` | `string` | Deduplication key - a second call with the same ID updates the existing toast instead of opening a new one. |
 
-When neither `copyText` nor `docsUrl` is provided, `showToast()` delegates to the native Sonner helpers so the toast benefits from Sonner's built-in animations. When action buttons are needed it uses `toast.custom()` with the `CustomToast` component.
+When neither `copyText` nor `docsUrl` is provided, `showToast()` delegates to the native Sonner helpers so the toast benefits from Sonner's built-in animations. When action buttons are needed, it uses Sonner's native `toast.error()` (or the matching type variant) and passes a `ToastActionButtons` component as the `description` node. This keeps Sonner's native layout, close button, and animations intact.
 
 ## showKnownErrorToast()
 
@@ -66,19 +66,21 @@ For unknown errors it falls back to `toast.error(message)`.
 3. Call `showToast()` with the `docsUrl` pointing to the relevant docs article.
 4. Add a row to the table above.
 
-## CustomToast component
+## ToastActionButtons component
 
-The visual component lives at `apps/web/src/components/ui/custom-toast.tsx`. It is only used indirectly through `showToast()` / `toast.custom()` and is not meant to be rendered directly.
+The action buttons (Copy, Docs) live in `apps/web/src/components/ui/custom-toast.tsx` as the exported `ToastActionButtons` component. It is only used indirectly through `showToast()` and is not meant to be rendered directly.
 
-The component renders inside the Sonner portal and uses the project's Tailwind CSS variables (`bg-card`, `border-border`, `text-card-foreground`, etc.) so it automatically adapts to light and dark mode.
+The component handles clipboard writes with a `navigator.clipboard` primary path and a `document.execCommand` fallback for HTTP contexts where the Clipboard API is unavailable.
 
 ## Toaster placement
 
 The `<Toaster />` component is rendered once in `App.tsx` outside the router. It is configured via `apps/web/src/components/ui/sonner.tsx`:
 
 - **Position**: `top-center`
-- **Close button**: enabled
+- **Close button**: enabled (Sonner's native close button, positioned top-right)
 - **Theme**: follows the user's current theme (dark / light / system) via `useTheme()`
+- **Icons**: custom Lucide icons (`AlertCircle`, `AlertTriangle`, `CheckCircle2`, `Info`) replace Sonner's built-in icons to match the app's design
+- **Colors**: overridden via CSS in `index.css` to use the app's card tokens (`--color-card`, `--color-border`, `--color-card-foreground`) in both light and dark mode
 
 ## i18n
 

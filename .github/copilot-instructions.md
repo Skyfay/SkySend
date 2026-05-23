@@ -60,6 +60,10 @@ showKnownErrorToast(hook.error);  // enriches known errors, falls back to toast.
 3. Call `showToast()` with `type: "error"`, `copyText`, and the `docsUrl`.
 4. Document the pattern in `docs/developer-guide/toast-system.md`.
 
+### Architecture note
+
+`showToast()` uses Sonner's native `toast.error()` / `toast.warning()` etc. for all toasts. When `copyText` or `docsUrl` are provided, it passes a `ToastActionButtons` component (from `@/components/ui/custom-toast`) as the `description` node. Sonner's own close button, animations, and layout are always used - there is no `toast.custom()` call.
+
 # i18n Translation Files
 
 Translation files live in `apps/web/src/i18n/`. The source-of-truth languages are **English** (`en.json`) and **German** (`de.json`). Always add new keys to both of those files first.
