@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   deriveKeys,
   computeAuthToken,
@@ -62,6 +62,8 @@ export function useDownload() {
     pendingDownloadArgs: null,
   });
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const loadInfo = useCallback(async (id: string) => {
     try {
       setState((s) => ({ ...s, phase: "loading-info", error: null }));
@@ -89,6 +91,8 @@ export function useDownload() {
       /** Skip the Firefox DevTools warning (user chose "download anyway") */
       forceDevTools = false,
     ) => {
+      const abortCtrl = new AbortController();
+      abortControllerRef.current = abortCtrl;
       try {
         const info = state.info ?? (await api.fetchInfo(id));
         if (!info) throw new Error("Upload not found");
@@ -271,10 +275,13 @@ export function useDownload() {
                     : null,
                 }));
               },
+              abortCtrl.signal,
             );
             downloaded = true;
           }
         } catch (swErr) {
+          // User-initiated cancel - do not fall through to Tier 2/3
+          if (swErr instanceof DOMException && swErr.name === "AbortError") throw swErr;
           console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
         }
 
@@ -347,7 +354,7 @@ export function useDownload() {
 
             await progressStream
               .pipeThrough(createDecryptStream(keys.fileKey))
-              .pipeTo(writable);
+              .pipeTo(writable, { signal: abortCtrl.signal });
             if (tier2StallTimer) clearTimeout(tier2StallTimer);
             downloaded = true;
           } catch (pickerErr) {
@@ -426,6 +433,10 @@ export function useDownload() {
           for (;;) {
             const { done, value } = await reader.read();
             if (done) break;
+            if (abortCtrl.signal.aborted) {
+              reader.cancel();
+              throw new DOMException("Download cancelled by user", "AbortError");
+            }
             chunks.push(value);
           }
           if (blobStallTimer) clearTimeout(blobStallTimer);
@@ -458,7 +469,8 @@ export function useDownload() {
             : null,
         }));
       } catch (err) {
-        // User cancelled the save dialog - not an error
+        abortControllerRef.current = null;
+        // User cancelled (save dialog, cancel button, etc.) - not an error
         if (err instanceof DOMException && err.name === "AbortError") {
           setState((s) => ({ ...s, phase: "idle" }));
           return;
@@ -490,6 +502,11 @@ export function useDownload() {
       debugInfo: null,
       pendingDownloadArgs: null,
     });
+  }, []);
+
+  const cancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
   }, []);
 
   /** User chose "Continue anyway" on the Safari large-file warning */
@@ -530,6 +547,7 @@ export function useDownload() {
     ...state,
     loadInfo,
     download,
+    cancel,
     reset,
     confirmSafariDownload,
     dismissSafariWarning,

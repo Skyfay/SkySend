@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Archive,
   Plus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +27,7 @@ interface DownloadCardProps {
   averageSpeed?: string | null;
   error: string | null;
   onDownload: () => void;
+  onCancel?: () => void;
 }
 
 export function DownloadCard({
@@ -37,6 +39,7 @@ export function DownloadCard({
   averageSpeed,
   error,
   onDownload,
+  onCancel,
 }: DownloadCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -119,6 +122,12 @@ export function DownloadCard({
             </span>
           </div>
           <Progress value={progress} />
+          {onCancel && (
+            <Button onClick={onCancel} variant="outline" size="sm" className="w-full">
+              <X className="mr-2 h-4 w-4" />
+              {t("download.cancel")}
+            </Button>
+          )}
         </div>
       )}
 

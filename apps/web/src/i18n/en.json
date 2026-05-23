@@ -98,6 +98,7 @@
     "tooManyAttempts": "Too many failed attempts. Please wait a few minutes and try again.",
     "download": "Download",
     "downloading": "Decrypting and downloading...",
+    "cancel": "Cancel Download",
     "decrypting": "Decrypting...",
     "complete": "Download complete!",
     "failed": "Download failed",

@@ -173,6 +173,7 @@ export function DownloadPage() {
                 averageSpeed={downloadHook.averageSpeed}
                 error={downloadHook.error}
                 onDownload={handleDownload}
+                onCancel={downloadHook.cancel}
               />
             )}
 

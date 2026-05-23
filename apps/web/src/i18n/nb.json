@@ -103,6 +103,7 @@
     "tooManyAttempts": "For mange mislykkede forsøk. Vent noen minutter og prøv igjen.",
     "download": "Last ned",
     "downloading": "Dekrypterer og laster ned...",
+    "cancel": "Avbryt nedlasting",
     "decrypting": "Dekrypterer...",
     "complete": "Nedlasting fullført!",
     "failed": "Nedlasting mislyktes",

@@ -103,6 +103,7 @@
     "tooManyAttempts": "Te veel mislukte pogingen. Wacht een paar minuten en probeer het opnieuw.",
     "download": "Downloaden",
     "downloading": "Ontsleutelen en downloaden...",
+    "cancel": "Download annuleren",
     "decrypting": "Ontsleutelen...",
     "complete": "Download voltooid!",
     "failed": "Download mislukt",

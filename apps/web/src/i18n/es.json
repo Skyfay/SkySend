@@ -103,6 +103,7 @@
     "tooManyAttempts": "Demasiados intentos fallidos. Por favor, espera unos minutos e inténtalo de nuevo.",
     "download": "Descargar",
     "downloading": "Descifrando y descargando...",
+    "cancel": "Cancelar descarga",
     "decrypting": "Descifrando...",
     "complete": "¡Descarga completada!",
     "failed": "Error en la descarga",

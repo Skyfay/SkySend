@@ -257,9 +257,13 @@ export async function streamDownloadViaSw(
   encryptedSize: number,
   onProgress: (progress: number) => void,
   onDebugInfo?: (swPath: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
+
+  // If already aborted before we even start, bail out immediately.
+  if (signal?.aborted) throw new DOMException("Download cancelled", "AbortError");
 
   const downloadId = crypto.randomUUID();
 
@@ -270,9 +274,17 @@ export async function streamDownloadViaSw(
       reject(new Error("SW config timeout"));
     }, 5000);
 
+    const abortHandler = () => {
+      clearTimeout(timeout);
+      downloadBc.removeEventListener("message", handler);
+      reject(new DOMException("Download cancelled", "AbortError"));
+    };
+    signal?.addEventListener("abort", abortHandler, { once: true });
+
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "config-ok" && e.data?.id === downloadId) {
         clearTimeout(timeout);
+        signal?.removeEventListener("abort", abortHandler);
         downloadBc.removeEventListener("message", handler);
         resolve();
       }
@@ -292,6 +304,13 @@ export async function streamDownloadViaSw(
     });
   });
 
+  // When the caller aborts, tell the SW to cancel the in-progress download.
+  // The SW will set cancelled=true, cancel the reader, error the stream, and
+  // send back a "dl-cancelled" message so we can clean up the promise below.
+  signal?.addEventListener("abort", () => {
+    downloadBc.postMessage({ type: "cancel", id: downloadId });
+  }, { once: true });
+
   // Trigger download via <a> navigation (no download attribute).
   // Without the download attribute the browser treats this as a regular navigation,
   // which the SW intercepts and answers with Content-Disposition: attachment -
@@ -309,7 +328,7 @@ export async function streamDownloadViaSw(
   a.click();
   a.remove();
 
-  // Wait for SW to signal completion (dl-done or dl-error).
+  // Wait for SW to signal completion (dl-done, dl-error, or dl-cancelled).
   // Messages are filtered by downloadId (not clientId, which is empty for navigations).
   await new Promise<void>((resolve, reject) => {
     let gotFirstMessage = false;
@@ -345,6 +364,13 @@ export async function streamDownloadViaSw(
         clearTimeout(completionTimeout);
         downloadBc.removeEventListener("message", handler);
         resolve();
+      } else if (msg.type === "dl-cancelled") {
+        // User-initiated cancel via the cancel button - throw AbortError so the
+        // caller can distinguish a clean cancel from a real download error and
+        // skip fallback tiers.
+        clearTimeout(completionTimeout);
+        downloadBc.removeEventListener("message", handler);
+        reject(new DOMException("Download cancelled by user", "AbortError"));
       } else if (msg.type === "dl-error") {
         clearTimeout(completionTimeout);
         downloadBc.removeEventListener("message", handler);

@@ -103,6 +103,7 @@
     "tooManyAttempts": "Trop de tentatives échouées. Veuillez patienter quelques minutes avant de réessayer.",
     "download": "Télécharger",
     "downloading": "Déchiffrement et téléchargement...",
+    "cancel": "Annuler le téléchargement",
     "decrypting": "Déchiffrement...",
     "complete": "Téléchargement terminé !",
     "failed": "Échec du téléchargement",

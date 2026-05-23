@@ -103,6 +103,7 @@
     "tooManyAttempts": "Liian monta epäonnistunutta yritystä. Odota muutama minuutti ja yritä uudelleen.",
     "download": "Lataa",
     "downloading": "Puretaan salausta ja ladataan...",
+    "cancel": "Peruuta lataus",
     "decrypting": "Puretaan salausta...",
     "complete": "Lataus valmis!",
     "failed": "Lataus epäonnistui",

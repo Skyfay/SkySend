@@ -67,6 +67,8 @@ async function deriveFileKey(secret, salt) {
 
 /** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number}>} */
 const pending = new Map();
+/** @type {Map<string, () => void>} Maps downloadId to a cancel function that aborts the in-progress download. */
+const pendingCancels = new Map();
 const bc = new BroadcastChannel("skysend-download");
 
 // ── SW Lifecycle ───────────────────────────────────────
@@ -92,6 +94,9 @@ bc.onmessage = (event) => {
       size: msg.size || 0,
     });
     bc.postMessage({ type: "config-ok", id: msg.id });
+  }
+  if (msg.type === "cancel" && msg.id) {
+    pendingCancels.get(msg.id)?.();
   }
 };
 
@@ -130,6 +135,10 @@ self.addEventListener("fetch", (event) => {
  */
 async function handleDownload(config, downloadId, streamDone) {
   const { url, authToken, secret, salt, filename, mimeType, size } = config;
+  const cleanup = () => {
+    pendingCancels.delete(downloadId);
+    streamDone();
+  };
 
   const fileKey = await deriveFileKey(secret, salt);
 
@@ -140,7 +149,7 @@ async function handleDownload(config, downloadId, streamDone) {
 
   if (!apiResponse.ok) {
     bc.postMessage({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
-    streamDone();
+    cleanup();
     return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
   }
 
@@ -156,7 +165,7 @@ async function handleDownload(config, downloadId, streamDone) {
     response = await fetch(data.url);
     if (!response.ok) {
       bc.postMessage({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
-      streamDone();
+      cleanup();
       return new Response(`S3 download failed: ${response.status}`, { status: 502 });
     }
   } else {
@@ -205,6 +214,29 @@ async function handleDownload(config, downloadId, streamDone) {
   let lastProgressTime = 0;
   let lastCheckpointTime = Date.now();
   let cancelled = false;
+  // Guard so cancelStream() / controller.error() is only called once.
+  let streamErrored = false;
+
+  // Called from both the user-cancel path (via pendingCancels) and from pull()
+  // when it detects cancelled=true. The guard prevents double controller.error().
+  function cancelStream(controller) {
+    if (streamErrored) return;
+    streamErrored = true;
+    reader.cancel().catch(() => {});
+    console.warn(`[SW-dl:${downloadId}] stream cancelled by user`);
+    controller.error(new DOMException("user-cancelled", "AbortError"));
+    bc.postMessage({ type: "dl-cancelled", downloadId });
+    cleanup();
+  }
+
+  // Register an external cancel function so bc.onmessage can abort this download.
+  // Sets cancelled=true and cancels the reader so the pending reader.read() inside
+  // readMore() resolves immediately with {done:true}, allowing pull() to detect
+  // cancelled and call cancelStream(controller) with the controller reference.
+  pendingCancels.set(downloadId, () => {
+    cancelled = true;
+    reader.cancel().catch(() => {});
+  });
 
   // Chunk queue: incoming network chunks are held by reference with zero copy.
   // readFromBuf allocates only the bytes needed for the current operation
@@ -278,7 +310,7 @@ async function handleDownload(config, downloadId, streamDone) {
 
   const decryptStream = new ReadableStream({
     async pull(controller) {
-      if (cancelled) return;
+      if (cancelled) { cancelStream(controller); return; }
       // Ensure the buffer has enough data for one full encrypted record before
       // attempting to decrypt. The while-loop is required: without it pull()
       // would return without enqueuing, causing the stream to call pull() again
@@ -289,7 +321,7 @@ async function handleDownload(config, downloadId, streamDone) {
       while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
         await readMore();
         readMoreCalls++;
-        if (cancelled) return;
+        if (cancelled) { cancelStream(controller); return; }
       }
       // Double-readMore: ECE records (65552 B) and network chunks (65536 B) differ
       // by 16 B, so the ciphertext buffer drifts down by 16 B per record. Every
@@ -304,7 +336,7 @@ async function handleDownload(config, downloadId, streamDone) {
         if (bufLen() < NONCE_LENGTH) {
           bc.postMessage({ type: "dl-done", downloadId });
           controller.close();
-          streamDone();
+          cleanup();
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
@@ -312,7 +344,7 @@ async function handleDownload(config, downloadId, streamDone) {
         // Read more if needed for first record
         while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {
           await readMore();
-          if (cancelled) return;
+          if (cancelled) { cancelStream(controller); return; }
         }
       }
 
@@ -342,7 +374,7 @@ async function handleDownload(config, downloadId, streamDone) {
           console.error(`[SW-dl:${downloadId}] decrypt error on record #${counter - 1}:`, e);
           bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          cleanup();
           return;
         }
         controller.enqueue(new Uint8Array(plain));
@@ -373,7 +405,7 @@ async function handleDownload(config, downloadId, streamDone) {
           console.error(`[SW-dl:${downloadId}] decrypt error on final record:`, e);
           bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
           controller.error(e);
-          streamDone();
+          cleanup();
           return;
         }
         controller.enqueue(new Uint8Array(plain));
@@ -381,14 +413,14 @@ async function handleDownload(config, downloadId, streamDone) {
         bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
         bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        cleanup();
         return;
       }
 
       if (readerDone && bufLen() <= TAG_LENGTH) {
         bc.postMessage({ type: "dl-done", downloadId });
         controller.close();
-        streamDone();
+        cleanup();
       }
     },
 
@@ -397,7 +429,7 @@ async function handleDownload(config, downloadId, streamDone) {
       console.warn(`[SW-dl:${downloadId}] stream cancelled by consumer`);
       reader.cancel();
       bc.postMessage({ type: "dl-error", downloadId, error: "cancelled" });
-      streamDone();
+      cleanup();
     },
   // highWaterMark: 8 keeps up to 8 pre-decrypted records (~512 KB plaintext)
   // in the stream's internal queue. Firefox's download manager reads from this
