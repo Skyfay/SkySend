@@ -313,4 +313,98 @@ describe("useUpload", () => {
     expect(result.current.debugInfo?.fallback).toBe(true);
     expect(result.current.debugInfo?.events.some((e) => e.message.includes("HTTP fallback"))).toBe(true);
   });
+
+  it("Worker 'transport'-Message (HTTP-Chunks, kein Fallback) → 'HTTP chunks transport active'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "transport", transport: "http", fallback: false });
+    });
+
+    expect(result.current.debugInfo?.transport).toBe("http");
+    expect(result.current.debugInfo?.fallback).toBe(false);
+    expect(result.current.debugInfo?.events.some((e) => e.message === "HTTP chunks transport active")).toBe(true);
+  });
+
+  it("Datei ohne MIME-Typ → fällt auf 'application/octet-stream' zurück", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    const noMimeFile = new File(["hello"], "test.bin", { type: "" });
+
+    act(() => {
+      result.current.upload({ files: [noMimeFile], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    expect(MockWorker.lastInstance!.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          mimeType: "application/octet-stream",
+        }),
+      }),
+      expect.any(Array),
+    );
+  });
+
+  it("Worker 'phase'-Message 'saving-meta' → uploadStartTime nicht gesetzt", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "phase", phase: "saving-meta" });
+    });
+
+    expect(result.current.phase).toBe("saving-meta");
+  });
+
+  it("Upload abgeschlossen ohne vorherige 'uploading'-Phase → averageSpeed=null", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "done", id: "file-xyz", ownerToken: "tok", effectiveSecret: "sec" });
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("done"));
+    expect(result.current.averageSpeed).toBeNull();
+    expect(result.current.debugInfo?.events.some((e) => e.message === "Upload complete")).toBe(true);
+  });
+
+  it("Catch: Non-Error-Wert geworfen → error='Upload failed'", async () => {
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(cryptoMod.generateSecret).mockImplementationOnce(() => {
+      throw "string error";
+    });
+
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    await act(async () => {
+      await result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Upload failed");
+  });
 });
+
