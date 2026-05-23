@@ -7,32 +7,31 @@ All notable changes to SkySend are documented here.
 
 ### ✨ Features
 
-- **web**: Added a copy button and a password generator button to the "Password protection" input field on all upload types (File, Text, Password, Code, SSH Key). The layout now matches the existing password entries in the Password tab: the input field is followed by a copy button (with brief "Copied!" feedback) and a generator toggle button that opens the `PasswordGenerator` panel below the field.
-- **web**: Added a "View" button (eye icon) to note cards in "My Uploads". Clicking it opens the note's share link directly in the browser, analogous to the download button on file cards.
-- **web**: The browser favicon now shows a circular progress indicator (matching the upload favicon) during active downloads. Progress resets to 0% automatically when the download engine falls back to a lower tier (Service Worker -> File System Access -> Blob), and the original favicon is restored once the download finishes, fails, or is cancelled.
-- **web**: Added a "Cancel Download" button that appears during an active download, analogous to the existing upload cancel button. Clicking it sends a `cancel` message via `BroadcastChannel` to the Service Worker, which errors the `ReadableStream` immediately and aborts the underlying network fetch. The browser download manager cancels as a result. An `AbortController` in the download hook ensures no fallback tier (File System Access or Blob) is triggered on user-initiated cancel.
-- **web**: Added an in-app Debug Info Panel accessible via an `(i)` button next to the download and upload progress indicators. The panel shows the active download tier (SW Stream, Sav)e File Picker, or Blob, the Service Worker decryption path, browser name and version, DevTools detection status, file size, upload transport (WebSocket or HTTP Chunks), fallback status, and a timestamped event timeline. All values reflect actual runtime decisions rather than heuristics. Includes a "Copy to clipboard" button for easy bug report sharing.
-- **web**: Added a Firefox DevTools detection warning on the download page. When Firefox DevTools are docked (bottom, left, or right panel) at the time a download is initiated, a warning modal is shown asking the user to close them before proceeding. Includes a retry button that re-checks the detection and a secondary escape-hatch button to proceed anyway in case of a false positive.
-- **web**: Average download speed is now displayed at the end of a download (e.g. "Ø 85.3 MB/s") in the download completion card, matching the existing average speed display for uploads. Works across all three download tiers (SW Stream, File System Access, Blob). The debug event timeline now also includes the average speed in the "Download complete" message.
-- **client**: Average download speed is now shown in the CLI output and TUI completion screen after a successful download, matching the existing behavior for uploads.
-- **web**: Replaced the fragmented inline error display (raw text below form fields) with a global toast notification system. Upload failures, note creation errors, SSH key generation errors, wrong password attempts, and decryption failures now appear as typed toasts (error, warning, info) in the top-right corner with a close button, making errors visible regardless of scroll position. Fatal page-level errors (expired note, file not found, download limit reached) continue to render as full-page `ErrorDisplay` components.
-- **web**: Added a `showToast()` helper (`lib/toast.tsx`) and a `CustomToast` component that extend the base Sonner toasts with optional action buttons. When `copyText` is provided a Copy button copies the message to clipboard. When `docsUrl` is provided a Docs button opens the linked documentation article in a new tab. Both buttons are shown inline below the toast message and the helper falls back to native Sonner calls for simple toasts without actions.
-- **web**: Added `showKnownErrorToast()` for error messages from the crypto pipeline. When the error indicates that `crypto.subtle` is unavailable (plain HTTP context), the toast is automatically enriched with the title "HTTPS required", a Copy button, and a Docs button linking to the troubleshooting guide. All upload, note, SSH key, and download error toasts now use this helper.
-- **web**: Added `isOriginNotAllowedError()` pattern to `showKnownErrorToast()`. WebSocket upload rejections due to a misconfigured `ALLOWED_ORIGINS` setting now show a user-friendly "Origin not allowed" toast with a Copy button and a Docs button linking to the troubleshooting guide.
+- **web**: Added a copy button and a password generator button to the "Password protection" input on all upload types.
+- **web**: Added a "View" button (eye icon) to note cards in "My Uploads" to open the share link directly in the browser.
+- **web**: The browser favicon now shows a circular progress indicator during active downloads and is restored once the download finishes, fails, or is cancelled.
+- **web**: Added a "Cancel Download" button that aborts the active download across all tiers (Service Worker, File System Access, Blob).
+- **web**: Added an in-app Debug Info Panel with runtime details (download tier, browser, DevTools status, file size, transport, event timeline) and a "Copy to clipboard" button.
+- **web**: Added a Firefox DevTools detection warning modal when DevTools are docked at download start, with a retry button and an escape-hatch to proceed anyway.
+- **web**: Average download speed is now shown in the download completion card (e.g. "Ø 85.3 MB/s"), matching the existing upload display.
+- **client**: Average download speed is now shown in the CLI output and TUI completion screen after a successful download.
+- **web**: Replaced inline error messages with a global toast notification system for upload, note, SSH key, and decryption errors.
+- **web**: Added a `showToast()` helper with optional Copy and Docs action buttons for enriched toast notifications.
+- **web**: Added `showKnownErrorToast()` that automatically enriches crypto pipeline errors (e.g. missing HTTPS) with a title, Copy button, and Docs link.
+- **web**: Added an `isOriginNotAllowedError()` pattern to `showKnownErrorToast()` for misconfigured `ALLOWED_ORIGINS` WebSocket rejections.
 
 ### 🐛 Bug Fixes
 
-- **web**: Fixed the close button and the copy button on `CustomToast` (used by `showToast()` and `showKnownErrorToast()`). Sonner's built-in close button was rendered on top of the custom one and did not dismiss custom toasts reliably - it is now disabled for `toast.custom()` calls so the component's own close button handles dismissal. The copy button now falls back to `document.execCommand("copy")` when `navigator.clipboard` is unavailable (plain HTTP context).
-- **web**: Fixed the note password prompt becoming permanently disabled after a wrong password attempt. The `loading` prop was derived from `phase === "needs-password" && !!passwordInput`, which stayed `true` after the verification returned because `passwordInput` still held the previous attempt's value. The condition now uses `phase === "verifying-password"` so the input is re-enabled as soon as verification completes.
-- **web**: Fixed the SSH key fingerprint overflowing its container. The `SHA256:...` string now wraps with `break-all`, consistent with the public and private key fields below it.
-- **web**: Fixed the X-button and file-size badge being pushed off-screen when a selected file has a very long name in the upload file list. Added `w-full` to the file `<ul>` and `overflow-hidden` to each `<li>` so the filename span is always truncated with an ellipsis and both the size badge and the remove button remain visible.
-- **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline (~150,000 calls per 2.5 GiB download). Firefox buffers SW console output via IPC to the parent process even when DevTools are closed, which overwhelmed the parent process and caused the multi-minute browser UI freezes reported by several users.
+- **web**: Fixed the note password input becoming permanently disabled after a wrong password attempt.
+- **web**: Fixed the SSH key fingerprint overflowing its container on narrow screens.
+- **web**: Fixed the remove button and file-size badge being pushed off-screen for files with very long names in the upload list.
+- **web**: Removed per-record `console.debug` calls from the Service Worker download pipeline that caused multi-minute Firefox UI freezes on large files.
 
 ### 🎨 Improvements
 
-- **web**: Replaced the `clients.matchAll()` broadcast mechanism in the Service Worker with a `BroadcastChannel("skysend-download")`. All SW-to-main-thread messages (`dl-progress`, `dl-done`, `dl-error`, `config-ok`) and main-to-SW config messages now use the channel directly, removing the async `clients.matchAll()` overhead and the dependency on `event.source` for replies.
-- **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` (~512 KB of pre-decrypted plaintext queued). This absorbs occasional double-`readMore()` stalls caused by a 16-byte drift per ECE record, preventing brief download UI freezes on slow or jittery connections.
-- **web**: Added lightweight diagnostic logging to the Service Worker: a stream-start summary, per-1000-record checkpoints with elapsed time, slow-read alerts (>1 s per chunk), and double-`readMore()` event detection. Replaces the removed per-record spam with roughly 60 targeted log lines per 2.5 GiB download for future freeze analysis.
+- **web**: Replaced the `clients.matchAll()` broadcast in the Service Worker with a `BroadcastChannel("skysend-download")` for all SW-to-main-thread and config messages.
+- **web**: Increased the Service Worker ReadableStream `highWaterMark` from `2` to `8` to prevent brief download UI freezes on slow or jittery connections.
+- **web**: Added lightweight diagnostic logging to the Service Worker (stream-start summary, per-1000-record checkpoints, slow-read alerts, double-`readMore()` detection).
 
 ### 🐳 Docker
 
