@@ -216,7 +216,7 @@ describe("upload-ws route", () => {
       msgEvent(JSON.stringify({ type: "init", headers })),
       fake.ws,
     );
-    const ready = fake.lastJson();
+    const ready = fake.allJson().find((m) => m.type === "ready") ?? null;
     expect(ready).toMatchObject({ type: "ready" });
     const uploadId = (ready as { id: string }).id;
     expect(uploadId).toMatch(/^[0-9a-f-]{36}$/);

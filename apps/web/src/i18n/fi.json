@@ -277,6 +277,7 @@
   },
   "errors": {
     "insecureContext": "HTTPS vaaditaan",
-    "originNotAllowed": "Palvelin esti tämän alkuperän"
+    "originNotAllowed": "Palvelin esti tämän alkuperän",
+    "s3CorsError": "S3 CORS ei ole määritetty"
   }
 }

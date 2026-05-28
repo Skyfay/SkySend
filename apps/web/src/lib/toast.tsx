@@ -12,6 +12,9 @@ const INSECURE_CONTEXT_DOCS_URL =
 const ORIGIN_NOT_ALLOWED_DOCS_URL =
   "https://docs.skysend.app/user-guide/troubleshooting#upload-fails-with-origin-not-allowed";
 
+const S3_CORS_DOCS_URL =
+  "https://docs.skysend.app/user-guide/troubleshooting#s3-downloads-fail-with-cors-error";
+
 /**
  * Returns true when the error message indicates that the Web Crypto API is
  * unavailable because the page is served over plain HTTP (insecure context).
@@ -34,6 +37,14 @@ export function isInsecureContextError(message: string): boolean {
  */
 export function isOriginNotAllowedError(message: string): boolean {
   return message.includes("Origin not allowed");
+}
+
+/**
+ * Returns true when a download from an S3/R2 presigned URL failed because
+ * the bucket's CORS policy does not allow requests from this origin.
+ */
+export function isS3CorsError(message: string): boolean {
+  return message.includes("S3 CORS") || message.includes("S3 unreachable");
 }
 
 /**
@@ -63,6 +74,15 @@ export function showKnownErrorToast(message: string): void {
       description: message,
       copyText: message,
       docsUrl: ORIGIN_NOT_ALLOWED_DOCS_URL,
+    });
+    return;
+  }
+  if (isS3CorsError(message)) {
+    showToast(i18n.t("errors.s3CorsError"), {
+      type: "error",
+      description: message,
+      copyText: message,
+      docsUrl: S3_CORS_DOCS_URL,
     });
     return;
   }

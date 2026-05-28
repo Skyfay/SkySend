@@ -279,6 +279,7 @@
   },
   "errors": {
     "insecureContext": "HTTPS kreves",
-    "originNotAllowed": "Serveren blokkerte dette opphavet"
+    "originNotAllowed": "Serveren blokkerte dette opphavet",
+    "s3CorsError": "S3 CORS ikke konfigurert"
   }
 }

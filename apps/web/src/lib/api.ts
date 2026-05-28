@@ -200,7 +200,7 @@ export async function verifyPassword(
 export async function downloadFile(
   id: string,
   authToken: string,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number; fileCount: number }> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number; fileCount: number; storageBackend: "s3" | "filesystem" }> {
   const res = await fetch(`/api/download/${encodeURIComponent(id)}`, {
     headers: { "X-Auth-Token": authToken },
   });
@@ -216,13 +216,22 @@ export async function downloadFile(
   const contentType = res.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
     const data = (await res.json()) as { url: string; size: number; fileCount: number };
-    const s3Res = await fetch(data.url);
+    let s3Res: Response;
+    try {
+      s3Res = await fetch(data.url);
+    } catch {
+      throw new Error(
+        "S3 CORS error: The bucket must allow cross-origin GET requests from this origin. " +
+        "Add this origin to the CORS policy of your S3/R2 bucket.",
+      );
+    }
     if (!s3Res.ok) throw new ApiError(s3Res.status, "S3 download failed");
     if (!s3Res.body) throw new Error("No response body from S3");
     return {
       stream: s3Res.body,
       size: data.size,
       fileCount: data.fileCount,
+      storageBackend: "s3",
     };
   }
 
@@ -233,6 +242,7 @@ export async function downloadFile(
     stream: res.body,
     size: parseInt(res.headers.get("Content-Length") ?? "0", 10),
     fileCount: parseInt(res.headers.get("X-File-Count") ?? "1", 10),
+    storageBackend: "filesystem",
   };
 }
 

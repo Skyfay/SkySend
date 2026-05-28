@@ -79,6 +79,7 @@ export type UploadWorkerMessage =
   | { type: "phase"; phase: string }
   | { type: "progress"; loaded: number; total: number }
   | { type: "transport"; transport: "ws" | "http"; fallback: boolean }
+  | { type: "storage"; backend: "s3" | "filesystem" }
   | {
       type: "done";
       id: string;
@@ -556,6 +557,11 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
       fatalError = new Error(msg.message ?? "Server error");
       notifyReady();
       notifyDone();
+    } else if (msg.type === "storage") {
+      const backend = (msg as unknown as { backend?: string }).backend;
+      if (backend === "s3" || backend === "filesystem") {
+        post({ type: "storage", backend });
+      }
     }
   });
 
