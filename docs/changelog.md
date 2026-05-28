@@ -8,6 +8,7 @@ All notable changes to SkySend are documented here.
 ### ✨ Features
 
 - **web**: Added an `isS3CorsError()` pattern to `showKnownErrorToast()` so S3/R2 CORS failures during download are shown as an enriched toast with a Copy button and a link to the troubleshooting docs.
+- **web**: The Debug Info Panel event timeline now shows which storage backend is active: "S3 upload active" when the server uses S3/R2 for an upload, and "S3 presigned URL received" when a download fetches directly from S3/R2 (all three download tiers covered).
 
 ### 🐛 Bug Fixes
 

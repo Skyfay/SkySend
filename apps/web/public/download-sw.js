@@ -164,6 +164,8 @@ async function handleDownload(config, downloadId, streamDone) {
     // S3 backend: parse presigned URL and fetch from S3 directly
     const data = await apiResponse.json();
     totalSize = data.size || size;
+    // Notify main thread that the S3 backend is active
+    bc.postMessage({ type: "dl-s3", downloadId });
     try {
       response = await fetch(data.url);
     } catch (fetchErr) {

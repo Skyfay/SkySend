@@ -263,6 +263,7 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
             };
             sessions.set(ws, session);
             sendJson(ws, { type: "ready", id });
+            sendJson(ws, { type: "storage", backend: storage.supportsPresignedUrls() ? "s3" : "filesystem" });
             return;
           }
 

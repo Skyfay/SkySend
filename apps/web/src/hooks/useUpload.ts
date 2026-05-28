@@ -234,6 +234,16 @@ export function useUpload() {
               }));
               break;
             }
+            case "storage": {
+              const event = { time: new Date().toISOString(), message: msg.backend === "s3" ? "S3 upload active" : "Filesystem upload active" };
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, event] }
+                  : null,
+              }));
+              break;
+            }
             case "error":
               reject(new Error(msg.message));
               break;

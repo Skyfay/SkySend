@@ -276,6 +276,14 @@ export function useDownload() {
                 }));
               },
               abortCtrl.signal,
+              () => {
+                setState((s) => ({
+                  ...s,
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
+                    : null,
+                }));
+              },
             );
             downloaded = true;
           }
@@ -312,7 +320,15 @@ export function useDownload() {
             });
             const writable = await fileHandle.createWritable();
 
-            const { stream, size } = await api.downloadFile(id, authTokenB64);
+            const { stream, size, storageBackend } = await api.downloadFile(id, authTokenB64);
+            if (storageBackend === "s3") {
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
+                  : null,
+              }));
+            }
 
             let loaded = 0;
             let tier2StallTimer: ReturnType<typeof setTimeout> | null = null;
@@ -385,7 +401,15 @@ export function useDownload() {
               ],
             },
           }));
-          const { stream, size } = await api.downloadFile(id, authTokenB64);
+          const { stream, size, storageBackend } = await api.downloadFile(id, authTokenB64);
+          if (storageBackend === "s3") {
+            setState((s) => ({
+              ...s,
+              debugInfo: s.debugInfo
+                ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
+                : null,
+            }));
+          }
 
           let loaded = 0;
           let blobStallTimer: ReturnType<typeof setTimeout> | null = null;

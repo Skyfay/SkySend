@@ -200,7 +200,7 @@ export async function verifyPassword(
 export async function downloadFile(
   id: string,
   authToken: string,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number; fileCount: number }> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number; fileCount: number; storageBackend: "s3" | "filesystem" }> {
   const res = await fetch(`/api/download/${encodeURIComponent(id)}`, {
     headers: { "X-Auth-Token": authToken },
   });
@@ -231,6 +231,7 @@ export async function downloadFile(
       stream: s3Res.body,
       size: data.size,
       fileCount: data.fileCount,
+      storageBackend: "s3",
     };
   }
 
@@ -241,6 +242,7 @@ export async function downloadFile(
     stream: res.body,
     size: parseInt(res.headers.get("Content-Length") ?? "0", 10),
     fileCount: parseInt(res.headers.get("X-File-Count") ?? "1", 10),
+    storageBackend: "filesystem",
   };
 }
 

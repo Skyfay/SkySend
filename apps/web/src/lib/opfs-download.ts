@@ -258,6 +258,7 @@ export async function streamDownloadViaSw(
   onProgress: (progress: number) => void,
   onDebugInfo?: (swPath: string) => void,
   signal?: AbortSignal,
+  onS3Info?: () => void,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -360,6 +361,8 @@ export async function streamDownloadViaSw(
         onProgress(msg.progress);
       } else if (msg.type === "dl-tier") {
         onDebugInfo?.(msg.swPath);
+      } else if (msg.type === "dl-s3") {
+        onS3Info?.();
       } else if (msg.type === "dl-done") {
         clearTimeout(completionTimeout);
         downloadBc.removeEventListener("message", handler);
