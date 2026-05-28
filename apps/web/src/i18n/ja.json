@@ -329,6 +329,7 @@
   },
   "errors": {
     "insecureContext": "HTTPSが必要です",
-    "originNotAllowed": "サーバーがこのオリジンをブロックしました"
+    "originNotAllowed": "サーバーがこのオリジンをブロックしました",
+    "s3CorsError": "S3 CORSが設定されていません"
   }
 }

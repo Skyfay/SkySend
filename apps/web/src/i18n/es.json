@@ -279,6 +279,7 @@
   },
   "errors": {
     "insecureContext": "Se requiere HTTPS",
-    "originNotAllowed": "El servidor bloqueó este origen"
+    "originNotAllowed": "El servidor bloqueó este origen",
+    "s3CorsError": "CORS S3 no configurado"
   }
 }

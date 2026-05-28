@@ -21,6 +21,7 @@ import { DebugPanel } from "@/components/DebugPanel";
 import { useDownload } from "@/hooks/useDownload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { hashWasmArgon2 } from "@/lib/argon2";
+import { showKnownErrorToast } from "@/lib/toast";
 
 export function DownloadPage() {
   const { t } = useTranslation();
@@ -47,6 +48,16 @@ export function DownloadPage() {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, [downloadHook.phase]);
+
+  // Show an enriched toast for download errors (e.g. S3 CORS).
+  // Only fires for errors that occur after the file info was loaded
+  // (phase=error + info present = the download itself failed, not a 404/expired).
+  useEffect(() => {
+    if (downloadHook.phase === "error" && downloadHook.info && downloadHook.error) {
+      showKnownErrorToast(downloadHook.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [downloadHook.phase, downloadHook.error]);
 
   if (!id || !secret) {
     return (
@@ -173,7 +184,7 @@ export function DownloadPage() {
                 progress={downloadHook.progress}
                 speed={downloadHook.speed}
                 averageSpeed={downloadHook.averageSpeed}
-                error={downloadHook.error}
+                error={null}
                 onDownload={handleDownload}
                 onCancel={downloadHook.cancel}
               />

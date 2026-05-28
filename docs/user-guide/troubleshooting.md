@@ -52,3 +52,28 @@ If you are only testing locally on the same machine, `http://localhost:3000` wor
 - `Upgrade` / `Connection` headers and the `$connection_upgrade` map - required for WebSocket uploads
 - `proxy_read_timeout` / `proxy_send_timeout` - must exceed the longest expected upload duration
 - `client_max_body_size` - must be at least as large as your `FILE_MAX_SIZE` setting
+
+## S3 downloads fail with CORS error
+
+**Symptom:** A download stalls immediately after clicking the download button and shows the error: "S3 CORS error: The bucket must allow cross-origin GET requests from this origin."
+
+**Cause:** SkySend uses presigned URLs for S3/R2 downloads so the file stream goes directly from the bucket to the browser without passing through SkySend. The browser enforces CORS for these cross-origin requests, so the bucket must explicitly allow GET requests from SkySend's origin.
+
+**Fix:** Open your bucket's CORS settings and add a rule that allows GET and HEAD requests from your SkySend origin:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://send.example.com"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+For Cloudflare R2, set the allowed origin in the R2 bucket settings under **CORS policy**.
+
+::: warning No trailing slash
+The origin value must not end with a slash. `https://send.example.com` is correct. `https://send.example.com/` will not match and CORS will still fail.
+:::

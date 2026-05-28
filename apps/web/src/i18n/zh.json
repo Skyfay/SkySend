@@ -330,6 +330,7 @@
   },
   "errors": {
     "insecureContext": "需要 HTTPS",
-    "originNotAllowed": "服务器阻止了此来源"
+    "originNotAllowed": "服务器阻止了此来源",
+    "s3CorsError": "S3 CORS 未配置"
   }
 }

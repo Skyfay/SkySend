@@ -279,6 +279,7 @@
   },
   "errors": {
     "insecureContext": "HTTPS vereist",
-    "originNotAllowed": "Server heeft deze oorsprong geblokkeerd"
+    "originNotAllowed": "Server heeft deze oorsprong geblokkeerd",
+    "s3CorsError": "S3 CORS niet geconfigureerd"
   }
 }

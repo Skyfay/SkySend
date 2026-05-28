@@ -150,7 +150,9 @@ async function handleDownload(config, downloadId, streamDone) {
   if (!apiResponse.ok) {
     bc.postMessage({ type: "dl-error", downloadId, error: `HTTP ${apiResponse.status}` });
     cleanup();
-    return new Response(`Download failed: ${apiResponse.status}`, { status: 502 });
+    // Use Content-Disposition: attachment so the browser treats this as a failed download
+    // rather than navigating the main page away (critical for the <a>-navigation SW approach).
+    return new Response(null, { status: 200, headers: { "Content-Disposition": "attachment", "Content-Length": "0" } });
   }
 
   // Step 2: Check if the response is a presigned URL (S3 backend) or a direct stream
@@ -162,11 +164,21 @@ async function handleDownload(config, downloadId, streamDone) {
     // S3 backend: parse presigned URL and fetch from S3 directly
     const data = await apiResponse.json();
     totalSize = data.size || size;
-    response = await fetch(data.url);
+    try {
+      response = await fetch(data.url);
+    } catch (fetchErr) {
+      // CORS or network error reaching the S3/R2 bucket.
+      // This typically means CORS is not configured on the bucket - the bucket must allow
+      // GET requests from the SkySend origin.
+      console.warn(`[SW-dl:${downloadId}] S3 fetch failed (CORS or network):`, fetchErr.message);
+      bc.postMessage({ type: "dl-error", downloadId, error: "S3 unreachable - make sure CORS is configured on your S3/R2 bucket" });
+      cleanup();
+      return new Response(null, { status: 200, headers: { "Content-Disposition": "attachment", "Content-Length": "0" } });
+    }
     if (!response.ok) {
       bc.postMessage({ type: "dl-error", downloadId, error: `S3 HTTP ${response.status}` });
       cleanup();
-      return new Response(`S3 download failed: ${response.status}`, { status: 502 });
+      return new Response(null, { status: 200, headers: { "Content-Disposition": "attachment", "Content-Length": "0" } });
     }
   } else {
     // Filesystem backend: use the stream directly

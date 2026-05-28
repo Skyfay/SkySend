@@ -274,6 +274,7 @@
   },
   "errors": {
     "insecureContext": "HTTPS required",
-    "originNotAllowed": "Server blocked this origin"
+    "originNotAllowed": "Server blocked this origin",
+    "s3CorsError": "S3 CORS not configured"
   }
 }

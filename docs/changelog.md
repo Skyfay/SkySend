@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **web**: Added an `isS3CorsError()` pattern to `showKnownErrorToast()` so S3/R2 CORS failures during download are shown as an enriched toast with a Copy button and a link to the troubleshooting docs.
+
+### 🐛 Bug Fixes
+
+- **web**: Fixed S3 downloads via presigned URL crashing the download page. After the switch from iframe to `<a>` navigation for Service Worker streaming, a CORS or network error from the S3/R2 bucket caused the browser to navigate the main page away. The Service Worker now catches those errors, signals the main thread via BroadcastChannel to fall back to the next download tier, and returns a safe attachment response to prevent page navigation.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.10.0 - New Copy & Share Features, Download UX Improvements, and Bug Fixes
 *Released: May 24, 2026*
 
