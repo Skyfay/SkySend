@@ -17,7 +17,6 @@ import {
   randomBytes,
   RECORD_SIZE,
   PASSWORD_SALT_LENGTH,
-  DERIVED_KEY_LENGTH,
   type Argon2idHashFn,
 } from "../src/index.js";
 

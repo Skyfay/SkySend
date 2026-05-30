@@ -2,8 +2,10 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.11.0 - Password Protection Algorithm Removal, New Copy Button for Password Values, and Improvements
+*Released: May 30, 2026*
+
+> ⚠️ **Breaking:** Password-protected uploads created with **PBKDF2** (prior to v2.4.0) or the **legacy Argon2id** parameters (v2.4.0 - v2.5.0, 4-day window) can no longer be decrypted - both algorithms have been fully removed from the decryption pipeline. All such uploads have exceeded their maximum retention period and have expired, but any password-protected file from those eras cannot be opened after upgrading to this version.
 
 ### ✨ Features
 
@@ -26,8 +28,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.11.0`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
