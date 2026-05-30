@@ -19,6 +19,10 @@ All notable changes to SkySend are documented here.
 - **web**: Removed `"pbkdf2"` from the `passwordAlgo` Zod enum in the download and note-info API schemas - responses containing this value are now treated as invalid.
 - **client**: Removed `"pbkdf2"` from the `passwordAlgo` Zod enum in the file-info and note-info API schemas, and removed the PBKDF2 decryption branch from `prepareDownload`.
 - **server**: Removed `"pbkdf2"` from the accepted `passwordAlgo` upload header values - any upload attempt with this algorithm now returns HTTP 400.
+- **crypto**: Removed `ARGON2_PARAMS_LEGACY` (19 MiB / 2 iterations) and the `argon2Params` optional parameter from `deriveKeyFromPassword` - the return type is now the literal `"argon2id-v2"`. All uploads created during the 4-day `"argon2id"` window (v2.4.0 - v2.5.0) have expired.
+- **web**: Removed `"argon2id"` from the `passwordAlgo` Zod enum in the download and note-info API schemas - responses with the legacy algorithm are now treated as invalid.
+- **client**: Removed `"argon2id"` from the `passwordAlgo` Zod enum and the legacy decryption branch in `prepareDownload` - the function now always uses the current Argon2id parameters.
+- **server**: Removed `"argon2id"` from the accepted `passwordAlgo` upload header values - new uploads with this algorithm now return HTTP 400.
 
 ### 🐳 Docker
 

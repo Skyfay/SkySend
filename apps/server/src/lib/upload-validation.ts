@@ -35,7 +35,7 @@ export const uploadHeadersSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   passwordSalt: z.string().regex(base64urlPattern).optional(),
-  passwordAlgo: z.enum(["argon2id", "argon2id-v2"]).optional(),
+  passwordAlgo: z.enum(["argon2id-v2"]).optional(),
 });
 
 export type UploadHeaders = z.infer<typeof uploadHeadersSchema>;

@@ -8,7 +8,6 @@ import {
   fromBase64url,
   applyPasswordProtection,
   deriveKeyFromPassword,
-  ARGON2_PARAMS_LEGACY,
   type FileMetadata,
   type Argon2idHashFn,
 } from "@skysend/crypto";
@@ -135,8 +134,6 @@ export function useDownload() {
             password,
             passwordSalt,
             argon2id,
-            // "argon2id" = legacy uploads (pre-v2.5.0) - use old params for backward compat
-            info.passwordAlgo === "argon2id" ? ARGON2_PARAMS_LEGACY : undefined,
           );
           secret = applyPasswordProtection(secret, passwordKey);
         }

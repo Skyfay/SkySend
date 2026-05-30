@@ -6,8 +6,7 @@
  * the browser - only a derived key is used.
  *
  * Strategy:
- * Argon2id via WASM (memory-hard, GPU-resistant) is always used for new uploads.
- * PBKDF2-SHA256 with 600,000 iterations remains supported for decrypting existing uploads.
+ * Argon2id via WASM (memory-hard, GPU-resistant) is always used for all uploads.
  *
  * The derived key is 32 bytes and used to XOR with the master secret,
  * creating a password-protected secret that requires both the URL
@@ -32,17 +31,6 @@ export const PASSWORD_SALT_LENGTH = 16;
 export const ARGON2_PARAMS = {
   memory: 65_536, // 64 MiB (OWASP strong recommendation)
   iterations: 3,
-  parallelism: 1,
-} as const;
-
-/**
- * Legacy Argon2id parameters used before v2.4.4.
- * Still needed to decrypt password-protected uploads created with the old params.
- * @deprecated Only use this for decrypting existing uploads where passwordAlgo === "argon2id".
- */
-export const ARGON2_PARAMS_LEGACY = {
-  memory: 19_456, // 19 MiB (OWASP minimum, used before v2.4.4)
-  iterations: 2,
   parallelism: 1,
 } as const;
 
@@ -98,19 +86,15 @@ export async function deriveKeyFromPasswordArgon2(
  * @param password - The user's password
  * @param salt - A unique salt per upload
  * @param argon2id - Argon2id hash function (from WASM)
- * @param argon2Params - Optional Argon2id parameters (defaults to current OWASP strong params).
- *   Pass `ARGON2_PARAMS_LEGACY` when decrypting an upload where `passwordAlgo === "argon2id"`.
- * @returns The derived key and which algorithm was used
+ * @returns The derived key and algorithm identifier
  */
 export async function deriveKeyFromPassword(
   password: string,
   salt: Uint8Array,
   argon2id: Argon2idHashFn,
-  argon2Params?: { memory: number; iterations: number; parallelism: number },
-): Promise<{ key: Uint8Array; algorithm: "argon2id" | "argon2id-v2" }> {
-  const usingLegacyParams = argon2Params !== undefined;
-  const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id, argon2Params);
-  return { key, algorithm: usingLegacyParams ? "argon2id" : "argon2id-v2" };
+): Promise<{ key: Uint8Array; algorithm: "argon2id-v2" }> {
+  const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id);
+  return { key, algorithm: "argon2id-v2" };
 }
 
 /**

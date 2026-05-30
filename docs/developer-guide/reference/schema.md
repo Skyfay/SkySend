@@ -29,7 +29,7 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `fileCount` | INTEGER | 1 | Number of files (1 = single, >1 = archive) |
 | `hasPassword` | INTEGER | 0 | Whether password protection is active |
 | `passwordSalt` | BLOB | NULL | Password KDF salt (16 bytes) |
-| `passwordAlgo` | TEXT | NULL | `"argon2id"` or `"pbkdf2"` |
+| `passwordAlgo` | TEXT | NULL | `"argon2id-v2"` |
 | `maxDownloads` | INTEGER NOT NULL | - | Maximum allowed downloads |
 | `downloadCount` | INTEGER | 0 | Current download count |
 | `expiresAt` | TIMESTAMP NOT NULL | - | Expiry timestamp (Unix epoch) |
@@ -55,7 +55,7 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `contentType` | TEXT NOT NULL | - | `"text"`, `"password"`, `"code"`, `"markdown"`, or `"sshkey"` |
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether password protection is active |
 | `passwordSalt` | BLOB | NULL | Password KDF salt (16 bytes) |
-| `passwordAlgo` | TEXT | NULL | `"argon2id"` or `"pbkdf2"` |
+| `passwordAlgo` | TEXT | NULL | `"argon2id-v2"` |
 | `maxViews` | INTEGER NOT NULL | - | Maximum allowed views (0 = unlimited) |
 | `viewCount` | INTEGER NOT NULL | 0 | Current view count |
 | `expiresAt` | TIMESTAMP NOT NULL | - | Expiry timestamp (Unix epoch) |
