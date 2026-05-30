@@ -36,7 +36,7 @@ Create a new encrypted note.
 | `expireSec` | integer | Expiry time in seconds (must be a valid option) |
 | `hasPassword` | boolean | Whether the note is password-protected |
 | `passwordSalt` | base64url | Password KDF salt (required if `hasPassword`) |
-| `passwordAlgo` | string | `"argon2id"` or `"pbkdf2"` (required if `hasPassword`) |
+| `passwordAlgo` | string | `"argon2id-v2"` (required if `hasPassword`) |
 
 ### Validation
 
@@ -102,7 +102,7 @@ Password-protected notes additionally include:
 
 ```json
 {
-  "passwordAlgo": "argon2id",
+  "passwordAlgo": "argon2id-v2",
   "passwordSalt": "<base64url>"
 }
 ```

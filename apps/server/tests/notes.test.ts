@@ -382,14 +382,14 @@ describe("note routes", () => {
         id: TEST_UUID,
         hasPassword: true,
         passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
-        passwordAlgo: "argon2id",
+        passwordAlgo: "argon2id-v2",
       });
 
       const res = await app.request(`/api/note/${TEST_UUID}`);
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.hasPassword).toBe(true);
-      expect(body.passwordAlgo).toBe("argon2id");
+      expect(body.passwordAlgo).toBe("argon2id-v2");
       expect(body.passwordSalt).toBeTruthy();
     });
   });

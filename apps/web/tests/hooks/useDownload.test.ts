@@ -18,7 +18,6 @@ vi.mock("@skysend/crypto", () => ({
   fromBase64url: vi.fn(() => new Uint8Array(32)),
   applyPasswordProtection: vi.fn((_s: Uint8Array, _k: Uint8Array) => new Uint8Array(32)),
   deriveKeyFromPassword: vi.fn(async () => ({ key: new Uint8Array(32) })),
-  ARGON2_PARAMS_LEGACY: {},
 }));
 
 vi.mock("../../src/lib/api.js", () => ({
@@ -168,7 +167,7 @@ describe("useDownload", () => {
   it("download() mit korrektem Passwort → phase='done'", async () => {
     const apiMod = await import("../../src/lib/api.js");
     vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
-      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
     vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(true);
     vi.mocked(apiMod.downloadFile).mockResolvedValueOnce({
@@ -184,9 +183,10 @@ describe("useDownload", () => {
 
     const { useDownload } = await import("../../src/hooks/useDownload.js");
     const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
 
     await act(async () => {
-      await result.current.download("f-1", "secret64", "correct-pw");
+      await result.current.download("f-1", "secret64", "correct-pw", fakeArgon2id);
     });
 
     expect(result.current.phase).toBe("done");
@@ -195,15 +195,16 @@ describe("useDownload", () => {
   it("download() falsches Passwort → phase='needs-password', error='wrong-password'", async () => {
     const apiMod = await import("../../src/lib/api.js");
     vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
-      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
     vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(false);
 
     const { useDownload } = await import("../../src/hooks/useDownload.js");
     const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
 
     await act(async () => {
-      await result.current.download("f-1", "secret64", "wrong-pw");
+      await result.current.download("f-1", "secret64", "wrong-pw", fakeArgon2id);
     });
 
     expect(result.current.phase).toBe("needs-password");
@@ -608,9 +609,10 @@ describe("useDownload", () => {
 
     const { useDownload } = await import("../../src/hooks/useDownload.js");
     const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
 
     await act(async () => {
-      await result.current.download("f-1", "secret64", "correct-pw");
+      await result.current.download("f-1", "secret64", "correct-pw", fakeArgon2id);
     });
 
     expect(result.current.phase).toBe("done");

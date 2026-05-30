@@ -6,8 +6,7 @@
  * the browser - only a derived key is used.
  *
  * Strategy:
- * Argon2id via WASM (memory-hard, GPU-resistant) is always used for new uploads.
- * PBKDF2-SHA256 with 600,000 iterations remains supported for decrypting existing uploads.
+ * Argon2id via WASM (memory-hard, GPU-resistant) is always used for all uploads.
  *
  * The derived key is 32 bytes and used to XOR with the master secret,
  * creating a password-protected secret that requires both the URL
@@ -20,10 +19,7 @@
  * - Password is encoded as UTF-8 before hashing
  */
 
-import { encodeUtf8, asBytes } from "./util.js";
-
-/** PBKDF2 iteration count (OWASP 2024 recommendation for SHA-256). */
-export const PBKDF2_ITERATIONS = 600_000;
+import { encodeUtf8 } from "./util.js";
 
 /** Derived key length in bytes. */
 export const DERIVED_KEY_LENGTH = 32;
@@ -38,17 +34,6 @@ export const ARGON2_PARAMS = {
   parallelism: 1,
 } as const;
 
-/**
- * Legacy Argon2id parameters used before v2.4.4.
- * Still needed to decrypt password-protected uploads created with the old params.
- * @deprecated Only use this for decrypting existing uploads where passwordAlgo === "argon2id".
- */
-export const ARGON2_PARAMS_LEGACY = {
-  memory: 19_456, // 19 MiB (OWASP minimum, used before v2.4.4)
-  iterations: 2,
-  parallelism: 1,
-} as const;
-
 /** Argon2id hash function type - to be provided by the consumer. */
 export type Argon2idHashFn = (
   password: Uint8Array,
@@ -60,43 +45,6 @@ export type Argon2idHashFn = (
     hashLength: number;
   },
 ) => Promise<Uint8Array>;
-
-/**
- * Derive a 32-byte key from a password using PBKDF2-SHA256.
- *
- * This is the built-in fallback that uses only the Web Crypto API.
- * Used when Argon2id WASM is not available (e.g., older browsers).
- */
-export async function deriveKeyFromPasswordPbkdf2(
-  password: string,
-  salt: Uint8Array,
-): Promise<Uint8Array> {
-  if (salt.length !== PASSWORD_SALT_LENGTH) {
-    throw new Error(`Password salt must be exactly ${PASSWORD_SALT_LENGTH} bytes`);
-  }
-  if (password.length === 0) {
-    throw new Error("Password must not be empty");
-  }
-
-  const passwordBytes = encodeUtf8(password);
-
-  const baseKey = await crypto.subtle.importKey("raw", asBytes(passwordBytes), "PBKDF2", false, [
-    "deriveBits",
-  ]);
-
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: asBytes(salt),
-      iterations: PBKDF2_ITERATIONS,
-    },
-    baseKey,
-    DERIVED_KEY_LENGTH * 8,
-  );
-
-  return new Uint8Array(bits);
-}
 
 /**
  * Derive a 32-byte key from a password using Argon2id.
@@ -133,33 +81,20 @@ export async function deriveKeyFromPasswordArgon2(
 }
 
 /**
- * Derive a password key with the specified algorithm.
- *
- * Pass an Argon2id function for new uploads (always Argon2id).
- * Pass `undefined` only when decrypting a legacy upload where `passwordAlgo === "pbkdf2"`.
+ * Derive a password key using Argon2id.
  *
  * @param password - The user's password
  * @param salt - A unique salt per upload
- * @param argon2id - Argon2id hash function (from WASM). Pass `undefined` only for PBKDF2 legacy decryption.
- * @param argon2Params - Optional Argon2id parameters (defaults to current OWASP strong params)
- * @returns The derived key and which algorithm was used
+ * @param argon2id - Argon2id hash function (from WASM)
+ * @returns The derived key and algorithm identifier
  */
 export async function deriveKeyFromPassword(
   password: string,
   salt: Uint8Array,
-  argon2id?: Argon2idHashFn,
-  argon2Params?: { memory: number; iterations: number; parallelism: number },
-): Promise<{ key: Uint8Array; algorithm: "argon2id" | "argon2id-v2" | "pbkdf2" }> {
-  if (argon2id) {
-    // If legacy params are passed explicitly, this is for decrypting an old upload.
-    // Return "argon2id" to signal the caller that legacy params were used.
-    const usingLegacyParams = argon2Params !== undefined;
-    const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id, argon2Params);
-    return { key, algorithm: usingLegacyParams ? "argon2id" : "argon2id-v2" };
-  }
-
-  const key = await deriveKeyFromPasswordPbkdf2(password, salt);
-  return { key, algorithm: "pbkdf2" };
+  argon2id: Argon2idHashFn,
+): Promise<{ key: Uint8Array; algorithm: "argon2id-v2" }> {
+  const key = await deriveKeyFromPasswordArgon2(password, salt, argon2id);
+  return { key, algorithm: "argon2id-v2" };
 }
 
 /**

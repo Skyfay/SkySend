@@ -1069,7 +1069,7 @@ describe("routes", () => {
         headers: makeUploadHeaders({
           "X-Has-Password": "true",
           "X-Password-Salt": shortPwSalt,
-          "X-Password-Algo": "argon2id",
+          "X-Password-Algo": "argon2id-v2",
         }),
         body: new Uint8Array([1, 2, 3, 4, 5]),
       });
@@ -1091,7 +1091,7 @@ describe("routes", () => {
         headers: makeUploadHeaders({
           "X-Has-Password": "true",
           "X-Password-Salt": validPwSalt,
-          "X-Password-Algo": "argon2id",
+          "X-Password-Algo": "argon2id-v2",
         }),
         body: new Uint8Array([1, 2, 3, 4, 5]),
       });

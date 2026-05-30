@@ -26,7 +26,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 | Header | Type | Description |
 | --- | --- | --- |
 | `X-Password-Salt` | base64url | Password KDF salt (16 bytes) |
-| `X-Password-Algo` | string | KDF algorithm: `"argon2id"` or `"pbkdf2"` |
+| `X-Password-Algo` | string | KDF algorithm: `"argon2id-v2"` |
 
 ### Validation
 

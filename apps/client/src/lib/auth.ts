@@ -7,7 +7,6 @@ import {
   applyPasswordProtection,
   deriveKeyFromPassword,
   deriveKeyFromPasswordArgon2,
-  ARGON2_PARAMS_LEGACY,
   randomBytes,
   toBase64url,
   fromBase64url,
@@ -47,7 +46,7 @@ export interface UploadCredentials {
   effectiveSecretB64: string;
   hasPassword: boolean;
   passwordSalt?: Uint8Array;
-  passwordAlgo?: "argon2id" | "argon2id-v2" | "pbkdf2";
+  passwordAlgo?: "argon2id-v2";
 }
 
 export async function prepareUpload(password?: string): Promise<UploadCredentials> {
@@ -58,7 +57,7 @@ export async function prepareUpload(password?: string): Promise<UploadCredential
   let effectiveSecret: Uint8Array = secret;
   let hasPassword = false;
   let passwordSalt: Uint8Array | undefined;
-  let passwordAlgo: "argon2id" | "argon2id-v2" | "pbkdf2" | undefined;
+  let passwordAlgo: "argon2id-v2" | undefined;
 
   if (password && password.length > 0) {
     hasPassword = true;
@@ -100,36 +99,18 @@ export async function prepareDownload(
   saltB64: string,
   password?: string,
   passwordSaltB64?: string,
-  passwordAlgo?: "argon2id" | "argon2id-v2" | "pbkdf2",
+  passwordAlgo?: "argon2id-v2",
 ): Promise<DownloadCredentials> {
   let secret = fromBase64url(secretB64) as Uint8Array<ArrayBuffer>;
   const salt = fromBase64url(saltB64) as Uint8Array<ArrayBuffer>;
 
   if (password && passwordSaltB64 && passwordAlgo) {
     const passwordSalt = fromBase64url(passwordSaltB64) as Uint8Array<ArrayBuffer>;
-    let passwordKey: Uint8Array;
-
-    if (passwordAlgo === "argon2id") {
-      // Legacy uploads (pre-v2.4.4) - use old Argon2id params for backward compat
-      passwordKey = await deriveKeyFromPasswordArgon2(
-        password,
-        passwordSalt,
-        hashWasmArgon2,
-        ARGON2_PARAMS_LEGACY,
-      );
-    } else if (passwordAlgo === "argon2id-v2") {
-      // New uploads (v2.4.4+) - use current Argon2id params (default)
-      passwordKey = await deriveKeyFromPasswordArgon2(
-        password,
-        passwordSalt,
-        hashWasmArgon2,
-      );
-    } else {
-      // TODO: Remove "pbkdf2" branch once all pre-v2.4.4 uploads have expired (~ late 2026)
-      const { key } = await deriveKeyFromPassword(password, passwordSalt);
-      passwordKey = key;
-    }
-
+    const passwordKey = await deriveKeyFromPasswordArgon2(
+      password,
+      passwordSalt,
+      hashWasmArgon2,
+    );
     secret = applyPasswordProtection(secret, passwordKey) as Uint8Array<ArrayBuffer>;
   }
 

@@ -12,7 +12,6 @@ vi.mock("@skysend/crypto", () => ({
   fromBase64url: vi.fn(() => new Uint8Array(32)),
   applyPasswordProtection: vi.fn((_s: Uint8Array, _k: Uint8Array) => new Uint8Array(32)),
   deriveKeyFromPassword: vi.fn(async () => ({ key: new Uint8Array(32) })),
-  ARGON2_PARAMS_LEGACY: {},
 }));
 
 vi.mock("../../src/lib/api.js", () => ({
@@ -90,7 +89,7 @@ describe("useNoteView", () => {
   it("loadInfo() sets phase=needs-password when note has a password", async () => {
     const { fetchNoteInfo } = await import("../../src/lib/api.js");
     vi.mocked(fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
@@ -164,19 +163,20 @@ describe("useNoteView", () => {
   it("view() sets phase=needs-password and error=wrong-password on failed verify", async () => {
     const api = await import("../../src/lib/api.js");
     vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
     vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(false);
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
     const { result } = renderHook(() => useNoteView());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
 
     await act(async () => {
       await result.current.loadInfo("n-1");
     });
 
     await act(async () => {
-      await result.current.view("n-1", "secretb64", "wrongpass");
+      await result.current.view("n-1", "secretb64", "wrongpass", fakeArgon2id);
     });
 
     expect(result.current.phase).toBe("needs-password");
@@ -207,7 +207,7 @@ describe("useNoteView", () => {
     const api = await import("../../src/lib/api.js");
     // passwordSalt intentionally absent so the throw on line 70 fires
     vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordAlgo: "pbkdf2" }),
+      makeNoteInfo({ hasPassword: true, passwordAlgo: "argon2id-v2" }),
     );
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
@@ -228,20 +228,21 @@ describe("useNoteView", () => {
   it("view() mit korrektem Passwort (verifyNotePassword=true) \u2192 phase='viewing'", async () => {
     const api = await import("../../src/lib/api.js");
     vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "pbkdf2" }),
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
     vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
     vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
     const { result } = renderHook(() => useNoteView());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
 
     await act(async () => {
       await result.current.loadInfo("n-1");
     });
 
     await act(async () => {
-      await result.current.view("n-1", "secretb64", "correctpass");
+      await result.current.view("n-1", "secretb64", "correctpass", fakeArgon2id);
     });
 
     expect(result.current.phase).toBe("viewing");
@@ -279,10 +280,10 @@ describe("useNoteView", () => {
     expect(result.current.phase).toBe("error");
   });
 
-  it("view() mit passwordAlgo='argon2id' und argon2id-Funktion \u2192 phase='viewing'", async () => {
+  it("view() mit passwordAlgo='argon2id-v2' und argon2id-Funktion \u2192 phase='viewing'", async () => {
     const api = await import("../../src/lib/api.js");
     vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id" }),
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
     vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
     vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());

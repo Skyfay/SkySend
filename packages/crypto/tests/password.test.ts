@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  deriveKeyFromPasswordPbkdf2,
   deriveKeyFromPassword,
   deriveKeyFromPasswordArgon2,
   applyPasswordProtection,
@@ -9,62 +8,7 @@ import {
 } from "../src/password.js";
 import { constantTimeEqual, randomBytes } from "../src/util.js";
 
-describe("deriveKeyFromPasswordPbkdf2", () => {
-  it("should derive a 32-byte key", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const key = await deriveKeyFromPasswordPbkdf2("test-password", salt);
-    expect(key.length).toBe(DERIVED_KEY_LENGTH);
-    expect(key).toBeInstanceOf(Uint8Array);
-  });
-
-  it("should be deterministic for same password + salt", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const key1 = await deriveKeyFromPasswordPbkdf2("my-password", salt);
-    const key2 = await deriveKeyFromPasswordPbkdf2("my-password", salt);
-    expect(constantTimeEqual(key1, key2)).toBe(true);
-  });
-
-  it("should produce different keys for different passwords", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const key1 = await deriveKeyFromPasswordPbkdf2("password-1", salt);
-    const key2 = await deriveKeyFromPasswordPbkdf2("password-2", salt);
-    expect(constantTimeEqual(key1, key2)).toBe(false);
-  });
-
-  it("should produce different keys for different salts", async () => {
-    const salt1 = randomBytes(PASSWORD_SALT_LENGTH);
-    const salt2 = randomBytes(PASSWORD_SALT_LENGTH);
-    const key1 = await deriveKeyFromPasswordPbkdf2("same-password", salt1);
-    const key2 = await deriveKeyFromPasswordPbkdf2("same-password", salt2);
-    expect(constantTimeEqual(key1, key2)).toBe(false);
-  });
-
-  it("should reject empty password", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    await expect(deriveKeyFromPasswordPbkdf2("", salt)).rejects.toThrow("not be empty");
-  });
-
-  it("should reject wrong salt length", async () => {
-    await expect(
-      deriveKeyFromPasswordPbkdf2("password", new Uint8Array(8)),
-    ).rejects.toThrow("16 bytes");
-  });
-
-  it("should handle Unicode passwords", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const key = await deriveKeyFromPasswordPbkdf2("passwort-mit-umlauten-aou", salt);
-    expect(key.length).toBe(DERIVED_KEY_LENGTH);
-  });
-});
-
 describe("deriveKeyFromPassword (auto-select)", () => {
-  it("should fall back to PBKDF2 when no Argon2id is provided", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const result = await deriveKeyFromPassword("test-password", salt);
-    expect(result.algorithm).toBe("pbkdf2");
-    expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
-  });
-
   it("should throw when Argon2id WASM is unavailable", async () => {
     const salt = randomBytes(PASSWORD_SALT_LENGTH);
     const wasmFailingArgon2id = async () => {
@@ -90,18 +34,6 @@ describe("deriveKeyFromPassword (auto-select)", () => {
     const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
     const result = await deriveKeyFromPassword("test-password", salt, mockArgon2id);
     expect(result.algorithm).toBe("argon2id-v2");
-    expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
-  });
-
-  it("should return 'argon2id' algorithm when legacy argon2Params are passed", async () => {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const mockArgon2id = async () => randomBytes(DERIVED_KEY_LENGTH);
-    const result = await deriveKeyFromPassword("test-password", salt, mockArgon2id, {
-      memory: 65536,
-      iterations: 3,
-      parallelism: 1,
-    });
-    expect(result.algorithm).toBe("argon2id");
     expect(result.key.length).toBe(DERIVED_KEY_LENGTH);
   });
 });
@@ -166,24 +98,5 @@ describe("deriveKeyFromPasswordArgon2", () => {
       mockArgon2id,
     );
     expect(constantTimeEqual(result, expectedKey)).toBe(true);
-  });
-});
-
-describe("deriveKeyFromPasswordPbkdf2 - known-answer test", () => {
-  // Verifies exact algorithm parameters: PBKDF2-SHA256, 600,000 iterations, 32-byte output.
-  // If iterations, hash, or output length ever change, this test will catch it.
-  it("should produce a specific known output for a fixed password and salt", async () => {
-    const password = "kat-password-skysend";
-    const salt = new Uint8Array(16); // all zeros - deterministic
-
-    const expected = new Uint8Array([
-      0x3d, 0x87, 0x12, 0x80, 0xab, 0xea, 0xd9, 0x97,
-      0x12, 0x98, 0xa0, 0x99, 0xba, 0xdb, 0xb0, 0x9b,
-      0xc5, 0x03, 0xd8, 0x78, 0x96, 0x5b, 0xc7, 0xb5,
-      0x90, 0x45, 0x82, 0x90, 0x36, 0x3f, 0x77, 0xcb,
-    ]);
-
-    const key = await deriveKeyFromPasswordPbkdf2(password, salt);
-    expect(constantTimeEqual(key, expected)).toBe(true);
   });
 });
