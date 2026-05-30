@@ -45,10 +45,8 @@ export type {
 // Password KDF
 export {
   deriveKeyFromPassword,
-  deriveKeyFromPasswordPbkdf2,
   deriveKeyFromPasswordArgon2,
   applyPasswordProtection,
-  PBKDF2_ITERATIONS,
   DERIVED_KEY_LENGTH,
   PASSWORD_SALT_LENGTH,
   ARGON2_PARAMS,

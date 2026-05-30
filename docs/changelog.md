@@ -13,6 +13,13 @@ All notable changes to SkySend are documented here.
 
 - **web**: Fixed the password generator not closing after clicking "generate" in the "password" tab.
 
+### 🗑️ Removed
+
+- **crypto**: Removed PBKDF2-SHA256 decryption support - `deriveKeyFromPasswordPbkdf2` and `PBKDF2_ITERATIONS` are deleted, `deriveKeyFromPassword` now requires an Argon2id function and no longer accepts `undefined` as a fallback. All pre-v2.5.0 PBKDF2-protected uploads have expired.
+- **web**: Removed `"pbkdf2"` from the `passwordAlgo` Zod enum in the download and note-info API schemas - responses containing this value are now treated as invalid.
+- **client**: Removed `"pbkdf2"` from the `passwordAlgo` Zod enum in the file-info and note-info API schemas, and removed the PBKDF2 decryption branch from `prepareDownload`.
+- **server**: Removed `"pbkdf2"` from the accepted `passwordAlgo` upload header values - any upload attempt with this algorithm now returns HTTP 400.
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`

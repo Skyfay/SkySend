@@ -78,13 +78,13 @@ export function useNoteView() {
           if (!info.passwordSalt) throw new Error("Missing password salt");
 
           const passwordSalt = fromBase64url(info.passwordSalt);
-          const isArgon2 = info.passwordAlgo === "argon2id" || info.passwordAlgo === "argon2id-v2";
-          // TODO: Remove "pbkdf2" branch once all pre-v2.4.4 notes have expired (~ late 2026)
-          /* v8 ignore next 5 */
+          if (!argon2id) throw new Error("Argon2id is required to decrypt password-protected notes");
+          /* v8 ignore next */
           const { key: passwordKey } = await deriveKeyFromPassword(
             password,
             passwordSalt,
-            isArgon2 ? argon2id : undefined,
+            argon2id,
+            // "argon2id" = legacy uploads (pre-v2.5.0) - use old params for backward compat
             info.passwordAlgo === "argon2id" ? ARGON2_PARAMS_LEGACY : undefined,
           );
           secret = applyPasswordProtection(secret, passwordKey);

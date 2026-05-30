@@ -17,7 +17,23 @@ import {
   randomBytes,
   RECORD_SIZE,
   PASSWORD_SALT_LENGTH,
+  DERIVED_KEY_LENGTH,
+  type Argon2idHashFn,
 } from "../src/index.js";
+
+/**
+ * Deterministic Argon2id mock for tests - uses PBKDF2 (1 iteration) as a stand-in.
+ * Produces the same output for the same input without WASM.
+ */
+const mockArgon2id: Argon2idHashFn = async (password, salt, params) => {
+  const baseKey = await crypto.subtle.importKey("raw", password, "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 1 },
+    baseKey,
+    params.hashLength * 8,
+  );
+  return new Uint8Array(bits);
+};
 
 /** Helper: collect all chunks from a ReadableStream. */
 async function collectStream(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
@@ -137,8 +153,8 @@ describe("Integration: full upload/download roundtrip", () => {
     const passwordSalt = randomBytes(PASSWORD_SALT_LENGTH);
 
     // 2. Derive password key
-    const { key: passwordKey, algorithm } = await deriveKeyFromPassword(password, passwordSalt);
-    expect(algorithm).toBe("pbkdf2"); // No Argon2id WASM in tests
+    const { key: passwordKey, algorithm } = await deriveKeyFromPassword(password, passwordSalt, mockArgon2id);
+    expect(algorithm).toBe("argon2id-v2");
 
     // 3. Protect the secret with the password
     const protectedSecret = applyPasswordProtection(secret, passwordKey);
@@ -165,7 +181,7 @@ describe("Integration: full upload/download roundtrip", () => {
     const recoveredProtectedSecret = fromBase64url(shareFragment);
 
     // 2. User enters password, derive password key
-    const { key: recoveredPasswordKey } = await deriveKeyFromPassword(password, passwordSalt);
+    const { key: recoveredPasswordKey } = await deriveKeyFromPassword(password, passwordSalt, mockArgon2id);
 
     // 3. Recover original secret
     const recoveredSecret = applyPasswordProtection(recoveredProtectedSecret, recoveredPasswordKey);
@@ -195,7 +211,7 @@ describe("Integration: full upload/download roundtrip", () => {
     const passwordSalt = randomBytes(PASSWORD_SALT_LENGTH);
 
     // Encrypt with correct password
-    const { key: passwordKey } = await deriveKeyFromPassword("correct-password", passwordSalt);
+    const { key: passwordKey } = await deriveKeyFromPassword("correct-password", passwordSalt, mockArgon2id);
     const protectedSecret = applyPasswordProtection(secret, passwordKey);
 
     const { fileKey } = await deriveKeys(secret, salt);
@@ -205,7 +221,7 @@ describe("Integration: full upload/download roundtrip", () => {
     );
 
     // Try to decrypt with wrong password
-    const { key: wrongPasswordKey } = await deriveKeyFromPassword("wrong-password", passwordSalt);
+    const { key: wrongPasswordKey } = await deriveKeyFromPassword("wrong-password", passwordSalt, mockArgon2id);
     const wrongSecret = applyPasswordProtection(protectedSecret, wrongPasswordKey);
     const wrongKeys = await deriveKeys(wrongSecret, salt);
 
