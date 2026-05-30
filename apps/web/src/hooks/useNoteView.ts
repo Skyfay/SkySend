@@ -77,8 +77,8 @@ export function useNoteView() {
           if (!info.passwordSalt) throw new Error("Missing password salt");
 
           const passwordSalt = fromBase64url(info.passwordSalt);
-          if (!argon2id) throw new Error("Argon2id is required to decrypt password-protected notes");
           /* v8 ignore next */
+          if (!argon2id) throw new Error("Argon2id is required to decrypt password-protected notes");
           const { key: passwordKey } = await deriveKeyFromPassword(
             password,
             passwordSalt,
