@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **web**: Added a copy button to the password value fields in the "password" tab, matching the behaviour of the "password protection" input.
+
+### 🎨 Improvements
+
+- **web**: Fixed the password generator not closing after clicking "generate" in the "password" tab.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.10.1 - S3 Download CORS Error Handling and Debug Info Panel Storage Backend Events
 *Released: May 28, 2026*
 

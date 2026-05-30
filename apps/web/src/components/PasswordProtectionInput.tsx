@@ -80,7 +80,13 @@ export function PasswordProtectionInput({
       </div>
 
       {showGenerator && (
-        <PasswordGenerator onGenerate={(v) => onChange(v)} disabled={disabled} />
+        <PasswordGenerator
+          onGenerate={(v) => {
+            onChange(v);
+            setShowGenerator(false);
+          }}
+          disabled={disabled}
+        />
       )}
     </div>
   );

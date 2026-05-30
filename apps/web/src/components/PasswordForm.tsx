@@ -5,6 +5,8 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Copy,
+  Check,
   Send,
   Loader2,
   Plus,
@@ -44,6 +46,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
   const [passwords, setPasswords] = useState<{ label: string; value: string }[]>([{ label: "", value: "" }]);
   const [showValues, setShowValues] = useState<boolean[]>([false]);
   const [generatorIndex, setGeneratorIndex] = useState<number | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const [expireSec, setExpireSec] = useState<number | null>(null);
   const [maxViews, setMaxViews] = useState<number | null>(null);
@@ -92,6 +95,14 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
 
   const toggleGenerator = (index: number) => {
     setGeneratorIndex(generatorIndex === index ? null : index);
+  };
+
+  const copyPassword = async (index: number) => {
+    const value = passwords[index]?.value;
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex((prev) => (prev === index ? null : prev)), 1500);
   };
 
   const handleGenerate = (index: number, value: string) => {
@@ -170,6 +181,17 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
                     )}
                   </button>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => copyPassword(index)}
+                  disabled={isSubmitting || !pw.value}
+                  title={copiedIndex === index ? t("common.copied") : t("common.copy")}
+                >
+                  {copiedIndex === index ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
                 <Button
                   type="button"
                   variant={generatorIndex === index ? "secondary" : "outline"}
