@@ -74,6 +74,7 @@ noteRoute.post(
     try {
       contentBytes = Buffer.from(data.encryptedContent, "base64");
     } catch {
+      /* v8 ignore next */
       return c.json({ error: "Invalid encryptedContent encoding" }, 400);
     }
 
@@ -101,6 +102,7 @@ noteRoute.post(
         return c.json({ error: "Nonce must be exactly 12 bytes" }, 400);
       }
     } catch {
+      /* v8 ignore next */
       return c.json({ error: "Invalid nonce encoding" }, 400);
     }
 

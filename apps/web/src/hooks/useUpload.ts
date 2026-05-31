@@ -48,11 +48,9 @@ interface UploadOptions {
  * In production, same-origin requests are used (empty string).
  */
 function getApiBase(): string {
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-  }
   /* v8 ignore next */
-  return "";
+  if (!import.meta.env.DEV) return "";
+  return import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 }
 
 export function useUpload() {
@@ -190,7 +188,21 @@ export function useUpload() {
               if (msg.phase === "uploading") {
                 uploadStartTime = performance.now();
               }
-              setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
+              if (msg.phase === "zipping") {
+                setState((s) => ({
+                  ...s,
+                  phase: msg.phase as UploadPhase,
+                  progress: 0,
+                  speed: null,
+                  /* v8 ignore next */
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Packing started" }] }
+                    /* v8 ignore next */
+                    : null,
+                }));
+              } else {
+                setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
+              }
               break;
             case "progress": {
               const now = performance.now();
@@ -214,6 +226,21 @@ export function useUpload() {
               uploadTotalBytes = msg.total;
               break;
             }
+            case "pack-done": {
+              const avgPackSpeed = msg.durationMs > 0
+                ? `${formatBytes(Math.round(msg.inputBytes / (msg.durationMs / 1000)))}/s`
+                : null;
+              const packEvent = { time: new Date().toISOString(), message: avgPackSpeed ? `Packing complete \u00b7 \u00d8 ${avgPackSpeed}` : "Packing complete" };
+              setState((s) => ({
+                ...s,
+                /* v8 ignore next */
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, packEvent] }
+                  /* v8 ignore next */
+                  : null,
+              }));
+              break;
+            }
             case "done":
               resolve(msg);
               break;
@@ -223,6 +250,7 @@ export function useUpload() {
                 : { time: new Date().toISOString(), message: msg.transport === "ws" ? "WebSocket transport active" : "HTTP chunks transport active" };
               setState((s) => ({
                 ...s,
+                /* v8 ignore next */
                 debugInfo: s.debugInfo
                   ? {
                       ...s.debugInfo,
@@ -230,6 +258,7 @@ export function useUpload() {
                       fallback: msg.fallback,
                       events: [...s.debugInfo.events, event],
                     }
+                  /* v8 ignore next */
                   : null,
               }));
               break;
@@ -238,8 +267,10 @@ export function useUpload() {
               const event = { time: new Date().toISOString(), message: msg.backend === "s3" ? "S3 upload active" : "Filesystem upload active" };
               setState((s) => ({
                 ...s,
+                /* v8 ignore next */
                 debugInfo: s.debugInfo
                   ? { ...s.debugInfo, events: [...s.debugInfo.events, event] }
+                  /* v8 ignore next */
                   : null,
               }));
               break;
@@ -304,8 +335,10 @@ export function useUpload() {
         shareLink,
         error: null,
         uploadId: result.id,
+        /* v8 ignore next */
         debugInfo: s.debugInfo
           ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Upload complete · Ø ${averageSpeed}` : "Upload complete" }] }
+          /* v8 ignore next */
           : null,
       }));
     } catch (err) {

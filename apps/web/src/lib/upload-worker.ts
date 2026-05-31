@@ -78,6 +78,7 @@ export interface UploadWorkerRequest {
 export type UploadWorkerMessage =
   | { type: "phase"; phase: string }
   | { type: "progress"; loaded: number; total: number }
+  | { type: "pack-done"; durationMs: number; inputBytes: number; outputBytes: number }
   | { type: "transport"; transport: "ws" | "http"; fallback: boolean }
   | { type: "storage"; backend: "s3" | "filesystem" }
   | {
@@ -128,10 +129,13 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       plaintextSize = msg.file.size;
     } else if (msg.files && msg.files.length > 0) {
       // Streaming ZIP: read files one at a time, report byte-accurate progress
+      const inputBytes = msg.files.reduce((sum, f) => sum + f.size, 0);
       post({ type: "phase", phase: "zipping" });
+      const packStart = Date.now();
       const zipResult = await streamingZip(msg.files, (bytesRead, totalBytes) => {
         post({ type: "progress", loaded: bytesRead, total: totalBytes });
       });
+      post({ type: "pack-done", durationMs: Date.now() - packStart, inputBytes, outputBytes: zipResult.totalSize });
       plaintextSize = zipResult.totalSize;
       // Stream from the chunks array without concatenating into a single buffer
       // to avoid exceeding the ~2 GB contiguous ArrayBuffer limit.

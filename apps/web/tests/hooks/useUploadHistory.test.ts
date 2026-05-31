@@ -204,4 +204,17 @@ describe("useUploadHistory", () => {
     expect(result.current.uploads).toHaveLength(2);
     expect(result.current.uploads.find((u) => u.id === "q-2")?.gone).toBe(false);
   });
+
+  it("subscribe cleanup wird aufgerufen wenn die Komponente unmountet wird", async () => {
+    const { getAllUploads } = await import("../../src/lib/upload-store.js");
+    vi.mocked(getAllUploads).mockResolvedValueOnce([]);
+
+    const { useUploadHistory } = await import("../../src/hooks/useUploadHistory.js");
+    const { result, unmount } = renderHook(() => useUploadHistory());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Unmounting triggers the cleanup returned by subscribe()
+    unmount();
+  });
 });

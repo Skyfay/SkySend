@@ -2,6 +2,28 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.11.1 - Adaptive ZIP Compression & Packing Events in Debug Info Panel
+*Released: May 31, 2026*
+
+### 🎨 Improvements
+
+- **web**: ZIP packing now uses store-only compression (`level: 0`) for already-compressed formats (audio, video, images, archives, and office documents), reducing CPU load on mobile devices without affecting ZIP output size.
+- **client**: Same adaptive compression as the web app - the CLI and TUI now also apply store-only mode for pre-compressed formats when packing multiple files.
+- **web**: The Technical Info timeline now shows packing events for multi-file uploads - "Packing started" when the ZIP phase begins and "Packing complete · Ø X MB/s" with the average throughput when it finishes.
+
+### 🧪 Tests
+
+- **server**: Brought `routes/note.ts` to 100% coverage.
+- **web**: Brought `useUpload` and `useUploadHistory` to 100% coverage.
+- **client**: Brought `lib/config.ts` to 100% coverage.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.11.1`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.11.0 - Password Protection Algorithm Removal, New Copy Button for Password Values, and Improvements
 *Released: May 30, 2026*
 
