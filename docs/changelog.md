@@ -9,6 +9,7 @@ All notable changes to SkySend are documented here.
 
 - **web**: ZIP packing now uses store-only compression (`level: 0`) for already-compressed formats (audio, video, images, archives, and office documents), reducing CPU load on mobile devices without affecting ZIP output size.
 - **client**: Same adaptive compression as the web app - the CLI and TUI now also apply store-only mode for pre-compressed formats when packing multiple files.
+- **web**: The Technical Info timeline now shows packing events for multi-file uploads - "Packing started" when the ZIP phase begins and "Packing complete · Ø X MB/s" with the average throughput when it finishes.
 
 ### 🐳 Docker
 

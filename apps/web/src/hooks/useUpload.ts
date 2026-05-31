@@ -190,7 +190,19 @@ export function useUpload() {
               if (msg.phase === "uploading") {
                 uploadStartTime = performance.now();
               }
-              setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
+              if (msg.phase === "zipping") {
+                setState((s) => ({
+                  ...s,
+                  phase: msg.phase as UploadPhase,
+                  progress: 0,
+                  speed: null,
+                  debugInfo: s.debugInfo
+                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Packing started" }] }
+                    : null,
+                }));
+              } else {
+                setState((s) => ({ ...s, phase: msg.phase as UploadPhase, progress: 0, speed: null }));
+              }
               break;
             case "progress": {
               const now = performance.now();
@@ -212,6 +224,19 @@ export function useUpload() {
                 ...(speed ? { speed } : {}),
               }));
               uploadTotalBytes = msg.total;
+              break;
+            }
+            case "pack-done": {
+              const avgPackSpeed = msg.durationMs > 0
+                ? `${formatBytes(Math.round(msg.inputBytes / (msg.durationMs / 1000)))}/s`
+                : null;
+              const packEvent = { time: new Date().toISOString(), message: avgPackSpeed ? `Packing complete \u00b7 \u00d8 ${avgPackSpeed}` : "Packing complete" };
+              setState((s) => ({
+                ...s,
+                debugInfo: s.debugInfo
+                  ? { ...s.debugInfo, events: [...s.debugInfo.events, packEvent] }
+                  : null,
+              }));
               break;
             }
             case "done":
