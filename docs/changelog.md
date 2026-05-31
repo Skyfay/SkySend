@@ -2,8 +2,8 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
-*Release: In Progress*
+## v2.11.1 - Adaptive ZIP Compression & Packing Events in Debug Info Panel
+*Released: May 31, 2026*
 
 ### 🎨 Improvements
 
@@ -19,8 +19,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.11.1`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 
