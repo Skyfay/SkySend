@@ -2,6 +2,21 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🎨 Improvements
+
+- **web**: ZIP packing now uses store-only compression (`level: 0`) for already-compressed formats (audio, video, images, archives, and office documents), reducing CPU load on mobile devices without affecting ZIP output size.
+- **client**: Same adaptive compression as the web app - the CLI and TUI now also apply store-only mode for pre-compressed formats when packing multiple files.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.11.0 - Password Protection Algorithm Removal, New Copy Button for Password Values, and Improvements
 *Released: May 30, 2026*
 

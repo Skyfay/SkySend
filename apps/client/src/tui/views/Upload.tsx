@@ -65,6 +65,24 @@ function createFileStream(filePath: string): ReadableStream<Uint8Array> {
   });
 }
 
+const PRECOMPRESSED_EXTENSIONS = new Set([
+  // Audio
+  "mp3", "aac", "ogg", "oga", "flac", "m4a", "opus", "wma",
+  // Video
+  "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "3gp",
+  // Images
+  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "avif",
+  // Archives
+  "zip", "gz", "bz2", "xz", "7z", "rar", "zst", "br",
+  // Documents (ZIP-based formats, already compressed)
+  "pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp", "epub",
+]);
+
+function getCompressionLevel(filename: string): 0 | 6 {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return PRECOMPRESSED_EXTENSIONS.has(ext) ? 0 : 6;
+}
+
 async function createZipStream(
   filePaths: string[],
   onProgress?: (packed: number, total: number) => void,
@@ -83,7 +101,7 @@ async function createZipStream(
   });
   for (const filePath of filePaths) {
     const name = path.basename(filePath);
-    const entry = new ZipDeflate(name, { level: 6 });
+    const entry = new ZipDeflate(name, { level: getCompressionLevel(name) });
     zipper.add(entry);
     const nodeStream = fs.createReadStream(filePath);
     for await (const chunk of nodeStream) {
