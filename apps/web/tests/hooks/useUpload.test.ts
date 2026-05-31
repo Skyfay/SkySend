@@ -406,5 +406,157 @@ describe("useUpload", () => {
     expect(result.current.phase).toBe("error");
     expect(result.current.error).toBe("Upload failed");
   });
+
+  it("Worker 'phase'-Message 'zipping' → debugInfo enthält 'Packing started'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "phase", phase: "zipping" });
+    });
+
+    expect(result.current.phase).toBe("zipping");
+    expect(result.current.debugInfo?.events.some((e) => e.message === "Packing started")).toBe(true);
+  });
+
+  it("Worker 'pack-done' mit durationMs > 0 → debugInfo enthält Packing-Speed", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "pack-done", durationMs: 1000, inputBytes: 5000 });
+    });
+
+    expect(result.current.debugInfo?.events.some((e) => e.message.startsWith("Packing complete"))).toBe(true);
+    expect(result.current.debugInfo?.events.some((e) => e.message.includes("/s"))).toBe(true);
+  });
+
+  it("Worker 'pack-done' mit durationMs = 0 → debugInfo enthält 'Packing complete' ohne Speed", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "pack-done", durationMs: 0, inputBytes: 0 });
+    });
+
+    expect(result.current.debugInfo?.events.some((e) => e.message === "Packing complete")).toBe(true);
+  });
+
+  it("Worker 'storage' mit backend='s3' → debugInfo enthält 'S3 upload active'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "storage", backend: "s3" });
+    });
+
+    expect(result.current.debugInfo?.events.some((e) => e.message === "S3 upload active")).toBe(true);
+  });
+
+  it("Worker 'storage' mit backend='filesystem' → debugInfo enthält 'Filesystem upload active'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "storage", backend: "filesystem" });
+    });
+
+    expect(result.current.debugInfo?.events.some((e) => e.message === "Filesystem upload active")).toBe(true);
+  });
+
+  it("Worker 'progress'-Message mit < 500ms → Speed bleibt null", async () => {
+    vi.useFakeTimers({ toFake: ["performance"] });
+
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    // Do NOT advance timers - elapsed < 0.5s
+    act(() => {
+      worker.emit({ type: "progress", loaded: 300, total: 1000 });
+    });
+
+    expect(result.current.progress).toBe(30);
+    expect(result.current.speed).toBeNull();
+  });
+
+  it("Worker onerror mit leerem Message → error='Worker error'", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emitError("");
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.error).toBe("Worker error");
+  });
+
+  it("averageSpeed=null wenn performance.now() immer denselben Wert zurückgibt (totalSec=0)", async () => {
+    vi.spyOn(performance, "now").mockReturnValue(1000);
+
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+
+    act(() => {
+      result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+
+    const worker = MockWorker.lastInstance!;
+    act(() => {
+      worker.emit({ type: "phase", phase: "uploading" });
+    });
+    act(() => {
+      worker.emit({ type: "progress", loaded: 500, total: 1000 });
+    });
+    act(() => {
+      worker.emit({ type: "done", id: "file-ts0", ownerToken: "tok", effectiveSecret: "sec" });
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("done"));
+    expect(result.current.averageSpeed).toBeNull();
+  });
 });
 

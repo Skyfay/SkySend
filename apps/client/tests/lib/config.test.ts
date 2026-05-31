@@ -34,6 +34,13 @@ describe("loadConfig", () => {
     expect(loadConfig()).toEqual({});
   });
 
+  it("getConfigDir fällt auf os.homedir() zurück wenn XDG_CONFIG_HOME nicht gesetzt ist", async () => {
+    delete process.env["XDG_CONFIG_HOME"];
+    const { getConfigFilePath } = await freshConfig();
+    expect(getConfigFilePath()).not.toContain(tempDir);
+    expect(getConfigFilePath()).toContain("skysend");
+  });
+
   it("returns empty object for corrupt JSON (recovery)", async () => {
     const { loadConfig, getConfigFilePath, saveConfig } = await freshConfig();
     // Create a valid config first to ensure the dir exists
@@ -91,6 +98,12 @@ describe("resolveServer", () => {
     const { resolveServer } = await freshConfig();
     expect(() => resolveServer()).toThrow("No server configured");
   });
+
+  it("gibt defaultServer zurück wenn er in der Config gesetzt ist", async () => {
+    const { resolveServer, saveConfig } = await freshConfig();
+    saveConfig({ defaultServer: "https://default.example.com" });
+    expect(resolveServer()).toBe("https://default.example.com");
+  });
 });
 
 // ── Multi-Server Management ───────────────────────────────────────────────────
@@ -121,6 +134,12 @@ describe("addServer", () => {
     addServer("First", "https://first.example.com");
     addServer("Second", "https://second.example.com");
     expect(getDefaultServer()).toBe("https://first.example.com");
+  });
+
+  it("gibt legacy server zurück wenn nur das server-Feld gesetzt ist (kein defaultServer)", async () => {
+    const { saveConfig, getDefaultServer } = await freshConfig();
+    saveConfig({ server: "https://legacy.example.com" });
+    expect(getDefaultServer()).toBe("https://legacy.example.com");
   });
 
   it("throws when adding a duplicate server URL", async () => {
@@ -156,6 +175,12 @@ describe("removeServer", () => {
     addServer("A", "https://a.example.com");
     removeServer("https://nonexistent.example.com");
     expect(getServers()).toHaveLength(1);
+  });
+
+  it("removeServer ohne vorherige Server (config.servers ist undefined) → kein Fehler", async () => {
+    const { removeServer, getServers } = await freshConfig();
+    expect(() => removeServer("https://nonexistent.example.com")).not.toThrow();
+    expect(getServers()).toHaveLength(0);
   });
 });
 

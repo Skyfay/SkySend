@@ -11,6 +11,12 @@ All notable changes to SkySend are documented here.
 - **client**: Same adaptive compression as the web app - the CLI and TUI now also apply store-only mode for pre-compressed formats when packing multiple files.
 - **web**: The Technical Info timeline now shows packing events for multi-file uploads - "Packing started" when the ZIP phase begins and "Packing complete · Ø X MB/s" with the average throughput when it finishes.
 
+### 🧪 Tests
+
+- **server**: Brought `routes/note.ts` to 100% coverage.
+- **web**: Brought `useUpload` and `useUploadHistory` to 100% coverage.
+- **client**: Brought `lib/config.ts` to 100% coverage.
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:vNEXT`
