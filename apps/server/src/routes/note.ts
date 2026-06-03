@@ -266,16 +266,17 @@ noteRoute.post(
       .where(
         sql`${notes.id} = ${id} AND (${notes.maxViews} = 0 OR ${notes.viewCount} < ${notes.maxViews})`,
       )
-      .run();
+      .returning({ viewCount: notes.viewCount })
+      .all();
 
-    if (result.changes === 0) {
+    if (result.length === 0) {
       return c.json({ error: "View limit reached" }, 410);
     }
 
     return c.json({
       encryptedContent: Buffer.from(note.encryptedContent).toString("base64"),
       nonce: Buffer.from(note.nonce).toString("base64"),
-      viewCount: note.viewCount + 1,
+      viewCount: result[0].viewCount,
       maxViews: note.maxViews,
     });
   },
