@@ -172,9 +172,14 @@ app.use(
 const quota = createUploadQuota(config);
 
 // Global error handler
+// no-store: caching proxies (e.g. Traefik with Souin) must never cache error
+// responses. Without this, a transient 500 for a static asset during deployment
+// gets cached and served to all clients until the proxy container is recreated.
 app.onError((err, c) => {
   console.error("[error]", err);
-  return c.json({ error: "Internal server error" }, 500);
+  return c.json({ error: "Internal server error" }, 500, {
+    "Cache-Control": "no-store",
+  });
 });
 
 // ── API Routes ─────────────────────────────────────────
@@ -317,6 +322,17 @@ if (config.OIDC_ENABLED && oidcAdapter) {
 // In production (Docker), the built files are at the expected path
 const webDistPath = resolve(import.meta.dirname, "../../web/dist");
 
+// Content-hashed assets can be cached aggressively by browsers (immutable).
+// The no-store on app.onError ensures transient errors during deployment are
+// never cached by intermediate proxies like Traefik.
+app.use("/assets/*", async (c, next) => {
+  await next();
+  if (c.res.status === 200) {
+    c.res.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  } else {
+    c.res.headers.set("Cache-Control", "no-store");
+  }
+});
 app.use(
   "/assets/*",
   serveStatic({ root: webDistPath, rewriteRequestPath: (path) => path }),
