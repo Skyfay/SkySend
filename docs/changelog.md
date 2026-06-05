@@ -16,6 +16,7 @@ All notable changes to SkySend are documented here.
 ### 🔧 CI/CD
 
 - **infra**: Added `typecheck` scripts to every TypeScript package so `pnpm validate` and CI now type-check the entire monorepo, not just the web app, preventing type errors from slipping through to the Docker build.
+- **infra**: The `typecheck` task now builds its workspace library dependencies first, so type checking resolves cross-package types from source and passes in a clean checkout instead of relying on previously built output.
 
 ### 🐳 Docker
 
