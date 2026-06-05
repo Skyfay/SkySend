@@ -13,6 +13,10 @@ All notable changes to SkySend are documented here.
 
 - **server**: Added Cache-Control headers so proxies no longer cache transient server errors, while content-hashed assets are served with long-term immutable caching.
 
+### 🔧 CI/CD
+
+- **infra**: Added `typecheck` scripts to every TypeScript package so `pnpm validate` and CI now type-check the entire monorepo, not just the web app, preventing type errors from slipping through to the Docker build.
+
 ### 🐳 Docker
 
 - **Image**: `skyfay/skysend:v2.11.2`

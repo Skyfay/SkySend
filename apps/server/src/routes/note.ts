@@ -269,14 +269,15 @@ noteRoute.post(
       .returning({ viewCount: notes.viewCount })
       .all();
 
-    if (result.length === 0) {
+    const updated = result[0];
+    if (!updated) {
       return c.json({ error: "View limit reached" }, 410);
     }
 
     return c.json({
       encryptedContent: Buffer.from(note.encryptedContent).toString("base64"),
       nonce: Buffer.from(note.nonce).toString("base64"),
-      viewCount: result[0].viewCount,
+      viewCount: updated.viewCount,
       maxViews: note.maxViews,
     });
   },

@@ -28,6 +28,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=../../.env.dev src/index.ts",
     "build": "tsc && rm -rf dist/db/migrations && cp -r src/db/migrations dist/db/migrations",
+    "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",

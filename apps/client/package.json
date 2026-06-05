@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "build:compile": "bun build --compile --minify src/index.ts --outfile dist/skysend",
     "build:linux-x64": "bun build --compile --minify --target=bun-linux-x64 src/index.ts --outfile dist/skysend-linux-x64",
     "build:linux-arm64": "bun build --compile --minify --target=bun-linux-arm64 src/index.ts --outfile dist/skysend-linux-arm64",

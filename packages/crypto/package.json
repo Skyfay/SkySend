@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
