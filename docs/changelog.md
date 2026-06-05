@@ -2,6 +2,24 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.11.2 - Cache-Control Fiexes & View Count Bug Fix
+*Released: June 5, 2026*
+
+### 🐛 Bug Fixes
+
+- **server**: The view count returned after opening a note now reflects the authoritative stored value, and notes that have reached their view limit are handled correctly. ([#59](https://github.com/Skyfay/SkySend/issues/59))
+
+### 🎨 Improvements
+
+- **server**: Added Cache-Control headers so proxies no longer cache transient server errors, while content-hashed assets are served with long-term immutable caching.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.11.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.11.1 - Adaptive ZIP Compression & Packing Events in Debug Info Panel
 *Released: May 31, 2026*
 
