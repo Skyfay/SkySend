@@ -644,7 +644,9 @@ describe("note routes", () => {
       const updateSpy = vi.spyOn(dbCtx.db, "update").mockReturnValueOnce({
         set: () => ({
           where: () => ({
-            run: () => ({ changes: 0, lastInsertRowid: 0n }),
+            returning: () => ({
+              all: () => [],
+            }),
           }),
         }),
       } as ReturnType<typeof dbCtx.db.update>);
