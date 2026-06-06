@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🐛 Bug Fixes
+
+- **server**: Fixed intermittent 500/502 errors for static assets behind a reverse proxy (e.g. Traefik) after a deployment by keeping server connections alive longer than the proxy's idle timeout, so the proxy no longer reuses a closed connection.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.11.2 - Cache-Control Fiexes & View Count Bug Fix
 *Released: June 5, 2026*
 
