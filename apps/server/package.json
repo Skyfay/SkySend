@@ -45,7 +45,7 @@
     "@skysend/crypto": "workspace:*",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.18",
+    "hono": "^4.12.26",
     "jose": "^6.2.3",
     "openid-client": "^6.8.4",
     "zod": "^4.4.3"
