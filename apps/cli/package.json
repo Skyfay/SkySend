@@ -20,6 +20,6 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.7.0",
-    "tsx": "^4.22.0"
+    "tsx": "^4.22.4"
   }
 }

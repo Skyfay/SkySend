@@ -15,6 +15,11 @@ All notable changes to SkySend are documented here.
 - **web**: Updated vite to 8.0.16 to fix `server.fs.deny` bypass and NTLMv2 hash disclosure on Windows (GHSA-fx2h-pf6j-xcff).
 - **web**: Updated dompurify to 3.4.11 to fix multiple XSS and attribute-pollution vulnerabilities (GHSA-hpcv-96wg-7vj8, GHSA-r47g-fvhr-h676, GHSA-rp9w-3fw7-7cwq, GHSA-76mc-f452-cxcm, GHSA-gvmj-g25r-r7wr, GHSA-vxr8-fq34-vvx9, GHSA-cmwh-pvxp-8882).
 - **infra**: Added pnpm overrides for `ws` (`>=8.21.0`), `miniflare>undici` (`>=7.28.0`), `tsx>esbuild` and `wrangler>esbuild` (`>=0.28.1`), `@babel/core` (`>=7.29.6`), and updated the `vitepress>vite` override to `>=6.4.3 <7` to address transitive advisories in dev dependencies (GHSA-96hv-2xvq-fx4p, GHSA-58qx-3vcg-4xpx, GHSA-vmh5-mc38-953g, GHSA-hm92-r4w5-c3mj, GHSA-vxpw-j846-p89q, GHSA-pr7r-676h-xcf6, GHSA-p88m-4jfj-68fv, GHSA-35p6-xmwp-9g52, GHSA-g8m3-5g58-fq7m, GHSA-g7r4-m6w7-qqqr, GHSA-4x5r-pxfx-6jf8, GHSA-fx2h-pf6j-xcff).
+- **server**: Updated `@hono/node-server` to 2.0.5 to patch a serve-static middleware path-prefix bypass on Windows.
+
+### 🔧 CI/CD
+
+- **infra**: Bumped patch-level dependencies across the monorepo (radix-ui components, react, react-i18next, idb-keyval, tailwindcss, vue, vitest, tsx, prettier, and related type definitions). Updated i18next to 26.3.1 to satisfy the updated react-i18next peer requirement.
 
 ### 🐳 Docker
 
