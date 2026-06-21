@@ -54,7 +54,7 @@ SkySend also supports sharing encrypted text notes - no file needed.
 2. Choose a note type:
    - **Text** - Plain text content, with an optional Markdown mode (live preview and rendered GFM output)
    - **Password** - One or more passwords displayed as masked fields with individual reveal and copy buttons. Includes a built-in password generator with configurable length, character types, and entropy display.
-   - **Code** - Code snippets with automatic syntax highlighting (22 languages) and line numbers
+   - **Code** - Code snippets with automatic syntax highlighting (43 languages) and line numbers
    - **SSH Key** - Generate Ed25519 or RSA (1024-4096 bit) key pairs in the browser, or paste existing keys. Shared as a structured note with separate Public Key and Private Key sections.
    - **Markdown** - Available as a sub-toggle in the Text tab. Write Markdown with a live preview and view it rendered with full GitHub Flavored Markdown support.
 3. Enter your content

@@ -67,7 +67,7 @@ We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern securi
 
 - **Text Notes** - share encrypted text snippets with optional Markdown rendering (GFM support with live preview)
 - **Password Sharing** - store multiple passwords with individual masked display, reveal toggles, copy buttons, and a built-in password generator
-- **Code Snippets** - share code with syntax highlighting (22 auto-detected languages) and line numbers
+- **Code Snippets** - share code with syntax highlighting (43 auto-detected languages) and line numbers
 - **Markdown** - write and preview Markdown notes with full GitHub Flavored Markdown support
 - **SSH Keys** - generate Ed25519 or RSA key pairs in the browser, or paste existing keys, and share them as encrypted notes
 - **Burn After Reading** - notes that self-destruct after a single view

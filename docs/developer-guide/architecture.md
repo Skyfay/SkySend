@@ -187,7 +187,7 @@ Notes support five content types, each with a dedicated UI:
 | `text` | Plain text | Whitespace-preserving display |
 | `markdown` | Markdown (GFM) | Rendered HTML via react-markdown |
 | `password` | One or more passwords | Per-password masked display with reveal/copy |
-| `code` | Code snippets | Syntax highlighting (22 languages) with line numbers |
+| `code` | Code snippets | Syntax highlighting (43 languages) with line numbers |
 | `sshkey` | SSH key pairs | Structured Public Key / Private Key sections |
 
 ## Package Dependencies
@@ -304,7 +304,9 @@ apps/web/src/
     nl.json             # Dutch translations
     it.json             # Italian translations
     pl.json             # Polish translations
+    pt-BR.json          # Brazilian Portuguese translations
     zh.json             # Chinese translations
+    ja.json             # Japanese translations
 ```
 
 ## CLI Client Architecture
@@ -340,7 +342,7 @@ The CLI client uses the same `@skysend/crypto` library and the same API endpoint
 
 ### Server-Side
 
-- **SQLite database** (`data/skysend.db`) - Upload metadata, tokens, encrypted metadata, and encrypted note content
+- **SQLite database** (`data/db/skysend.db`) - Upload metadata, tokens, encrypted metadata, and encrypted note content
 - **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Used when `STORAGE_BACKEND=filesystem` (default).
 - **S3-compatible storage** - Encrypted file blobs stored as `<uuid>.bin` objects. Used when `STORAGE_BACKEND=s3`. Downloads use presigned URLs for direct client-to-S3 transfers.
 - Notes are stored entirely in the database regardless of storage backend.

@@ -1,6 +1,6 @@
 # Database Schema
 
-SkySend uses SQLite with Drizzle ORM. The database file is located at `data/skysend.db`.
+SkySend uses SQLite with Drizzle ORM. The database file is located at `data/db/skysend.db`.
 
 ## SQLite Configuration
 

@@ -34,8 +34,7 @@ Browser (Client)                              Server
 | Metadata Encryption | AES-256-GCM + random 12-byte IV |
 | Nonce Handling | Counter-based XOR (32-bit big-endian) |
 | Auth Token | HMAC-SHA256 |
-| Password KDF (preferred) | Argon2id (64 MiB memory, 3 iterations, 1 parallelism) |
-| Password KDF (fallback) | PBKDF2-SHA256 (600,000 iterations) |
+| Password KDF | Argon2id (64 MiB memory, 3 iterations, 1 parallelism) |
 
 ## Key Derivation
 
@@ -169,7 +168,7 @@ When a user sets a password, additional protection is applied:
 ### Key Derivation
 
 1. Generate a password salt (16 bytes)
-2. Derive a `passwordKey` (32 bytes) from the password using Argon2id or PBKDF2-SHA256
+2. Derive a `passwordKey` (32 bytes) from the password using Argon2id
 3. XOR the secret with the password key: `protectedSecret = secret XOR passwordKey`
 4. Store the password salt and algorithm on the server
 
@@ -182,12 +181,7 @@ When a user sets a password, additional protection is applied:
 | Parallelism | 1 |
 | Hash Length | 32 bytes |
 
-### PBKDF2 Fallback
-
-If Argon2id WASM is unavailable (e.g., older browsers), PBKDF2-SHA256 is used:
-
-- **Iterations**: 600,000 (OWASP 2024 recommendation)
-- **Key Length**: 32 bytes
+> Argon2id is the only supported password KDF. The legacy PBKDF2-SHA256 fallback was removed in v2.11.0.
 
 ### Download Flow with Password
 

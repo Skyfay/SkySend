@@ -15,6 +15,7 @@ http://localhost:3000/api
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
 | `GET` | `/api/config` | Server configuration (limits) | - |
+| `GET` | `/api/quota` | Upload quota status for the client IP | - |
 | `POST` | `/api/upload` | Upload encrypted file stream | - |
 | `POST` | `/api/upload/init` | Initialize chunked upload session | - |
 | `POST` | `/api/upload/:id/chunk` | Append chunk (with `?index=N`) | - |
@@ -118,6 +119,7 @@ Simple health check for monitoring and Docker health checks.
 ```json
 {
   "status": "ok",
+  "version": "2.11.3",
   "timestamp": "2025-01-01T00:00:00.000Z"
 }
 ```

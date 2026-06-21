@@ -5,7 +5,7 @@ The `@skysend/crypto` package (`packages/crypto`) is the shared encryption libra
 - Key generation and derivation (HKDF-SHA256)
 - Streaming file encryption/decryption (AES-256-GCM)
 - Metadata encryption/decryption (AES-256-GCM)
-- Password-based key derivation (Argon2id / PBKDF2-SHA256)
+- Password-based key derivation (Argon2id)
 - Utility functions (base64url, constant-time comparison)
 
 ## Design Principles
@@ -55,4 +55,4 @@ randomBytes(length): Uint8Array
 - [Key Derivation](/developer-guide/crypto/key-derivation) - HKDF-SHA256 key generation and derivation
 - [Streaming Encryption](/developer-guide/crypto/streaming-encryption) - AES-256-GCM ECE format
 - [Metadata Encryption](/developer-guide/crypto/metadata-encryption) - File metadata encryption
-- [Password Protection](/developer-guide/crypto/password-protection) - Argon2id and PBKDF2
+- [Password Protection](/developer-guide/crypto/password-protection) - Argon2id password-based key derivation

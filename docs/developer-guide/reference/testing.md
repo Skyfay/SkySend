@@ -22,7 +22,7 @@ cd apps/server && pnpm test
 | `keychain.test.ts` | Secret/salt generation, HKDF key derivation, token computation |
 | `ece.test.ts` | Streaming encryption/decryption, nonce handling, size calculation |
 | `metadata.test.ts` | Metadata encryption/decryption, schema validation |
-| `password.test.ts` | Argon2id/PBKDF2 key derivation, password protection XOR |
+| `password.test.ts` | Argon2id key derivation, password protection XOR |
 | `util.test.ts` | Base64url encoding, constant-time comparison, byte utilities |
 | `integration.test.ts` | Full encrypt-decrypt roundtrip |
 

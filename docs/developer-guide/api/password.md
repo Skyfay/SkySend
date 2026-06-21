@@ -62,7 +62,7 @@ The `authToken` is derived client-side from the secret (which itself was recover
 
 1. The client retrieves the upload info (`GET /api/info/:id`) which includes `passwordSalt` and `passwordAlgo`
 2. The user enters their password
-3. The client derives `passwordKey` using the same algorithm (Argon2id or PBKDF2)
+3. The client derives `passwordKey` using Argon2id (the algorithm recorded in `passwordAlgo`)
 4. The client recovers the secret: `secret = protectedSecret XOR passwordKey`
 5. The client derives keys and computes the `authToken`
 6. The client sends the `authToken` to `POST /api/password/:id`

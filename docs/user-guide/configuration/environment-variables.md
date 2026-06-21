@@ -48,8 +48,8 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `NOTE_MAX_SIZE` | ❌ | `1MB` | Maximum note content size. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `NOTE_EXPIRE_OPTIONS_SEC` | ❌ | `300,3600,86400,604800` | Comma-separated list of selectable expiry times for notes in seconds. |
 | `NOTE_DEFAULT_EXPIRE_SEC` | ❌ | `86400` | Default note expiry time (must be one of `NOTE_EXPIRE_OPTIONS_SEC`). |
-| `NOTE_VIEW_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | Comma-separated list of selectable view limits for notes. Include `0` for an "Unlimited" option. |
-| `NOTE_DEFAULT_VIEWS` | ❌ | `1` | Default view limit for notes (must be one of `NOTE_VIEW_OPTIONS`). `1` means burn-after-reading. `0` means unlimited. |
+| `NOTE_VIEW_OPTIONS` | ❌ | `0,1,2,3,5,10,20,50,100` | Comma-separated list of selectable view limits for notes. Include `0` for an "Unlimited" option. |
+| `NOTE_DEFAULT_VIEWS` | ❌ | `0` | Default view limit for notes (must be one of `NOTE_VIEW_OPTIONS`). `0` means unlimited (the default). `1` means burn-after-reading. |
 
 ## Services
 

@@ -42,7 +42,7 @@ curl -fsSL https://skysend.app/install.sh | sh
 To install a specific version or to a custom directory:
 
 ```bash
-VERSION=v2.4.0 curl -fsSL https://skysend.app/install.sh | sh
+VERSION=v2.11.3 curl -fsSL https://skysend.app/install.sh | sh
 INSTALL_DIR=$HOME/.local/bin curl -fsSL https://skysend.app/install.sh | sh
 ```
 
@@ -59,7 +59,7 @@ This installs `skysend.exe` to `~/.skysend/bin` and adds it to your user PATH. R
 To install a specific version:
 
 ```powershell
-$env:VERSION="v2.4.0"; irm https://skysend.app/install.ps1 | iex
+$env:VERSION="v2.11.3"; irm https://skysend.app/install.ps1 | iex
 ```
 
 ### Manual Download

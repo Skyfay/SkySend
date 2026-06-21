@@ -14,7 +14,6 @@
  *
  * Security notes:
  * - Argon2id parameters follow OWASP recommendations
- * - PBKDF2 iteration count follows OWASP 2024 guidance (600,000)
  * - Salt is unique per upload (prevents rainbow tables)
  * - Password is encoded as UTF-8 before hashing
  */
