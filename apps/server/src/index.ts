@@ -412,9 +412,20 @@ const server = serve(
 //   large file uploads over slow connections can legitimately take many hours.
 //   The reverse proxy (Nginx/Caddy/Traefik) should handle overall connection timeouts.
 // - timeout: 0 (disabled) - socket inactivity handled by Node.js keep-alive defaults.
+// - keepAliveTimeout: 120s. Node's default is only 5s, which is shorter than the
+//   backend idle-connection timeout of every common reverse proxy (Traefik defaults
+//   to 90s). When Node closes a pooled keep-alive connection first, the proxy still
+//   believes it is usable and sends the next request into the closing socket, which
+//   surfaces as an intermittent 500/502 for whichever asset lands on the dead
+//   connection - only via the proxy, never on direct access, and only cured by
+//   recreating the proxy's connection pool. Keeping Node's timeout longer than the
+//   proxy's ensures the proxy always controls connection lifecycle. Since Node 18
+//   headersTimeout counts only from the start of an active request, so it stays an
+//   effective Slowloris defense even though it is now shorter than keepAliveTimeout.
 const nodeServer = server as unknown as import("node:http").Server;
 nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;
+nodeServer.keepAliveTimeout = 120_000;
 
 // Attach the WebSocket adapter so /api/upload/ws can accept upgrade requests.
 if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {

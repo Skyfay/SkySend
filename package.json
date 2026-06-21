@@ -1,6 +1,6 @@
 {
   "name": "skysend",
-  "version": "2.11.2",
+  "version": "2.11.3",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
@@ -38,20 +38,25 @@
       "fast-xml-parser": ">=5.7.2",
       "postcss": ">=8.5.10",
       "@esbuild-kit/core-utils>esbuild": ">=0.25.0",
-      "vitepress>vite": "~6.4.2"
+      "vitepress>vite": ">=6.4.3 <7",
+      "ws": ">=8.21.0",
+      "miniflare>undici": ">=7.28.0",
+      "tsx>esbuild": ">=0.28.1",
+      "wrangler>esbuild": ">=0.28.1",
+      "@babel/core": ">=7.29.6"
     }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^4.1.6",
-    "eslint": "^10.3.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.6.0",
-    "prettier": "^3.8.3",
-    "tsx": "^4.22.0",
+    "prettier": "^3.8.4",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.3",
-    "vitest": "^4.1.6"
+    "typescript-eslint": "^8.61.1",
+    "vitest": "^4.1.9"
   }
 }
