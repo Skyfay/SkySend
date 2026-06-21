@@ -21,6 +21,7 @@ All notable changes to SkySend are documented here.
 
 - **infra**: Bumped patch-level dependencies across the monorepo (radix-ui components, react, react-i18next, idb-keyval, tailwindcss, vue, vitest, tsx, prettier, and related type definitions). Updated i18next to 26.3.1 to satisfy the updated react-i18next peer requirement.
 - **infra**: Bumped minor-level dependencies across the monorepo (AWS SDK v3, react-router-dom, radix-ui react-select/slot/switch, lucide-react, better-sqlite3, ink, eslint, typescript-eslint, wrangler, @cloudflare/workers-types).
+- **infra**: Updated commander to v15, @types/node to v26, @tailwindcss/typography to 0.5.20, and fflate to 0.8.3.
 
 ### 🐳 Docker
 

@@ -14,12 +14,12 @@
   },
   "dependencies": {
     "@skysend/server": "workspace:*",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.7.0",
+    "@types/node": "^26.0.0",
     "tsx": "^4.22.4"
   }
 }
