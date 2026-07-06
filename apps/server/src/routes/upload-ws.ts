@@ -12,6 +12,7 @@ import {
   type UploadHeaders,
 } from "../lib/upload-validation.js";
 import { getClientIp } from "../middleware/rate-limit.js";
+import { createExpiresAt } from "../lib/expiry.js";
 
 /**
  * WebSocket upload transport.
@@ -330,7 +331,7 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
                 passwordSaltBuffer = Buffer.from(fromBase64url(headers.passwordSalt));
               }
               const now = new Date();
-              const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
+              const expiresAt = createExpiresAt(headers.expireSec, now);
               const storagePath = `${session.id}.bin`;
 
               const db = getDb();

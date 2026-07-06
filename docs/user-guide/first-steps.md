@@ -91,7 +91,7 @@ Navigate to **My Uploads** to:
 - Delete uploads or notes manually
 
 ::: info Browser-Local Data
-Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire.
+Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire, reach their download/view limit, or are deleted manually.
 :::
 
 ## Upload from the Terminal

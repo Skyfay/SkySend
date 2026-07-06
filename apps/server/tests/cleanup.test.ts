@@ -92,6 +92,26 @@ describe("cleanup", () => {
     expect(await storageCtx.storage.exists(id)).toBe(true);
   });
 
+  it("should not delete never-expiring uploads before download limit", async () => {
+    const id = TEST_UUID;
+    insertTestUpload(dbCtx.db, {
+      id,
+      maxDownloads: 10,
+      downloadCount: 3,
+      expiresAt: new Date("9999-12-31T23:59:59.999Z"),
+    });
+    await storageCtx.storage.save(id, createStream(new Uint8Array([1])));
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(0);
+
+    const result = await dbCtx.db.query.uploads.findFirst({
+      where: eq(uploads.id, id),
+    });
+    expect(result).toBeDefined();
+    expect(await storageCtx.storage.exists(id)).toBe(true);
+  });
+
   it("should return 0 when nothing to clean", async () => {
     const deleted = await runCleanup(storageCtx.storage);
     expect(deleted).toBe(0);
@@ -204,6 +224,24 @@ describe("cleanup", () => {
       maxViews: 0,
       viewCount: 50,
       expiresAt: new Date(Date.now() + 86400 * 1000),
+    });
+
+    const deleted = await runCleanup(storageCtx.storage);
+    expect(deleted).toBe(0);
+
+    const result = await dbCtx.db.query.notes.findFirst({
+      where: eq(notes.id, noteId),
+    });
+    expect(result).toBeDefined();
+  });
+
+  it("should not delete never-expiring notes before view limit", async () => {
+    const noteId = "550e8400-e29b-41d4-a716-446655440015";
+    insertTestNote(dbCtx.db, {
+      id: noteId,
+      maxViews: 10,
+      viewCount: 2,
+      expiresAt: new Date("9999-12-31T23:59:59.999Z"),
     });
 
     const deleted = await runCleanup(storageCtx.storage);

@@ -20,7 +20,7 @@ export const uploadHeadersSchema = z.object({
   expireSec: z
     .string()
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().nonnegative()),
   fileCount: z
     .string()
     .default("1")

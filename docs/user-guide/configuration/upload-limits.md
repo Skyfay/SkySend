@@ -16,7 +16,7 @@ If using a reverse proxy (Nginx, Caddy, etc.), make sure its upload size limit m
 
 ## Expiry Options
 
-`FILE_EXPIRE_OPTIONS_SEC` controls which expiry times users can select, as a comma-separated list of seconds (default: `300,3600,86400,604800`). `FILE_DEFAULT_EXPIRE_SEC` sets the pre-selected default and must be one of those values.
+`FILE_EXPIRE_OPTIONS_SEC` controls which expiry times users can select, as a comma-separated list of seconds (default: `0,300,3600,86400,604800`). Use `0` for "never expires". `FILE_DEFAULT_EXPIRE_SEC` sets the pre-selected default and must be one of those values (default: `86400`).
 
 ## Download Limits
 

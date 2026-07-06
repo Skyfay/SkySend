@@ -1,6 +1,8 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+const NEVER_EXPIRES_YEAR = 9999;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -15,6 +17,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatDuration(seconds: number): string {
+  if (seconds === 0) return "Never";
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
@@ -22,7 +25,9 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatTimeRemaining(expiresAt: string): string {
-  const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
+  const expiry = new Date(expiresAt);
+  if (expiry.getUTCFullYear() >= NEVER_EXPIRES_YEAR) return "Never";
+  const remaining = Math.max(0, expiry.getTime() - Date.now());
   const seconds = Math.floor(remaining / 1000);
   if (seconds <= 0) return "expired";
   if (seconds < 60) return `${seconds}s`;

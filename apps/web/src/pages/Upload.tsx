@@ -56,6 +56,7 @@ export function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [expireSec, setExpireSec] = useState<number>(0);
   const [maxDownloads, setMaxDownloads] = useState<number>(0);
+  const [defaultsInitialized, setDefaultsInitialized] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordEnabled, setPasswordEnabled] = useState(false);
   const [quotaRefreshKey, setQuotaRefreshKey] = useState(0);
@@ -85,10 +86,12 @@ export function UploadPage() {
     uploadHook.phase !== "error";
   useFaviconProgress(isUploading ? uploadHook.progress : null);
 
-  // Initialize defaults when config loads
-  if (config && expireSec === 0) {
+  // Initialize defaults when config loads. `0` is a valid expiry value (never),
+  // so a separate flag is used instead of treating 0 as "unset".
+  if (config && !defaultsInitialized) {
     setExpireSec(config.fileDefaultExpire);
     setMaxDownloads(config.fileDefaultDownload);
+    setDefaultsInitialized(true);
     // Set initial tab: use server default if available, else first available tab
     const preferredTab = config.defaultTab;
     const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;

@@ -1,4 +1,5 @@
 const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
+const NEVER_EXPIRES_YEAR = 9999;
 
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -11,10 +12,15 @@ export function formatBytes(bytes: number): string {
 }
 
 export function formatDate(date: Date): string {
+  if (date.getUTCFullYear() >= NEVER_EXPIRES_YEAR) return "never";
   return date.toISOString().replace("T", " ").slice(0, 19);
 }
 
 export function formatDuration(ms: number): string {
+  if (ms > 0) {
+    const expiresAt = new Date(Date.now() + ms);
+    if (expiresAt.getUTCFullYear() >= NEVER_EXPIRES_YEAR) return "never";
+  }
   if (ms <= 0) return "expired";
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec}s`;
@@ -27,6 +33,7 @@ export function formatDuration(ms: number): string {
 }
 
 export function formatExpiry(seconds: number): string {
+  if (seconds === 0) return "never";
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${seconds / 60}m`;
   if (seconds < 86400) return `${seconds / 3600}h`;

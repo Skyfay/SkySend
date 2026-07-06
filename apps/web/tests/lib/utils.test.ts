@@ -60,8 +60,11 @@ describe("formatBytes", () => {
 // ── formatDuration ────────────────────────────────────────────────────────────
 
 describe("formatDuration", () => {
+  it("formats never expiry", () => {
+    expect(formatDuration(0)).toBe("Never");
+  });
+
   it("formats seconds under 1 minute", () => {
-    expect(formatDuration(0)).toBe("0s");
     expect(formatDuration(1)).toBe("1s");
     expect(formatDuration(59)).toBe("59s");
   });
@@ -89,6 +92,10 @@ describe("formatDuration", () => {
 describe("formatTimeRemaining", () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("formats never expiry sentinel", () => {
+    expect(formatTimeRemaining("9999-12-31T23:59:59.999Z")).toBe("Never");
   });
 
   it("returns 'expired' for a past timestamp", () => {

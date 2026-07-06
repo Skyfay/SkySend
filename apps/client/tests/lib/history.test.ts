@@ -190,6 +190,21 @@ describe("cleanupExpired", () => {
     expect(getNotes()).toHaveLength(1);
   });
 
+  it("keeps uploads and notes with never expiry", async () => {
+    const { addUpload, addNote, cleanupExpired, getUploads, getNotes } =
+      await freshHistory();
+
+    const past = new Date(Date.now() - 365 * 86400 * 1000).toISOString();
+    addUpload(makeUpload({ id: "never-upload", createdAt: past, expireSec: 0 }));
+    addNote(makeNote({ id: "never-note", createdAt: past, expireSec: 0 }));
+
+    const result = cleanupExpired();
+    expect(result.removedUploads).toBe(0);
+    expect(result.removedNotes).toBe(0);
+    expect(getUploads()).toHaveLength(1);
+    expect(getNotes()).toHaveLength(1);
+  });
+
   it("returns zero counts and does not write if nothing expired", async () => {
     const { addUpload, cleanupExpired } = await freshHistory();
     addUpload(makeUpload({ expireSec: 86400 * 30 }));

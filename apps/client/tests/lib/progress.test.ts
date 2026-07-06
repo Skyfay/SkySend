@@ -102,6 +102,10 @@ describe("formatDuration", () => {
 // ── formatExpiry ──────────────────────────────────────────────────────────────
 
 describe("formatExpiry", () => {
+  it("formats never expiry", () => {
+    expect(formatExpiry(0)).toBe("never");
+  });
+
   it("formats seconds under 1 minute", () => {
     expect(formatExpiry(30)).toBe("30 seconds");
     expect(formatExpiry(59)).toBe("59 seconds");
@@ -126,6 +130,12 @@ describe("formatExpiry", () => {
 // ── parseDuration ─────────────────────────────────────────────────────────────
 
 describe("parseDuration", () => {
+  it("parses never expiry aliases", () => {
+    expect(parseDuration("0")).toBe(0);
+    expect(parseDuration("never")).toBe(0);
+    expect(parseDuration("none")).toBe(0);
+  });
+
   it("parses plain numeric string as seconds", () => {
     expect(parseDuration("30")).toBe(30);
     expect(parseDuration("3600")).toBe(3600);

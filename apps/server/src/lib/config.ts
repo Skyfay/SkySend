@@ -64,13 +64,13 @@ const configSchema = z.object({
     .transform((v) => parseByteSize(v))
     .pipe(z.number().positive()),
 
-  FILE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+  FILE_EXPIRE_OPTIONS_SEC: commaSeparatedNonNegativeInts.default(() => [0, 300, 3600, 86400, 604800]),
 
   FILE_DEFAULT_EXPIRE_SEC: z
     .string()
     .default("86400")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().nonnegative()),
 
   FILE_DOWNLOAD_OPTIONS: commaSeparatedInts.default(() => [1, 2, 3, 4, 5, 10, 20, 50, 100]),
 
@@ -138,13 +138,13 @@ const configSchema = z.object({
     .transform((v) => parseByteSize(v))
     .pipe(z.number().positive()),
 
-  NOTE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+  NOTE_EXPIRE_OPTIONS_SEC: commaSeparatedNonNegativeInts.default(() => [0, 300, 3600, 86400, 604800]),
 
   NOTE_DEFAULT_EXPIRE_SEC: z
     .string()
     .default("86400")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().nonnegative()),
 
   NOTE_VIEW_OPTIONS: commaSeparatedNonNegativeInts.default(() => [0, 1, 2, 3, 5, 10, 20, 50, 100]),
 

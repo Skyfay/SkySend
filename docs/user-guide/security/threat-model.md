@@ -81,13 +81,13 @@ The server knows the encrypted file size, which reveals the approximate original
 SkySend does not provide redundancy or high availability. If the server goes down, files are unavailable until it recovers.
 
 ### Long-Term Secret Storage
-Share links contain the encryption key. If a share link is stored long-term (e.g., in chat logs, bookmark managers), anyone who later accesses it can download the file (until it expires).
+Share links contain the encryption key. If a share link is stored long-term (e.g., in chat logs, bookmark managers), anyone who later accesses it can download the file until it expires, reaches its download/view limit, or is deleted manually. Links with "never" expiry remain valid indefinitely unless a limit is reached or the owner/admin deletes them.
 
 ## Recommendations
 
 1. **Always use HTTPS** - Deploy behind a reverse proxy with TLS to protect traffic in transit
 2. **Share links securely** - Use end-to-end encrypted messaging to share links
-3. **Set short expiry times** - Files should expire as soon as they are no longer needed
+3. **Set finite expiry times for sensitive shares** - Files should expire as soon as they are no longer needed
 4. **Use low download limits** - Set the download limit to the number of intended recipients
 5. **Use password protection** - For sensitive files, add a password and share it through a separate channel
 6. **Keep SkySend updated** - Apply updates promptly for security fixes

@@ -21,7 +21,7 @@ skysend upload <files...> [options]
 | Option | Description |
 | --- | --- |
 | `-s, --server <url>` | Server URL (overrides config) |
-| `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
+| `-e, --expires <duration>` | Expiry time (e.g. `never`, `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
 | `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
 | `--no-ws` | Disable WebSocket transport, use HTTP chunked upload |
@@ -141,7 +141,7 @@ skysend note <text> [options]
 | --- | --- | --- |
 | `-s, --server <url>` | | Server URL (overrides config) |
 | `-t, --type <type>` | `text` | Content type: `text`, `password`, `code`, `markdown`, `sshkey` |
-| `-e, --expires <duration>` | | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
+| `-e, --expires <duration>` | | Expiry time (e.g. `never`, `5m`, `1h`, `1d`, `7d`) |
 | `-v, --views <count>` | | Maximum view count (`0` = unlimited) |
 | `-p, --password [password]` | | Password protect. Prompts interactively if no value is given. |
 | `--json` | | Output result as JSON |

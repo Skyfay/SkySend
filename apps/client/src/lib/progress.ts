@@ -22,6 +22,7 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatExpiry(seconds: number): string {
+  if (seconds === 0) return "never";
   if (seconds < 60) return `${seconds} seconds`;
   if (seconds < 3600) return `${seconds / 60} minutes`;
   if (seconds < 86400) return `${seconds / 3600} hours`;
@@ -73,6 +74,7 @@ const DURATION_MAP: Record<string, number> = {
 };
 
 export function parseDuration(input: string): number {
+  if (/^(0|never|none)$/i.test(input.trim())) return 0;
   const match = input.match(/^(\d+)\s*([smhdw])$/i);
   if (!match) {
     const num = parseInt(input, 10);

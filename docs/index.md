@@ -39,8 +39,8 @@ features:
     title: Encrypted Notes
     details: Share text, passwords, code, Markdown, or SSH keys - all end-to-end encrypted. Supports burn-after-reading, view limits, and password protection.
   - icon: ⏱️
-    title: Automatic Expiry
-    details: Uploads and notes expire automatically after a configurable time or download/view count. No data lingers on the server.
+    title: Configurable Expiry
+    details: Uploads and notes can be kept indefinitely or expire after a configurable time or download/view count.
   - icon: 📊
     title: Upload Dashboard
     details: Track your uploads and notes locally via IndexedDB. View download/view counts, expiry countdowns, and re-copy share links - no account needed.

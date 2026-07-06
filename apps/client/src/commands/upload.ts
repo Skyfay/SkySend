@@ -214,7 +214,7 @@ export function registerUploadCommand(program: Command): void {
     .description("Upload file(s) with end-to-end encryption")
     .argument("<files...>", "File path(s) to upload")
     .option("-s, --server <url>", "Server URL")
-    .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
+    .option("-e, --expires <duration>", "Expiry time (e.g. never, 5m, 1h, 1d, 7d)")
     .option("-d, --downloads <count>", "Max download count")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
     .option("--no-ws", "Disable WebSocket transport, use HTTP chunked upload")
@@ -263,7 +263,7 @@ export function registerUploadCommand(program: Command): void {
           : config.fileDefaultExpire;
         if (!config.fileExpireOptions.includes(expireSec)) {
           throw new Error(
-            `Invalid expiry. Options: ${config.fileExpireOptions.map((s) => `${s}s`).join(", ")}`,
+            `Invalid expiry. Options: ${config.fileExpireOptions.map((s) => s === 0 ? "never" : `${s}s`).join(", ")}`,
           );
         }
 

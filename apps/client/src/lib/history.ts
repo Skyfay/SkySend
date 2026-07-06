@@ -109,12 +109,14 @@ export function cleanupExpired(): { removedUploads: number; removedNotes: number
 
   const beforeUploads = data.uploads.length;
   data.uploads = data.uploads.filter((u) => {
+    if (u.expireSec === 0) return true;
     const expiresAt = new Date(u.createdAt).getTime() + u.expireSec * 1000;
     return expiresAt > now;
   });
 
   const beforeNotes = data.notes.length;
   data.notes = data.notes.filter((n) => {
+    if (n.expireSec === 0) return true;
     const expiresAt = new Date(n.createdAt).getTime() + n.expireSec * 1000;
     return expiresAt > now;
   });

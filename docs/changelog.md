@@ -2,6 +2,18 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.12.0 - Never-Expiring Uploads and Notes
+*Release: In Progress*
+
+### ✨ Features
+
+- **server**: Added configurable never-expiring options for uploads and notes while keeping download and view limits enforceable.
+
+### 🧪 Tests
+
+- **server**: Added cleanup coverage for never-expiring uploads and notes.
+
+
 ## v2.11.3 - Dependency Updates and Bug Fixes
 *Released: June 21, 2026*
 

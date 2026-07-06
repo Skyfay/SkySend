@@ -31,7 +31,7 @@ describe("config", () => {
       expect(config.BASE_URL).toBe("http://localhost:3000");
       expect(config.DATA_DIR).toBe("./data");
       expect(config.FILE_MAX_SIZE).toBe(2 * 1024 ** 3);
-      expect(config.FILE_EXPIRE_OPTIONS_SEC).toEqual([300, 3600, 86400, 604800]);
+      expect(config.FILE_EXPIRE_OPTIONS_SEC).toEqual([0, 300, 3600, 86400, 604800]);
       expect(config.FILE_DEFAULT_EXPIRE_SEC).toBe(86400);
       expect(config.FILE_DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 4, 5, 10, 20, 50, 100]);
       expect(config.FILE_DEFAULT_DOWNLOAD).toBe(1);
@@ -43,7 +43,7 @@ describe("config", () => {
       expect(config.FILE_UPLOAD_QUOTA_WINDOW).toBe(86400);
       expect(config.FILE_MAX_FILES_PER_UPLOAD).toBe(32);
       expect(config.NOTE_MAX_SIZE).toBe(1024 ** 2);
-      expect(config.NOTE_EXPIRE_OPTIONS_SEC).toEqual([300, 3600, 86400, 604800]);
+      expect(config.NOTE_EXPIRE_OPTIONS_SEC).toEqual([0, 300, 3600, 86400, 604800]);
       expect(config.NOTE_DEFAULT_EXPIRE_SEC).toBe(86400);
       expect(config.NOTE_VIEW_OPTIONS).toEqual([0, 1, 2, 3, 5, 10, 20, 50, 100]);
       expect(config.NOTE_DEFAULT_VIEWS).toBe(0);
@@ -79,9 +79,9 @@ describe("config", () => {
     });
 
     it("should parse comma-separated FILE_EXPIRE_OPTIONS_SEC", async () => {
-      process.env.FILE_EXPIRE_OPTIONS_SEC = "60,3600,86400";
+      process.env.FILE_EXPIRE_OPTIONS_SEC = "0,60,3600,86400";
       const config = await loadFreshConfig();
-      expect(config.FILE_EXPIRE_OPTIONS_SEC).toEqual([60, 3600, 86400]);
+      expect(config.FILE_EXPIRE_OPTIONS_SEC).toEqual([0, 60, 3600, 86400]);
     });
 
     it("should parse comma-separated FILE_DOWNLOAD_OPTIONS", async () => {

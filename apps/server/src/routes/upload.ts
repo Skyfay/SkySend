@@ -8,6 +8,7 @@ import { fromBase64url } from "@skysend/crypto";
 import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
 import { uploadHeadersSchema, validateUploadHeaders } from "../lib/upload-validation.js";
+import { createExpiresAt } from "../lib/expiry.js";
 
 export function createUploadRoute(storage: StorageBackend) {
   const route = new Hono<{ Variables: QuotaVariables }>();
@@ -255,7 +256,7 @@ export function createUploadRoute(storage: StorageBackend) {
 
     // Create database record
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
+    const expiresAt = createExpiresAt(headers.expireSec, now);
     const storagePath = `${id}.bin`;
 
     const db = getDb();
@@ -365,7 +366,7 @@ export function createUploadRoute(storage: StorageBackend) {
 
     // Create database record
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
+    const expiresAt = createExpiresAt(headers.expireSec, now);
 
     const db = getDb();
     try {

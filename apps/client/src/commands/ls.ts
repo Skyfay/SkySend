@@ -16,6 +16,7 @@ function formatAge(isoDate: string): string {
 }
 
 function formatTimeRemaining(isoDate: string, expireSec: number): string {
+  if (expireSec === 0) return "never";
   const expiresAt = new Date(isoDate).getTime() + expireSec * 1000;
   const ms = expiresAt - Date.now();
   if (ms <= 0) return "expired";

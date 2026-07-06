@@ -8,6 +8,7 @@ import { getConfig } from "../lib/config.js";
 import { constantTimeEqual, fromBase64url, toBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH } from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
 import type { PasswordLockout } from "../lib/password-lockout.js";
+import { createExpiresAt } from "../lib/expiry.js";
 
 export function createNoteRoute(lockout: PasswordLockout) {
 const noteRoute = new Hono();
@@ -22,7 +23,7 @@ const createNoteSchema = z.object({
   authToken: z.string().min(1),
   contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
   maxViews: z.number().int().nonnegative(),
-  expireSec: z.number().int().positive(),
+  expireSec: z.number().int().nonnegative(),
   hasPassword: z.boolean().default(false),
   passwordSalt: z.string().optional(),
   passwordAlgo: z.string().optional(),
@@ -135,7 +136,7 @@ noteRoute.post(
     }
 
     const id = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + data.expireSec * 1000);
+    const expiresAt = createExpiresAt(data.expireSec);
 
     const db = getDb();
     db.insert(notes)

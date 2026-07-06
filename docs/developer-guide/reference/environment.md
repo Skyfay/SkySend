@@ -96,8 +96,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Comma-separated integers |
-| Default | `300,3600,86400,604800` |
-| Description | Selectable expiry times in seconds for file uploads |
+| Default | `0,300,3600,86400,604800` |
+| Description | Selectable expiry times in seconds for file uploads. `0` means never expires |
 
 ### FILE_DEFAULT_EXPIRE_SEC
 
@@ -107,7 +107,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Type | Integer |
 | Default | `86400` |
 | Validation | Must be one of `FILE_EXPIRE_OPTIONS_SEC` |
-| Description | Default expiry time for file uploads |
+| Description | Default expiry time for file uploads. `0` means never expires |
 
 ### FILE_DOWNLOAD_OPTIONS
 
@@ -199,8 +199,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Comma-separated integers |
-| Default | `300,3600,86400,604800` |
-| Description | Selectable expiry times in seconds for notes |
+| Default | `0,300,3600,86400,604800` |
+| Description | Selectable expiry times in seconds for notes. `0` means never expires |
 
 ### NOTE_DEFAULT_EXPIRE_SEC
 
@@ -210,7 +210,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Type | Integer |
 | Default | `86400` |
 | Validation | Must be one of `NOTE_EXPIRE_OPTIONS_SEC` |
-| Description | Default expiry time for notes |
+| Description | Default expiry time for notes. `0` means never expires |
 
 ### NOTE_VIEW_OPTIONS
 
@@ -219,7 +219,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Required | No |
 | Type | Comma-separated integers |
 | Default | `0,1,2,3,5,10,20,50,100` |
-| Description | Selectable view limits for notes. `0` means unlimited views (the note expires only by time). |
+| Description | Selectable view limits for notes. `0` means unlimited views (the note is not deleted by view count). |
 
 ### NOTE_DEFAULT_VIEWS
 
@@ -229,7 +229,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Type | Integer |
 | Default | `0` |
 | Validation | Must be one of `NOTE_VIEW_OPTIONS` |
-| Description | Default view limit for notes. `0` means unlimited views (expires only by time). `1` means burn-after-reading. |
+| Description | Default view limit for notes. `0` means unlimited views (not deleted by view count). `1` means burn-after-reading. |
 
 ### ENABLED_SERVICES
 

@@ -36,7 +36,7 @@ export function registerNoteCommand(program: Command): void {
     .argument("<text>", "Note content")
     .option("-s, --server <url>", "Server URL")
     .option("-t, --type <type>", "Content type (text, password, code, markdown, sshkey)", "text")
-    .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
+    .option("-e, --expires <duration>", "Expiry time (e.g. never, 5m, 1h, 1d, 7d)")
     .option("-v, --views <count>", "Max view count (0 = unlimited)")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
     .option("--json", "Output as JSON")
@@ -83,7 +83,7 @@ export function registerNoteCommand(program: Command): void {
           : config.noteDefaultExpire;
         if (!config.noteExpireOptions.includes(expireSec)) {
           throw new Error(
-            `Invalid expiry. Options: ${config.noteExpireOptions.map((s) => `${s}s`).join(", ")}`,
+            `Invalid expiry. Options: ${config.noteExpireOptions.map((s) => s === 0 ? "never" : `${s}s`).join(", ")}`,
           );
         }
 
