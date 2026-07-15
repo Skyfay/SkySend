@@ -29,6 +29,12 @@ const SOFTWARE_APPLICATION_JSON_LD = {
   },
 };
 
+export const metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
+
 export default function Home() {
   return (
     <>
