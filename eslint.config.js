@@ -6,7 +6,14 @@ import globals from "globals";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/", "**/build/", "**/coverage/", "**/.vitepress/"],
+    ignores: [
+      "**/dist/",
+      "**/build/",
+      "**/coverage/",
+      "**/.vitepress/",
+      "website/.next/",
+      "website/out/",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}"],
+    files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}", "website/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,
     },
@@ -33,7 +40,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts", "apps/client/**/*.{ts,tsx}"],
+    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts", "apps/client/**/*.{ts,tsx}", "website/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         ...globals.node,

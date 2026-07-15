@@ -1,0 +1,29 @@
+---
+title: "Why We Built SkySend Around Zero-Knowledge Encryption"
+date: "2026-07-10"
+excerpt: "Every file and note shared through SkySend is encrypted before it leaves your browser - here's why that's a different guarantee than 'encrypted at rest'."
+tags: ["philosophy", "encryption", "security"]
+author: "Skyfay"
+---
+
+Most file-sharing tools encrypt your data "at rest" - once it reaches their servers. That protects against a stolen hard drive, but it does nothing against the operator of the service itself, a compromised server, or a subpoena that compels access to stored data. If the service can technically read your file, someone eventually will, whether that's an employee, an attacker, or a court order.
+
+SkySend takes a different approach: **encryption happens in your browser, before the upload even starts.** By the time a byte reaches the server, it's already ciphertext. The server stores and serves encrypted blobs it has no way to open.
+
+## What "zero-knowledge" actually means
+
+Every file, note, password, code snippet, and SSH key shared through SkySend is encrypted client-side with AES-256-GCM. The encryption key is generated in the browser and never transmitted to the server in any form - it lives only in the URL fragment of the share link, the part after the `#` character.
+
+Browsers never send the fragment portion of a URL to a server, by design - it's a client-side-only piece of the address. That's the mechanism that makes zero-knowledge sharing possible without any special server-side cooperation: the server literally cannot see the part of the link that unlocks the file, even if it wanted to.
+
+## Password protection is a second, independent layer
+
+An optional password adds a second factor on top of the encryption key, derived with Argon2id rather than sent to the server in plain form. Someone who has the share link but not the password still can't decrypt the file, and someone who somehow obtained the password without the link has nothing to decrypt in the first place.
+
+## What this means in practice
+
+- **The operator can't read your data.** Whether you're using a public community instance or running your own, the person operating the server sees ciphertext, file sizes, and expiry timestamps - not content.
+- **A server compromise doesn't expose past shares.** An attacker who gains access to the server's storage gets encrypted blobs, not the keys to open them.
+- **Expiry is a genuine deletion, not just a hidden flag.** When a file or note reaches its expiry time or download/view limit, it's deleted - there's no plaintext copy sitting around to worry about after the fact.
+
+None of this requires trusting SkySend, or whoever is running the instance you're using, with the contents of what you share. That's the point - a sharing tool's job is to move data from one person to another, not to become a party that has to be trusted with what's inside.

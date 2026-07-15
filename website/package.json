@@ -1,0 +1,43 @@
+{
+  "name": "@skysend/website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "lint": "eslint",
+    "type": "tsc --noEmit",
+    "preview": "npx wrangler dev"
+  },
+  "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "gray-matter": "^4.0.3",
+    "lucide-react": "^1.17.0",
+    "next": "16.2.6",
+    "next-mdx-remote": "^5.0.0",
+    "next-themes": "^0.4.6",
+    "radix-ui": "^1.6.2",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "rehype-pretty-code": "^0.14.4",
+    "shiki": "^4.3.1",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^20.19.37",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.9.3"
+  }
+}

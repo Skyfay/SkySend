@@ -1,0 +1,147 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.985 0.004 167);
+  --foreground: oklch(0.17 0.015 167);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.015 167);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.015 167);
+  --primary: oklch(0.5 0.13 167);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.006 167);
+  --secondary-foreground: oklch(0.25 0.012 167);
+  --muted: oklch(0.95 0.006 167);
+  --muted-foreground: oklch(0.48 0.014 167);
+  --accent: oklch(0.94 0.03 167);
+  --accent-foreground: oklch(0.3 0.05 167);
+  --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.6 0.14 154);
+  --success-foreground: oklch(0.99 0 0);
+  --border: oklch(0.9 0.008 167);
+  --input: oklch(0.9 0.008 167);
+  --ring: oklch(0.5 0.13 167);
+}
+
+.dark {
+  --background: oklch(0.145 0.008 167);
+  --foreground: oklch(0.96 0.004 167);
+  --card: oklch(0.19 0.012 167);
+  --card-foreground: oklch(0.96 0.004 167);
+  --popover: oklch(0.17 0.01 167);
+  --popover-foreground: oklch(0.96 0.004 167);
+  --primary: oklch(0.6 0.1 167);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.24 0.014 167);
+  --secondary-foreground: oklch(0.96 0.004 167);
+  --muted: oklch(0.22 0.012 167);
+  --muted-foreground: oklch(0.65 0.014 167);
+  --accent: oklch(0.26 0.03 167);
+  --accent-foreground: oklch(0.96 0.004 167);
+  --destructive: oklch(0.6 0.22 25);
+  --success: oklch(0.72 0.17 154);
+  --success-foreground: oklch(0.15 0 0);
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.16);
+  --ring: oklch(0.6 0.1 167);
+}
+
+.code-highlight span {
+  color: var(--shiki-light);
+}
+.dark .code-highlight span {
+  color: var(--shiki-dark);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-dot-grid {
+    background-image: radial-gradient(
+      circle at center,
+      var(--border) 1px,
+      transparent 1px
+    );
+    background-size: 16px 16px;
+  }
+
+  .bg-hero-glow {
+    background-image: radial-gradient(
+        60% 55% at 50% -10%,
+        oklch(0.5 0.12 167 / 0.35),
+        transparent 70%
+      ),
+      radial-gradient(
+        35% 25% at 85% 15%,
+        oklch(0.7 0.15 200 / 0.12),
+        transparent 70%
+      );
+  }
+
+  .bg-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+[data-reveal][data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}

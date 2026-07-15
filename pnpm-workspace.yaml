@@ -3,3 +3,4 @@ packages:
   - "packages/*"
   - "docs"
   - "workers/*"
+  - "website"

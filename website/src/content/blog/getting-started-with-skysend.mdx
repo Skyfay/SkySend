@@ -1,0 +1,57 @@
+---
+title: "Getting Started with SkySend in 5 Minutes"
+date: "2026-07-01"
+excerpt: "Spin up SkySend with a single docker-compose file and share your first end-to-end encrypted file."
+tags: ["tutorial", "docker", "quickstart"]
+author: "Skyfay"
+---
+
+SkySend ships as a single multi-arch Docker image (amd64/arm64) with no external database required to run the app itself - it manages its own SQLite database internally. Here's the whole setup.
+
+## 1. Create a docker-compose.yml
+
+```yaml
+# docker-compose.yml
+services:
+  skysend:
+    image: skyfay/skysend:latest
+    container_name: skysend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data              # Database and internal state
+      - ./uploads:/uploads        # Encrypted uploads (when using the filesystem backend)
+    environment:
+      - BASE_URL=http://localhost:3000
+```
+
+The one environment variable that matters before you start the container is `BASE_URL` - set it to the public URL this instance will be reachable at. It's used for CORS and for generating share links, so it needs to match the address you actually open in the browser.
+
+## 2. Start the container
+
+```bash
+docker-compose up -d
+```
+
+SkySend listens on port 3000 and is ready as soon as the container reports healthy.
+
+## 3. Share your first file
+
+Open `http://localhost:3000`, drag in a file, and set an expiry time and download limit if you want. SkySend encrypts the file in your browser with AES-256-GCM before it ever reaches the server, generates a share link, and only then uploads the ciphertext.
+
+The decryption key lives in the URL fragment (the part after `#`), which browsers never send to a server - so the link itself is the only thing that can unlock the file.
+
+## 4. Try the other share types
+
+Files are just one of five things SkySend can share, all with the same encryption model:
+
+- **Notes** - plain text or multi-block code snippets
+- **Passwords** - one-time password sharing
+- **SSH Keys** - share a key pair without pasting it into chat
+
+## 5. Optional: switch to S3-compatible storage
+
+For multi-instance or larger deployments, point `STORAGE_BACKEND` at any S3-compatible bucket (AWS S3, Cloudflare R2, MinIO, and others) instead of the local filesystem. See the environment variable reference for the full list of `S3_*` options.
+
+Full configuration reference, reverse proxy setup, and production hardening notes: [docs.skysend.app/user-guide/getting-started](https://docs.skysend.app/user-guide/getting-started)

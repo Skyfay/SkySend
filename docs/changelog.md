@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### ✨ Features
+
+- **website**: Added a new public website (homepage, roadmap, blog, and a Server Instances section listing live public instances), plus a Report Abuse page for flagging file and note links.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.11.3 - Dependency Updates and Bug Fixes
 *Released: June 21, 2026*
 
