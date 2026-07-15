@@ -8,6 +8,7 @@ All notable changes to SkySend are documented here.
 ### ✨ Features
 
 - **website**: Added a new public website (homepage, roadmap, blog, and a Server Instances section listing live public instances), plus a Report Abuse page for flagging file and note links.
+- **infra**: Moved the abuse report Cloudflare Worker into the monorepo (`workers/report`), alongside the existing instances worker.
 
 ### 🐳 Docker
 

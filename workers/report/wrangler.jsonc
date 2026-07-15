@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "skysend-report",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-15",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "report.skysend.app",
+      "zone_name": "skysend.app",
+      "custom_domain": true
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
+  "send_email": [
+    {
+      "name": "REPORT_EMAIL"
+    }
+  ]
+}
