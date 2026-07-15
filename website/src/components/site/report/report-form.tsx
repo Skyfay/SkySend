@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Script from "next/script";
 import { AlertCircle, CheckCircle2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,17 @@ import {
 
 declare global {
   interface Window {
-    onSkySendTurnstileVerify?: (token: string) => void;
-    onSkySendTurnstileExpire?: () => void;
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback"?: () => void;
+        }
+      ) => string;
+      remove: (widgetId: string) => void;
+    };
   }
 }
 
@@ -38,8 +47,10 @@ export function ReportForm() {
   const [comment, setComment] = useState("");
   const [replyEmail, setReplyEmail] = useState("");
   const [token, setToken] = useState("");
+  const [turnstileReady, setTurnstileReady] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [formError, setFormError] = useState<string | null>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,15 +71,11 @@ export function ReportForm() {
     };
   }, []);
 
-  useEffect(() => {
-    window.onSkySendTurnstileVerify = (t: string) => setToken(t);
-    window.onSkySendTurnstileExpire = () => setToken("");
-    return () => {
-      window.onSkySendTurnstileVerify = undefined;
-      window.onSkySendTurnstileExpire = undefined;
-    };
-  }, []);
-
+  // The Turnstile widget container only enters the DOM after a reportable
+  // instance is selected - well after Cloudflare's script has already done
+  // its one-time implicit auto-render scan. Explicit rendering (calling
+  // window.turnstile.render() ourselves once the container exists) is the
+  // only reliable way to mount it for a container added later by React.
   const instances = useMemo(
     () => (instancesState.status === "ready" ? instancesState.instances : []),
     [instancesState]
@@ -79,6 +86,23 @@ export function ReportForm() {
     [instances, selectedHostname]
   );
   const abuseSupported = hasAbuseSupport(selectedInstance);
+
+  useEffect(() => {
+    if (!turnstileReady || !abuseSupported) return;
+    const container = turnstileContainerRef.current;
+    if (!container || !window.turnstile) return;
+
+    const widgetId = window.turnstile.render(container, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (t) => setToken(t),
+      "expired-callback": () => setToken(""),
+    });
+
+    return () => {
+      window.turnstile?.remove(widgetId);
+      setToken("");
+    };
+  }, [turnstileReady, selectedHostname, abuseSupported]);
 
   function handleUrlChange(value: string) {
     setUrl(value);
@@ -143,7 +167,11 @@ export function ReportForm() {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-8">
-      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+        onReady={() => setTurnstileReady(true)}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>
@@ -274,12 +302,7 @@ export function ReportForm() {
               />
             </div>
 
-            <div
-              className="cf-turnstile"
-              data-sitekey={TURNSTILE_SITE_KEY}
-              data-callback="onSkySendTurnstileVerify"
-              data-expired-callback="onSkySendTurnstileExpire"
-            />
+            <div ref={turnstileContainerRef} />
 
             {formError && (
               <p className="flex items-center gap-2 text-sm text-destructive">
