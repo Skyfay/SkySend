@@ -1,0 +1,42 @@
+# ─── Deploy Report Worker ──────────────────────────────────
+# Deploys the report Cloudflare Worker when its code changes.
+
+name: Deploy Report Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/report/**"
+      - ".github/workflows/deploy-report-worker.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @skysend/report-worker
+
+      - name: Deploy Worker
+        working-directory: workers/report
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
