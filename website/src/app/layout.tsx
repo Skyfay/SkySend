@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/site/json-ld";
 import { SITE_URL } from "@/lib/site";
 import { GITHUB_REPO, DISCORD_URL, TAGLINE } from "@/lib/content";
 import "./globals.css";
+import "flag-icons/css/flag-icons.min.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   },
   description: TAGLINE,
   icons: {
-    icon: "/favicon.svg",
+    icon: "/logo.svg",
     apple: "/apple-touch-icon.png",
   },
   manifest: "/manifest.webmanifest",

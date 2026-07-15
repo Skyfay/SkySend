@@ -37,18 +37,21 @@ function relativeTime(iso: string): string {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-xl border border-border bg-card/50 p-6">
-      <div className="flex items-center gap-2">
-        <div className="size-6 rounded-full bg-muted" />
-        <div className="h-4 w-32 rounded bg-muted" />
-        <div className="h-4 w-12 rounded bg-muted" />
+    <div className="animate-pulse rounded-2xl border border-border bg-card/50 p-6">
+      <div className="flex items-start gap-4">
+        <div className="size-12 shrink-0 rounded-xl bg-muted" />
+        <div className="flex-1">
+          <div className="h-4 w-32 rounded bg-muted" />
+          <div className="mt-2 h-3 w-40 rounded bg-muted" />
+        </div>
       </div>
-      <div className="mt-3 h-3 w-40 rounded bg-muted" />
-      <div className="mt-4 grid grid-cols-5 gap-2">
+      <div className="mt-4 h-6 w-24 rounded-full bg-muted" />
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-12 rounded-lg bg-muted" />
         ))}
       </div>
+      <div className="mt-5 h-9 rounded-full bg-muted" />
     </div>
   );
 }

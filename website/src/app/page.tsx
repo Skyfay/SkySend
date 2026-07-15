@@ -35,12 +35,12 @@ export default function Home() {
       <JsonLd data={SOFTWARE_APPLICATION_JSON_LD} />
       <Hero />
       <StatsBand />
-      <AccessMethods />
+      <ZeroKnowledgeSection />
       <ProductTour />
       <InstancesSection />
       <AutomationSection />
       <FeatureGrid />
-      <ZeroKnowledgeSection />
+      <AccessMethods />
       <QuickStart />
       <Faq />
       <BlogTeaser />

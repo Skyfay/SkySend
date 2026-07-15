@@ -1,3 +1,5 @@
+import { GITHUB_REPO } from "@/lib/content";
+
 export type RoadmapStatus = "idea" | "planned" | "in-progress";
 
 export type RoadmapCategory =
@@ -88,6 +90,14 @@ export const SHIPPED_ITEMS: ShippedItem[] = [
     releaseDate: "2026-05-31",
   },
   {
+    slug: "200-github-stars",
+    title: "200 GitHub Stars",
+    description: "SkySend crossed 200 stars on GitHub, thanks to everyone in the community.",
+    releaseDate: "2026-05-28",
+    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
+    star: true,
+  },
+  {
     slug: "multi-block-code-notes",
     title: "Multi-Block Code Notes and UI Improvements",
     description: "Code notes support multiple language-tagged blocks in a single note.",
@@ -101,6 +111,14 @@ export const SHIPPED_ITEMS: ShippedItem[] = [
       "Sign in to admin areas via any OIDC-compatible identity provider, alongside general improvements and security patches.",
     version: "v2.8.0",
     releaseDate: "2026-05-14",
+  },
+  {
+    slug: "100-github-stars",
+    title: "100 GitHub Stars",
+    description: "SkySend crossed 100 stars on GitHub.",
+    releaseDate: "2026-05-10",
+    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
+    star: true,
   },
   {
     slug: "native-os-share-button",
