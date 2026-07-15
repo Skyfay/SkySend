@@ -104,7 +104,7 @@ export const FAQS = [
   {
     question: "Do I need to create an account?",
     answer:
-      "No. SkySend has no user accounts for sharing - open an instance and start uploading. Self-hosters can optionally enable OIDC/SSO for admin areas.",
+      "No. SkySend has no user accounts for sharing - open an instance and start uploading. Self-hosters can optionally require OIDC/SSO login before uploads or notes are allowed, for example to restrict a private instance to their organization.",
   },
   {
     question: "Is there a hosted or cloud version?",

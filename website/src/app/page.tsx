@@ -1,7 +1,7 @@
 import { Hero } from "@/components/site/hero";
 import { StatsBand } from "@/components/site/stats-band";
 import { InstancesSection } from "@/components/site/instances/instances-section";
-import { ProductTour } from "@/components/site/product-tour";
+// import { ProductTour } from "@/components/site/product-tour";
 import { FeatureGrid } from "@/components/site/feature-grid";
 import { ZeroKnowledgeSection } from "@/components/site/zero-knowledge-section";
 import { AutomationSection } from "@/components/site/automation-section";
@@ -36,7 +36,8 @@ export default function Home() {
       <Hero />
       <StatsBand />
       <ZeroKnowledgeSection />
-      <ProductTour />
+      {/* ProductTour disabled - the live Server Instances section below lets
+          visitors open a real public instance instead of static screenshots. */}
       <InstancesSection />
       <AutomationSection />
       <FeatureGrid />
