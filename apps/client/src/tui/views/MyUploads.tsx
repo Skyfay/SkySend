@@ -293,8 +293,10 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
             <>
               <Text>
                 <Text dimColor>Views:     </Text>
-                {liveNote.viewCount} / {liveNote.maxViews}
-                <Text dimColor> ({liveNote.maxViews - liveNote.viewCount} remaining)</Text>
+                {liveNote.viewCount} / {liveNote.maxViews === 0 ? "∞" : liveNote.maxViews}
+                {liveNote.maxViews > 0 && (
+                  <Text dimColor> ({liveNote.maxViews - liveNote.viewCount} remaining)</Text>
+                )}
               </Text>
               <Text>
                 <Text dimColor>Expires:   </Text>
