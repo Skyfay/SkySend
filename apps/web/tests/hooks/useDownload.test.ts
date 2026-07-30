@@ -779,5 +779,301 @@ describe("useDownload", () => {
 
     expect(result.current.phase).toBe("done");
   });
+
+  // ── Metadaten beim Laden ────────────────────────────────────────────────────
+
+  it("loadInfo() mit Secret entschlüsselt die Metadaten sofort", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ encryptedMeta: btoa("ciphertext"), nonce: btoa("nonce123") }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.metadata).toEqual({
+      type: "single",
+      name: "file.txt",
+      size: 42,
+      mimeType: "text/plain",
+    });
+    expect(apiMod.downloadFile).not.toHaveBeenCalled();
+  });
+
+  it("loadInfo() ohne encryptedMeta → metadata bleibt null", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.metadata).toBeNull();
+    expect(cryptoMod.decryptMetadata).not.toHaveBeenCalled();
+  });
+
+  it("loadInfo() → Entschlüsselungsfehler blockiert die Seite nicht", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(cryptoMod.decryptMetadata).mockRejectedValueOnce(
+      new Error("Metadata decryption failed - data may be corrupted or tampered with"),
+    );
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ encryptedMeta: btoa("ciphertext"), nonce: btoa("nonce123") }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.metadata).toBeNull();
+    expect(result.current.error).toBeNull();
+    warn.mockRestore();
+  });
+
+  it("loadInfo() mit Passwort entschlüsselt noch nichts", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({
+        hasPassword: true,
+        passwordSalt: "ps64",
+        passwordAlgo: "argon2id-v2",
+        encryptedMeta: btoa("ciphertext"),
+        nonce: btoa("nonce123"),
+      }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("needs-password");
+    expect(result.current.metadata).toBeNull();
+    expect(cryptoMod.decryptMetadata).not.toHaveBeenCalled();
+  });
+
+  it("download() verwendet die beim Laden entschlüsselten Metadaten erneut", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ encryptedMeta: btoa("ciphertext"), nonce: btoa("nonce123") }),
+    );
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce({
+      stream: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+      size: 3,
+      fileCount: 1,
+    });
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+    expect(cryptoMod.decryptMetadata).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(cryptoMod.decryptMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  // ── unlock() ────────────────────────────────────────────────────────────────
+
+  it("unlock() mit korrektem Passwort → metadata gesetzt, kein Download gestartet", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({
+        hasPassword: true,
+        passwordSalt: "ps64",
+        passwordAlgo: "argon2id-v2",
+        encryptedMeta: btoa("ciphertext"),
+        nonce: btoa("nonce123"),
+      }),
+    );
+    vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(true);
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.metadata?.type).toBe("single");
+    expect(apiMod.verifyPassword).toHaveBeenCalledTimes(1);
+    expect(apiMod.downloadFile).not.toHaveBeenCalled();
+  });
+
+  it("unlock() mit falschem Passwort → phase='needs-password', error='wrong-password'", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+    vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(false);
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "wrong-pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("needs-password");
+    expect(result.current.error).toBe("wrong-password");
+    expect(result.current.metadata).toBeNull();
+  });
+
+  it("unlock() 429 → phase='needs-password', error='rate-limited'", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+    vi.mocked(apiMod.verifyPassword).mockRejectedValueOnce(
+      new apiMod.ApiError(429, "rate-limited"),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("needs-password");
+    expect(result.current.error).toBe("rate-limited");
+  });
+
+  it("unlock() ohne passwordSalt → phase='error'", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Missing password salt");
+  });
+
+  it("download() nach unlock() wiederholt weder Argon2id noch die Passwortprüfung", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+    vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(true);
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce({
+      stream: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+      size: 3,
+      fileCount: 1,
+    });
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.loadInfo("f-1", "secret64");
+    });
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+    expect(cryptoMod.deriveKeyFromPassword).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(cryptoMod.deriveKeyFromPassword).toHaveBeenCalledTimes(1);
+    expect(apiMod.verifyPassword).toHaveBeenCalledTimes(1);
+  });
+
+  it("reset() verwirft das entsperrte Secret", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    const infoWithPassword = makeUploadInfo({
+      hasPassword: true,
+      passwordSalt: "ps64",
+      passwordAlgo: "argon2id-v2",
+    });
+    vi.mocked(apiMod.fetchInfo).mockResolvedValue(infoWithPassword);
+    vi.mocked(apiMod.verifyPassword).mockResolvedValue(true);
+    vi.mocked(apiMod.downloadFile).mockResolvedValue({
+      stream: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+      size: 3,
+      fileCount: 1,
+    });
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+    expect(cryptoMod.deriveKeyFromPassword).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.reset();
+    });
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(cryptoMod.deriveKeyFromPassword).toHaveBeenCalledTimes(2);
+  });
 });
 

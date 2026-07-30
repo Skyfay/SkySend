@@ -10,6 +10,9 @@ import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
+/** Built-in logo shipped with the frontend build. */
+const DEFAULT_LOGO = "/logo.svg";
+
 export function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -18,7 +21,12 @@ export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const logoSrc = config?.customLogo ?? "/logo.svg";
+  // A misconfigured CUSTOM_LOGO or an unreachable external host would otherwise
+  // leave a broken image in the header, so fall back to the built-in logo.
+  const [failedLogoSrc, setFailedLogoSrc] = useState<string | null>(null);
+  const customLogo = config?.customLogo ?? null;
+  const logoSrc =
+    customLogo && customLogo !== failedLogoSrc ? customLogo : DEFAULT_LOGO;
   const title = config?.customTitle ?? t("common.appName");
   const oidcEnabled = config?.oidcEnabled ?? false;
 
@@ -59,7 +67,12 @@ export function Layout() {
             to="/"
             className="flex flex-1 min-w-0 items-center gap-2 text-lg font-bold tracking-tight"
           >
-            <img src={logoSrc} alt="" className="h-6 w-6 shrink-0" />
+            <img
+              src={logoSrc}
+              alt=""
+              className="h-6 w-6 shrink-0"
+              onError={() => setFailedLogoSrc(logoSrc)}
+            />
             <span className="truncate">{title}</span>
           </Link>
 

@@ -19,6 +19,7 @@
     "view": "Visualizza",
     "cancel": "Annulla",
     "confirm": "Conferma",
+    "save": "Salva",
     "close": "Chiudi",
     "back": "Indietro",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Scarica file",
     "fileInfo": "Informazioni sul file",
-    "encryptedFile": "File crittografato",
+    "encryptedFile": "File protetto",
     "size": "Dimensione",
     "downloads": "Download",
     "expires": "Scade",
@@ -130,6 +131,11 @@
     "deleteFailed": "Eliminazione del caricamento fallita",
     "deleteNoteSuccess": "Nota eliminata",
     "deleteNoteFailed": "Eliminazione della nota fallita",
+    "rename": "Rinomina",
+    "renameTitle": "Assegna un nome a questo caricamento",
+    "renameDescription": "Salvato solo in questo browser e visibile solo a te. I destinatari non vedono mai questo nome.",
+    "renamePlaceholder": "es. Documenti del progetto - Pratica 4711",
+    "renameFailed": "Impossibile rinominare il caricamento",
     "note": "Nota",
     "filter": {
       "all": "Tutto",

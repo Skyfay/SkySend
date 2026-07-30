@@ -19,6 +19,7 @@
     "view": "Bekijken",
     "cancel": "Annuleren",
     "confirm": "Bevestigen",
+    "save": "Opslaan",
     "close": "Sluiten",
     "back": "Terug",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Bestand downloaden",
     "fileInfo": "Bestandsinformatie",
-    "encryptedFile": "Versleuteld bestand",
+    "encryptedFile": "Beveiligd bestand",
     "size": "Grootte",
     "downloads": "Downloads",
     "expires": "Verloopt",
@@ -130,6 +131,11 @@
     "deleteFailed": "Verwijderen van upload mislukt",
     "deleteNoteSuccess": "Notitie verwijderd",
     "deleteNoteFailed": "Verwijderen van notitie mislukt",
+    "rename": "Hernoemen",
+    "renameTitle": "Deze upload een naam geven",
+    "renameDescription": "Wordt alleen in deze browser opgeslagen en is alleen voor u zichtbaar. Ontvangers zien deze naam nooit.",
+    "renamePlaceholder": "bijv. Projectdocumenten - Dossier 4711",
+    "renameFailed": "Upload hernoemen mislukt",
     "note": "Notitie",
     "filter": {
       "all": "Alles",

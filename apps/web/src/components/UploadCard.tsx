@@ -10,9 +10,11 @@ import {
   Clock,
   Download,
   QrCode,
+  Pencil,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -22,18 +24,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatBytes, formatTimeRemaining } from "@/lib/utils";
+import { UPLOAD_NAME_MAX_LENGTH } from "@/lib/upload-store";
 import type { UploadWithStatus } from "@/hooks/useUploadHistory";
 
 interface UploadCardProps {
   upload: UploadWithStatus;
   onDelete: (id: string, ownerToken: string) => Promise<void>;
+  onRename: (id: string, name: string) => Promise<void>;
 }
 
-export function UploadCard({ upload, onDelete }: UploadCardProps) {
+export function UploadCard({ upload, onDelete, onRename }: UploadCardProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showQrDialog, setShowQrDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const shareLink = `${window.location.origin}/file/${upload.id}#${upload.secret}`;
@@ -60,8 +67,29 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
     }
   };
 
+  const openRenameDialog = () => {
+    setNameInput(upload.name ?? "");
+    setShowRenameDialog(true);
+  };
+
+  const handleRename = async () => {
+    setRenaming(true);
+    try {
+      await onRename(upload.id, nameInput);
+      setShowRenameDialog(false);
+    } catch {
+      // Error handled by parent
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const isMulti = upload.fileNames.length > 1;
   const info = upload.info;
+  const fileList = upload.fileNames.join(", ");
+  // With a custom name the file names would otherwise be invisible, and a plain
+  // count says nothing about a multi-file upload.
+  const showFileList = Boolean(upload.name) || isMulti;
 
   return (
     <>
@@ -77,10 +105,16 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium">
-              {isMulti
-                ? t("myUploads.files", { count: upload.fileNames.length })
-                : upload.fileNames[0]}
+              {upload.name ??
+                (isMulti
+                  ? t("myUploads.files", { count: upload.fileNames.length })
+                  : upload.fileNames[0])}
             </p>
+            {showFileList && (
+              <p className="truncate text-sm text-muted-foreground" title={fileList}>
+                {fileList}
+              </p>
+            )}
             {upload.loading ? (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -118,6 +152,10 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
               {copied ? t("common.copied") : t("myUploads.copyLink")}
             </span>
           </Button>
+          <Button variant="outline" size="sm" onClick={openRenameDialog}>
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">{t("myUploads.rename")}</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -147,6 +185,46 @@ export function UploadCard({ upload, onDelete }: UploadCardProps) {
           </Button>
         </div>
       </div>
+
+      {/* Rename dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("myUploads.renameTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("myUploads.renameDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!renaming) handleRename();
+            }}
+          >
+            <Input
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder={t("myUploads.renamePlaceholder")}
+              maxLength={UPLOAD_NAME_MAX_LENGTH}
+              aria-label={t("myUploads.renameTitle")}
+              autoFocus
+            />
+          </form>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRenameDialog(false)}
+              disabled={renaming}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleRename} disabled={renaming}>
+              {renaming && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

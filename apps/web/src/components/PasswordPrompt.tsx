@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ export function PasswordPrompt({
           </button>
         </div>
         <Button type="submit" disabled={loading || password.length === 0}>
+          {loading && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
           {t("download.unlock")}
         </Button>
       </div>

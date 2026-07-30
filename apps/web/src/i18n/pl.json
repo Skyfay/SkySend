@@ -19,6 +19,7 @@
     "view": "Wyświetl",
     "cancel": "Anuluj",
     "confirm": "Potwierdź",
+    "save": "Zapisz",
     "close": "Zamknij",
     "back": "Wstecz",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Pobierz plik",
     "fileInfo": "Informacje o pliku",
-    "encryptedFile": "Zaszyfrowany plik",
+    "encryptedFile": "Chroniony plik",
     "size": "Rozmiar",
     "downloads": "Pobrania",
     "expires": "Wygasa",
@@ -130,6 +131,11 @@
     "deleteFailed": "Nie udało się usunąć przesyłki",
     "deleteNoteSuccess": "Notatka usunięta",
     "deleteNoteFailed": "Nie udało się usunąć notatki",
+    "rename": "Zmień nazwę",
+    "renameTitle": "Nazwij to przesłanie",
+    "renameDescription": "Zapisywane tylko w tej przeglądarce i widoczne tylko dla Ciebie. Odbiorcy nigdy nie widzą tej nazwy.",
+    "renamePlaceholder": "np. Dokumenty projektu - Sprawa 4711",
+    "renameFailed": "Nie udało się zmienić nazwy przesłania",
     "note": "Notatka",
     "filter": {
       "all": "Wszystko",

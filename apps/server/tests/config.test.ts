@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { join } from "node:path";
 
 // We need to test the config module in isolation with controlled env vars.
 // Since loadConfig caches its result, we re-import fresh each test.
@@ -235,9 +236,74 @@ describe("config", () => {
 
   describe("CUSTOM_LOGO", () => {
     it("should accept an absolute path starting with /", async () => {
-      process.env.CUSTOM_LOGO = "/logo.svg";
+      process.env.CUSTOM_LOGO = "/branding/logo.svg";
       const config = await loadFreshConfig();
-      expect(config.CUSTOM_LOGO).toBe("/logo.svg");
+      expect(config.CUSTOM_LOGO).toBe("/branding/logo.svg");
+    });
+
+    it("should accept an https URL", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.CUSTOM_LOGO = "https://example.com/logo.svg";
+      const config = await loadFreshConfig();
+      expect(config.CUSTOM_LOGO).toBe("https://example.com/logo.svg");
+      warn.mockRestore();
+    });
+
+    it("should warn about an external logo host", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.CUSTOM_LOGO = "https://cdn.example.com/logo.svg";
+      await loadFreshConfig();
+
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain("https://cdn.example.com");
+      expect(warn.mock.calls[0]?.[0]).toContain("CUSTOM_LOGO");
+      warn.mockRestore();
+    });
+
+    it("should not warn about a local logo path", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.CUSTOM_LOGO = "/branding/logo.svg";
+      await loadFreshConfig();
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("should not warn when no logo is configured", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      await loadFreshConfig();
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("should reject a protocol-relative URL", async () => {
+      process.env.CUSTOM_LOGO = "//evil.example.com/logo.png";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should reject a relative path", async () => {
+      process.env.CUSTOM_LOGO = "logo.svg";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+  });
+
+  describe("BRANDING_DIR", () => {
+    it("should default to a branding folder inside DATA_DIR", async () => {
+      const config = await loadFreshConfig();
+      expect(config.BRANDING_DIR).toBe(join("./data", "branding"));
+    });
+
+    it("should follow a custom DATA_DIR", async () => {
+      process.env.DATA_DIR = "/srv/skysend";
+      const config = await loadFreshConfig();
+      expect(config.BRANDING_DIR).toBe(join("/srv/skysend", "branding"));
+    });
+
+    it("should accept an explicit override", async () => {
+      process.env.BRANDING_DIR = "/mnt/assets";
+      const config = await loadFreshConfig();
+      expect(config.BRANDING_DIR).toBe("/mnt/assets");
     });
   });
 

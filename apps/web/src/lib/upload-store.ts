@@ -7,7 +7,12 @@ export interface StoredUpload {
   secret: string;
   fileNames: string[];
   createdAt: string;
+  /** Optional label the owner set in "My Uploads". Never leaves this browser. */
+  name?: string;
 }
+
+/** Maximum length of a user-defined upload name. */
+export const UPLOAD_NAME_MAX_LENGTH = 100;
 
 export interface StoredNote {
   id: string;
@@ -38,6 +43,22 @@ export async function getUpload(id: string): Promise<StoredUpload | undefined> {
 
 export async function removeUpload(id: string): Promise<void> {
   await del(uploadKey(id));
+}
+
+/** Trims and truncates a user-defined upload name. Blank input clears the name. */
+export function normalizeUploadName(name: string): string | undefined {
+  const trimmed = name.trim().slice(0, UPLOAD_NAME_MAX_LENGTH);
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Sets or clears the user-defined name of a stored upload.
+ * Reads before writing because `set` replaces the whole record.
+ */
+export async function setUploadName(id: string, name: string): Promise<void> {
+  const upload = await getUpload(id);
+  if (!upload) return;
+  await set(uploadKey(id), { ...upload, name: normalizeUploadName(name) });
 }
 
 export async function getAllUploads(): Promise<StoredUpload[]> {

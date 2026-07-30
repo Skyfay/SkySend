@@ -14,6 +14,7 @@
     "view": "View",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "save": "Save",
     "close": "Close",
     "back": "Back",
     "docs": "Docs"
@@ -86,7 +87,7 @@
   "download": {
     "title": "Download File",
     "fileInfo": "File Information",
-    "encryptedFile": "Encrypted file",
+    "encryptedFile": "Protected file",
     "size": "Size",
     "downloads": "Downloads",
     "expires": "Expires",
@@ -125,6 +126,11 @@
     "deleteFailed": "Failed to delete upload",
     "deleteNoteSuccess": "Note deleted",
     "deleteNoteFailed": "Failed to delete note",
+    "rename": "Rename",
+    "renameTitle": "Name this upload",
+    "renameDescription": "Stored only in this browser and visible only to you. Recipients never see this name.",
+    "renamePlaceholder": "e.g. Project documents - Case 4711",
+    "renameFailed": "Failed to rename upload",
     "note": "Note",
     "filter": {
       "all": "All",

@@ -64,17 +64,26 @@ export function DownloadCard({
             )}
             <div className="min-w-0 flex-1">
               {metadata?.type === "single" ? (
-                <p className="truncate font-medium">{metadata.name}</p>
+                <p className="truncate font-medium" title={metadata.name}>
+                  {metadata.name}
+                </p>
               ) : metadata?.type === "archive" ? (
                 <div>
                   <p className="font-medium">
                     {t("myUploads.files", { count: metadata.files.length })}
                   </p>
-                  <ScrollArea className="mt-1 max-h-32">
-                    <ul className="space-y-0.5 text-sm text-muted-foreground">
+                  {/* Cap the viewport, not the root, so long lists actually scroll. */}
+                  <ScrollArea className="mt-1" viewportClassName="max-h-40">
+                    <ul className="space-y-0.5 pr-3 text-sm text-muted-foreground">
                       {metadata.files.map((f, i) => (
-                        <li key={i} className="truncate">
-                          {f.name} ({formatBytes(f.size)})
+                        <li key={i} className="flex items-center gap-2">
+                          {/* Only the name truncates - the size stays readable. */}
+                          <span className="min-w-0 flex-1 truncate" title={f.name}>
+                            {f.name}
+                          </span>
+                          <span className="shrink-0 text-xs">
+                            {formatBytes(f.size)}
+                          </span>
                         </li>
                       ))}
                     </ul>

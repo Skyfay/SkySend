@@ -19,6 +19,7 @@
     "view": "Näytä",
     "cancel": "Peruuta",
     "confirm": "Vahvista",
+    "save": "Tallenna",
     "close": "Sulje",
     "back": "Takaisin",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Lataa tiedosto",
     "fileInfo": "Tiedoston tiedot",
-    "encryptedFile": "Salattu tiedosto",
+    "encryptedFile": "Suojattu tiedosto",
     "size": "Koko",
     "downloads": "Lataukset",
     "expires": "Vanhenee",
@@ -130,6 +131,11 @@
     "deleteFailed": "Lähetyksen poistaminen epäonnistui",
     "deleteNoteSuccess": "Muistiinpano poistettu",
     "deleteNoteFailed": "Muistiinpanon poistaminen epäonnistui",
+    "rename": "Nimeä uudelleen",
+    "renameTitle": "Nimeä tämä lähetys",
+    "renameDescription": "Tallennetaan vain tähän selaimeen ja näkyy vain sinulle. Vastaanottajat eivät koskaan näe tätä nimeä.",
+    "renamePlaceholder": "esim. Projektiasiakirjat - Asia 4711",
+    "renameFailed": "Lähetyksen nimeäminen epäonnistui",
     "note": "Muistiinpano",
     "filter": {
       "all": "Kaikki",

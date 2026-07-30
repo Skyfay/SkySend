@@ -71,6 +71,15 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | `DATA_DIR/uploads` |
 | Description | Directory for encrypted upload files. Falls back to `DATA_DIR/uploads` if not set. In Docker, defaults to `/uploads` for separate volume mounting. |
 
+### BRANDING_DIR
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | String (path) |
+| Default | `DATA_DIR/branding` |
+| Description | Directory for operator-supplied branding assets. Its contents are served under `/branding/`, restricted to image extensions (`.svg`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.ico`, `.avif`). The directory is created on startup. Symlinks pointing outside it are not followed. |
+
 ### FILE_MAX_SIZE
 
 | Property | Value |
@@ -304,8 +313,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Required | No |
 | Type | URL or absolute path |
 | Default | - (uses built-in SkySend logo) |
-| Validation | Must be a URL (`https://...`) or an absolute path (`/...`) |
-| Description | URL or path to a custom logo image displayed in the web app header and as favicon. For local files, place them in the `public/` directory (e.g. `public/custom-logo.svg`) and reference as `/custom-logo.svg`. |
+| Validation | Must be an `http(s)` URL or an absolute path starting with a single `/`. Protocol-relative URLs (`//host/logo.png`) are rejected because they point at a foreign origin without being covered by the CSP origin check. |
+| Description | Path or URL to a custom logo image displayed in the web app header and as favicon. Place local files in `BRANDING_DIR` (e.g. `<DATA_DIR>/branding/custom-logo.svg`) and reference them as `/branding/custom-logo.svg`. External URLs remain supported: the host then sees each visitor's IP address (but not the opened link, since `Referrer-Policy: no-referrer` is set) and its origin is added to the CSP `img-src`. |
 
 ### CUSTOM_PRIVACY
 
@@ -486,7 +495,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 - `NOTE_MAX_SIZE` must be a valid byte size string with a recognized unit
 - `BASE_URL` must be a valid URL
 - `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
-- `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
+- `CUSTOM_LOGO` must be an `http(s)` URL or an absolute path starting with a single `/`
 - `CUSTOM_PRIVACY` must be a valid URL
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL

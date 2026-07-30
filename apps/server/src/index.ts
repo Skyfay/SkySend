@@ -14,6 +14,7 @@ import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
+import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
 import { createPasswordLockout } from "./lib/password-lockout.js";
 import type { QuotaVariables } from "./types.js";
 
@@ -322,6 +323,13 @@ if (config.OIDC_ENABLED && oidcAdapter) {
 // In production (Docker), the built files are at the expected path
 const webDistPath = resolve(import.meta.dirname, "../../web/dist");
 
+// ── Custom Branding Assets ─────────────────────────────
+// Files an operator drops into BRANDING_DIR are served from the instance's own
+// origin, so CUSTOM_LOGO="/branding/logo.svg" needs no third-party request and
+// stays covered by the CSP 'self' image source.
+// Registered before the SPA fallback so it wins over the catch-all handlers.
+app.use(`${BRANDING_PREFIX}*`, ...createBrandingStatic(config.BRANDING_DIR));
+
 // Content-hashed assets can be cached aggressively by browsers (immutable).
 // The no-store on app.onError ensures transient errors during deployment are
 // never cached by intermediate proxies like Traefik.
@@ -393,6 +401,7 @@ const server = serve(
     console.log(`[skysend] Listening on http://${config.HOST}:${info.port}`);
     console.log(`[skysend] Data directory: ${resolve(config.DATA_DIR)}`);
     console.log(`[skysend] Uploads directory: ${resolve(config.UPLOADS_DIR)}`);
+    console.log(`[skysend] Branding directory: ${resolve(config.BRANDING_DIR)}`);
     console.log(`[skysend] Max file size: ${(config.FILE_MAX_SIZE / (1024 ** 2)).toFixed(0)} MB`);
     console.log(`[skysend] Max note size: ${(config.NOTE_MAX_SIZE / (1024 ** 2)).toFixed(2)} MB`);
     if (config.FILE_UPLOAD_QUOTA_BYTES > 0) {

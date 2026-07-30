@@ -19,6 +19,7 @@
     "view": "Ver",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
+    "save": "Guardar",
     "close": "Cerrar",
     "back": "Volver",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Descargar archivo",
     "fileInfo": "Información del archivo",
-    "encryptedFile": "Archivo cifrado",
+    "encryptedFile": "Archivo protegido",
     "size": "Tamaño",
     "downloads": "Descargas",
     "expires": "Expira",
@@ -130,6 +131,11 @@
     "deleteFailed": "Error al eliminar la subida",
     "deleteNoteSuccess": "Nota eliminada",
     "deleteNoteFailed": "Error al eliminar la nota",
+    "rename": "Renombrar",
+    "renameTitle": "Nombrar esta subida",
+    "renameDescription": "Se guarda solo en este navegador y solo usted puede verlo. Los destinatarios nunca ven este nombre.",
+    "renamePlaceholder": "p. ej. Documentos del proyecto - Expediente 4711",
+    "renameFailed": "No se pudo renombrar la subida",
     "note": "Nota",
     "filter": {
       "all": "Todo",

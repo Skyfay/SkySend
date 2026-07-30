@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Upload, FolderOpen, X, FileIcon } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface UploadZoneProps {
   files: File[];
@@ -154,15 +155,19 @@ export function UploadZone({
             {" - "}
             {t("upload.totalSize", { size: formatBytes(totalSize) })}
           </p>
-          <div className="max-h-60 overflow-x-hidden overflow-y-auto">
-            <ul className="space-y-1" role="list">
+          {/* Cap the viewport, not the root, so the list actually scrolls. */}
+          <ScrollArea viewportClassName="max-h-60">
+            <ul className="space-y-1 pr-3" role="list">
               {files.map((file, i) => (
                 <li
                   key={`${file.name}-${file.size}-${i}`}
                   className="flex items-center gap-2 overflow-hidden rounded-md bg-muted/50 px-3 py-2 text-sm"
                 >
                   <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">
+                  <span
+                    className="min-w-0 flex-1 truncate"
+                    title={file.webkitRelativePath || file.name}
+                  >
                     {file.webkitRelativePath || file.name}
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
@@ -180,7 +185,7 @@ export function UploadZone({
                 </li>
               ))}
             </ul>
-          </div>
+          </ScrollArea>
         </div>
       )}
     </div>

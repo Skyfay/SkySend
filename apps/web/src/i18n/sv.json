@@ -19,6 +19,7 @@
     "view": "Visa",
     "cancel": "Avbryt",
     "confirm": "Bekräfta",
+    "save": "Spara",
     "close": "Stäng",
     "back": "Tillbaka",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Ladda ner fil",
     "fileInfo": "Filinformation",
-    "encryptedFile": "Krypterad fil",
+    "encryptedFile": "Skyddad fil",
     "size": "Storlek",
     "downloads": "Nedladdningar",
     "expires": "Upphör",
@@ -128,6 +129,11 @@
     "deleteFailed": "Kunde inte ta bort uppladdningen",
     "deleteNoteSuccess": "Anteckning borttagen",
     "deleteNoteFailed": "Kunde inte ta bort anteckningen",
+    "rename": "Byt namn",
+    "renameTitle": "Ge den här uppladdningen ett namn",
+    "renameDescription": "Sparas endast i den här webbläsaren och syns bara för dig. Mottagare ser aldrig det här namnet.",
+    "renamePlaceholder": "t.ex. Projektdokument - Ärende 4711",
+    "renameFailed": "Det gick inte att byta namn på uppladdningen",
     "note": "Anteckning",
     "filter": {
       "all": "Alla",

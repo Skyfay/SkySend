@@ -25,7 +25,12 @@ const FILTER_ICONS: Record<Filter, React.ComponentType<{ className?: string }>> 
 export function MyUploadsPage() {
   const { t } = useTranslation();
   const { config } = useServerConfig();
-  const { uploads, loading: uploadsLoading, deleteUpload } = useUploadHistory();
+  const {
+    uploads,
+    loading: uploadsLoading,
+    deleteUpload,
+    renameUpload,
+  } = useUploadHistory();
   const { notes, loading: notesLoading, deleteNote } = useNoteHistory();
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -40,6 +45,14 @@ export function MyUploadsPage() {
       toast.success(t("myUploads.deleteSuccess"));
     } catch {
       toast.error(t("myUploads.deleteFailed"));
+    }
+  };
+
+  const handleRenameUpload = async (id: string, name: string) => {
+    try {
+      await renameUpload(id, name);
+    } catch {
+      toast.error(t("myUploads.renameFailed"));
     }
   };
 
@@ -174,6 +187,7 @@ export function MyUploadsPage() {
                 key={`upload-${item.data.id}`}
                 upload={item.data}
                 onDelete={handleDeleteUpload}
+                onRename={handleRenameUpload}
               />
             ) : (
               <NoteCard

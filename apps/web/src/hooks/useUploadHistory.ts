@@ -1,7 +1,9 @@
 import { useState, useCallback, useSyncExternalStore } from "react";
 import {
   getAllUploads,
+  normalizeUploadName,
   removeUpload,
+  setUploadName,
   type StoredUpload,
 } from "@/lib/upload-store";
 import * as api from "@/lib/api";
@@ -90,10 +92,21 @@ export function useUploadHistory() {
     [],
   );
 
+  // Patches the single row instead of calling refresh(), which would re-fetch
+  // the live status of every upload.
+  const renameUploadById = useCallback(async (id: string, name: string) => {
+    await setUploadName(id, name);
+    const normalized = normalizeUploadName(name);
+    setUploads((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, name: normalized } : u)),
+    );
+  }, []);
+
   return {
     uploads: uploads.filter((u) => !u.gone),
     loading,
     refresh: emitRefresh,
     deleteUpload: deleteUploadById,
+    renameUpload: renameUploadById,
   };
 }

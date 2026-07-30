@@ -69,7 +69,7 @@ All environment variables are optional. SkySend works out of the box with sensib
 
 | Mount Point | Required | Purpose |
 | :--- | :---: | :--- |
-| `/data` | ✅ | Database and persistent data. |
+| `/data` | ✅ | Database and persistent data. Also holds `/data/branding` for your own logo. |
 | `/uploads` | ✅ | Encrypted file storage. |
 
 ::: warning Data Persistence

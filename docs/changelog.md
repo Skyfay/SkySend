@@ -9,6 +9,33 @@ All notable changes to SkySend are documented here.
 
 - **website**: Added a new public website (homepage, roadmap, blog, and a Server Instances section listing live public instances), plus a Report Abuse page for flagging file and note links.
 - **infra**: Moved the abuse report Cloudflare Worker into the monorepo (`workers/report`), alongside the existing instances worker.
+- **web**: The download page now shows the file name, file list, and size as soon as the link is opened, instead of only after starting the download. ([#66](https://github.com/Skyfay/SkySend/issues/66))
+- **web**: Uploads in "My Uploads" can be given an optional name, and multi-file uploads now list their file names instead of only a count. ([#67](https://github.com/Skyfay/SkySend/issues/67))
+- **server**: Branding assets placed in the data directory are now served by the instance itself, so a custom logo no longer needs an external URL. ([#66](https://github.com/Skyfay/SkySend/issues/66))
+
+### 🐛 Bug Fixes
+
+- **web**: A repeated wrong password on the download page shows the error message again instead of staying silent after the first attempt.
+- **web**: A custom logo that cannot be loaded now falls back to the built-in logo instead of leaving a broken image in the header.
+- **web**: The file list on the download page now scrolls through all files instead of cutting off after the first few, and long file names no longer hide the file size.
+
+### 🔒 Security
+
+- **server**: `CUSTOM_LOGO` no longer accepts protocol-relative URLs such as `//example.com/logo.png`, which loaded an external image outside the Content Security Policy origin check.
+
+### 🎨 Improvements
+
+- **server**: Startup now points out when `CUSTOM_LOGO` refers to an external host, and how to serve the file from the instance instead.
+- **web**: The selected-files list on the upload page uses the app's own slim scrollbar instead of the browser's native one, and hovering a shortened file name shows it in full.
+
+### 🔄 Changed
+
+- **web**: On password-protected download links, entering the password now unlocks the file details, and the download starts with a separate click. ([#66](https://github.com/Skyfay/SkySend/issues/66))
+- **web**: The placeholder for uploads without metadata now reads "Protected file" instead of "Encrypted file". ([#66](https://github.com/Skyfay/SkySend/issues/66))
+
+### 📝 Documentation
+
+- **docs**: Documented the branding directory and switched the custom logo examples from an external URL to a local path.
 
 ### 🔧 CI/CD
 

@@ -36,7 +36,7 @@ export function DownloadPage() {
 
   useEffect(() => {
     if (id && secret) {
-      downloadHook.loadInfo(id);
+      downloadHook.loadInfo(id, secret);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -127,9 +127,11 @@ export function DownloadPage() {
     );
   }
 
+  // Unlocking only verifies the password and decrypts the metadata. The transfer
+  // starts with a separate click, so no download is spent on a look at the file.
   const handlePasswordSubmit = (pw: string) => {
     setPasswordInput(pw);
-    downloadHook.download(id, secret, pw, hashWasmArgon2);
+    downloadHook.unlock(id, secret, pw, hashWasmArgon2);
   };
 
   const handleDownload = () => {
@@ -145,11 +147,12 @@ export function DownloadPage() {
 
       <Card>
         <CardContent className="space-y-6 pt-6">
-          {/* Password prompt */}
-          {downloadHook.phase === "needs-password" && (
+          {/* Password prompt - stays mounted during the Argon2id stretch */}
+          {(downloadHook.phase === "needs-password" ||
+            downloadHook.phase === "verifying-password") && (
             <PasswordPrompt
               onSubmit={handlePasswordSubmit}
-              loading={false}
+              loading={downloadHook.phase === "verifying-password"}
               error={downloadHook.error}
             />
           )}
@@ -175,6 +178,7 @@ export function DownloadPage() {
           {/* Download card when info is available and no password needed (or already unlocked) */}
           {downloadHook.info &&
             downloadHook.phase !== "needs-password" &&
+            downloadHook.phase !== "verifying-password" &&
             downloadHook.phase !== "safari-warning" &&
             downloadHook.phase !== "firefox-devtools-warning" && (
               <DownloadCard

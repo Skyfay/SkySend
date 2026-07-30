@@ -19,6 +19,7 @@
     "view": "Voir",
     "cancel": "Annuler",
     "confirm": "Confirmer",
+    "save": "Enregistrer",
     "close": "Fermer",
     "back": "Retour",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Télécharger le fichier",
     "fileInfo": "Informations sur le fichier",
-    "encryptedFile": "Fichier chiffré",
+    "encryptedFile": "Fichier protégé",
     "size": "Taille",
     "downloads": "Téléchargements",
     "expires": "Expire",
@@ -130,6 +131,11 @@
     "deleteFailed": "Échec de la suppression de l'envoi",
     "deleteNoteSuccess": "Note supprimée",
     "deleteNoteFailed": "Échec de la suppression de la note",
+    "rename": "Renommer",
+    "renameTitle": "Nommer cet envoi",
+    "renameDescription": "Enregistré uniquement dans ce navigateur et visible seulement par vous. Les destinataires ne voient jamais ce nom.",
+    "renamePlaceholder": "ex. Documents du projet - Dossier 4711",
+    "renameFailed": "Échec du renommage de l'envoi",
     "note": "Note",
     "filter": {
       "all": "Tout",

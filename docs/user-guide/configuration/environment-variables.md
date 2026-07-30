@@ -11,6 +11,7 @@ Complete reference of all environment variables supported by SkySend.
 | `BASE_URL` | ✅ | - | Public URL of the instance (used for CORS and generated links). |
 | `DATA_DIR` | ❌ | `./data` | Directory for the database (`DATA_DIR/db/skysend.db`). |
 | `UPLOADS_DIR` | ❌ | `{DATA_DIR}/uploads` | Directory for encrypted upload files. In Docker, defaults to `/uploads`. |
+| `BRANDING_DIR` | ❌ | `{DATA_DIR}/branding` | Directory for your own branding assets. Its contents are served under `/branding/`. Created automatically on startup. |
 | `TRUST_PROXY` | ❌ | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
 | `CORS_ORIGINS` | ❌ | _(empty)_ | Additional CORS origins, comma-separated. |
 
@@ -100,7 +101,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | :--- | :---: | :--- | :--- |
 | `CUSTOM_TITLE` | ❌ | `SkySend` | Displayed site title in the UI. |
 | `CUSTOM_COLOR` | ❌ | _(none)_ | Primary brand color as 6-digit hex code (e.g. `46c89d`). The `#` prefix is optional. |
-| `CUSTOM_LOGO` | ❌ | _(none)_ | URL or absolute path to a custom logo (e.g. `https://example.com/logo.svg` or `/custom-logo.svg`). |
+| `CUSTOM_LOGO` | ❌ | _(none)_ | Path to a custom logo. Put the file into `BRANDING_DIR` and reference it as `/branding/logo.svg`. An external URL (`https://example.com/logo.svg`) also works but is not recommended. |
 | `CUSTOM_PRIVACY` | ❌ | _(none)_ | URL to your privacy policy page. Shown as a link in the footer if set. |
 | `CUSTOM_LEGAL` | ❌ | _(none)_ | URL to your legal notice / impressum page. Shown as a link in the footer if set. |
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
@@ -117,7 +118,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 environment:
   CUSTOM_TITLE: MyShare
   CUSTOM_COLOR: ff6b35
-  CUSTOM_LOGO: "https://example.com/my-logo.svg"
+  CUSTOM_LOGO: "/branding/my-logo.svg"
   CUSTOM_PRIVACY: "https://example.com/privacy"
   CUSTOM_LEGAL: "https://example.com/impressum"
   CUSTOM_LINK_URL: "https://example.com"
@@ -126,6 +127,27 @@ environment:
 
 ::: tip
 The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are valid. Omitting the `#` avoids quoting issues in `.env` files.
+:::
+
+### Custom logo
+
+Copy the image into the branding directory of your data volume, then reference it by path:
+
+```bash
+cp my-logo.svg ./data/branding/
+```
+
+```yaml
+environment:
+  CUSTOM_LOGO: "/branding/my-logo.svg"
+```
+
+The directory is created automatically on startup and is served under `/branding/`. Only image files are served (`.svg`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.ico`, `.avif`), everything else returns 404.
+
+::: info External URLs
+`CUSTOM_LOGO` still accepts an external URL, and that stays supported. Be aware of the trade-off: every visitor's browser loads the image from that host, so the host sees their IP address and the time of the request. It does not learn which link they opened, because SkySend sends `Referrer-Policy: no-referrer`. The Content Security Policy is widened to allow images from that one origin, and if the host is slow or unreachable, so is your logo.
+
+Hosting the file on infrastructure you control (including your own CDN) is fine. A local file in `BRANDING_DIR` avoids the extra request entirely and is the simpler default.
 :::
 
 ## SSO / OIDC Authentication
@@ -173,7 +195,7 @@ SkySend validates all environment variables on startup using Zod:
 - When `STORAGE_BACKEND=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY` are required
 - `S3_ENDPOINT` must be a valid URL when set
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
-- `CUSTOM_LOGO` must be a URL or an absolute path starting with `/`
+- `CUSTOM_LOGO` must be an `http(s)` URL or an absolute path starting with a single `/`
 - `CUSTOM_PRIVACY` must be a valid URL
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL

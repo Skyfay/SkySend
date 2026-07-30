@@ -203,6 +203,8 @@ const configSchema = z.object({
 
   UPLOADS_DIR: z.string().optional(),
 
+  BRANDING_DIR: z.string().optional(),
+
   TRUST_PROXY: z
     .string()
     .default("false")
@@ -214,11 +216,13 @@ const configSchema = z.object({
     .transform((v) => (v.startsWith("#") ? v : `#${v}`))
     .optional(),
 
+  // A leading "//" is a protocol-relative URL pointing at a foreign origin. It
+  // would slip past the CSP img-src handling, which only widens for "https?://".
   CUSTOM_LOGO: z
     .string()
     .refine(
-      (v) => /^https?:\/\//.test(v) || v.startsWith("/"),
-      "Must be a URL (https://...) or an absolute path (/logo.svg)",
+      (v) => /^https?:\/\//.test(v) || /^\/(?!\/)/.test(v),
+      "Must be a URL (https://...) or an absolute path (/branding/logo.svg)",
     )
     .optional(),
 
@@ -350,8 +354,10 @@ const configSchema = z.object({
 });
 
 type RawConfig = z.infer<typeof configSchema>;
-export type Config = Omit<RawConfig, "UPLOADS_DIR"> & {
+export type Config = Omit<RawConfig, "UPLOADS_DIR" | "BRANDING_DIR"> & {
   UPLOADS_DIR: string;
+  /** Directory whose contents are served under /branding/ (custom logo etc.). */
+  BRANDING_DIR: string;
   /** True when OIDC is fully configured (OIDC_ISSUER + OIDC_CLIENT_ID + OIDC_CLIENT_SECRET + OIDC_SESSION_SECRET are all set). */
   OIDC_ENABLED: boolean;
 };
@@ -373,6 +379,7 @@ export function loadConfig(): Config {
   _config = {
     ...parsed,
     UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
+    BRANDING_DIR: parsed.BRANDING_DIR ?? join(parsed.DATA_DIR, "branding"),
     OIDC_ENABLED: false,
   } as Config;
 
@@ -453,6 +460,17 @@ export function loadConfig(): Config {
       );
     }
     _config.OIDC_ENABLED = true;
+  }
+
+  // Cross-field validation - Branding
+  if (_config.CUSTOM_LOGO && /^https?:\/\//.test(_config.CUSTOM_LOGO)) {
+    console.warn(
+      `[branding] NOTE: CUSTOM_LOGO points at an external host (${new URL(_config.CUSTOM_LOGO).origin}). `
+      + "Every visitor's browser loads the image from there, so that host sees their IP address, "
+      + "and its origin is added to the Content Security Policy. "
+      + `To serve the logo from this instance instead, put the file into ${_config.BRANDING_DIR} `
+      + "and set CUSTOM_LOGO=/branding/<filename>.",
+    );
   }
 
   return _config;

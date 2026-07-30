@@ -2,16 +2,29 @@ import * as React from "react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { cn } from "@/lib/utils";
 
+interface ScrollAreaProps
+  extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  /**
+   * Classes for the scrollable viewport. Use this for a `max-h-*` cap: on the
+   * root it would only clip, because the viewport's `h-full` cannot resolve
+   * against an auto-height parent, so Radix never sees an overflow and never
+   * enables scrolling. A fixed `h-*` on the root works either way.
+   */
+  viewportClassName?: string;
+}
+
 const ScrollArea = React.forwardRef<
   React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  ScrollAreaProps
+>(({ className, viewportClassName, children, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    <ScrollAreaPrimitive.Viewport
+      className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />

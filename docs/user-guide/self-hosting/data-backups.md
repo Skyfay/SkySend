@@ -12,6 +12,8 @@ data/
     skysend.db          # SQLite database (upload metadata)
     skysend.db-wal      # Write-ahead log (temporary)
     skysend.db-shm      # Shared memory file (temporary)
+  branding/
+    logo.svg            # Your own branding assets (optional)
 ```
 
 Encrypted upload files are stored separately in `./uploads` by default (configurable via `UPLOADS_DIR`). In the Docker image, this defaults to `/uploads` as a dedicated volume:
@@ -27,6 +29,7 @@ uploads/
 | --- | --- |
 | `skysend.db` | Upload metadata: IDs, tokens, salt, encrypted metadata, expiry times, download counts |
 | `uploads/*.bin` | Encrypted file payloads (AES-256-GCM ciphertext). Only present when using filesystem storage. |
+| `branding/*` | Branding assets you placed there yourself, for example the logo referenced by `CUSTOM_LOGO`. |
 
 ::: tip S3 Storage
 When using `STORAGE_BACKEND=s3`, encrypted files are stored in your S3 bucket instead of the local `uploads/` directory. You only need to back up the `data/` directory (SQLite database). The S3 bucket should be backed up separately using your provider's tools.

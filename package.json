@@ -6,7 +6,7 @@
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
   "license": "AGPL-3.0",
   "scripts": {
-    "dev": "pnpm --parallel --filter=!@skysend/instances-worker dev",
+    "dev": "pnpm --parallel --filter=!@skysend/instances-worker --filter=!@skysend/report-worker dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test",
     "test:coverage": "pnpm --recursive --filter=@skysend/server --filter=@skysend/web --filter=@skysend/crypto --filter=@skysend/client test:coverage",

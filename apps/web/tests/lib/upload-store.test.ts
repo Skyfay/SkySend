@@ -28,6 +28,9 @@ const {
   removeUpload,
   getAllUploads,
   clearExpiredUploads,
+  normalizeUploadName,
+  setUploadName,
+  UPLOAD_NAME_MAX_LENGTH,
   saveNote,
   getNote,
   removeNote,
@@ -91,6 +94,47 @@ describe("removeUpload", () => {
 
   it("does not throw when removing a non-existent upload", async () => {
     await expect(removeUpload("nonexistent")).resolves.toBeUndefined();
+  });
+});
+
+describe("normalizeUploadName", () => {
+  it("trims surrounding whitespace", () => {
+    expect(normalizeUploadName("  Vorgang 4711  ")).toBe("Vorgang 4711");
+  });
+
+  it("returns undefined for blank input", () => {
+    expect(normalizeUploadName("")).toBeUndefined();
+    expect(normalizeUploadName("   ")).toBeUndefined();
+  });
+
+  it("truncates to the maximum length", () => {
+    const long = "x".repeat(UPLOAD_NAME_MAX_LENGTH + 50);
+    expect(normalizeUploadName(long)).toHaveLength(UPLOAD_NAME_MAX_LENGTH);
+  });
+});
+
+describe("setUploadName", () => {
+  it("stores a normalized name without touching the other fields", async () => {
+    await saveUpload(makeUpload({ fileNames: ["a.txt", "b.txt"] }));
+    await setUploadName("upload-1", "  Projekt Nordlicht  ");
+
+    const result = await getUpload("upload-1");
+    expect(result?.name).toBe("Projekt Nordlicht");
+    expect(result?.fileNames).toEqual(["a.txt", "b.txt"]);
+    expect(result?.ownerToken).toBe("tok");
+    expect(result?.secret).toBe("sec");
+    expect(result?.createdAt).toBe("2024-01-01T00:00:00.000Z");
+  });
+
+  it("clears the name when given blank input", async () => {
+    await saveUpload(makeUpload({ name: "Alter Name" }));
+    await setUploadName("upload-1", "   ");
+    expect((await getUpload("upload-1"))?.name).toBeUndefined();
+  });
+
+  it("does nothing for an unknown id", async () => {
+    await expect(setUploadName("missing", "Name")).resolves.toBeUndefined();
+    expect(await getUpload("missing")).toBeUndefined();
   });
 });
 

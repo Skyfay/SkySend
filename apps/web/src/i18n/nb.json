@@ -19,6 +19,7 @@
     "view": "Vis",
     "cancel": "Avbryt",
     "confirm": "Bekreft",
+    "save": "Lagre",
     "close": "Lukk",
     "back": "Tilbake",
     "docs": "Docs"
@@ -91,7 +92,7 @@
   "download": {
     "title": "Last ned fil",
     "fileInfo": "Filinformasjon",
-    "encryptedFile": "Kryptert fil",
+    "encryptedFile": "Beskyttet fil",
     "size": "Størrelse",
     "downloads": "Nedlastinger",
     "expires": "Utløper",
@@ -130,6 +131,11 @@
     "deleteFailed": "Kunne ikke slette opplastingen",
     "deleteNoteSuccess": "Notat slettet",
     "deleteNoteFailed": "Kunne ikke slette notatet",
+    "rename": "Gi nytt navn",
+    "renameTitle": "Gi denne opplastingen et navn",
+    "renameDescription": "Lagres bare i denne nettleseren og er bare synlig for deg. Mottakere ser aldri dette navnet.",
+    "renamePlaceholder": "f.eks. Prosjektdokumenter - Sak 4711",
+    "renameFailed": "Kunne ikke gi opplastingen nytt navn",
     "note": "Notat",
     "filter": {
       "all": "Alle",

@@ -70,6 +70,11 @@ export default defineConfig(({ command }) => {
         target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
         changeOrigin: true,
       },
+      // Operator-supplied branding assets are served by the API server.
+      "/branding": {
+        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
+        changeOrigin: true,
+      },
     },
   },
   };
