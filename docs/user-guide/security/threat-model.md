@@ -82,9 +82,25 @@ The recipient's mail infrastructure is a different case, because the sender has 
 
 Either way, the gateway operator holds the full original URL, since the link was in the message body when it passed through their systems.
 
-**After the fact**, a new link is not a remedy, because the exposed key stays exposed. The remedy is to delete the upload, which removes the ciphertext that key unlocks. That leaves one gap: an operator who keeps backups of both the blob storage and the proxy logs still holds both halves. Deletion narrows the window, it does not close it.
+#### What the instance operator can do with it
 
-**Before the fact**, add a password and send it through a separate channel. A rewritten link then leaks a key that is not sufficient on its own, which is the only measure that survives the exposure entirely.
+Decrypting an upload takes three separate pieces, and a rewritten link puts all of them in reach of whoever runs the instance:
+
+| Piece | Where it lives |
+| :--- | :--- |
+| The secret from the URL fragment | The reverse proxy or CDN access log |
+| The HKDF salt | The database |
+| The ciphertext | The blob storage |
+
+**Without a password, that is enough.** An operator who holds the access log plus backups of the database and the blob storage can decrypt the upload, including after the sender deleted it. Deleting removes the live copy, it does not reach into a backup.
+
+**With a password, it is not enough.** The URL fragment carries only the raw secret. The keys that actually decrypt anything are derived from that secret combined with an Argon2id hash of the password, and the password never leaves the browser, so the server stores neither it nor a hash of it. The same operator would have to brute force the password at 64 MiB of memory and three iterations per guess.
+
+#### What to do
+
+**After the fact**, a new link is not a remedy, because the exposed secret stays exposed. Ask the sender to delete the upload, which removes the ciphertext that secret unlocks. On an instance without backups that closes the case, and a one-time download link that was already used is gone anyway. Against an operator who keeps backups, deletion only narrows the window.
+
+**Before the fact**, add a password and send it through a separate channel. That is the only measure which survives the exposure completely, because it keeps one required piece off the server entirely.
 
 ### Malicious File Content
 SkySend does not inspect or scan file contents. It encrypts and stores whatever the user uploads. SkySend is not responsible for malicious file content.

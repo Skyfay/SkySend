@@ -97,7 +97,9 @@ A rewritten link is no longer a zero-knowledge link. The server, the reverse pro
 
 Asking for a new link does not help, because the old key is already out. What helps is removing what that key unlocks: **download or view the content, then ask the sender to delete the upload.** Once the ciphertext is gone, a key sitting in a log line is worthless. A one-time download link that has already been used is deleted for you.
 
-This is not airtight. If the operator keeps backups of the blob storage and of the proxy logs, both halves still exist somewhere. Treat a rewritten link as compromised and re-share genuinely sensitive content through a different channel, ideally with a password sent separately. See the [Threat Model](/user-guide/security/threat-model#link-rewriting-by-mail-security-gateways).
+This is not airtight. On an upload **without a password**, an operator who keeps the access log alongside backups of the database and the blob storage holds everything needed to decrypt it, deletion included. On an upload **with a password**, they do not: the password never reaches the server, and without it the leaked secret decrypts nothing.
+
+So treat a rewritten link as compromised. Re-share genuinely sensitive content through a different channel, with a password sent separately. See the [Threat Model](/user-guide/security/threat-model#link-rewriting-by-mail-security-gateways) for the full breakdown.
 :::
 
 If the gateway strips the fragment instead of encoding it, nothing can recover the key, because it never reaches the browser. Share the link through a different channel in that case.
