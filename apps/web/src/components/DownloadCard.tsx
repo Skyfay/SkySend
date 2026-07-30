@@ -16,7 +16,7 @@ import { formatBytes, formatTimeRemaining } from "@/lib/utils";
 import type { UploadInfo } from "@/lib/api";
 import type { FileMetadata } from "@skysend/crypto";
 import type { DownloadPhase } from "@/hooks/useDownload";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 interface DownloadCardProps {
   info: UploadInfo;

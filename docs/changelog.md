@@ -22,6 +22,11 @@ All notable changes to SkySend are documented here.
 ### 🔒 Security
 
 - **server**: `CUSTOM_LOGO` no longer accepts protocol-relative URLs such as `//example.com/logo.png`, which loaded an external image outside the Content Security Policy origin check.
+- **server**: Updated `@hono/node-server` to 2.0.12 to patch an unauthenticated memory-leak denial of service triggered by aborted WebSocket handshakes (GHSA-9mqv-5hh9-4cgg).
+- **server**: Updated hono to 4.12.32 to patch cross-request data disclosure in JSX server-side rendering, XSS via the `cx()` utility, and header de-duplication in the AWS Lambda adapter (GHSA-hvrm-45r6-mjfj, GHSA-w62v-xxxg-mg59, GHSA-xgm2-5f3f-mvvc).
+- **web**: Updated react-router to 8 to patch a CSRF bypass that allowed actions to run before a 400 response (GHSA-qwww-vcr4-c8h2).
+- **web**: Updated dompurify to 3.4.12 to fix a sanitizer bypass for allowed custom elements (GHSA-c2j3-45gr-mqc4).
+- **infra**: Added pnpm overrides for `sharp` and `brace-expansion`, raised the `postcss` override, and removed the unused `autoprefixer` dependency to clear transitive advisories (GHSA-f88m-g3jw-g9cj, GHSA-3jxr-9vmj-r5cp, GHSA-mh99-v99m-4gvg, GHSA-r28c-9q8g-f849).
 
 ### 🎨 Improvements
 
