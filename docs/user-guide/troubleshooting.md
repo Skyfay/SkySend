@@ -77,3 +77,27 @@ For Cloudflare R2, set the allowed origin in the R2 bucket settings under **CORS
 ::: warning No trailing slash
 The origin value must not end with a slash. `https://send.example.com` is correct. `https://send.example.com/` will not match and CORS will still fail.
 :::
+
+## Share link opens but the page says "not found"
+
+**Symptom:** A share link that works when opened directly shows "not found" after being sent by email. The address bar contains `%23` where the link should have a `#`:
+
+```
+https://send.example.com/file/c9c9c3a2-...-8b001a8051c7%23Xy1wbZmb0OePQ...
+```
+
+**Cause:** A mail security gateway rewrote the link. Microsoft Defender for Office 365 Safe Links wraps the original URL in a query parameter, and the `#` survives that round trip only as its percent-encoded form `%23`. Browsers never decode `%23` in a path, so the key ends up as part of the path instead of the URL fragment, and the page cannot read it.
+
+Proofpoint URL Defense, Mimecast, and similar products rewrite links the same way. Some of them drop the fragment entirely.
+
+**Fix:** Nothing to configure. SkySend detects this exact shape and moves the key back into the fragment before the page loads, so the link works on the second hop. A warning is shown because the rewrite has a real consequence: the key travelled to the server inside the request path, which a normal share link never does.
+
+::: warning The key was exposed
+A rewritten link is no longer a zero-knowledge link. The server, the reverse proxy, and any CDN in front of them saw the key in the request path. SkySend truncates its own request log at the resource ID, but logs outside the application are the operator's responsibility.
+
+Asking for a new link does not help, because the old key is already out. What helps is removing what that key unlocks: **download or view the content, then ask the sender to delete the upload.** Once the ciphertext is gone, a key sitting in a log line is worthless. A one-time download link that has already been used is deleted for you.
+
+This is not airtight. If the operator keeps backups of the blob storage and of the proxy logs, both halves still exist somewhere. Treat a rewritten link as compromised and re-share genuinely sensitive content through a different channel, ideally with a password sent separately. See the [Threat Model](/user-guide/security/threat-model#link-rewriting-by-mail-security-gateways).
+:::
+
+If the gateway strips the fragment instead of encoding it, nothing can recover the key, because it never reaches the browser. Share the link through a different channel in that case.

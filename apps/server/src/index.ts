@@ -2,7 +2,6 @@ import { Hono, type Context, type Next } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
-import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { resolve } from "node:path";
@@ -12,6 +11,7 @@ import { loadConfig } from "./lib/config.js";
 import { initDatabase, closeDatabase } from "./db/index.js";
 import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
+import { createRequestLogger } from "./middleware/request-logger.js";
 import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
 import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
@@ -101,9 +101,11 @@ if (config.CUSTOM_LOGO && /^https?:\/\//.test(config.CUSTOM_LOGO)) {
 }
 
 // Global middleware
-// L-4: Hono's built-in logger only logs METHOD, PATH, STATUS, and elapsed time.
-// It does NOT log IP addresses or other user-identifying information.
-app.use("*", logger());
+// L-4: The request logger only logs METHOD, PATH, STATUS, and elapsed time.
+// It does NOT log IP addresses or other user-identifying information, and it
+// truncates share-link paths at the resource ID so that a link rewritten by a
+// mail security gateway cannot leave its key in the log. See request-logger.ts.
+app.use("*", createRequestLogger());
 app.use(
   "*",
   secureHeaders({

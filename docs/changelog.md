@@ -19,6 +19,7 @@ All notable changes to SkySend are documented here.
 - **web**: A custom logo that cannot be loaded now falls back to the built-in logo instead of leaving a broken image in the header.
 - **web**: The file list on the download page now scrolls through all files instead of cutting off after the first few, and long file names no longer hide the file size.
 - **client**: Notes with an unlimited view limit now show "3 / ∞" in the TUI note detail instead of "3 / 0 (-3 remaining)". Thanks @Osamaali313 ([#65](https://github.com/Skyfay/SkySend/pull/65))
+- **web**: Share links whose fragment was percent-encoded by a mail security filter now open correctly instead of showing "not found", and warn that the key was exposed. ([#68](https://github.com/Skyfay/SkySend/issues/68))
 
 ### 🔒 Security
 
@@ -28,6 +29,7 @@ All notable changes to SkySend are documented here.
 - **web**: Updated react-router to 8 to patch a CSRF bypass that allowed actions to run before a 400 response (GHSA-qwww-vcr4-c8h2).
 - **web**: Updated dompurify to 3.4.12 to fix a sanitizer bypass for allowed custom elements (GHSA-c2j3-45gr-mqc4).
 - **infra**: Added pnpm overrides for `sharp` and `brace-expansion`, raised the `postcss` override, and removed the unused `autoprefixer` dependency to clear transitive advisories (GHSA-f88m-g3jw-g9cj, GHSA-3jxr-9vmj-r5cp, GHSA-mh99-v99m-4gvg, GHSA-r28c-9q8g-f849).
+- **server**: The request log no longer records anything after the ID in a file, note, or download path, so a link rewritten by a mail security filter cannot leave its key in the log. ([#68](https://github.com/Skyfay/SkySend/issues/68))
 
 ### 🎨 Improvements
 
@@ -42,6 +44,7 @@ All notable changes to SkySend are documented here.
 ### 📝 Documentation
 
 - **docs**: Documented the branding directory and switched the custom logo examples from an external URL to a local path.
+- **docs**: Documented how mail security filters rewrite share links, what that means for the encryption key, and what a reverse proxy logs. ([#68](https://github.com/Skyfay/SkySend/issues/68))
 
 ### 🔧 CI/CD
 

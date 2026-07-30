@@ -284,6 +284,8 @@
   "errors": {
     "insecureContext": "Wymagane HTTPS",
     "originNotAllowed": "Serwer zablokował to źródło",
-    "s3CorsError": "CORS S3 nie jest skonfigurowany"
+    "s3CorsError": "CORS S3 nie jest skonfigurowany",
+    "linkRewritten": "Link został zmieniony w trakcie przesyłania",
+    "linkRewrittenDesc": "Filtr bezpieczeństwa poczty przepisał ten link, przez co klucz deszyfrujący był widoczny dla serwera. Jeśli treść jest poufna, poproś nadawcę o jej usunięcie, gdy tylko ją pobierzesz."
   }
 }

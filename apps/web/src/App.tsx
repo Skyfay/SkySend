@@ -27,6 +27,13 @@ export function App() {
       <ThemeProvider>
         <TooltipProvider delayDuration={0}>
         <ServerConfigProvider>
+          {/*
+            Toaster stays ahead of the router. Sonner only delivers a toast to
+            subscribers that already exist, and it subscribes in a mount effect.
+            Sibling effects run in tree order, so a page that toasts while
+            mounting would publish into the void if the Toaster came after it.
+          */}
+          <Toaster />
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
@@ -39,7 +46,6 @@ export function App() {
               </Route>
             </Routes>
           </BrowserRouter>
-          <Toaster />
         </ServerConfigProvider>
         </TooltipProvider>
       </ThemeProvider>

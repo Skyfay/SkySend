@@ -57,7 +57,9 @@
       "debug.close",
       "common.view",
       "common.docs",
-      "errors.insecureContext"
+      "errors.insecureContext",
+      "errors.linkRewritten",
+      "errors.linkRewrittenDesc"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -343,6 +345,8 @@
   "errors": {
     "insecureContext": "HTTPSが必要です",
     "originNotAllowed": "サーバーがこのオリジンをブロックしました",
-    "s3CorsError": "S3 CORSが設定されていません"
+    "s3CorsError": "S3 CORSが設定されていません",
+    "linkRewritten": "リンクが転送中に変更されました",
+    "linkRewrittenDesc": "メールセキュリティフィルターがこのリンクを書き換えたため、復号キーがサーバーから見える状態になりました。内容が機密の場合は、受け取り次第、送信者に削除を依頼してください。"
   }
 }

@@ -284,6 +284,8 @@
   "errors": {
     "insecureContext": "HTTPS requis",
     "originNotAllowed": "Le serveur a bloqué cette origine",
-    "s3CorsError": "CORS S3 non configuré"
+    "s3CorsError": "CORS S3 non configuré",
+    "linkRewritten": "Le lien a été modifié en transit",
+    "linkRewrittenDesc": "Un filtre de sécurité de messagerie a réécrit ce lien, la clé de déchiffrement a donc été visible par le serveur. Si le contenu est confidentiel, demandez à l'expéditeur de le supprimer une fois que vous l'avez."
   }
 }

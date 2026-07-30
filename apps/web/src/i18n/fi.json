@@ -284,6 +284,8 @@
   "errors": {
     "insecureContext": "HTTPS vaaditaan",
     "originNotAllowed": "Palvelin esti tämän alkuperän",
-    "s3CorsError": "S3 CORS ei ole määritetty"
+    "s3CorsError": "S3 CORS ei ole määritetty",
+    "linkRewritten": "Linkkiä muutettiin siirron aikana",
+    "linkRewrittenDesc": "Sähköpostin suojaussuodatin kirjoitti tämän linkin uudelleen, joten salauksen purkuavain näkyi palvelimelle. Jos sisältö on luottamuksellista, pyydä lähettäjää poistamaan se heti kun olet saanut sen."
   }
 }

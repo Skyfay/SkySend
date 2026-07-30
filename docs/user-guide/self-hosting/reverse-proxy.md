@@ -6,6 +6,14 @@ SkySend should be placed behind a reverse proxy for production use. This provide
 SkySend share links contain the encryption key in the URL fragment (`#`). Using HTTPS is essential to prevent the link from being intercepted in transit.
 :::
 
+::: warning Access logs
+Traefik, Nginx, and Cloudflare write the full request path into their access logs, and SkySend cannot influence that.
+
+This normally holds nothing sensitive, because the key lives in the URL fragment and browsers never send it. A mail security gateway that rewrites a share link breaks that assumption: the key then arrives inside the path and lands in the proxy log. SkySend truncates its own log at the resource ID, so the proxy is the remaining place where such a key can persist.
+
+If your instance handles sensitive content, disable the access log for `/file/` and `/note/` paths or strip everything after the ID before it is written. See [Troubleshooting](/user-guide/troubleshooting#share-link-opens-but-the-page-says-not-found) for what causes this.
+:::
+
 ## Caddy (Recommended)
 
 Caddy automatically provisions and renews TLS certificates:

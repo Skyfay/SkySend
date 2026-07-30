@@ -58,7 +58,9 @@
       "debug.close",
       "common.view",
       "common.docs",
-      "errors.insecureContext"
+      "errors.insecureContext",
+      "errors.linkRewritten",
+      "errors.linkRewrittenDesc"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -344,6 +346,8 @@
   "errors": {
     "insecureContext": "HTTPS obrigatório",
     "originNotAllowed": "O servidor bloqueou esta origem",
-    "s3CorsError": "CORS S3 não configurado"
+    "s3CorsError": "CORS S3 não configurado",
+    "linkRewritten": "O link foi modificado em trânsito",
+    "linkRewrittenDesc": "Um filtro de segurança de e-mail reescreveu este link, então a chave de descriptografia ficou visível para o servidor. Se o conteúdo for confidencial, peça ao remetente que o exclua assim que você o tiver."
   }
 }

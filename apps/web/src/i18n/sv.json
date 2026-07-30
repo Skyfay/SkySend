@@ -284,6 +284,8 @@
   "errors": {
     "insecureContext": "HTTPS krävs",
     "originNotAllowed": "Servern blockerade detta ursprung",
-    "s3CorsError": "S3 CORS inte konfigurerat"
+    "s3CorsError": "S3 CORS inte konfigurerat",
+    "linkRewritten": "Länken ändrades under överföringen",
+    "linkRewrittenDesc": "Ett e-postsäkerhetsfilter skrev om den här länken, så dekrypteringsnyckeln var synlig för servern. Om innehållet är känsligt, be avsändaren radera det så snart du har hämtat det."
   }
 }

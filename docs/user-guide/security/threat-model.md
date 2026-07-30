@@ -71,6 +71,21 @@ If the uploader's or recipient's device is compromised (malware, keylogger), the
 ### Share Link Interception
 If the share link is sent over an insecure channel (e.g., unencrypted email, public chat) and intercepted, the attacker can download and decrypt the file. Users should share links through secure channels.
 
+### Link Rewriting by Mail Security Gateways
+
+Choosing the transport is the sender's decision, and SkySend cannot influence it. A link posted publicly or sent through a channel that reads along is outside the product's control.
+
+The recipient's mail infrastructure is a different case, because the sender has no say in it. Microsoft Defender Safe Links, Proofpoint URL Defense, and Mimecast rewrite links after the message has left the sender. Two outcomes are possible:
+
+- **The fragment is percent-encoded** (`#` becomes `%23`). The key then arrives as part of the request path, so the server, the reverse proxy, and any CDN see it in the request line. SkySend repairs the link in the browser and truncates its own request log at the resource ID, but the exposure itself cannot be undone, and logs in front of the application are the operator's responsibility.
+- **The fragment is dropped**. The key never reaches the browser and the link cannot be recovered at all.
+
+Either way, the gateway operator holds the full original URL, since the link was in the message body when it passed through their systems.
+
+**After the fact**, a new link is not a remedy, because the exposed key stays exposed. The remedy is to delete the upload, which removes the ciphertext that key unlocks. That leaves one gap: an operator who keeps backups of both the blob storage and the proxy logs still holds both halves. Deletion narrows the window, it does not close it.
+
+**Before the fact**, add a password and send it through a separate channel. A rewritten link then leaks a key that is not sufficient on its own, which is the only measure that survives the exposure entirely.
+
 ### Malicious File Content
 SkySend does not inspect or scan file contents. It encrypts and stores whatever the user uploads. SkySend is not responsible for malicious file content.
 
@@ -89,5 +104,5 @@ Share links contain the encryption key. If a share link is stored long-term (e.g
 2. **Share links securely** - Use end-to-end encrypted messaging to share links
 3. **Set short expiry times** - Files should expire as soon as they are no longer needed
 4. **Use low download limits** - Set the download limit to the number of intended recipients
-5. **Use password protection** - For sensitive files, add a password and share it through a separate channel
+5. **Use password protection** - For sensitive files, add a password and share it through a separate channel, which also covers links rewritten by a mail security gateway
 6. **Keep SkySend updated** - Apply updates promptly for security fixes

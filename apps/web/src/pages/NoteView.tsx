@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { showKnownErrorToast } from "@/lib/toast";
+import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
+import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import {
   FileText,
   KeyRound,
@@ -44,6 +45,10 @@ export function NoteViewPage() {
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
     if (id && secret) {
       noteHook.loadInfo(id);
+    }
+    // A rewritten link means the key reached the server in the request path.
+    if (wasShareLinkRewritten()) {
+      showRewrittenLinkWarning();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

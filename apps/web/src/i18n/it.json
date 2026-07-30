@@ -286,6 +286,8 @@
   "errors": {
     "insecureContext": "HTTPS richiesto",
     "originNotAllowed": "Il server ha bloccato questa origine",
-    "s3CorsError": "CORS S3 non configurato"
+    "s3CorsError": "CORS S3 non configurato",
+    "linkRewritten": "Il link è stato modificato durante il transito",
+    "linkRewrittenDesc": "Un filtro di sicurezza email ha riscritto questo link, quindi la chiave di decifratura è stata visibile al server. Se il contenuto è riservato, chiedi al mittente di eliminarlo una volta che lo hai ricevuto."
   }
 }

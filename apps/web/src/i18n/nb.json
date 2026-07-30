@@ -286,6 +286,8 @@
   "errors": {
     "insecureContext": "HTTPS kreves",
     "originNotAllowed": "Serveren blokkerte dette opphavet",
-    "s3CorsError": "S3 CORS ikke konfigurert"
+    "s3CorsError": "S3 CORS ikke konfigurert",
+    "linkRewritten": "Lenken ble endret underveis",
+    "linkRewrittenDesc": "Et e-postsikkerhetsfilter skrev om denne lenken, så dekrypteringsnøkkelen var synlig for serveren. Hvis innholdet er fortrolig, be avsenderen slette det så snart du har det."
   }
 }

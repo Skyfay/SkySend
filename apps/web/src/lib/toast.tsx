@@ -15,6 +15,9 @@ const ORIGIN_NOT_ALLOWED_DOCS_URL =
 const S3_CORS_DOCS_URL =
   "https://docs.skysend.app/user-guide/troubleshooting#s3-downloads-fail-with-cors-error";
 
+const LINK_REWRITTEN_DOCS_URL =
+  "https://docs.skysend.app/user-guide/troubleshooting#share-link-opens-but-the-page-says-not-found";
+
 /**
  * Returns true when the error message indicates that the Web Crypto API is
  * unavailable because the page is served over plain HTTP (insecure context).
@@ -154,4 +157,21 @@ export function showToast(message: string, options: ShowToastOptions = {}) {
     default:
       return toast(message, opts);
   }
+}
+
+/**
+ * Warn that this page was opened through a share link whose fragment was
+ * percent-encoded by a mail security gateway. The key travelled to the server
+ * in the request path, which the recipient cannot see and should be told about.
+ *
+ * The fixed id keeps a remount from stacking a second copy.
+ */
+export function showRewrittenLinkWarning() {
+  return showToast(i18n.t("errors.linkRewritten"), {
+    type: "warning",
+    description: i18n.t("errors.linkRewrittenDesc"),
+    docsUrl: LINK_REWRITTEN_DOCS_URL,
+    id: "link-rewritten",
+    duration: 15000,
+  });
 }

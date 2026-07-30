@@ -21,7 +21,8 @@ import { DebugPanel } from "@/components/DebugPanel";
 import { useDownload } from "@/hooks/useDownload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { hashWasmArgon2 } from "@/lib/argon2";
-import { showKnownErrorToast } from "@/lib/toast";
+import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
+import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 
 export function DownloadPage() {
   const { t } = useTranslation();
@@ -40,6 +41,13 @@ export function DownloadPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // A rewritten link means the key reached the server in the request path.
+  useEffect(() => {
+    if (wasShareLinkRewritten()) {
+      showRewrittenLinkWarning();
+    }
+  }, []);
 
   // Remove the key from the URL fragment once decryption starts.
   // The key is now held in memory; removing it prevents browser-history leakage.
