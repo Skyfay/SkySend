@@ -6,14 +6,10 @@ import globals from "globals";
 
 export default tseslint.config(
   {
-    ignores: [
-      "**/dist/",
-      "**/build/",
-      "**/coverage/",
-      "**/.vitepress/",
-      "website/.next/",
-      "website/out/",
-    ],
+    // The website carries its own eslint.config.mjs on ESLint 9, because
+    // eslint-config-next still pulls eslint-plugin-react 7, which crashes on
+    // ESLint 10. It is linted by `pnpm --filter @skysend/website lint`.
+    ignores: ["**/dist/", "**/build/", "**/coverage/", "**/.vitepress/", "website/"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -26,7 +22,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}", "website/**/*.{ts,tsx}"],
+    files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,
     },
@@ -40,7 +36,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts", "apps/client/**/*.{ts,tsx}", "website/**/*.{ts,tsx}"],
+    files: ["apps/server/**/*.ts", "apps/cli/**/*.ts", "apps/client/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         ...globals.node,

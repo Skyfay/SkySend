@@ -96,7 +96,10 @@ export function createBrandingStatic(brandingDir: string): MiddlewareHandler[] {
   const files = serveStatic({
     root,
     // Runs after serveStatic's own traversal check and is not re-validated by
-    // it, so this only strips the already guarded prefix.
+    // it, so this only strips the already guarded prefix. The guard rejects
+    // every path outside the prefix before this handler runs, which is why the
+    // fallback is unreachable.
+    /* v8 ignore next 2 */
     rewriteRequestPath: (path) =>
       path.startsWith(BRANDING_PREFIX) ? path.slice(BRANDING_PREFIX.length - 1) : "/",
   });

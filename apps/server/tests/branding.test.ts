@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 import { Hono } from "hono";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,6 +20,8 @@ beforeAll(() => {
   mkdirSync(root, { recursive: true });
   mkdirSync(outside, { recursive: true });
   mkdirSync(join(root, "nested"), { recursive: true });
+  // A directory whose name looks like an image passes the guard but has no body.
+  mkdirSync(join(root, "folder.png"), { recursive: true });
 
   writeFileSync(join(root, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
   writeFileSync(join(root, "icon.PNG"), "png-bytes");
@@ -64,6 +66,12 @@ describe("branding static assets", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
   });
 
+  it("does not cache a request the static handler could not serve", async () => {
+    const res = await app.request("/branding/folder.png");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Cache-Control")).toBeNull();
+  });
+
   it("does not serve HTML from the operator-writable directory", async () => {
     const res = await app.request("/branding/index.html");
     expect(res.status).toBe(404);
@@ -84,6 +92,21 @@ describe("branding static assets", () => {
     expect(res.status).toBe(404);
   });
 
+  it("rejects a traversal whose segment survives URL normalization", async () => {
+    // The URL parser resolves ".." and "%2e%2e" segments before routing, so those
+    // requests never reach the guard. An encoded slash keeps the segment intact
+    // and is what actually exercises the containment check.
+    const res = await app.request(
+      new Request("http://localhost/branding/..%2fsecret%2fescape.svg"),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects malformed percent-encoding", async () => {
+    const res = await app.request(new Request("http://localhost/branding/%E0%A4%A.png"));
+    expect(res.status).toBe(404);
+  });
+
   it("rejects a symlink pointing outside the branding directory", async () => {
     const res = await app.request("/branding/linked.svg");
     expect(res.status).toBe(404);
@@ -97,6 +120,32 @@ describe("branding static assets", () => {
   it("returns 404 for the bare prefix", async () => {
     const res = await app.request("/branding/");
     expect(res.status).toBe(404);
+  });
+
+  it("serves nothing outside the prefix, whatever it is mounted on", async () => {
+    const broad = new Hono();
+    broad.use("*", ...createBrandingStatic(root));
+
+    const res = await broad.request("/logo.svg");
+    expect(res.status).toBe(404);
+  });
+
+  it("still answers when the branding directory cannot be created", async () => {
+    const base = mkdtempSync(join(tmpdir(), "skysend-branding-blocked-"));
+    writeFileSync(join(base, "blocker"), "not a directory");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const blockedApp = new Hono();
+    blockedApp.use(
+      `${BRANDING_PREFIX}*`,
+      ...createBrandingStatic(join(base, "blocker", "branding")),
+    );
+
+    const res = await blockedApp.request("/branding/logo.svg");
+    expect(res.status).toBe(404);
+
+    warn.mockRestore();
+    rmSync(base, { recursive: true, force: true });
   });
 
   it("creates the branding directory when it does not exist yet", async () => {

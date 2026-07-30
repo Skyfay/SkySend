@@ -995,6 +995,70 @@ describe("useDownload", () => {
     expect(result.current.error).toBe("Missing password salt");
   });
 
+  it("unlock() keeps the page usable when the metadata cannot be decrypted", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({
+        hasPassword: true,
+        passwordSalt: "ps64",
+        passwordAlgo: "argon2id-v2",
+        encryptedMeta: btoa("ciphertext"),
+        nonce: btoa("nonce123"),
+      }),
+    );
+    vi.mocked(apiMod.verifyPassword).mockResolvedValueOnce(true);
+    vi.mocked(cryptoMod.decryptMetadata).mockRejectedValueOnce(
+      new Error("Metadata decryption failed - data may be corrupted or tampered with"),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "correct-pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("idle");
+    expect(result.current.metadata).toBeNull();
+    expect(result.current.error).toBeNull();
+    warn.mockRestore();
+  });
+
+  it("unlock() surfaces a non-429 ApiError message as phase='error'", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockRejectedValueOnce(new apiMod.ApiError(404, "Not Found"));
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Not Found");
+  });
+
+  it("unlock() falls back to a generic message when the rejection is not an Error", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockRejectedValueOnce("not an error object");
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+
+    await act(async () => {
+      await result.current.unlock("f-1", "secret64", "pw", fakeArgon2id);
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Failed to unlock upload");
+  });
+
   it("download() nach unlock() wiederholt weder Argon2id noch die Passwortprüfung", async () => {
     const apiMod = await import("../../src/lib/api.js");
     const cryptoMod = await import("@skysend/crypto");

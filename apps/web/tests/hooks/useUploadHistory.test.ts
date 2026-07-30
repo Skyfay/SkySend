@@ -251,6 +251,35 @@ describe("useUploadHistory", () => {
     expect(vi.mocked(fetchInfo)).toHaveBeenCalledTimes(1);
   });
 
+  it("renameUpload leaves the other rows untouched", async () => {
+    const { getAllUploads } = await import("../../src/lib/upload-store.js");
+    const { fetchInfo } = await import("../../src/lib/api.js");
+
+    vi.mocked(getAllUploads)
+      .mockResolvedValueOnce([
+        storedUpload("r-3"),
+        { ...storedUpload("r-4"), name: "Quartalsbericht" },
+      ])
+      .mockResolvedValue([]);
+    vi.mocked(fetchInfo)
+      .mockResolvedValueOnce(uploadInfo("r-3"))
+      .mockResolvedValueOnce(uploadInfo("r-4"));
+
+    const { useUploadHistory } = await import("../../src/hooks/useUploadHistory.js");
+    const { result } = renderHook(() => useUploadHistory());
+
+    await waitFor(() => {
+      expect(result.current.uploads.filter((u) => !u.loading)).toHaveLength(2);
+    });
+
+    await act(async () => {
+      await result.current.renameUpload("r-3", "Fotos");
+    });
+
+    expect(result.current.uploads.find((u) => u.id === "r-3")?.name).toBe("Fotos");
+    expect(result.current.uploads.find((u) => u.id === "r-4")?.name).toBe("Quartalsbericht");
+  });
+
   it("renameUpload mit leerer Eingabe entfernt den Namen", async () => {
     const { getAllUploads } = await import("../../src/lib/upload-store.js");
     const { fetchInfo } = await import("../../src/lib/api.js");
