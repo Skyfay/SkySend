@@ -13,6 +13,7 @@ All notable changes to SkySend are documented here.
 ### 🔧 CI/CD
 
 - **infra**: Added a GitHub Actions workflow to deploy the report worker on push, matching the existing instances worker deploy pipeline.
+- **infra**: `pnpm update:check` now lists outdated dependencies per workspace package with a summary, instead of one merged table that ends in `Command failed with exit code 1`.
 
 ### 🐳 Docker
 
