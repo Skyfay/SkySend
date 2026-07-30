@@ -88,4 +88,4 @@ The `<Toaster />` component is rendered once in `App.tsx` outside the router. It
 
 Action button labels (`Copy`, `Copied!`, `Docs`) are looked up via `common.copy`, `common.copied`, and `common.docs` in the translation files. Error titles use keys in the `errors.*` namespace.
 
-When adding a new key, follow the [i18n rules in the Copilot instructions](https://github.com/Skyfay/SkySend/blob/main/.github/copilot-instructions.md): add it to `en.json` and `de.json` first, then add AI-translated values to all other language files and track them in `__meta.aiGeneratedKeys`.
+When adding a new key, add it to `en.json` and `de.json` first - those two are the source of truth. Then add AI-translated values to the remaining language files. A file whose `__meta` block has `"aiGenerated": true` needs no further tracking, a file with `"aiGeneratedKeys"` needs the new key appended to that array.

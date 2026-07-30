@@ -18,6 +18,7 @@ All notable changes to SkySend are documented here.
 - **web**: A repeated wrong password on the download page shows the error message again instead of staying silent after the first attempt.
 - **web**: A custom logo that cannot be loaded now falls back to the built-in logo instead of leaving a broken image in the header.
 - **web**: The file list on the download page now scrolls through all files instead of cutting off after the first few, and long file names no longer hide the file size.
+- **client**: Notes with an unlimited view limit now show "3 / ∞" in the TUI note detail instead of "3 / 0 (-3 remaining)". Thanks @Osamaali313 ([#65](https://github.com/Skyfay/SkySend/pull/65))
 
 ### 🔒 Security
 

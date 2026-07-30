@@ -21,6 +21,11 @@ data/
 .env.local
 .env.*.local
 
+# Claude Code - share agents and skills, keep personal settings local
+.claude/*
+!.claude/agents/
+!.claude/skills/
+
 # IDE
 .vscode/*
 !.vscode/extensions.json
