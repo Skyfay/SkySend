@@ -61,7 +61,7 @@ export default defineConfig({
           { text: 'Screenshots', link: '/screenshots' },
           { text: 'Benchmarks', link: '/benchmarks' },
           { text: 'Changelog', link: '/changelog' },
-          { text: 'Roadmap', link: '/roadmap' },
+          { text: 'Roadmap', link: 'https://skysend.app/roadmap/' },
           { text: 'GitHub', link: 'https://github.com/Skyfay/SkySend' }
         ]
       }
