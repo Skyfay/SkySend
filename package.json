@@ -22,7 +22,8 @@
     "client:build": "pnpm --filter @skysend/crypto build && pnpm --filter @skysend/client build",
     "client:run": "tsx apps/client/src/index.ts",
     "client:compile": "pnpm client:build && pnpm --filter @skysend/client build:compile",
-    "update:check": "bash scripts/check-updates.sh"
+    "update:check": "bash scripts/check-updates.sh",
+    "setup:worktree": "bash scripts/setup-worktree.sh"
   },
   "engines": {
     "node": ">=24",
