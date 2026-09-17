@@ -2,9 +2,9 @@
 
 All notable changes to SkySend are documented here.
 
-## vNEXT
+## v2.12.1 - Link Preview and Branding Improvements, Security Updates and Bug Fixes
 
-*Release: In Progress*
+*Released: September 17, 2026*
 
 ### ✨ Features
 
@@ -47,8 +47,8 @@ All notable changes to SkySend are documented here.
 
 ### 🐳 Docker
 
-- **Image**: `skyfay/skysend:vNEXT`
-- **Also tagged as**: `latest`, `vNEXT`
+- **Image**: `skyfay/skysend:v2.12.1`
+- **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
 ## v2.12.0 - New Website, Branding &amp; UX Improvements, Security Hardening, and Security Patches
