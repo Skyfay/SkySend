@@ -5,18 +5,34 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### ✨ Features
+
+- **server**: Added `CUSTOM_OG_IMAGE` and `CUSTOM_OG_IMAGE_STYLE` to set the image and layout of link previews, and a PNG or JPEG `CUSTOM_LOGO` is now used there by default. ([#72](https://github.com/Skyfay/SkySend/issues/72))
+
 ### 🐛 Bug Fixes
 
 - **web**: The light theme no longer flashes dark while the page loads, and the mobile browser bar now follows the selected theme. ([#70](https://github.com/Skyfay/SkySend/issues/70))
+- **server**: Link preview images now use an absolute URL as the Open Graph standard requires, so more apps show them.
+- **server**: The site name in link previews now follows `CUSTOM_TITLE` instead of always showing SkySend.
+- **server**: A `CUSTOM_TITLE` containing quotes or angle brackets no longer breaks the page markup.
 
 ### 🔄 Changed
 
 - **web**: The selected language is now kept in the browser's local storage instead of a cookie, so a language picked before this version has to be selected once more.
 - **website**: The community goal on the roadmap page now targets 500 GitHub stars, and reaching 300 stars is listed under "Already live".
 
+### 🗑️ Removed
+
+- **web**: Removed the build-time `VITE_OG_IMAGE` variable, which is replaced by `CUSTOM_OG_IMAGE`.
+
 ### 📝 Documentation
 
 - **docs**: Removed the roadmap page from the docs site. The Roadmap link in the navigation and the README now point to the roadmap on [skysend.app](https://skysend.app/roadmap/).
+- **docs**: Documented how the link preview image is chosen and how to set a separate preview image or banner.
+
+### 🧪 Tests
+
+- **server**: Added tests for the link preview image selection and for escaping branding values in the served page.
 
 ### 🔧 CI/CD
 

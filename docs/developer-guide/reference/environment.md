@@ -316,6 +316,26 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Must be an `http(s)` URL or an absolute path starting with a single `/`. Protocol-relative URLs (`//host/logo.png`) are rejected because they point at a foreign origin without being covered by the CSP origin check. |
 | Description | Path or URL to a custom logo image displayed in the web app header and as favicon. Place local files in `BRANDING_DIR` (e.g. `<DATA_DIR>/branding/custom-logo.svg`) and reference them as `/branding/custom-logo.svg`. External URLs remain supported: the host then sees each visitor's IP address (but not the opened link, since `Referrer-Policy: no-referrer` is set) and its origin is added to the CSP `img-src`. |
 
+### CUSTOM_OG_IMAGE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | URL or absolute path |
+| Default | - (uses `CUSTOM_LOGO` if it is PNG, JPEG, WebP, or GIF, otherwise the built-in logo) |
+| Validation | Same rules as `CUSTOM_LOGO`. A startup warning is logged when the file is not PNG, JPEG, WebP, or GIF. |
+| Description | Image used for `og:image` and `twitter:image` in link previews. Injected into `index.html` at runtime as an absolute URL resolved against `BASE_URL`. When unset and `CUSTOM_LOGO` is an SVG or another unsupported format, both image tags are omitted. |
+
+### CUSTOM_OG_IMAGE_STYLE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `logo` |
+| Validation | One of `logo`, `banner` |
+| Description | Sets `twitter:card`. `logo` renders `summary` (small square image), `banner` renders `summary_large_image` (large image above the text). Only X and Discord read this tag. |
+
 ### CUSTOM_PRIVACY
 
 | Property | Value |
@@ -496,6 +516,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 - `BASE_URL` must be a valid URL
 - `CUSTOM_COLOR` must be a 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be an `http(s)` URL or an absolute path starting with a single `/`
+- `CUSTOM_OG_IMAGE` must be an `http(s)` URL or an absolute path starting with a single `/`
+- `CUSTOM_OG_IMAGE_STYLE` must be one of `logo` or `banner`
 - `CUSTOM_PRIVACY` must be a valid URL
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL

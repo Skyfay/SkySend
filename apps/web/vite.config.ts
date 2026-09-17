@@ -9,12 +9,14 @@ const rootPkg = JSON.parse(
 );
 
 export default defineConfig(({ command }) => {
-  const ogImage = process.env.VITE_OG_IMAGE ?? "/logo.png";
   // In dev mode (Vite dev server) the server middleware is not involved,
   // so replace the placeholder directly with the env value.
   const customTitle = command === "serve"
     ? (process.env.CUSTOM_TITLE ?? "SkySend")
     : "__CUSTOM_TITLE__";
+  // Link previews never reach the dev server, so the built-in defaults are enough there.
+  const ogImage = command === "serve" ? "/logo.png" : "__OG_IMAGE__";
+  const twitterCard = command === "serve" ? "summary" : "__TWITTER_CARD__";
   const envTheme = process.env.DEFAULT_THEME ?? "";
   const defaultTheme = command === "serve"
     ? (["dark", "light", "system"].includes(envTheme) ? envTheme : "system")
@@ -28,9 +30,10 @@ export default defineConfig(({ command }) => {
       name: "inject-html-vars",
       transformIndexHtml(html) {
         return html
-          .replace(/%VITE_OG_IMAGE%/g, ogImage)
           .replace(/__CUSTOM_TITLE__/g, customTitle)
-          .replace(/__DEFAULT_THEME__/g, defaultTheme);
+          .replace(/__DEFAULT_THEME__/g, defaultTheme)
+          .replace(/__OG_IMAGE__/g, ogImage)
+          .replace(/__TWITTER_CARD__/g, twitterCard);
       },
     },
   ],

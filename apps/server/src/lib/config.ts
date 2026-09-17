@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { isPreviewImage } from "./index-html.js";
 
 /**
  * Parse a human-readable byte size string (e.g., "2GB", "500MB") into bytes.
@@ -33,6 +34,15 @@ const commaSeparatedNonNegativeInts = z
   .string()
   .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
   .pipe(z.array(z.number().int().nonnegative()).min(1));
+
+// A leading "//" is a protocol-relative URL pointing at a foreign origin. It
+// would slip past the CSP img-src handling, which only widens for "https?://".
+const imageUrlOrPath = z
+  .string()
+  .refine(
+    (v) => /^https?:\/\//.test(v) || /^\/(?!\/)/.test(v),
+    "Must be a URL (https://...) or an absolute path (/branding/logo.svg)",
+  );
 
 const configSchema = z.object({
   PORT: z
@@ -216,15 +226,16 @@ const configSchema = z.object({
     .transform((v) => (v.startsWith("#") ? v : `#${v}`))
     .optional(),
 
-  // A leading "//" is a protocol-relative URL pointing at a foreign origin. It
-  // would slip past the CSP img-src handling, which only widens for "https?://".
-  CUSTOM_LOGO: z
-    .string()
-    .refine(
-      (v) => /^https?:\/\//.test(v) || /^\/(?!\/)/.test(v),
-      "Must be a URL (https://...) or an absolute path (/branding/logo.svg)",
-    )
-    .optional(),
+  CUSTOM_LOGO: imageUrlOrPath.optional(),
+
+  // Fetched by messenger apps and social network crawlers, never by the browser,
+  // so it does not touch the CSP.
+  CUSTOM_OG_IMAGE: imageUrlOrPath.optional(),
+
+  /** "banner" shows the preview image large above the text on X and Discord. */
+  CUSTOM_OG_IMAGE_STYLE: z
+    .enum(["logo", "banner"])
+    .default("logo"),
 
   CUSTOM_PRIVACY: z
     .string()
@@ -470,6 +481,21 @@ export function loadConfig(): Config {
       + "and its origin is added to the Content Security Policy. "
       + `To serve the logo from this instance instead, put the file into ${_config.BRANDING_DIR} `
       + "and set CUSTOM_LOGO=/branding/<filename>.",
+    );
+  }
+  if (_config.CUSTOM_OG_IMAGE && !isPreviewImage(_config.CUSTOM_OG_IMAGE)) {
+    console.warn(
+      "[branding] WARNING: CUSTOM_OG_IMAGE is not a PNG, JPEG, WebP, or GIF file. "
+      + "Most messengers and social networks show no image in link previews for other formats.",
+    );
+  } else if (
+    !_config.CUSTOM_OG_IMAGE
+    && _config.CUSTOM_LOGO
+    && !isPreviewImage(_config.CUSTOM_LOGO)
+  ) {
+    console.log(
+      "[branding] Link previews show no image because CUSTOM_LOGO is not a PNG, JPEG, WebP, or GIF file. "
+      + "Set CUSTOM_OG_IMAGE to a separate preview image.",
     );
   }
 
