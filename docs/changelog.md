@@ -2,6 +2,20 @@
 
 All notable changes to SkySend are documented here.
 
+## vNEXT
+*Release: In Progress*
+
+### 🔧 CI/CD
+
+- **infra**: Added `pnpm setup:worktree`, which copies the local `.env` from the primary checkout into a new git worktree and installs dependencies.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:vNEXT`
+- **Also tagged as**: `latest`, `vNEXT`
+- **Platforms**: linux/amd64, linux/arm64
+
+
 ## v2.12.0 - New Website, Branding & UX Improvements, Security Hardening, and Security Patches
 *Released: July 30, 2026*
 
