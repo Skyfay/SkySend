@@ -365,7 +365,11 @@ app.get("*", async (c, next) => {
   if (!cachedIndexHtml) {
     cachedIndexHtml = await readFile(indexHtmlPath, "utf-8");
   }
-  const html = cachedIndexHtml.replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE);
+  // DEFAULT_THEME is a Zod enum, so it is safe to place in an HTML attribute.
+  // public/theme-init.js reads it to pick the theme before the first paint.
+  const html = cachedIndexHtml
+    .replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE)
+    .replace(/__DEFAULT_THEME__/g, config.DEFAULT_THEME);
   // no-store: browsers and intermediate proxies (e.g. Traefik with a caching middleware)
   // must never cache index.html. no-cache would allow storage with revalidation, but
   // revalidation requires ETag/Last-Modified headers which we do not set - leaving some
