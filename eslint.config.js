@@ -22,6 +22,14 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/web/public/theme-init.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+  {
     files: ["apps/web/**/*.{ts,tsx}", "apps/client/**/*.{ts,tsx}"],
     plugins: {
       "react-hooks": reactHooks,

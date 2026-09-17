@@ -21,6 +21,7 @@ It never sees the secret, any derived key, the filename, the MIME type, or note 
 ```
 src/index.ts          Composition root: config, DB, storage, middleware order, routes, shutdown
 src/lib/config.ts     Zod schema for every env var + cross-field validation
+src/lib/index-html.ts Runtime placeholders in the SPA's index.html (title, theme, link preview tags)
 src/lib/cleanup.ts    Periodic expiry sweep, also exported for the admin CLI
 src/lib/password-lockout.ts   Failed-attempt tracking, shared by password and note routes
 src/lib/upload-validation.ts  Zod schema + limit checks shared by the HTTP and WS upload paths
