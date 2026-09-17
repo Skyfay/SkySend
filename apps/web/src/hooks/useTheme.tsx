@@ -17,18 +17,29 @@ function getSystemTheme(): "dark" | "light" {
     : "light";
 }
 
+function isTheme(value: string | null | undefined): value is Theme {
+  return value === "dark" || value === "light" || value === "system";
+}
+
+// Same resolution order as public/theme-init.js, which applies it before the first
+// paint: stored preference, then the server DEFAULT_THEME injected into index.html.
+function getInitialTheme(): Theme {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (isTheme(stored)) return stored;
+  const serverDefault = document.documentElement.dataset.defaultTheme;
+  return isTheme(serverDefault) ? serverDefault : "system";
+}
+
 function applyTheme(theme: Theme) {
   const resolved = theme === "system" ? getSystemTheme() : theme;
   document.documentElement.classList.toggle("dark", resolved === "dark");
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", resolved === "dark" ? "#09090b" : "#ffffff");
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return (stored === "dark" || stored === "light" || stored === "system")
-      ? stored
-      : "system";
-  });
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     applyTheme(theme);

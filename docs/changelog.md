@@ -5,6 +5,10 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### 🐛 Bug Fixes
+
+- **web**: The light theme no longer flashes dark while the page loads, and the mobile browser bar now follows the selected theme. ([#70](https://github.com/Skyfay/SkySend/issues/70))
+
 ### 🔄 Changed
 
 - **website**: The community goal on the roadmap page now targets 500 GitHub stars, and reaching 300 stars is listed under "Already live".

@@ -15,6 +15,10 @@ export default defineConfig(({ command }) => {
   const customTitle = command === "serve"
     ? (process.env.CUSTOM_TITLE ?? "SkySend")
     : "__CUSTOM_TITLE__";
+  const envTheme = process.env.DEFAULT_THEME ?? "";
+  const defaultTheme = command === "serve"
+    ? (["dark", "light", "system"].includes(envTheme) ? envTheme : "system")
+    : "__DEFAULT_THEME__";
 
   return {
   plugins: [
@@ -25,7 +29,8 @@ export default defineConfig(({ command }) => {
       transformIndexHtml(html) {
         return html
           .replace(/%VITE_OG_IMAGE%/g, ogImage)
-          .replace(/__CUSTOM_TITLE__/g, customTitle);
+          .replace(/__CUSTOM_TITLE__/g, customTitle)
+          .replace(/__DEFAULT_THEME__/g, defaultTheme);
       },
     },
   ],
