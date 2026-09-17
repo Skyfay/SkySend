@@ -11,6 +11,7 @@ All notable changes to SkySend are documented here.
 
 ### 🔄 Changed
 
+- **web**: The selected language is now kept in the browser's local storage instead of a cookie, so a language picked before this version has to be selected once more.
 - **website**: The community goal on the roadmap page now targets 500 GitHub stars, and reaching 300 stars is listed under "Already live".
 
 ### 📝 Documentation

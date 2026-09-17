@@ -15,18 +15,25 @@ import ptBR from "./pt-BR.json";
 import zh from "./zh.json";
 import ja from "./ja.json";
 
-const COOKIE_NAME = "skysend-lang";
+const STORAGE_KEY = "skysend-lang";
 
+// Storage access throws when site data is blocked. This module runs before React
+// mounts, so a throw here would leave a blank page instead of browser detection.
 export function getSavedLanguage(): string | null {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]+)`));
-  const value = match?.[1] ?? null;
-  if (value === "auto" || !value) return null;
-  return value;
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return value && value !== "auto" ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 export function saveLanguage(code: string) {
-  const maxAge = 365 * 24 * 60 * 60; // 1 year
-  document.cookie = `${COOKIE_NAME}=${code}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  try {
+    localStorage.setItem(STORAGE_KEY, code);
+  } catch {
+    // The choice still applies for this page view, it just is not remembered.
+  }
 }
 
 i18n

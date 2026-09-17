@@ -119,7 +119,7 @@ JSON has no comments, so each non-EN/DE file carries a top-level `__meta` block:
 
 Never remove a `__meta` block and never set `aiGenerated: false` yourself. Only a native speaker who reviewed the whole file may clear the flag, via pull request.
 
-Detection order is `navigator` then `htmlTag`, with `en` as the fallback, so `de-CH` resolves to `de` through the fallback chain. A user's explicit choice is stored in the `skysend-lang` cookie and applied after init - browser detection never overrides it.
+Detection order is `navigator` then `htmlTag`, with `en` as the fallback, so `de-CH` resolves to `de` through the fallback chain. A user's explicit choice is stored under the `skysend-lang` localStorage key and applied after init - browser detection never overrides it.
 
 No user-facing string is hardcoded in a component. Errors that surface as toasts are keys too.
 
