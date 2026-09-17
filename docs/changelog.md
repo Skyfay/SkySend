@@ -5,6 +5,14 @@ All notable changes to SkySend are documented here.
 ## vNEXT
 *Release: In Progress*
 
+### 🔄 Changed
+
+- **website**: The community goal on the roadmap page now targets 500 GitHub stars, and reaching 300 stars is listed under "Already live".
+
+### 📝 Documentation
+
+- **docs**: Removed the roadmap page from the docs site. The Roadmap link in the navigation and the README now point to the roadmap on [skysend.app](https://skysend.app/roadmap/).
+
 ### 🔧 CI/CD
 
 - **infra**: Added `pnpm setup:worktree`, which copies the local `.env` from the primary checkout into a new git worktree and installs dependencies.

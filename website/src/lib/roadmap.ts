@@ -82,6 +82,14 @@ export interface ShippedItem {
 
 export const SHIPPED_ITEMS: ShippedItem[] = [
   {
+    slug: "300-github-stars",
+    title: "300 GitHub Stars",
+    description: "SkySend crossed 300 stars on GitHub, thank you for the continued support.",
+    releaseDate: "2026-08-10",
+    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
+    star: true,
+  },
+  {
     slug: "adaptive-zip-compression",
     title: "Adaptive ZIP Compression",
     description:
@@ -179,12 +187,12 @@ export interface Milestone {
 
 export const MILESTONES: Milestone[] = [
   {
-    slug: "300-github-stars",
-    title: "300 GitHub Stars",
+    slug: "500-github-stars",
+    title: "500 GitHub Stars",
     description: "Help SkySend reach its next community milestone.",
-    target: 300,
+    target: 500,
     unit: "stars",
     liveSource: "github-stars",
-    fallbackCurrent: 279,
+    fallbackCurrent: 395,
   },
 ];

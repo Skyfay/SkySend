@@ -28,7 +28,7 @@
   <a href="https://docs.skysend.app/user-guide/getting-started">Quick Start</a> •
   <a href="https://docs.skysend.app/instances">Public Instances</a> •
   <a href="https://docs.skysend.app/changelog">Changelog</a> •
-  <a href="https://docs.skysend.app/roadmap">Roadmap</a>
+  <a href="https://skysend.app/roadmap/">Roadmap</a>
 </p>
 
 ### What is SkySend?
@@ -245,7 +245,7 @@ Full documentation is available at **[docs.skysend.app](https://docs.skysend.app
 - [User Guide](https://docs.skysend.app/user-guide/getting-started) - Installation, configuration, usage
 - [Developer Guide](https://docs.skysend.app/developer-guide/) - Architecture, crypto design, contributing
 - [Changelog](https://docs.skysend.app/changelog) - Release history
-- [Roadmap](https://docs.skysend.app/roadmap) - Planned features
+- [Roadmap](https://skysend.app/roadmap/) - Planned features
 
 ## 🛠️ Development
 

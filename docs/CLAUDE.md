@@ -18,7 +18,7 @@ Two sidebars, defined in `.vitepress/config.mts`. A new page must be added there
 ```
 /user-guide/       Getting Started, Self-Hosting, Configuration, Admin CLI, CLI Client, Security, Help
 /developer-guide/  Introduction, API Reference, Cryptography, Reference
-/                  index, instances, roadmap, screenshots, benchmarks, changelog
+/                  index, instances, screenshots, benchmarks, changelog
 ```
 
 `instances.md` documents the public instance list and `public/instances.json` is the machine-readable registry behind it, served at `docs.skysend.app/instances.json`. Both Cloudflare Workers and the marketing site read that file, so changing its shape breaks all three. Adding an instance means editing the JSON and the page together.
