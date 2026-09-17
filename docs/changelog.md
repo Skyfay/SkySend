@@ -3,6 +3,7 @@
 All notable changes to SkySend are documented here.
 
 ## vNEXT
+
 *Release: In Progress*
 
 ### ✨ Features
@@ -15,6 +16,12 @@ All notable changes to SkySend are documented here.
 - **server**: Link preview images now use an absolute URL as the Open Graph standard requires, so more apps show them.
 - **server**: The site name in link previews now follows `CUSTOM_TITLE` instead of always showing SkySend.
 - **server**: A `CUSTOM_TITLE` containing quotes or angle brackets no longer breaks the page markup.
+
+### 🔒 Security
+
+- **server**: Updated hono to 4.13.8 to patch a ReDoS in the CORS middleware, query parameters read after the URL fragment, and further advisories in `parseBody()` and helpers SkySend does not use (GHSA-8j4g-w8fx-2239, GHSA-g6gw-c38x-mqfc, GHSA-crvj-82cr-hjcx, GHSA-54fx-42gc-7vw4, GHSA-f23p-vx2j-j53r, GHSA-gqvv-2mrq-wpjv, GHSA-79qm-7rj5-m7r9).
+- **web**: Updated dompurify to 3.4.15 to fix an XSS via detached subtrees when hooks are removed during in-place sanitizing (GHSA-55q2-fjhq-7xh7).
+- **website**: Updated next and eslint-config-next to 16.3.5 to patch two unauthenticated remote code execution vulnerabilities in the image optimization API and on Windows hosts (GHSA-p293-qw3h-jr36, GHSA-2xp9-vwfh-vxw4).
 
 ### 🔄 Changed
 
@@ -44,8 +51,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `vNEXT`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.12.0 - New Website, Branding &amp; UX Improvements, Security Hardening, and Security Patches
 
-## v2.12.0 - New Website, Branding & UX Improvements, Security Hardening, and Security Patches
 *Released: July 30, 2026*
 
 ### ✨ Features
@@ -100,8 +107,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.11.3 - Dependency Updates and Bug Fixes
+
 *Released: June 21, 2026*
 
 ### 🐛 Bug Fixes
@@ -128,8 +135,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.11.2 - Cache-Control Fiexes &amp; View Count Bug Fix
 
-## v2.11.2 - Cache-Control Fiexes & View Count Bug Fix
 *Released: June 5, 2026*
 
 ### 🐛 Bug Fixes
@@ -151,8 +158,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.11.1 - Adaptive ZIP Compression &amp; Packing Events in Debug Info Panel
 
-## v2.11.1 - Adaptive ZIP Compression & Packing Events in Debug Info Panel
 *Released: May 31, 2026*
 
 ### 🎨 Improvements
@@ -173,8 +180,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.11.0 - Password Protection Algorithm Removal, New Copy Button for Password Values, and Improvements
+
 *Released: May 30, 2026*
 
 > ⚠️ **Breaking:** Password-protected uploads created with **PBKDF2** (prior to v2.4.0) or the **legacy Argon2id** parameters (v2.4.0 - v2.5.0, 4-day window) can no longer be decrypted - both algorithms have been fully removed from the decryption pipeline. All such uploads have exceeded their maximum retention period and have expired, but any password-protected file from those eras cannot be opened after upgrading to this version.
@@ -204,8 +211,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.10.1 - S3 Download CORS Error Handling and Debug Info Panel Storage Backend Events
+
 *Released: May 28, 2026*
 
 ### ✨ Features
@@ -223,8 +230,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.10.0 - New Copy &amp; Share Features, Download UX Improvements, and Bug Fixes
 
-## v2.10.0 - New Copy & Share Features, Download UX Improvements, and Bug Fixes
 *Released: May 24, 2026*
 
 ### ✨ Features
@@ -266,8 +273,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.9.5 - Cache-Control Fixes for Stale Content and Traefik Caching
+
 *Released: May 20, 2026*
 
 ### 🎨 Improvements
@@ -281,8 +288,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.9.4 - Service Worker Download Fixes for Firefox &amp; Improved Caching
 
-## v2.9.4 - Service Worker Download Fixes for Firefox & Improved Caching
 *Released: May 20, 2026*
 
 ### 🐛 Bug Fixes
@@ -304,6 +311,7 @@ All notable changes to SkySend are documented here.
 - **Platforms**: linux/amd64, linux/arm64
 
 ## v2.9.3 - Debugging Service Worker Download Stalling in Firefox
+
 *Released: May 17, 2026*
 
 ### 🐛 Bug Fixes
@@ -320,13 +328,13 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.9.2 - Firefox Hotfix release &amp; Browser Cache fix
 
-## v2.9.2 - Firefox Hotfix release & Browser Cache fix
 *Released: May 17, 2026*
 
 ### 🐛 Bug Fixes
 
-- **web**: Fixed Firefox hanging on Service Worker-streamed downloads for files >= 2 GiB. Firefox has a long-standing signed 32-bit integer overflow in its internal download pipeline that triggers when `Content-Length` is >= 2^31 bytes, causing the download manager to stall or cancel at the end. The `Content-Length` header is now omitted for files >= 2 GiB so Firefox falls back to reading until EOF. Files below 2 GiB and all other browsers are unaffected. Thanks @Dominion0815
+- **web**: Fixed Firefox hanging on Service Worker-streamed downloads for files &gt;= 2 GiB. Firefox has a long-standing signed 32-bit integer overflow in its internal download pipeline that triggers when `Content-Length` is &gt;= 2^31 bytes, causing the download manager to stall or cancel at the end. The `Content-Length` header is now omitted for files &gt;= 2 GiB so Firefox falls back to reading until EOF. Files below 2 GiB and all other browsers are unaffected. Thanks @Dominion0815
 - **web**: Fixed the Service Worker download progress not reaching 100% and the UI not transitioning to "done" after the download completes. The `dl-done` broadcast was fire-and-forget - Firefox terminates the SW as soon as `waitUntil` resolves, abandoning the still-pending `clients.matchAll()` call before the message is delivered. All completion broadcasts are now awaited before `streamDone()` is called.
 
 ### 🎨 Improvements
@@ -339,8 +347,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.9.1 - Fixes for Large File Downloads in Firefox and SEO Meta Tag Improvements
+
 *Released: May 16, 2026*
 
 ### 🐛 Bug Fixes
@@ -350,7 +358,7 @@ All notable changes to SkySend are documented here.
 ### 🎨 Improvements
 
 - **web**: Updated SEO meta tags (title, description, Open Graph, Twitter Card) to mention both file and note sharing. Added `og:image` and `twitter:image` for rich link previews on Discord and other platforms. The image defaults to `/logo.png` and can be overridden with the `VITE_OG_IMAGE` environment variable at build time.
-- **web**: The page `<title>` and OG/Twitter title tags now reflect `CUSTOM_TITLE` at runtime. When `CUSTOM_TITLE=MyShare` is set, the preview title becomes "MyShare | Encrypted File & Note Transfer" instead of "SkySend | ...".
+- **web**: The page `<title>` and OG/Twitter title tags now reflect `CUSTOM_TITLE` at runtime. When `CUSTOM_TITLE=MyShare` is set, the preview title becomes "MyShare | Encrypted File &amp; Note Transfer" instead of "SkySend | ...".
 - **server**: The SPA fallback route now injects `CUSTOM_TITLE` into the served `index.html` at request time (cached after first read) so link-preview scrapers see the correct title without a separate build-time variable.
 
 ### 🔄 Changed
@@ -364,8 +372,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.9.0 - Multi-block Code Notes and UI Improvements
+
 *Released: May 15, 2026*
 
 ### ✨ Features
@@ -384,8 +392,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.8.0 - OIDC/SSO Authentication, General Improvements, Security &amp; Dependency Patches
 
-## v2.8.0 - OIDC/SSO Authentication, General Improvements, Security & Dependency Patches
 *Released: May 14, 2026*
 
 ### ✨ Features
@@ -429,8 +437,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.7.1 - Two New Languages &amp; Markdown Rendering Fixes
 
-## v2.7.1 - Two New Languages & Markdown Rendering Fixes
 *Released: May 13, 2026*
 
 ### ✨ Features
@@ -452,8 +460,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.7.0 - Native OS Share Button, Security Patches, and Dependency Updates
+
 *Released: May 8, 2026*
 
 ### ✨ Features
@@ -474,8 +482,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.6.0 - New Customization Options, Added Chinese Language and Bug Fixes
+
 *Released: May 6, 2026*
 
 ### ✨ Features
@@ -501,8 +509,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.7 - Docker Entrypoint Custom Data/Uploads Directory Fix
+
 *Released: May 3, 2026*
 
 ### 🐛 Bug Fixes
@@ -515,8 +523,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.6 - Docker Entrypoint PGID Fix
+
 *Released: May 3, 2026*
 
 ### 🐛 Bug Fixes
@@ -529,8 +537,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.5 - CSP Fix for Password-Protected Uploads, Downloads and Notes
+
 *Released: May 2, 2026*
 
 ### 🐛 Bug Fixes
@@ -543,8 +551,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.4 - Content Security Policy Update for Custom Logo Support
+
 *Released: May 1, 2026*
 
 ### 🔄 Changed
@@ -557,8 +565,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.3 - WebSocket Upload Keepalive
+
 *Released: April 25, 2026*
 
 ### 🐛 Bug Fixes
@@ -575,8 +583,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.5.2 - Client Improvements &amp; Bug fixes
 
-## v2.5.2 - Client Improvements & Bug fixes
 *Released: April 25, 2026*
 
 ### 🐛 Bug Fixes
@@ -598,8 +606,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.1 - Bug fixes, dependency updates, and Dockerfile improvements
+
 *Released: April 25, 2026*
 
 ### 🐛 Bug Fixes
@@ -608,7 +616,7 @@ All notable changes to SkySend are documented here.
 - **client**: Fixed `install.ps1` hanging silently during download. PowerShell's default `$ProgressPreference = 'Continue'` makes `Invoke-WebRequest` up to 100x slower and shows no feedback in many terminal environments. The script now sets `$ProgressPreference = 'SilentlyContinue'` and prints `Downloading <file>... done (X.X MB)` and `Verifying checksum... ok` step messages instead.
 - **client**: Fixed `install.sh` showing no output during binary download. `curl -fsSL` and `wget -q` were fully silent. The binary download now uses `curl --progress-bar` (shows a `#####` bar on stderr) and `wget` without `-q`, so users see download progress.
 - **server**: Fixed S3 uploads failing with Cloudflare R2 and other S3-compatible providers with the error `[EntityReplacer] Invalid character '#' in entity name: "#xD"`. The root cause was `fast-xml-parser@5.7.1` introducing a regression where numeric character references (e.g. `&#xD;`) in XML responses could no longer be parsed. Updated `fast-xml-parser` override to `>=5.7.2` which restores correct behavior.
-- **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 >=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
+- **server**: Set `requestChecksumCalculation` and `responseChecksumValidation` to `WHEN_REQUIRED` on the S3 client. AWS SDK v3 &gt;=3.679 defaults to `WHEN_SUPPORTED`, causing proactive CRC checksum headers that can trigger provider-specific XML parsing issues.
 
 ### 🔒 Security
 
@@ -636,8 +644,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.5.0 - Security Audit Fixes, Test Coverage Improvements, and Docker Metadata Labels
+
 *Released: April 23, 2026*
 
 ### ✨ Features
@@ -686,22 +694,26 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
+## v2.4.3 - Codecov, Unit Test Improvements &amp; Web Improvements
 
-## v2.4.3 - Codecov, Unit Test Improvements & Web Improvements
 *Released: April 21, 2026*
 
 ### ✨ Features
+
 - **client**: TUI "Manage servers" now supports adding, deleting, and setting a server as default via a server action sub-menu
 
 ### 🐛 Bug Fixes
+
 - **web**: Fixed note view incorrectly showing "permanently deleted" warning for unlimited-view notes (`maxViews === 0`)
 
 ### 🧪 Tests
+
 - **infra**: Added `@vitest/coverage-v8` and `test:coverage` scripts to `server`, `web`, `crypto`, and `client` packages for coverage report generation in LCOV format
 - **web**: Added 57 unit tests across `lib/utils`, `lib/password-generator`, and `lib/upload-store` - covering formatting functions, `isSafari` detection, `generatePassword`/`calculateEntropy`, and full CRUD/sorting for IndexedDB upload and note storage (using an in-memory `idb-keyval` mock)
 - **client**: Added 93 unit tests across `lib/progress`, `lib/url`, `lib/password-generator`, `lib/config`, and `lib/history` - covering all formatting/parsing utilities, full `parseShareUrl`/`buildShareUrl` logic including edge cases, password generation, config file lifecycle with filesystem isolation via `tmpdir`, and history CRUD with expiry cleanup
 
 ### 🔧 CI/CD
+
 - **infra**: Updated `validate.yml` test job to run with coverage and upload reports to Codecov via `codecov/codecov-action@v5`
 - **infra**: Added `codecov.yml` with project and patch coverage status checks
 - **crypto**: Added 14 new unit tests covering previously untested security-critical paths: `validateMetadata` error branches (invalid JSON, null payload, unknown type, malformed archive entries, negative sizes, empty names, missing MIME type), `deriveKeyFromPasswordArgon2` input validation, ECE decrypt stream "record too short" path, and exact error message matching for the nonce-missing guard. Coverage: 94% → 99.29% statements, 88% → 97.82% branches. Added `vitest.config.ts` to exclude the re-export barrel `src/index.ts` from coverage.
@@ -712,19 +724,22 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.4.2 - WebSocket Upload Toggle and CLI History Command
+
 *Released: April 20, 2026*
 
 ### ✨ Features
+
 - **client**: Added WebSocket transport toggle - disable WebSocket uploads via `--no-ws` CLI flag, TUI Settings menu, or `\"websocket\": false` in config file- **client**: Added `skysend ls` command to list upload and note history with age, expiry, and size - supports `--server`, `--all`, and `--json` flags
 
 ### 🎨 Improvements
+
 - **client**: Connection error screen now offers recovery options - press `s` to select another server or `r` to retry instead of requiring Ctrl+C exit
 - **client**: Connection errors now show a user-friendly message (`Server <url> is not reachable`) instead of the raw `fetch failed` error
 - **client**: `skysend config` now shows all registered servers with their per-server WebSocket status
 
 ### 📝 Documentation
+
 - **docs**: Added WebSocket transport configuration section to CLI client documentation
 
 ### 🐳 Docker
@@ -733,14 +748,16 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.4.1 - Bug Fixes for CLI Binary and Client install URL Shortening
+
 *Released: April 20, 2026*
 
 ### 🐛 Bug Fixes
+
 - **client**: Fixed `Cannot find package 'react-devtools-core'` runtime error when running compiled CLI binaries - replaced `--external` flag with a bundled no-op stub so Ink's optional devtools import resolves inside the binary
 
 ### 📝 Documentation
+
 - **docs**: Shortened CLI install URLs from raw GitHub links to `skysend.app/install.sh` and `skysend.app/install.ps1` redirects across README, docs, and install scripts
 
 ### 🐳 Docker
@@ -749,32 +766,38 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.4.0 - CLI Client, PWA Support and ZIP creating improvements
+
 *Released: April 19, 2026*
 
 ### ✨ Features
+
 - **web**: Added PWA (Progressive Web App) support - SkySend can now be installed as an app on desktop (Chrome, Edge), Android, and iOS via "Add to Home Screen"
 - **client**: Added `@skysend/client` CLI binary for uploading and downloading files with end-to-end encryption from the terminal - supports single/multi-file uploads, encrypted notes, password protection, WebSocket and HTTP chunked transports, and cross-platform Bun-compiled binaries (Linux, macOS, Windows)
 - **web**: Added Argon2id password KDF support to the web frontend and upload worker using hash-wasm, enabling cross-compatibility with CLI password-protected uploads
 
 ### 🐛 Bug Fixes
+
 - **web**: Fixed WebSocket upload failing through Vite dev proxy by enabling `ws: true` on the API proxy config
 
 ### 🎨 Improvements
+
 - **web**: Multi-file uploads now show a determinate progress bar (0-100%) during the packing phase instead of an indeterminate spinner
 - **web**: Multi-file ZIP creation moved from main thread into the upload worker, reducing peak memory usage by ~50% for large uploads
 - **web**: Average upload speed is now displayed on the share link page after upload completes
 
 ### 🔄 Changed
+
 - **cli**: Renamed admin CLI binary from `skysend` to `skysend-cli` to avoid conflict with the new client binary (consistent with Docker and documentation)
 
 ### 📝 Documentation
+
 - **docs**: Cleaned up docker compose example in the user guide - removed redundant comments and simplified environment variable list with a link to the full reference
 - **docs**: Added CLI client documentation - overview, installation guide (Linux/macOS/Windows), detailed command reference for all 7 commands (`upload`, `download`, `note`, `note:view`, `delete`, `config`, `update`)
 - **docs**: Updated README, docs homepage, getting started, installation, first steps, architecture, setup, and roadmap pages with CLI client information
 
 ### 🔧 CI/CD
+
 - **infra**: Added CLI binary build pipeline to release workflow - compiles Bun binaries for 5 targets (linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64) with SHA-256 checksums and attaches them to GitHub Releases
 - **infra**: Added install scripts for Linux/macOS (`install.sh`) and Windows (`install.ps1`) with automatic platform detection and checksum verification
 
@@ -784,20 +807,23 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.3.0 - WebSocket Upload Transport for Improved Performance in Proxied Environments
+
 *Released: April 17, 2026*
 
 ### ✨ Features
+
 - **server**: Added a WebSocket upload transport at `/api/upload/ws` that streams the encrypted payload over a single persistent connection, eliminating the HTTP/2 multiplexing bottleneck that reverse proxies (Traefik, Nginx) impose on parallel chunk uploads
 - **server**: Added `FILE_UPLOAD_WS` environment variable (default: `true`) to enable or disable the WebSocket upload transport
 - **server**: Added `FILE_UPLOAD_WS_MAX_BUFFER` environment variable (default: `16MB`) to cap the per-session server receive buffer for WebSocket uploads
 - **web**: Upload worker now uses the WebSocket transport as the primary upload path and automatically falls back to the existing HTTP chunked upload when the handshake fails, is blocked, or times out (10 s)
 
 ### 🔒 Security
+
 - **server**: Added `Origin` header validation on WebSocket upgrade requests to prevent cross-site WebSocket hijacking (defence-in-depth, not exploitable due to token requirements)
 
 ### 📝 Documentation
+
 - **docs**: Added `FILE_UPLOAD_WS` and `FILE_UPLOAD_WS_MAX_BUFFER` to the user-guide environment variables page and the developer-guide environment reference
 - **docs**: Documented the WebSocket upload protocol in the upload API reference, including message shapes, close codes, and client fallback triggers
 - **docs**: Added Nginx and Traefik configuration snippets for the WebSocket upload transport in the reverse-proxy guide
@@ -809,16 +835,18 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.2.4 - Max Concurrent Chunk Uploads and Speed Limit Configuration
+
 *Released: April 15, 2026*
 
 ### ✨ Features
+
 - **server**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` environment variable (default: `3`) to control the number of parallel chunk uploads per session - increase to improve upload speed in Chromium browsers through HTTP/2 proxies
 - **server**: Added `FILE_UPLOAD_SPEED_LIMIT` environment variable (default: `0` = unlimited) to cap upload throughput per session - supports human-readable values like `100MB` (bytes per second)
 - **web**: Client now reads the configured concurrent chunk count from the server and adjusts parallel uploads accordingly
 
 ### 📝 Documentation
+
 - **docs**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` and `FILE_UPLOAD_SPEED_LIMIT` to user-guide environment variables page with new "Upload Performance" section
 - **docs**: Added `FILE_UPLOAD_CONCURRENT_CHUNKS` and `FILE_UPLOAD_SPEED_LIMIT` to developer-guide environment reference
 
@@ -828,8 +856,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.2.3 - Critical Bug Fixes for Chunked Uploads in HTTP/2 Proxied Environments
+
 *Released: April 15, 2026*
 
 - **server**: Fixed rate limiter path matching - the regex anchor (`^`) prevented chunk requests from being recognized through the `/api` sub-router, causing 429 errors despite the exemption
@@ -841,11 +869,12 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.2.2 - Bug Fixes for Chunked Uploads in Brave and Edge
+
 *Released: April 15, 2026*
 
 ### 🐛 Bug Fixes
+
 - **server**: Chunk upload requests (`/upload/:id/chunk`) are now exempt from the global rate limiter - previously, uploading a large file would exceed the 60 requests/minute limit and cause 429 errors, breaking uploads entirely in production
 - **web**: Chunk upload body changed from `Blob` to `ArrayBuffer` - fixes uploads permanently stalling at 0% in Brave and Edge, where the browser opened HTTP/2 streams but never sent DATA frames for Blob bodies from Web Workers
 
@@ -855,11 +884,12 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.2.1 - Parallel Chunk Uploads and Performance Improvements
+
 *Released: April 15, 2026*
 
 ### 🎨 Improvements
+
 - **web**: Upload chunks are now sent in parallel (up to 3 concurrent, 10 MB each) instead of sequentially (50 MB each), dramatically improving upload speed in Chrome, Brave, and Edge through reverse proxies like Traefik
 - **server**: Chunk upload endpoint accepts an `index` query parameter and reassembles chunks in-order on the server, ensuring data integrity with parallel client uploads
 - **server**: In-order chunks are now streamed directly to storage without buffering, eliminating unnecessary memory copies on the hot path
@@ -867,6 +897,7 @@ All notable changes to SkySend are documented here.
 - **server**: S3 part uploads now run as a concurrent pool with smooth backpressure - waits for one upload slot to free up instead of draining everything, giving consistent throughput instead of burst-stop cycles
 
 ### 📝 Documentation
+
 - **docs**: Updated architecture diagram with chunked upload flow (init, parallel chunks with index, finalize)
 - **docs**: Added chunked upload API documentation (init, chunk, finalize endpoints) to developer guide
 - **docs**: Added chunked upload endpoints to API overview table
@@ -877,11 +908,12 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.2.0 - S3 Storage Backend
+
 *Released: April 15, 2026*
 
 ### ✨ Features
+
 - **server**: Added S3-compatible storage backend as alternative to local filesystem storage
 - **server**: Added `STORAGE_BACKEND` environment variable to switch between `filesystem` (default) and `s3` storage
 - **server**: Added S3 configuration via environment variables (`S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`, `S3_PUBLIC_URL`)
@@ -896,17 +928,21 @@ All notable changes to SkySend are documented here.
 - **web**: Download progress bar now shows real-time download speed (e.g. `42.5 MB/s`) alongside the percentage, matching the upload speed display
 
 ### 🐛 Bug Fixes
+
 - **docker**: Fixed Docker healthcheck showing `unhealthy` despite a running server - replaced `wget` (not available in Alpine) with Node.js `fetch` and increased start period to 30s
 - **web**: Upload progress bar now reflects actual end-to-end upload progress instead of encryption speed - progress updates after each chunk is fully uploaded (including server-to-S3 forwarding)
 
 ### 🔒 Security
+
 - **server**: CSP `connect-src` header is dynamically extended to allow client fetches to the configured S3 endpoint
 
 ### 🎨 Improvements
+
 - **server**: Introduced `StorageBackend` interface with adapter pattern for pluggable storage implementations
 - **server**: Optimized S3 multipart upload performance - configurable part size (default 25MB) and parallel part uploads (default 4 concurrent) to reduce round-trip overhead
 
 ### 📝 Documentation
+
 - **docs**: Added S3 storage backend section to environment variables reference with configuration table, `S3_PUBLIC_URL`, and provider examples (R2, MinIO)
 - **docs**: Added S3 variable definitions to developer environment reference (`STORAGE_BACKEND`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE`, `S3_PRESIGNED_EXPIRY`, `S3_PUBLIC_URL`, `S3_PART_SIZE`, `S3_CONCURRENCY`)
 - **docs**: Updated architecture diagram and data storage section to reflect S3 backend and download flow
@@ -921,11 +957,12 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.1.0 - General UI and Documentation Improvements
+
 *Released: April 14, 2026*
 
 ### ✨ Features
+
 - **docs**: Added VitePress sitemap generation (`/sitemap.xml`) for Google Search Console indexing
 - **docs**: Added Cloudflare Worker that fetches instance data (version, config, enabled services) hourly and caches it in KV
 - **docs**: Instances page now loads all data from a single cached API endpoint instead of querying each instance individually
@@ -940,6 +977,7 @@ All notable changes to SkySend are documented here.
 - **web**: Added optional custom labels for password notes so users can describe what each password is for
 
 ### 🎨 Improvements
+
 - **web**: Redesigned theme toggle from a cycling button to a dropdown menu with Auto, Light, and Dark options
 - **web**: Fixed an UI issue on text and markdown note cards, when they were expanded
 
@@ -949,13 +987,14 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v2.0.0 - Encrypted Notes, Text, Passwords, Code Snippets, and SSH Keys
+
 *Released: April 13, 2026*
 
-> ⚠️ **Breaking:** All file-related environment variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the environment reference for the full mapping.
+> ⚠️ **Breaking:** All file-related environment variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -&gt; `FILE_MAX_SIZE`). Old names are no longer supported. See the environment reference for the full mapping.
 
 ### ✨ Features
+
 - **server**: Added encrypted notes API with support for text, password, and code content types
 - **server**: Added burn-after-reading support for notes via configurable max view count
 - **server**: Added new `NOTE_` environment variables for independent note configuration (`NOTE_MAX_SIZE`, `NOTE_EXPIRE_OPTIONS_SEC`, `NOTE_DEFAULT_EXPIRE_SEC`, `NOTE_VIEW_OPTIONS`, `NOTE_DEFAULT_VIEWS`)
@@ -982,17 +1021,20 @@ All notable changes to SkySend are documented here.
 - **cli**: Added notes support to `list`, `delete`, `stats`, and `cleanup` commands
 
 ### 🔄 Changed
+
 - **server**: Renamed all file-related environment variables with `FILE_` prefix for clarity
 - **server**: Cleanup job now also removes expired notes and notes that reached their view limit
 - **web**: File download URLs changed from `/d/:id` to `/file/:id` with automatic redirect from old URLs
 
 ### 🎨 Improvements
+
 - **web**: Replaced default browser scrollbar with custom styled scrollbar on textareas and code blocks
 - **web**: Updated footer tagline and browser tab subtitle to reflect file and note sharing
 - **web**: Removed primary-color border from ShareLink card and NoteView card to avoid confusion with custom color themes
 - **web**: Added `success` Tailwind color variable (fixed SkySend green) for the "Upload complete" text so it stays green regardless of custom primary color
 
 ### 📝 Documentation
+
 - **docs**: Updated environment variables reference with new `FILE_` and `NOTE_` variable names
 - **docs**: Added v1 to v2 environment variable migration table to environment reference
 - **docs**: Updated URL references from `/d/` to `/file/` in architecture and API docs
@@ -1003,6 +1045,7 @@ All notable changes to SkySend are documented here.
 - **docs**: Added screenshots page with overview, note types, and My Uploads views
 
 ### 🧪 Tests
+
 - **crypto**: Added 9 tests for note content encryption/decryption (round-trip, unicode, tampering, nonce uniqueness)
 - **server**: Added 33 tests for note API routes (CRUD, view counting, burn-after-reading, auth tokens, password verification, size/expiry/view validation)
 - **server**: Added 4 cleanup tests for note expiry and view limit enforcement
@@ -1016,14 +1059,16 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v2`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v1.0.2 - Patch Release for CORS correction on Health Endpoint
+
 *Released: April 13, 2026*
 
 ### 🐛 Bug Fixes
+
 - **server**: Added open CORS policy (`*`) on `/api/health` endpoint so external sites can fetch instance status
 
 ### 📝 Documentation
+
 - **docs**: Added website and instances links to README navigation bar
 
 ### 🐳 Docker
@@ -1032,8 +1077,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v1.0.1 - Patch Release for Docker Permissions Issue
+
 *Released: April 12, 2026*
 
 ### 🐛 Bug Fixes
@@ -1050,8 +1095,8 @@ All notable changes to SkySend are documented here.
 - **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64
 
-
 ## v1.0.0 - First Stable Release
+
 *Released: April 12, 2026*
 
 This is the first stable release of SkySend, marking the completion of the initial development phase and the beginning of production use. The v1.0.0 release includes all core features, security measures, and documentation necessary for self-hosting and public deployment.
@@ -1116,3 +1161,4 @@ This is the first stable release of SkySend, marking the completion of the initi
 - **Image**: `skyfay/skysend:v1.0.0`
 - **Also tagged as**: `latest`, `v1`
 - **Platforms**: linux/amd64, linux/arm64
+
