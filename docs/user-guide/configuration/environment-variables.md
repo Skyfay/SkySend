@@ -102,6 +102,8 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_TITLE` | ❌ | `SkySend` | Displayed site title in the UI. |
 | `CUSTOM_COLOR` | ❌ | _(none)_ | Primary brand color as 6-digit hex code (e.g. `46c89d`). The `#` prefix is optional. |
 | `CUSTOM_LOGO` | ❌ | _(none)_ | Path to a custom logo. Put the file into `BRANDING_DIR` and reference it as `/branding/logo.svg`. An external URL (`https://example.com/logo.svg`) also works but is not recommended. |
+| `CUSTOM_OG_IMAGE` | ❌ | `CUSTOM_LOGO` or built-in logo | Image shown when a link to your instance is shared on messengers and social networks. Same path or URL rules as `CUSTOM_LOGO`. Use PNG or JPEG, SVG is not rendered in link previews. See [Link preview image](#link-preview-image). |
+| `CUSTOM_OG_IMAGE_STYLE` | ❌ | `logo` | How X and Discord show the preview image. `logo` for a small square image next to the text, `banner` for a large image above it. |
 | `CUSTOM_PRIVACY` | ❌ | _(none)_ | URL to your privacy policy page. Shown as a link in the footer if set. |
 | `CUSTOM_LEGAL` | ❌ | _(none)_ | URL to your legal notice / impressum page. Shown as a link in the footer if set. |
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
@@ -150,6 +152,39 @@ The directory is created automatically on startup and is served under `/branding
 Hosting the file on infrastructure you control (including your own CDN) is fine. A local file in `BRANDING_DIR` avoids the extra request entirely and is the simpler default.
 :::
 
+### Link preview image
+
+When a link to your instance is shared on WhatsApp, Signal, Telegram, Discord, X, or similar, the preview card shows an image. SkySend picks it in this order:
+
+1. `CUSTOM_OG_IMAGE`, if set.
+2. `CUSTOM_LOGO`, if it is a PNG, JPEG, WebP, or GIF file.
+3. No image, if `CUSTOM_LOGO` is set in any other format such as SVG. SkySend logs a note on startup in that case.
+4. The built-in SkySend logo, if neither is set.
+
+Link previews do not render SVG, so an instance with an SVG logo needs a separate raster image for the preview:
+
+```yaml
+environment:
+  CUSTOM_LOGO: "/branding/my-logo.svg"
+  CUSTOM_OG_IMAGE: "/branding/my-preview.png"
+```
+
+For a wide banner instead of a square logo, use an image of about 1200x630 pixels and set `CUSTOM_OG_IMAGE_STYLE` to `banner`:
+
+```yaml
+environment:
+  CUSTOM_OG_IMAGE: "/branding/my-banner.png"
+  CUSTOM_OG_IMAGE_STYLE: banner
+```
+
+`CUSTOM_OG_IMAGE_STYLE` only affects X and Discord. WhatsApp, Telegram, Signal, Facebook, and LinkedIn pick the layout on their own, usually from the image dimensions.
+
+::: info Caching and external URLs
+Messengers and social networks cache link previews. A changed image may only show up for links that have not been shared before.
+
+Some apps, including WhatsApp and Signal, build the preview on the sender's device. With an external URL, that host sees the IP address of the person sharing the link. A local file in `BRANDING_DIR` avoids this.
+:::
+
 ## SSO / OIDC Authentication
 
 When `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set, OIDC authentication is activated. Downloads are always public - authentication only gates the upload action.
@@ -196,6 +231,8 @@ SkySend validates all environment variables on startup using Zod:
 - `S3_ENDPOINT` must be a valid URL when set
 - `CUSTOM_COLOR` must be a valid 6-digit hex color code (with or without `#` prefix)
 - `CUSTOM_LOGO` must be an `http(s)` URL or an absolute path starting with a single `/`
+- `CUSTOM_OG_IMAGE` must be an `http(s)` URL or an absolute path starting with a single `/`
+- `CUSTOM_OG_IMAGE_STYLE` must be one of `logo` or `banner`
 - `CUSTOM_PRIVACY` must be a valid URL
 - `CUSTOM_LEGAL` must be a valid URL
 - `CUSTOM_LINK_URL` must be a valid URL

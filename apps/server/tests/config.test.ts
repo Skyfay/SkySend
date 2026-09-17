@@ -288,6 +288,51 @@ describe("config", () => {
     });
   });
 
+  describe("CUSTOM_OG_IMAGE", () => {
+    it("should default the style to logo and leave the image unset", async () => {
+      const config = await loadFreshConfig();
+      expect(config.CUSTOM_OG_IMAGE).toBeUndefined();
+      expect(config.CUSTOM_OG_IMAGE_STYLE).toBe("logo");
+    });
+
+    it("should accept an absolute path and the banner style", async () => {
+      process.env.CUSTOM_OG_IMAGE = "/branding/preview.png";
+      process.env.CUSTOM_OG_IMAGE_STYLE = "banner";
+      const config = await loadFreshConfig();
+      expect(config.CUSTOM_OG_IMAGE).toBe("/branding/preview.png");
+      expect(config.CUSTOM_OG_IMAGE_STYLE).toBe("banner");
+    });
+
+    it("should reject a protocol-relative URL", async () => {
+      process.env.CUSTOM_OG_IMAGE = "//evil.example.com/preview.png";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should reject an unknown style", async () => {
+      process.env.CUSTOM_OG_IMAGE_STYLE = "large";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("should warn when the preview image is an SVG", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.CUSTOM_OG_IMAGE = "/branding/preview.svg";
+      await loadFreshConfig();
+
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain("CUSTOM_OG_IMAGE");
+      warn.mockRestore();
+    });
+
+    it("should not warn about a PNG preview image", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.CUSTOM_OG_IMAGE = "/branding/preview.png";
+      await loadFreshConfig();
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+
   describe("BRANDING_DIR", () => {
     it("should default to a branding folder inside DATA_DIR", async () => {
       const config = await loadFreshConfig();

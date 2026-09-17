@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import { loadConfig } from "./lib/config.js";
+import { renderIndexHtml } from "./lib/index-html.js";
 import { initDatabase, closeDatabase } from "./db/index.js";
 import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
@@ -362,20 +363,16 @@ app.get("*", async (c, next) => {
   if (reqPath !== "/" && /\.[^/]+$/.test(reqPath)) {
     return next();
   }
+  // The config never changes at runtime, so the rendered page is cached as a whole.
   if (!cachedIndexHtml) {
-    cachedIndexHtml = await readFile(indexHtmlPath, "utf-8");
+    cachedIndexHtml = renderIndexHtml(await readFile(indexHtmlPath, "utf-8"), config);
   }
-  // DEFAULT_THEME is a Zod enum, so it is safe to place in an HTML attribute.
-  // public/theme-init.js reads it to pick the theme before the first paint.
-  const html = cachedIndexHtml
-    .replace(/__CUSTOM_TITLE__/g, config.CUSTOM_TITLE)
-    .replace(/__DEFAULT_THEME__/g, config.DEFAULT_THEME);
   // no-store: browsers and intermediate proxies (e.g. Traefik with a caching middleware)
   // must never cache index.html. no-cache would allow storage with revalidation, but
   // revalidation requires ETag/Last-Modified headers which we do not set - leaving some
   // proxy implementations to fall back to their own TTL and serve stale HTML. no-store
   // is unconditional and requires no conditional-request support from the proxy.
-  return c.html(html, 200, { "Cache-Control": "no-store" });
+  return c.html(cachedIndexHtml, 200, { "Cache-Control": "no-store" });
 });
 
 // Serve download-sw.js with no-store so browsers and proxies never cache it.
