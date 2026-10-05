@@ -46,6 +46,12 @@ VERSION=v2.11.3 curl -fsSL https://skysend.app/install.sh | sh
 INSTALL_DIR=$HOME/.local/bin curl -fsSL https://skysend.app/install.sh | sh
 ```
 
+::: warning macOS on Apple Silicon
+The macOS binaries up to v2.12.2 carry an invalid signature, so macOS stops them right after they start and the shell only prints `killed`. `skysend update` cannot run either, so install the current version once more with the install script above. Pinning `VERSION` to v2.12.2 or older brings the problem back.
+
+A binary downloaded through a browser is also held back by Gatekeeper, because it is signed without an Apple developer certificate. Use the install script, or remove the quarantine flag with `xattr -d com.apple.quarantine skysend-macos-arm64`.
+:::
+
 ### Windows
 
 Run in PowerShell:

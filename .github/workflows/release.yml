@@ -281,7 +281,9 @@ jobs:
       # skysend update, which download it without a quarantine flag.
       - name: Sign macOS binary
         if: startsWith(matrix.target, 'macos-')
-        run: codesign --sign - --force apps/client/dist/skysend-${{ matrix.target }}
+        run: |
+          codesign --sign - --force apps/client/dist/skysend-${{ matrix.target }}
+          codesign --verify --verbose apps/client/dist/skysend-${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
