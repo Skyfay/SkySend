@@ -5,6 +5,7 @@ export default defineConfig({
   title: 'SkySend | Docs',
   description: 'Minimalist, self-hostable, end-to-end encrypted file sharing. Zero knowledge - the server never sees your data.',
   lang: 'en-US',
+  srcExclude: ['CLAUDE.md'], // Contributor guide, not a published docs page
   cleanUrls: true,
   lastUpdated: true,
   sitemap: {

@@ -244,7 +244,13 @@ export function release({ version, tags, dir = FRAGMENT_DIR, changelog = CHANGEL
   }
 
   const content = fs.readFileSync(changelog, "utf8");
-  if (new RegExp(`^## v${version.replace(/\./g, "\\.")}\\b`, "m").test(content)) {
+  const header = `## v${version}`;
+  // Compared as text, since the version comes from the command line and must
+  // not be read as a pattern. A title may follow the version, a suffix may not.
+  const listed = content
+    .split(/\r?\n/)
+    .some((line) => line === header || line.startsWith(`${header} `));
+  if (listed) {
     throw new Error(`The changelog already lists v${version}.`);
   }
 

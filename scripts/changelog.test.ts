@@ -290,6 +290,17 @@ describe("a release", () => {
     expect(files.has(`${DIR}/Skyfay-fix.md`)).toBe(true);
   });
 
+  it("tells a version apart from a pre-release of it", () => {
+    const files = memoryFiles({
+      [MEMORY_CHANGELOG]: RELEASED.replace("## v2.12.1 - ", "## v2.13.0-beta - "),
+      [`${DIR}/Skyfay-fix.md`]: "### 🐛 Bug Fixes\n\n- **web**: Fixed.",
+    });
+
+    release({ version: "2.13.0", tags: "`latest`, `v2`", dir: DIR, changelog: MEMORY_CHANGELOG });
+
+    expect(files.get(MEMORY_CHANGELOG)).toContain("## v2.13.0\n");
+  });
+
   it("refuses a version the changelog lists already", () => {
     const files = memoryFiles({
       [MEMORY_CHANGELOG]: RELEASED,
