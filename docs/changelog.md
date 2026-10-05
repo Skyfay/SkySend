@@ -2,6 +2,48 @@
 
 All notable changes to SkySend are documented here.
 
+## v2.12.2 - Download Integrity and Upload Memory Security Fixes and CI Improvements
+
+*Released: October 5, 2026*
+
+### 🐛 Bug Fixes
+
+- **client**: `skysend upload --no-ws` is now read correctly, so it keeps uploads on HTTP chunks once WebSocket uploads return to the CLI.
+
+### 🔒 Security
+
+- **web**: A download that the server cut short at a record boundary now fails instead of being saved as a complete file. Thanks @rajnisht7 ([GHSA-w3p6-2vcf-mmv9](https://github.com/Skyfay/SkySend/security/advisories/GHSA-w3p6-2vcf-mmv9))
+- **client**: A download that the server cut short at a record boundary now fails in the CLI and the TUI, and the incomplete file is removed. Thanks @rajnisht7 ([GHSA-w3p6-2vcf-mmv9](https://github.com/Skyfay/SkySend/security/advisories/GHSA-w3p6-2vcf-mmv9))
+- **crypto**: Archive metadata now records the size of the zip, so archive downloads can be checked for completeness. Archives uploaded with older versions cannot be checked this way.
+- **server**: Upload chunks are now streamed to disk instead of being held in memory, so oversized or parallel chunk requests can no longer exhaust the server's memory. A chunk is limited to 16 MiB and the chunks of an upload to its declared size. Thanks @rajnisht7 ([GHSA-9rmm-v3p2-c26g](https://github.com/Skyfay/SkySend/security/advisories/GHSA-9rmm-v3p2-c26g))
+- **server**: WebSocket upload messages are limited to 1 MiB instead of the 100 MiB default of the WebSocket library.
+- **infra**: The abuse report Worker now checks a reply address in linear time and limits it to 254 characters, so a long crafted address no longer ties up a request. Reported by CodeQL as `js/polynomial-redos`.
+
+### 📝 Documentation
+
+- **docs**: Documented the size check on downloads and the archive size in the encrypted metadata.
+- **docs**: Documented the limits and error responses of the chunk upload endpoint and the `tmp/` folder in the data directory.
+- **docs**: The CLI docs now state that uploads always use HTTP chunks, since WebSocket uploads are disabled in the CLI.
+
+### 🧪 Tests
+
+- **crypto**: Added tests for downloads cut short at a record boundary and for the archive size in the metadata.
+- **web**: Added tests that every download tier rejects a truncated file without falling back to the next tier.
+- **server**: Added tests for the limits of the chunked upload and for the chunk files on disk.
+- **client**: Added a test for the transport the upload command picks with and without `--no-ws`.
+
+### 🔧 CI/CD
+
+- **infra**: Every pull request writes its changelog entries into a file of its own, which the release collects into the changelog, so pull requests no longer conflict over it.
+- **infra**: Lint, type check, unit tests and the docs build now also run on pull requests into `dev`, and every pull request now builds the website as well.
+- **infra**: A pull request into `main` can build the Docker image for both platforms and start it once, after a maintainer approves the build.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v2.12.2`
+- **Also tagged as**: `latest`, `v2`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v2.12.1 - Link Preview and Branding Improvements, Security Updates and Bug Fixes
 
 *Released: September 17, 2026*
