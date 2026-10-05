@@ -318,6 +318,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
             type: "archive",
             files: files.map((f) => ({ name: path.basename(f), size: fs.statSync(f).size })),
             totalSize: files.reduce((sum, f) => sum + fs.statSync(f).size, 0),
+            archiveSize: plaintextSize,
           } satisfies ArchiveMetadata
         : {
             type: "single",

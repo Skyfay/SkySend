@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import { loadConfig } from "./lib/config.js";
@@ -69,7 +69,11 @@ const stopCleanup = startCleanupJob(storage, config.CLEANUP_INTERVAL);
 // ── App Setup ──────────────────────────────────────────
 
 const app = new Hono();
-const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
+const { upgradeWebSocket, injectWebSocket, wss } = createNodeWebSocket({ app });
+// The web app and the CLI send upload frames of 256 KiB. ws holds a whole message
+// in memory before onMessage sees it, and its default of 100 MiB would let a
+// single frame take that much before the declared size is ever checked.
+wss.options.maxPayload = 1024 * 1024;
 
 // Build CSP connect-src based on storage backend
 const connectSrc: string[] = ["'self'"];
@@ -202,14 +206,17 @@ api.use("*", async (c, next) => {
 });
 
 // Rate limiter on API routes (not static assets).
-// S-2 (Security Audit): Chunk upload requests are intentionally exempt from the
-// global rate limiter. This is NOT a security gap - it is a deliberate design
-// decision for the following reasons:
-//   1. Chunk uploads are already guarded by an upload session (valid init token required).
-//   2. The quota middleware enforces per-IP byte limits on the entire upload.
-//   3. Per-session memory limits cap total in-flight data.
-//   4. Applying the global rate limit (e.g. 60 req/min) to chunks would block a
-//      single legitimate large-file upload (a 1 GB file = ~100 chunks at 10 MB each).
+// S-2 (Security Audit): Chunk upload requests are exempt from the global rate
+// limiter, because 60 req/min would block a single legitimate large-file upload
+// (a 1 GB file = ~100 chunks at 10 MB each). Opening a session through /init
+// stays rate limited. What bounds the chunk traffic instead is routes/upload.ts,
+// checked while the body is read (GHSA-9rmm-v3p2-c26g):
+//   1. A chunk body is streamed into a file, never held in memory.
+//   2. A chunk is at most 16 MiB, and all chunks of a session together never
+//      exceed the declared upload size.
+//   3. A session has at most FILE_UPLOAD_CONCURRENT_CHUNKS requests in flight,
+//      and each chunk index is accepted once.
+// The quota does not bound chunk traffic, it only counts finished uploads.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
 const rateLimiter = createRateLimiter(config);
@@ -256,7 +263,8 @@ api.get("/quota", (c) => {
 });
 
 // Upload route with quota middleware
-const uploadRoute = createUploadRoute(storage);
+// Chunk bodies wait in DATA_DIR, which is writable for every storage backend.
+const uploadRoute = createUploadRoute(storage, { chunkDir: join(config.DATA_DIR, "tmp", "chunks") });
 const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
 
 // OIDC guard: protect file upload init when configured

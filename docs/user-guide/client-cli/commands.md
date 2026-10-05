@@ -24,7 +24,7 @@ skysend upload <files...> [options]
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
 | `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
-| `--no-ws` | Disable WebSocket transport, use HTTP chunked upload |
+| `--no-ws` | Use HTTP chunked upload instead of WebSocket. Currently the default anyway, see below |
 | `--json` | Output result as JSON |
 
 ### Examples
@@ -53,7 +53,7 @@ skysend upload ./data.csv --json
 
 - **Single file**: Uploaded as-is after encryption.
 - **Multiple files**: Automatically zipped with [fflate](https://github.com/101arrowz/fflate) before encryption. The recipient receives a `.zip` file.
-- **Transport**: Uses WebSocket transport (primary) with automatic fallback to HTTP chunked upload if the WebSocket handshake fails. Use `--no-ws` to force HTTP chunked upload, or toggle it in Settings in interactive mode.
+- **Transport**: Always HTTP chunked upload for now, as WebSocket uploads are disabled in the CLI. `--no-ws` keeps it that way once they return, see [WebSocket Transport](./index.md#websocket-transport).
 - **Progress**: Displays a progress bar with speed and ETA.
 
 ### JSON Output

@@ -33,7 +33,13 @@ export interface ArchiveMetadata {
     name: string;
     size: number;
   }>;
+  /** Sum of the original file sizes, shown to the recipient. */
   totalSize: number;
+  /**
+   * Byte size of the zip archive, which is the plaintext of the encrypted
+   * stream. Missing on archives uploaded by older clients.
+   */
+  archiveSize?: number;
 }
 
 export type FileMetadata = SingleFileMetadata | ArchiveMetadata;
@@ -113,6 +119,18 @@ export async function decryptMetadata(
   return validateMetadata(parsed);
 }
 
+/**
+ * The byte size the decrypted file stream must have, to pass to `createDecryptStream`.
+ *
+ * GCM authenticates each record on its own, so a server can drop whole records from
+ * the end of the stream and the rest still decrypts. The metadata is authenticated
+ * with the metaKey, so its size is the one the server cannot change. Undefined only
+ * for archives uploaded by older clients, which carry no archive size.
+ */
+export function expectedPlaintextSize(metadata: FileMetadata): number | undefined {
+  return metadata.type === "single" ? metadata.size : metadata.archiveSize;
+}
+
 /** Validate that parsed JSON conforms to the FileMetadata shape. */
 function validateMetadata(data: unknown): FileMetadata {
   if (typeof data !== "object" || data === null) {
@@ -160,10 +178,19 @@ function validateMetadata(data: unknown): FileMetadata {
     if (typeof obj.totalSize !== "number" || obj.totalSize < 0) {
       throw new Error("Invalid metadata: invalid total size");
     }
+    if (
+      obj.archiveSize !== undefined &&
+      (typeof obj.archiveSize !== "number" ||
+        !Number.isSafeInteger(obj.archiveSize) ||
+        obj.archiveSize < 0)
+    ) {
+      throw new Error("Invalid metadata: invalid archive size");
+    }
     return {
       type: "archive",
       files,
       totalSize: obj.totalSize,
+      ...(obj.archiveSize !== undefined ? { archiveSize: obj.archiveSize } : {}),
     };
   }
 

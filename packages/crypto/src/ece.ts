@@ -99,8 +99,13 @@ export function createEncryptStream(
  * Input: Uint8Array chunks of the encrypted stream (nonce header + records).
  * Output: Decrypted plaintext Uint8Array chunks.
  *
+ * Every record is authenticated on its own, so a stream cut at a record boundary
+ * still decrypts cleanly. Only `expectedPlaintextSize` catches that, so every
+ * download passes the size from the authenticated metadata, see
+ * `expectedPlaintextSize()` in metadata.ts.
+ *
  * Usage:
- *   encryptedStream.pipeThrough(createDecryptStream(fileKey))
+ *   encryptedStream.pipeThrough(createDecryptStream(fileKey, expectedPlaintextSize(metadata)))
  */
 export function createDecryptStream(
   fileKey: CryptoKey,

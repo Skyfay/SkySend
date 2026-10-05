@@ -41,7 +41,13 @@ Two sidebars, defined in `.vitepress/config.mts`. A new page must be added there
 
 ---
 
-# Part 2 - Changelog format (`docs/changelog.md`)
+# Part 2 - Changelog (`changelog/unreleased/` and `docs/changelog.md`)
+
+## Where entries go
+
+Never into `docs/changelog.md`. Every branch writes its entries into a fragment of its own, `changelog/unreleased/<branch>.md` with the `/` of the branch name replaced by `-`, so pull requests that run side by side never touch the same file. A change made without a branch of its own names its fragment after the change.
+
+A fragment is a version block without the version header and without the Docker section: notes like breaking changes above the first section, then sections with entries. The release (`pnpm version:bump`) collects all fragments into one version block of `docs/changelog.md`, sorts the sections into the order below and deletes the fragments. `scripts/changelog.test.ts` checks every fragment against the rules of this part (sections, scopes, at most two sentences, no `;`, no hyphen used as a dash), and `pnpm changelog:preview` prints the block the next release writes. Format and example: [changelog/unreleased/README.md](../changelog/unreleased/README.md).
 
 ## What never gets an entry
 
@@ -52,10 +58,6 @@ This file is published for people who run SkySend. AI tooling is invisible to th
 - `.gitignore` rules that only exist to track those files
 
 Code that ships in the repository still counts, even when its purpose is to keep the assistant honest.
-
-## Active version
-
-The topmost `## vNEXT` block, or the topmost `## vX.Y.Z` block marked `*Release: In Progress*`. If neither exists, run `pnpm changelog:next` - it inserts a `vNEXT` placeholder with the Docker section already filled in. `pnpm version:bump` later rewrites `vNEXT` into the real version and fixes the image tags.
 
 ## Entry format
 
@@ -81,11 +83,13 @@ A change spanning several scopes becomes several entries, one per scope. Never `
 
 **Description** - one sentence, as short as it can be while still making sense. Two only if unavoidable. Write **what** changed, not why or how. No file paths, function names, root causes, or internals - those belong in the commit message.
 
+**Punctuation** - no `;` and no hyphen used as a dash inside a description, which means no hyphen followed by a space. Stricter than the general typography rule, which allows one. A sentence reaching for either is doing too much work, so split it or cut it. Hyphenated words stay, and so does the hyphen that opens the line as the list marker. Entries released before v2.13 still use the hyphen as a dash, do not copy them.
+
 **Issue links** go at the end as `([#N](https://github.com/Skyfay/SkySend/issues/N))`, never inside the scope.
 
 **One entry per user-visible change.** A pull request touching 20 files to deliver one behavior change is one line. Two unrelated changes in one pull request are two lines.
 
-Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`.
+Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link.
 
 ## Section order
 
@@ -102,7 +106,7 @@ Never rearrange. Omit sections with no entries. Do not invent new ones.
 | 7 | `### 📝 Documentation` | Documentation changes |
 | 8 | `### 🧪 Tests` | Tests added or changed |
 | 9 | `### 🔧 CI/CD` | Pipeline, Dockerfile, script changes |
-| 10 | `### 🐳 Docker` | Docker image info (always last) |
+| 10 | `### 🐳 Docker` | Docker image info (always last, written by the release) |
 
 ## Bug fix policy
 
@@ -117,14 +121,15 @@ Only log fixes for problems in **already released** versions. A problem found an
 
 ```markdown
 ## vX.Y.Z - Short Title
+
 *Released: Month Day, Year*
 ```
 
-Unreleased versions use `*Release: In Progress*`.
+The release writes the header with `*Release: In Progress*` and no title. Add the title and replace the line with the date once the version ships. A fragment has no header.
 
 ## Breaking changes
 
-A blockquote directly below the release date, before any section:
+A blockquote directly below the release date, before any section. In a fragment it goes above the first section, and the release moves it below the date:
 
 ```markdown
 > ⚠️ **Breaking:** What breaks and how to migrate.
@@ -132,7 +137,7 @@ A blockquote directly below the release date, before any section:
 
 ## Docker section
 
-Last section of every version with a published image:
+Last section of every version with a published image. The release writes it, a fragment never has one:
 
 ```markdown
 ### 🐳 Docker
@@ -142,19 +147,20 @@ Last section of every version with a published image:
 - **Platforms**: linux/amd64, linux/arm64
 ```
 
-Tag rules: stable releases get `latest` plus the major tag (`v2`), `-beta` releases get `beta`, `-dev` releases get `dev`. `pnpm version:bump` fills these in.
+Tag rules: stable releases get `latest` plus the major tag (`v2`), `-beta` releases get `beta`, `-dev` releases get `dev`.
 
 ## Additional rules
 
 - Newest version at the top.
 - No `---` separators between versions. VitePress renders them.
 - Entries are grouped under `###` headings, never a flat list.
-- No em dashes, no semicolons joining clauses.
+- No em dashes, no `;` and no hyphen used as a dash inside an entry.
 
 ## Example
 
 ```markdown
 ## v2.12.0 - Branding and Reports
+
 *Released: July 30, 2026*
 
 ### ✨ Features

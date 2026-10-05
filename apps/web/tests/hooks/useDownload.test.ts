@@ -8,6 +8,9 @@ vi.mock("@skysend/crypto", () => ({
   deriveKeys: vi.fn(async () => ({ metaKey: {}, authKey: {} })),
   computeAuthToken: vi.fn(async () => new Uint8Array(32)),
   createDecryptStream: vi.fn(() => new TransformStream()),
+  expectedPlaintextSize: vi.fn((meta: { type: string; size?: number; archiveSize?: number }) =>
+    meta.type === "single" ? meta.size : meta.archiveSize,
+  ),
   decryptMetadata: vi.fn(async () => ({
     type: "single",
     name: "file.txt",
@@ -58,8 +61,8 @@ function makeUploadInfo(overrides = {}) {
     fileCount: 1,
     hasPassword: false,
     salt: "salt64",
-    encryptedMeta: null,
-    nonce: null,
+    encryptedMeta: btoa("ciphertext"),
+    nonce: btoa("nonce123"),
     downloadCount: 0,
     maxDownloads: 5,
     expiresAt: "2099-01-01T00:00:00Z",
@@ -808,7 +811,9 @@ describe("useDownload", () => {
   it("loadInfo() ohne encryptedMeta → metadata bleibt null", async () => {
     const apiMod = await import("../../src/lib/api.js");
     const cryptoMod = await import("@skysend/crypto");
-    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ encryptedMeta: null, nonce: null }),
+    );
 
     const { useDownload } = await import("../../src/hooks/useDownload.js");
     const { result } = renderHook(() => useDownload());
@@ -1139,5 +1144,159 @@ describe("useDownload", () => {
     expect(result.current.phase).toBe("done");
     expect(cryptoMod.deriveKeyFromPassword).toHaveBeenCalledTimes(2);
   });
-});
 
+  // ── Truncation check (GHSA-w3p6-2vcf-mmv9) ──────────────────────────────────
+
+  const TRUNCATED = "Stream truncation detected: expected 42 bytes, got 0 bytes";
+
+  function threeBytes() {
+    return {
+      stream: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          controller.close();
+        },
+      }),
+      size: 3,
+      fileCount: 1,
+    };
+  }
+
+  it("download() without metadata fails instead of saving a file it cannot verify", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ encryptedMeta: null, nonce: null }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toMatch(/no metadata/);
+    expect(apiMod.downloadFile).not.toHaveBeenCalled();
+  });
+
+  it("download() checks the decrypted stream against the size from the metadata", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce(threeBytes());
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(cryptoMod.createDecryptStream).toHaveBeenCalledWith(undefined, 42);
+  });
+
+  it("download() hands the archive size to the Service Worker", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    const opfs = await import("../../src/lib/opfs-download.js");
+    vi.mocked(cryptoMod.decryptMetadata).mockResolvedValueOnce({
+      type: "archive",
+      files: [{ name: "a.txt", size: 10 }],
+      totalSize: 10,
+      archiveSize: 132,
+    });
+    vi.mocked(opfs.ensureSwController).mockResolvedValueOnce(
+      {} as unknown as Awaited<ReturnType<typeof opfs.ensureSwController>>,
+    );
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(vi.mocked(opfs.streamDownloadViaSw).mock.calls[0]?.at(-1)).toBe(132);
+  });
+
+  it("download() SW-Tier-1 truncation → phase='error' without a fallback download", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const opfs = await import("../../src/lib/opfs-download.js");
+    vi.mocked(opfs.ensureSwController).mockResolvedValueOnce(
+      {} as unknown as Awaited<ReturnType<typeof opfs.ensureSwController>>,
+    );
+    vi.mocked(opfs.streamDownloadViaSw).mockRejectedValueOnce(new Error(TRUNCATED));
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe(TRUNCATED);
+    expect(apiMod.downloadFile).not.toHaveBeenCalled();
+  });
+
+  it("download() Tier-2 truncation → phase='error' without the Blob fallback", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce(threeBytes());
+    vi.mocked(cryptoMod.createDecryptStream).mockImplementationOnce(
+      () =>
+        new TransformStream<Uint8Array, Uint8Array>({
+          flush() {
+            throw new Error(TRUNCATED);
+          },
+        }),
+    );
+    const mockFileHandle = {
+      createWritable: vi.fn().mockResolvedValue(new WritableStream({ write() {} })),
+    };
+    vi.stubGlobal("showSaveFilePicker", vi.fn().mockResolvedValue(mockFileHandle));
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe(TRUNCATED);
+    expect(apiMod.downloadFile).toHaveBeenCalledOnce();
+  });
+
+  it("download() Blob-Tier-3 truncation → phase='error' and no file is offered", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce(threeBytes());
+    vi.mocked(cryptoMod.createDecryptStream).mockImplementationOnce(
+      () =>
+        new TransformStream<Uint8Array, Uint8Array>({
+          flush() {
+            throw new Error(TRUNCATED);
+          },
+        }),
+    );
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe(TRUNCATED);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+});

@@ -8,7 +8,7 @@
  * backpressure to the fetch response body's network layer).
  *
  * Protocol:
- *   Main → Worker: { type: "download", url, authToken, secret, salt, tempName, encryptedSize }
+ *   Main → Worker: { type: "download", url, authToken, secret, salt, tempName, encryptedSize, plaintextSize }
  *   Worker → Main: { type: "progress", progress: number }
  *   Worker → Main: { type: "done" }
  *   Worker → Main: { type: "error", message: string }
@@ -30,7 +30,7 @@ self.onmessage = async (event: MessageEvent) => {
 
   try {
     if (msg.type === "download") {
-      const { url, authToken, secret, salt, tempName, encryptedSize } = msg;
+      const { url, authToken, secret, salt, tempName, encryptedSize, plaintextSize } = msg;
 
       // Derive the file key inside the Worker
       const keys = await deriveKeys(
@@ -72,7 +72,7 @@ self.onmessage = async (event: MessageEvent) => {
       // fetch response body in RAM (their pipeThrough doesn't
       // propagate backpressure back to the HTTP layer).
 
-      const decryptTransform = createDecryptStream(fileKey);
+      const decryptTransform = createDecryptStream(fileKey, plaintextSize);
       const encWriter = decryptTransform.writable.getWriter();
       const decReader = decryptTransform.readable.getReader();
 
@@ -131,7 +131,7 @@ self.onmessage = async (event: MessageEvent) => {
       // Stream mode: fetch → decrypt → send via MessagePort (no OPFS needed).
       // Used when OPFS is unavailable (Firefox/Safari).
       // The SW pulls chunks from us via the port - natural backpressure.
-      const { url, authToken, secret, salt, encryptedSize, port } = msg;
+      const { url, authToken, secret, salt, encryptedSize, plaintextSize, port } = msg;
 
       const keys = await deriveKeys(
         new Uint8Array(secret),
@@ -147,7 +147,7 @@ self.onmessage = async (event: MessageEvent) => {
 
       const totalSize = encryptedSize || parseInt(response.headers.get("Content-Length") || "0", 10);
 
-      const decryptTransform = createDecryptStream(fileKey);
+      const decryptTransform = createDecryptStream(fileKey, plaintextSize);
       const encWriter = decryptTransform.writable.getWriter();
       const decReader = decryptTransform.readable.getReader();
 

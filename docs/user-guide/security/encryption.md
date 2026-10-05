@@ -133,9 +133,12 @@ For a multi-file archive:
     { "name": "photo1.jpg", "size": 524288 },
     { "name": "photo2.jpg", "size": 786432 }
   ],
-  "totalSize": 1310720
+  "totalSize": 1310720,
+  "archiveSize": 1310966
 }
 ```
+
+`archiveSize` is the size of the zip archive. Because the metadata is authenticated, the server cannot change it, and the recipient checks the downloaded file against it. A file the server cut short is rejected instead of being saved as complete.
 
 The encrypted metadata and IV are stored in the database and returned via the info endpoint.
 

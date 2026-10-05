@@ -33,7 +33,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 2. **Never weaken the zero-knowledge boundary.** See the rule above and [packages/crypto/CLAUDE.md](packages/crypto/CLAUDE.md).
 3. **Validate every external input with Zod** - request headers, request bodies, environment variables, API responses in the frontend. No hand-rolled parsing at a trust boundary.
 4. **Write TypeScript, avoid `any`.** `@typescript-eslint/no-unused-vars` is an error, a leading `_` is the escape hatch.
-5. **Every change updates `docs/changelog.md`** in the same response, except AI tooling changes. See [Changelog workflow](#changelog-workflow).
+5. **Every change gets a changelog entry** in the same response, written into the fragment of its branch under `changelog/unreleased/`, never into `docs/changelog.md`. AI tooling changes get none. See [Changelog workflow](#changelog-workflow).
 6. **Typography**: no em dashes, no semicolons joining clauses. Use a hyphen where a dash is needed, and end sentences with a period. Applies to code comments, docs, changelog entries, and commit messages.
 7. **Language**: all code, comments, and documentation in English. User-facing strings go through i18n, never inline.
 8. **Never log secrets, keys, tokens, plaintext, or IP addresses.** The request logger records method, path, status, and duration only. Quota tracking uses HMAC-hashed IPs with a daily rotating key.
@@ -86,7 +86,8 @@ Version and release helpers:
 ```bash
 pnpm version:bump         # Interactive version picker, syncs every package.json + changelog
 pnpm version:sync         # Propagate the root version without bumping
-pnpm changelog:next       # Insert a `## vNEXT` placeholder block into docs/changelog.md
+pnpm changelog:preview    # Show the changelog block the next release writes from the fragments
+pnpm changelog:check      # Check every fragment under changelog/unreleased/
 ```
 
 Single workspace: `pnpm --filter @skysend/web build`, `pnpm --filter @skysend/docs dev`, and so on. Package names are `@skysend/server`, `-web`, `-client`, `-cli`, `-crypto`, `-docs`, `@skysend/website`, `@skysend/instances-worker`, `@skysend/report-worker`.
@@ -95,7 +96,7 @@ Single workspace: `pnpm --filter @skysend/web build`, `pnpm --filter @skysend/do
 
 ## Changelog workflow
 
-Every change - feature, bug fix, security fix, refactor with user-visible impact, docs, CI, Docker - gets an entry in `docs/changelog.md` in the same response. Do not defer it.
+Every change - feature, bug fix, security fix, refactor with user-visible impact, docs, CI, Docker - gets an entry in the same response. Do not defer it.
 
 **Exception: AI tooling changes never get a changelog entry.** The changelog is published on the docs site for people who run SkySend. Anything that only configures the assistant is invisible to them:
 
@@ -105,7 +106,9 @@ Every change - feature, bug fix, security fix, refactor with user-visible impact
 
 The test is who the line is for. A reader upgrading their instance never needs to know a prompt file changed. Code that ships in the repository still counts, even when it exists to keep the assistant honest.
 
-**Find the active version**: the `## vNEXT` block at the top, or the topmost `## vX.Y.Z` block marked `*Release: In Progress*`. If neither exists, run `pnpm changelog:next`.
+**Inside an entry there is no `;` and no hyphen used as a dash**, which means no hyphen followed by a space. Stricter than the typography rule above, which allows one. A sentence reaching for either is doing too much work, so split it or cut it. Hyphenated words stay, and so does the hyphen that opens the line as the list marker.
+
+**Where the entry goes**: into `changelog/unreleased/<branch>.md`, named after the branch with `/` replaced by `-`, never into `docs/changelog.md`. One file per branch, in the Markdown of a version block without the version header and the Docker section, so pull requests that run side by side never touch the same file. A branch that changes its mind edits its own file. `pnpm version:bump` collects the fragments into `docs/changelog.md` at the release and deletes them, a test checks every fragment, and `pnpm changelog:preview` shows the block the next release writes. Format and example: [changelog/unreleased/README.md](changelog/unreleased/README.md).
 
 **Section order** (skip sections with no entries, never reorder):
 
@@ -120,7 +123,7 @@ The test is who the line is for. A reader upgrading their instance never needs t
 | 7 | Documentation | `### 📝 Documentation` |
 | 8 | Tests added or changed | `### 🧪 Tests` |
 | 9 | GitHub Actions, Dockerfile, scripts | `### 🔧 CI/CD` |
-| 10 | Docker image info (always last) | `### 🐳 Docker` |
+| 10 | Docker image info (always last, written by the release) | `### 🐳 Docker` |
 
 **Bug fix policy**: only log fixes for problems in released versions. A bug found and fixed while building an unreleased feature is part of that feature, not a separate entry.
 
@@ -146,15 +149,16 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 | Frontend API client | [apps/web/src/lib/api.ts](apps/web/src/lib/api.ts) |
 | Toast helpers | [apps/web/src/lib/toast.tsx](apps/web/src/lib/toast.tsx) |
 | Translations | [apps/web/src/i18n/](apps/web/src/i18n/) |
-| Changelog | [docs/changelog.md](docs/changelog.md) |
+| Changelog fragments (unreleased) | [changelog/unreleased/](changelog/unreleased/README.md) |
+| Changelog (released) | [docs/changelog.md](docs/changelog.md) |
 | Published env var reference | [docs/user-guide/configuration/environment-variables.md](docs/user-guide/configuration/environment-variables.md) |
 | Dev environment | [.env.dev](.env.dev), [.env.example](.env.example) |
-| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml) |
+| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [docker-build.yml](.github/workflows/docker-build.yml) |
 
 ## Before finishing a change
 
 1. `pnpm validate` passes (lint, typecheck, tests).
-2. `docs/changelog.md` has an entry in the active version block, unless the change is AI tooling only.
+2. The fragment of the branch under `changelog/unreleased/` has an entry, unless the change is AI tooling only.
 3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, and the published env var reference.
 4. New user-facing strings exist in `en.json` and `de.json`, plus the 11 AI-translated locales.
 5. Nothing new is logged that identifies a user or reveals plaintext.

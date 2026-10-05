@@ -280,7 +280,13 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // ── Save Encrypted Metadata ──────────────────────
     post({ type: "phase", phase: "saving-meta" });
 
-    const encMeta = await encryptMetadata(msg.metadata, keys.metaKey);
+    // The archive size is only known once the zip is built. The recipient needs
+    // it to tell a complete download from one the server cut short.
+    const metadata: FileMetadata =
+      msg.metadata.type === "archive"
+        ? { ...msg.metadata, archiveSize: plaintextSize }
+        : msg.metadata;
+    const encMeta = await encryptMetadata(metadata, keys.metaKey);
     const encryptedMeta = btoa(
       String.fromCharCode(...encMeta.ciphertext),
     );

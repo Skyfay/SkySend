@@ -31,6 +31,16 @@ const ALLOWED_ORIGINS = ["https://skysend.app", "https://www.skysend.app"];
 const FROM_ADDRESS = "report@mail.skysend.app";
 const INSTANCES_API = "https://docs.skysend.app/instances.json";
 
+/** The longest address SMTP allows (RFC 5321). */
+const MAX_EMAIL_LENGTH = 254;
+/**
+ * A local part, then a domain of dot-separated labels. No label may contain a
+ * dot, so the regex never has two ways to split the same input and runs in
+ * linear time. The previous pattern backtracked quadratically on a long crafted
+ * address (CodeQL js/polynomial-redos).
+ */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const reqUrl = new URL(request.url);
@@ -103,7 +113,12 @@ export default {
       return corsResponse({ error: "Comment too short" }, 400, allowedOrigin);
     }
 
-    if (replyEmail && (typeof replyEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyEmail))) {
+    if (
+      replyEmail &&
+      (typeof replyEmail !== "string" ||
+        replyEmail.length > MAX_EMAIL_LENGTH ||
+        !EMAIL_PATTERN.test(replyEmail))
+    ) {
       return corsResponse({ error: "Invalid reply email" }, 400, allowedOrigin);
     }
 

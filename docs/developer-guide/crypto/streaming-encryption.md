@@ -87,9 +87,11 @@ The `createDecryptStream` function returns a `TransformStream` that:
 3. Decrypts each record with AES-256-GCM, verifying the auth tag
 4. Outputs plaintext chunks
 5. Throws an error if any record fails authentication
-6. If `expectedPlaintextSize` is provided, throws `"Stream truncation detected"` if the total decrypted byte count does not match - this prevents a malicious server from delivering fewer records than were encrypted
+6. If `expectedPlaintextSize` is provided, throws `"Stream truncation detected"` when the total decrypted byte count does not match
 
-The `expectedPlaintextSize` should be sourced from the authenticated, encrypted metadata (which contains the original file size). Passing it is optional but strongly recommended.
+Every record carries its own auth tag, so a stream that a server cuts at a record boundary still decrypts cleanly. The size check is the only thing that catches it, so every SkySend client passes `expectedPlaintextSize`. The value comes from the authenticated metadata via `expectedPlaintextSize(metadata)`: the file size for a single file, and `archiveSize` for an archive, see [Metadata Encryption](./metadata-encryption.md). The download Service Worker runs the same check in its own decrypt loop.
+
+A download without metadata fails instead of skipping the check. Archives uploaded by older clients carry no `archiveSize`, so their downloads cannot be checked this way.
 
 ## Size Calculation
 

@@ -44,7 +44,8 @@ interface UploadOptions {
   downloads?: string;
   password?: boolean | string;
   json?: boolean;
-  noWs?: boolean;
+  /** False with --no-ws. Commander stores a negated flag under its positive name. */
+  ws?: boolean;
 }
 
 async function uploadHttpTransport(
@@ -355,7 +356,7 @@ export function registerUploadCommand(program: Command): void {
         let uploadEndTime = 0;
 
         // Try WebSocket first, fall back to HTTP chunks
-        const useWs = config.fileUploadWs && !options.noWs && getWebSocket(server);
+        const useWs = config.fileUploadWs && options.ws !== false && getWebSocket(server);
         if (useWs) {
           try {
             uploadResult = await uploadWsTransport(
@@ -397,6 +398,7 @@ export function registerUploadCommand(program: Command): void {
                 size: fs.statSync(f).size,
               })),
               totalSize: files.reduce((sum, f) => sum + fs.statSync(f).size, 0),
+              archiveSize: plaintextSize,
             } satisfies ArchiveMetadata
           : {
               type: "single",
