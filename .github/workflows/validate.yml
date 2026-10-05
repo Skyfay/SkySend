@@ -1,6 +1,9 @@
 # ─── Validate ────────────────────────────────────────────────
-# Lint, type checking, unit tests, and docs build run in parallel.
-# Triggered on pull requests and reusable by the release workflow.
+# Lint, type checking, unit tests and the builds of the docs and the website
+# run in parallel.
+# A quality gate on every pull request into main or dev, and called by the
+# release workflow on tags. The Docker image of a pull request into main is
+# built by docker-build.yml.
 
 name: Validate
 
@@ -8,6 +11,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev
   workflow_call:
 
 concurrency:
@@ -110,3 +114,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter docs build
+
+  website-build:
+    name: Website Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @skysend/website build

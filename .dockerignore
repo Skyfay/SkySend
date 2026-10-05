@@ -15,6 +15,7 @@ uploads
 **/data/uploads
 test
 docs
+changelog
 .vscode
 .idea
 *.log

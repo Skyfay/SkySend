@@ -91,7 +91,7 @@ Add a row to the known error patterns table under `## showKnownErrorToast()`:
 
 ## Step 5 - Changelog
 
-File: `docs/changelog.md`, active version block (`## vNEXT` or the topmost `*Release: In Progress*`).
+File: the fragment of the branch, `changelog/unreleased/<branch>.md` with `/` replaced by `-`. Never `docs/changelog.md`, the release writes that. Create the file if the branch has none yet, see [changelog/unreleased/README.md](../../../changelog/unreleased/README.md).
 
 One line under `### 🎨 Improvements`, describing what the user now sees. Do not name the detector function - entries before v2.11 did, the current style does not.
 
