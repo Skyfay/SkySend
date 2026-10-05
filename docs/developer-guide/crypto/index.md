@@ -34,6 +34,7 @@ calculatePlaintextSize(encryptedSize): number
 // Metadata
 encryptMetadata(metadata, metaKey): Promise<{ ciphertext, iv }>
 decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>
+expectedPlaintextSize(metadata): number | undefined
 
 // Note Content
 encryptNoteContent(content, metaKey): Promise<{ ciphertext, iv }>

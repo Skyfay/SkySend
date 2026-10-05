@@ -4,6 +4,7 @@ import type { Command } from "commander";
 import {
   createDecryptStream,
   decryptMetadata,
+  expectedPlaintextSize,
   type FileMetadata,
 } from "@skysend/crypto";
 import {
@@ -41,6 +42,9 @@ export function registerDownloadCommand(program: Command): void {
     .option("-p, --password [password]", "Password (prompts if no value given)")
     .option("--json", "Output as JSON")
     .action(async (url: string, options: DownloadOptions) => {
+      // The file being written. A failed download removes it again, so a file
+      // the server cut short never stays behind looking complete.
+      let partial: { path: string; writer: fs.WriteStream } | undefined;
       try {
         // Parse the share URL
         const parsed = parseShareUrl(url);
@@ -94,14 +98,12 @@ export function registerDownloadCommand(program: Command): void {
           ) as Uint8Array<ArrayBuffer>;
           metadata = await decryptMetadata(ciphertext, iv, creds.keys.metaKey);
         }
+        // The metadata carries the authenticated size the download is checked against.
+        if (!metadata) throw new Error("The upload has no metadata, so the download cannot be verified");
 
         // Determine output path
         let outputPath: string;
-        const defaultName = metadata?.type === "single"
-          ? metadata.name
-          : metadata?.type === "archive"
-            ? "archive.zip"
-            : `download-${parsed.id}`;
+        const defaultName = metadata.type === "single" ? metadata.name : "archive.zip";
 
         if (options.output) {
           const stat = fs.existsSync(options.output) ? fs.statSync(options.output) : null;
@@ -127,7 +129,7 @@ export function registerDownloadCommand(program: Command): void {
 
         const { stream } = await downloadFile(server, parsed.id, creds.authTokenB64);
         const decryptedStream = stream.pipeThrough(
-          createDecryptStream(creds.keys.fileKey),
+          createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
         );
 
         const progressState: ProgressState = {
@@ -138,6 +140,7 @@ export function registerDownloadCommand(program: Command): void {
 
         // Write to file
         const writer = fs.createWriteStream(outputPath);
+        partial = { path: outputPath, writer };
         const reader = decryptedStream.getReader();
 
         let totalWritten = 0;
@@ -156,6 +159,7 @@ export function registerDownloadCommand(program: Command): void {
           writer.end(() => resolve());
           writer.on("error", reject);
         });
+        partial = undefined;
 
         if (!options.json) { clearLine(); writeLine("Download complete."); }
 
@@ -174,11 +178,16 @@ export function registerDownloadCommand(program: Command): void {
           }));
         } else {
           writeLine(`Saved: ${outputPath} (${formatBytes(totalWritten)})${avgSpeedSuffix}`);
-          if (metadata?.type === "archive") {
+          if (metadata.type === "archive") {
             writeLine(`Archive contains ${metadata.files.length} files`);
           }
         }
       } catch (err) {
+        if (!options.json) clearLine();
+        if (partial) {
+          partial.writer.destroy();
+          fs.rmSync(partial.path, { force: true });
+        }
         if (err instanceof ApiError) {
           if (options.json) {
             console.error(JSON.stringify({ error: err.message, status: err.status }));

@@ -125,6 +125,15 @@ The entire decrypted file is held in RAM. For large files this will cause the br
 
 ---
 
+## Truncation Check
+
+Every tier checks the decrypted size against the size from the authenticated metadata, the file size for a single file and `archiveSize` for an archive. Each ECE record is authenticated on its own, so a server that drops whole records from the end of a file leaves a stream that still decrypts cleanly. Only the size reveals it.
+
+- Tier 1 hands the size to the Service Worker, which fails the stream with `Stream truncation detected` instead of closing it. It also uses the size as `Content-Length`, so the browser sees a short body as an incomplete download.
+- Tiers 2 and 3 pass the size to `createDecryptStream()`. A failed `pipeTo()` aborts the writable, which discards the partial file, and Tier 3 never builds the Blob.
+- A truncated download does not fall through to the next tier. Every tier fetches the same ciphertext, so a retry would only repeat the download and use up a download from the limit.
+- A download without metadata fails before anything is fetched. Archives uploaded by older clients carry no `archiveSize` and skip the check.
+
 ## Tier Selection Logic
 
 The selection happens in `useDownload.ts`:

@@ -2,7 +2,12 @@ import React, { useState, useCallback } from "react";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
-import { createDecryptStream, decryptMetadata, type FileMetadata } from "@skysend/crypto";
+import {
+  createDecryptStream,
+  decryptMetadata,
+  expectedPlaintextSize,
+  type FileMetadata,
+} from "@skysend/crypto";
 import { fetchInfo, downloadFile, verifyPassword } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
 import { parseShareUrl } from "../../lib/url.js";
@@ -100,8 +105,13 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
   }, [parsedUrl, fileInfo]);
 
   const doDownload = useCallback(async () => {
+    // The file being written. A failed download removes it again, so a file
+    // the server cut short never stays behind looking complete.
+    let partial: { path: string; writer: fs.WriteStream } | undefined;
     try {
       if (!parsedUrl || !fileInfo) return;
+      // The metadata carries the authenticated size the download is checked against.
+      if (!metadata) throw new Error("The upload has no metadata, so the download cannot be verified");
       setPhase("downloading");
 
       const creds = await prepareDownload(
@@ -113,9 +123,12 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
       const { stream } = await downloadFile(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
-      const decryptedStream = stream.pipeThrough(createDecryptStream(creds.keys.fileKey));
+      const decryptedStream = stream.pipeThrough(
+        createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
+      );
 
       const writer = fs.createWriteStream(outputPath);
+      partial = { path: outputPath, writer };
       const reader = decryptedStream.getReader();
       const startTime = Date.now();
       let totalWritten = 0;
@@ -139,6 +152,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         writer.end(() => resolve());
         writer.on("error", reject);
       });
+      partial = undefined;
 
       setResultPath(outputPath);
       setResultSize(totalWritten);
@@ -148,10 +162,14 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       }
       setPhase("done");
     } catch (err) {
+      if (partial) {
+        partial.writer.destroy();
+        fs.rmSync(partial.path, { force: true });
+      }
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, [parsedUrl, fileInfo, password, savePath]);
+  }, [parsedUrl, fileInfo, metadata, password, savePath]);
 
   useInput((_input, key) => {
     if ((phase === "done" || phase === "error") && (key.return || key.escape)) {

@@ -61,6 +61,7 @@ export function startOpfsDownload(
   tempName: string,
   encryptedSize: number,
   onProgress: (progress: number) => void,
+  plaintextSize?: number,
 ): Promise<OpfsDownloadResult> {
   const worker = new Worker(
     new URL("./opfs-worker.ts", import.meta.url),
@@ -101,6 +102,7 @@ export function startOpfsDownload(
       salt,
       tempName,
       encryptedSize,
+      plaintextSize,
     }, [secret, salt]);
   });
 }
@@ -246,6 +248,8 @@ export async function ensureSwController(): Promise<ServiceWorker | null> {
  * All inside respondWith() - Firefox propagates backpressure correctly there.
  *
  * The SW reports progress and completion back via postMessage (dl-progress, dl-done).
+ * `plaintextSize` is the size from the authenticated metadata. The SW fails the
+ * download when the decrypted stream ends up any other size.
  */
 export async function streamDownloadViaSw(
   url: string,
@@ -259,6 +263,7 @@ export async function streamDownloadViaSw(
   onDebugInfo?: (swPath: string) => void,
   signal?: AbortSignal,
   onS3Info?: () => void,
+  plaintextSize?: number,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -302,6 +307,7 @@ export async function streamDownloadViaSw(
       filename,
       mimeType,
       size: encryptedSize,
+      plaintextSize,
     });
   });
 

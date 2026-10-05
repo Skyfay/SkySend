@@ -9,6 +9,7 @@ import {
   createDecryptStream,
   encryptMetadata,
   decryptMetadata,
+  expectedPlaintextSize,
   deriveKeyFromPassword,
   applyPasswordProtection,
   toBase64url,
@@ -16,6 +17,8 @@ import {
   constantTimeEqual,
   randomBytes,
   RECORD_SIZE,
+  NONCE_LENGTH,
+  ENCRYPTED_RECORD_SIZE,
   PASSWORD_SALT_LENGTH,
   type Argon2idHashFn,
 } from "../src/index.js";
@@ -230,6 +233,76 @@ describe("Integration: full upload/download roundtrip", () => {
         toStream(encryptedFile, 4096).pipeThrough(createDecryptStream(wrongKeys.fileKey)),
       ),
     ).rejects.toThrow("corrupted or tampered");
+  });
+
+  it("should reject a download the server cut short at a record boundary", async () => {
+    // GHSA-w3p6-2vcf-mmv9: every record carries its own GCM tag, so dropping whole
+    // records from the end leaves a stream that decrypts cleanly. The size from the
+    // authenticated metadata is what tells the download it is incomplete.
+    const { fileKey, metaKey } = await deriveKeys(generateSecret(), generateSalt());
+    const content = randomBytes(RECORD_SIZE * 5 + 1000);
+    const encryptedFile = await collectStream(
+      toStream(content).pipeThrough(createEncryptStream(fileKey)),
+    );
+    const encryptedMeta = await encryptMetadata(
+      { type: "single", name: "contract.txt", size: content.length, mimeType: "text/plain" },
+      metaKey,
+    );
+
+    // The server keeps the nonce header and the first two records only.
+    const truncated = encryptedFile.slice(0, NONCE_LENGTH + 2 * ENCRYPTED_RECORD_SIZE);
+    const metadata = await decryptMetadata(encryptedMeta.ciphertext, encryptedMeta.iv, metaKey);
+
+    await expect(
+      collectStream(
+        toStream(truncated, 8192).pipeThrough(
+          createDecryptStream(fileKey, expectedPlaintextSize(metadata)),
+        ),
+      ),
+    ).rejects.toThrow("Stream truncation detected");
+
+    // The untouched stream still passes the same check.
+    const decrypted = await collectStream(
+      toStream(encryptedFile, 8192).pipeThrough(
+        createDecryptStream(fileKey, expectedPlaintextSize(metadata)),
+      ),
+    );
+    expect(constantTimeEqual(decrypted, content)).toBe(true);
+  });
+
+  it("should check an archive against the archive size, not the sum of its files", async () => {
+    const { fileKey, metaKey } = await deriveKeys(generateSecret(), generateSalt());
+    // Stands in for the zip, which is larger than the files it holds.
+    const archive = randomBytes(RECORD_SIZE * 3);
+    const encryptedFile = await collectStream(
+      toStream(archive).pipeThrough(createEncryptStream(fileKey)),
+    );
+    const encryptedMeta = await encryptMetadata(
+      {
+        type: "archive",
+        files: [{ name: "a.bin", size: RECORD_SIZE }],
+        totalSize: RECORD_SIZE,
+        archiveSize: archive.length,
+      },
+      metaKey,
+    );
+    const metadata = await decryptMetadata(encryptedMeta.ciphertext, encryptedMeta.iv, metaKey);
+
+    const decrypted = await collectStream(
+      toStream(encryptedFile, 8192).pipeThrough(
+        createDecryptStream(fileKey, expectedPlaintextSize(metadata)),
+      ),
+    );
+    expect(decrypted.length).toBe(archive.length);
+
+    const truncated = encryptedFile.slice(0, NONCE_LENGTH + ENCRYPTED_RECORD_SIZE);
+    await expect(
+      collectStream(
+        toStream(truncated, 8192).pipeThrough(
+          createDecryptStream(fileKey, expectedPlaintextSize(metadata)),
+        ),
+      ),
+    ).rejects.toThrow("Stream truncation detected");
   });
 
   it("should handle multi-file archive metadata", async () => {

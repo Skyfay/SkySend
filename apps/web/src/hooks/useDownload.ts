@@ -4,6 +4,7 @@ import {
   computeAuthToken,
   createDecryptStream,
   decryptMetadata,
+  expectedPlaintextSize,
   toBase64url,
   fromBase64url,
   applyPasswordProtection,
@@ -109,6 +110,14 @@ async function decryptMeta(
   );
   const nonce = Uint8Array.from(atob(info.nonce), (c) => c.charCodeAt(0));
   return decryptMetadata(ciphertext, nonce, metaKey);
+}
+
+/**
+ * True for a download the server cut short. Every tier fetches the same
+ * ciphertext, so falling back to the next one would only repeat the download.
+ */
+function isTruncated(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("Stream truncation detected");
 }
 
 export function useDownload() {
@@ -304,6 +313,11 @@ export function useDownload() {
 
         // Reuse the metadata decrypted during loadInfo()/unlock() when available.
         const metadata = state.metadata ?? (await decryptMeta(info, keys.metaKey));
+        // The metadata carries the authenticated size the download is checked against.
+        if (!metadata) {
+          throw new Error("The upload has no metadata, so the download cannot be verified");
+        }
+        const plaintextSize = expectedPlaintextSize(metadata);
 
         // Determine filename and mime type early (needed for save dialog)
         let filename = "download";
@@ -417,12 +431,14 @@ export function useDownload() {
                     : null,
                 }));
               },
+              plaintextSize,
             );
             downloaded = true;
           }
         } catch (swErr) {
           // User-initiated cancel - do not fall through to Tier 2/3
           if (swErr instanceof DOMException && swErr.name === "AbortError") throw swErr;
+          if (isTruncated(swErr)) throw swErr;
           console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
         }
 
@@ -503,7 +519,7 @@ export function useDownload() {
             );
 
             await progressStream
-              .pipeThrough(createDecryptStream(keys.fileKey))
+              .pipeThrough(createDecryptStream(keys.fileKey, plaintextSize))
               .pipeTo(writable, { signal: abortCtrl.signal });
             if (tier2StallTimer) clearTimeout(tier2StallTimer);
             downloaded = true;
@@ -512,6 +528,8 @@ export function useDownload() {
             if (pickerErr instanceof DOMException && pickerErr.name === "AbortError") {
               throw pickerErr;
             }
+            // A failed pipeTo() aborts the writable, which discards the partial file.
+            if (isTruncated(pickerErr)) throw pickerErr;
             console.warn("[SkySend] showSaveFilePicker failed:", pickerErr);
           }
         }
@@ -584,7 +602,7 @@ export function useDownload() {
           );
 
           const decryptedStream = progressStream.pipeThrough(
-            createDecryptStream(keys.fileKey),
+            createDecryptStream(keys.fileKey, plaintextSize),
           );
 
           const reader = decryptedStream.getReader();

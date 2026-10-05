@@ -65,7 +65,7 @@ async function deriveFileKey(secret, salt) {
 
 // ── Pending Downloads ──────────────────────────────────
 
-/** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number}>} */
+/** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number, plaintextSize:number|null}>} */
 const pending = new Map();
 /** @type {Map<string, () => void>} Maps downloadId to a cancel function that aborts the in-progress download. */
 const pendingCancels = new Map();
@@ -92,6 +92,9 @@ bc.onmessage = (event) => {
       filename: msg.filename,
       mimeType: msg.mimeType,
       size: msg.size || 0,
+      // From the authenticated metadata. Null only for archives uploaded by older
+      // clients, which carry no archive size.
+      plaintextSize: typeof msg.plaintextSize === "number" ? msg.plaintextSize : null,
     });
     bc.postMessage({ type: "config-ok", id: msg.id });
   }
@@ -134,7 +137,7 @@ self.addEventListener("fetch", (event) => {
  * - Report progress and completion back to main thread
  */
 async function handleDownload(config, downloadId, streamDone) {
-  const { url, authToken, secret, salt, filename, mimeType, size } = config;
+  const { url, authToken, secret, salt, filename, mimeType, size, plaintextSize } = config;
   const cleanup = () => {
     pendingCancels.delete(downloadId);
     streamDone();
@@ -203,7 +206,7 @@ async function handleDownload(config, downloadId, streamDone) {
   // own warning + Tier-3 Blob fallback path so it does not hit this branch
   // for huge files anyway.
   const TWO_GIB = 2 * 1024 * 1024 * 1024;
-  const decryptedSize = computeDecryptedSize(totalSize);
+  const decryptedSize = plaintextSize ?? computeDecryptedSize(totalSize);
   if (decryptedSize > 0 && decryptedSize < TWO_GIB) {
     headers.set("Content-Length", String(decryptedSize));
   }
@@ -223,6 +226,7 @@ async function handleDownload(config, downloadId, streamDone) {
 
   let baseNonce = null;
   let counter = 0;
+  let decryptedTotal = 0;
   let readerDone = false;
   let loaded = 0;
   let lastProgressTime = 0;
@@ -240,6 +244,31 @@ async function handleDownload(config, downloadId, streamDone) {
     console.warn(`[SW-dl:${downloadId}] stream cancelled by user`);
     controller.error(new DOMException("user-cancelled", "AbortError"));
     bc.postMessage({ type: "dl-cancelled", downloadId });
+    cleanup();
+  }
+
+  function failStream(controller, error) {
+    console.error(`[SW-dl:${downloadId}] ${error}`);
+    bc.postMessage({ type: "dl-error", downloadId, error });
+    controller.error(new Error(error));
+    cleanup();
+  }
+
+  // Closes the stream after the last record. Every record is authenticated on its
+  // own, so a server that drops whole records from the end leaves a stream that
+  // still decrypts cleanly. Only the size from the metadata catches that, and the
+  // message matches the one of createDecryptStream in @skysend/crypto.
+  function finishStream(controller) {
+    if (plaintextSize !== null && decryptedTotal !== plaintextSize) {
+      failStream(
+        controller,
+        `Stream truncation detected: expected ${plaintextSize} bytes, got ${decryptedTotal} bytes`,
+      );
+      return;
+    }
+    bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
+    bc.postMessage({ type: "dl-done", downloadId });
+    controller.close();
     cleanup();
   }
 
@@ -348,9 +377,7 @@ async function handleDownload(config, downloadId, streamDone) {
       // Extract nonce header on first call
       if (baseNonce === null) {
         if (bufLen() < NONCE_LENGTH) {
-          bc.postMessage({ type: "dl-done", downloadId });
-          controller.close();
-          cleanup();
+          failStream(controller, "Encrypted stream is empty - missing nonce header");
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
@@ -391,6 +418,7 @@ async function handleDownload(config, downloadId, streamDone) {
           cleanup();
           return;
         }
+        decryptedTotal += plain.byteLength;
         controller.enqueue(new Uint8Array(plain));
         // Periodic checkpoint: ~40 logs per 2.5 GiB download instead of ~150 K.
         // Shows elapsed time since last checkpoint so a freeze shows as an
@@ -422,19 +450,20 @@ async function handleDownload(config, downloadId, streamDone) {
           cleanup();
           return;
         }
+        decryptedTotal += plain.byteLength;
         controller.enqueue(new Uint8Array(plain));
         console.debug(`[SW-dl:${downloadId}] stream complete: ${counter} records total`);
-        bc.postMessage({ type: "dl-progress", downloadId, progress: 100 });
-        bc.postMessage({ type: "dl-done", downloadId });
-        controller.close();
-        cleanup();
+        finishStream(controller);
         return;
       }
 
-      if (readerDone && bufLen() <= TAG_LENGTH) {
-        bc.postMessage({ type: "dl-done", downloadId });
-        controller.close();
-        cleanup();
+      if (readerDone && bufLen() > 0) {
+        failStream(controller, "Invalid encrypted record: too short to contain auth tag");
+        return;
+      }
+
+      if (readerDone) {
+        finishStream(controller);
       }
     },
 

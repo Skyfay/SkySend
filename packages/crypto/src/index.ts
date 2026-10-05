@@ -33,6 +33,7 @@ export {
 export {
   encryptMetadata,
   decryptMetadata,
+  expectedPlaintextSize,
   META_IV_LENGTH,
 } from "./metadata.js";
 export type {

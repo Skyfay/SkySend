@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   encryptMetadata,
   decryptMetadata,
+  expectedPlaintextSize,
   META_IV_LENGTH,
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
@@ -309,6 +310,75 @@ describe("validateMetadata - invalid shapes (via decryptMetadata)", () => {
     await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
       "missing MIME type",
     );
+  });
+});
+
+describe("archive size", () => {
+  it("should round-trip the archive size", async () => {
+    const metaKey = await getMetaKey();
+    const metadata: ArchiveMetadata = {
+      type: "archive",
+      files: [{ name: "a.txt", size: 10 }],
+      totalSize: 10,
+      archiveSize: 132,
+    };
+    const encrypted = await encryptMetadata(metadata, metaKey);
+    const decrypted = await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey);
+    expect(decrypted).toEqual(metadata);
+  });
+
+  it("should accept an archive from an older client without an archive size", async () => {
+    const metaKey = await getMetaKey();
+    const { ciphertext, iv } = await encryptRawJson(
+      { type: "archive", files: [{ name: "a.txt", size: 10 }], totalSize: 10 },
+      metaKey,
+    );
+    const decrypted = await decryptMetadata(ciphertext, iv, metaKey);
+    expect(decrypted).toEqual({
+      type: "archive",
+      files: [{ name: "a.txt", size: 10 }],
+      totalSize: 10,
+    });
+    expect("archiveSize" in decrypted).toBe(false);
+  });
+
+  it.each([-1, 1.5, "132", null])(
+    "should reject an archive size of %s",
+    async (archiveSize) => {
+      const metaKey = await getMetaKey();
+      const { ciphertext, iv } = await encryptRawJson(
+        { type: "archive", files: [], totalSize: 0, archiveSize },
+        metaKey,
+      );
+      await expect(decryptMetadata(ciphertext, iv, metaKey)).rejects.toThrow(
+        "invalid archive size",
+      );
+    },
+  );
+});
+
+describe("expectedPlaintextSize", () => {
+  it("should be the file size of a single file", () => {
+    expect(
+      expectedPlaintextSize({ type: "single", name: "a.txt", size: 42, mimeType: "text/plain" }),
+    ).toBe(42);
+  });
+
+  it("should be the archive size of an archive, not the sum of its files", () => {
+    expect(
+      expectedPlaintextSize({
+        type: "archive",
+        files: [{ name: "a.txt", size: 10 }],
+        totalSize: 10,
+        archiveSize: 132,
+      }),
+    ).toBe(132);
+  });
+
+  it("should be undefined for an archive from an older client", () => {
+    expect(
+      expectedPlaintextSize({ type: "archive", files: [{ name: "a.txt", size: 10 }], totalSize: 10 }),
+    ).toBeUndefined();
   });
 });
 

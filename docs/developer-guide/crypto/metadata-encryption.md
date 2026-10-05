@@ -29,8 +29,13 @@ interface ArchiveMetadata {
     size: number       // individual file size in bytes
   }>
   totalSize: number    // sum of all file sizes
+  archiveSize?: number // size of the zip archive, the plaintext of the file stream
 }
 ```
+
+`totalSize` is what the recipient sees, `archiveSize` is what the download is checked against. The two differ because the zip compresses its entries and adds its own headers. The uploader only knows `archiveSize` after packing, so the metadata is encrypted after the upload. Archives uploaded by older clients have no `archiveSize`.
+
+`expectedPlaintextSize(metadata)` returns the size the decrypted file stream must have: `size` for a single file, `archiveSize` for an archive. See [Streaming Encryption](./streaming-encryption.md#decryption) for why every download checks it.
 
 ## Encryption
 
