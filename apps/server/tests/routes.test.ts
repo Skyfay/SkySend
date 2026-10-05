@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
 import { eq } from "drizzle-orm";
@@ -21,7 +23,7 @@ vi.mock("../src/lib/config.js", () => ({
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
 import { configRoute } from "../src/routes/config.js";
-import { CHUNK_LIMITS, createUploadRoute } from "../src/routes/upload.js";
+import { createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
 import { createDownloadRoute } from "../src/routes/download.js";
@@ -67,11 +69,14 @@ describe("routes", () => {
   let dbCtx: ReturnType<typeof createTestDb>;
   let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
   let storage: FileStorage;
+  /** Where the upload route keeps chunk bodies until it appends them. */
+  let chunkDir: string;
 
   beforeEach(async () => {
     dbCtx = createTestDb();
     storageCtx = await createTestStorage();
     storage = storageCtx.storage;
+    chunkDir = join(storageCtx.tempDir, "tmp-chunks");
     vi.mocked(getDb).mockReturnValue(dbCtx.db);
     vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
   });
@@ -919,7 +924,7 @@ describe("routes", () => {
 
     it("should upload a file successfully", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const body = new Uint8Array([1, 2, 3, 4, 5]);
       const res = await app.request("/api/upload", {
@@ -943,7 +948,7 @@ describe("routes", () => {
 
     it("should reject missing auth token header", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const headers = makeUploadHeaders();
       delete (headers as Record<string, string>)["X-Auth-Token"];
@@ -959,7 +964,7 @@ describe("routes", () => {
 
     it("should reject invalid expiry time", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload", {
         method: "POST",
@@ -974,7 +979,7 @@ describe("routes", () => {
 
     it("should reject invalid download limit", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload", {
         method: "POST",
@@ -994,7 +999,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload", {
         method: "POST",
@@ -1012,7 +1017,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload", {
         method: "POST",
@@ -1027,7 +1032,7 @@ describe("routes", () => {
 
     it("should reject password upload without required headers", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload", {
         method: "POST",
@@ -1042,7 +1047,7 @@ describe("routes", () => {
 
     it("should return 400 when salt decodes to wrong number of bytes", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       // 16-byte salt is valid base64url but SALT_LENGTH requires 32 bytes
       const shortSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
@@ -1060,7 +1065,7 @@ describe("routes", () => {
 
     it("should return 400 when passwordSalt decodes to wrong length", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       // 8-byte passwordSalt is valid base64url but PASSWORD_SALT_LENGTH requires 16 bytes
       const shortPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(8))).toString("base64url");
@@ -1082,7 +1087,7 @@ describe("routes", () => {
 
     it("should accept password-protected upload with correct passwordSalt", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       // Exactly 16 bytes for passwordSalt (PASSWORD_SALT_LENGTH)
       const validPwSalt = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
@@ -1123,7 +1128,7 @@ describe("routes", () => {
 
     it("should return 400 for missing required headers on /init", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const headers = makeInitHeaders();
       delete (headers as Record<string, string>)["X-Auth-Token"];
@@ -1140,7 +1145,7 @@ describe("routes", () => {
 
     it("should return 400 for invalid expiry on /init", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload/init", {
         method: "POST",
@@ -1154,7 +1159,7 @@ describe("routes", () => {
 
     it("should return 404 for chunk with unknown session", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const res = await app.request("/api/upload/unknown-session-id/chunk?index=0", {
         method: "POST",
@@ -1166,7 +1171,7 @@ describe("routes", () => {
 
     it("should return 400 for chunk with missing index query param", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const initRes = await app.request("/api/upload/init", {
         method: "POST",
@@ -1187,7 +1192,7 @@ describe("routes", () => {
 
     it("should return 400 for chunk with non-numeric index", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const initRes = await app.request("/api/upload/init", {
         method: "POST",
@@ -1206,7 +1211,7 @@ describe("routes", () => {
 
     it("should complete a chunked upload with in-order chunks", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const chunk1 = new Uint8Array([1, 2, 3, 4, 5]);
       const chunk2 = new Uint8Array([6, 7, 8, 9, 10]);
@@ -1257,7 +1262,7 @@ describe("routes", () => {
 
     it("should buffer out-of-order chunks and flush them in correct sequence", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       const chunk1 = new Uint8Array([1, 2, 3, 4, 5]);
       const chunk2 = new Uint8Array([6, 7, 8, 9, 10]);
@@ -1295,7 +1300,7 @@ describe("routes", () => {
 
     it("should return 400 on finalize when bytes written differ from declared size", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
 
       // Declare 10 bytes but only upload 5
       const initRes = await app.request("/api/upload/init", {
@@ -1319,9 +1324,9 @@ describe("routes", () => {
       expect(json.error).toContain("content length");
     });
 
-    // ── Memory limits (GHSA-9rmm-v3p2-c26g) ──────────
-    // The chunk route reads a body into memory before it writes it. These tests
-    // send bodies that the old route read in full, however large they were.
+    // ── Chunk limits (GHSA-9rmm-v3p2-c26g) ───────────
+    // The old route read every chunk body into memory, however large it was,
+    // before it checked anything. These tests send the bodies it accepted.
 
     async function openSession(app: Hono, contentLength: number): Promise<string> {
       const res = await app.request("/api/upload/init", {
@@ -1359,7 +1364,7 @@ describe("routes", () => {
 
     it("should reject a chunk whose Content-Length is over the limit without reading it", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage, { ...CHUNK_LIMITS, maxChunkSize: 1024 }));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir, maxChunkSize: 1024 }));
       const id = await openSession(app, 10_000);
 
       // A body that never ends: reading it would hang the request.
@@ -1372,7 +1377,7 @@ describe("routes", () => {
 
     it("should stop reading a body without Content-Length once it is over the limit", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage, { ...CHUNK_LIMITS, maxChunkSize: 1024 }));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir, maxChunkSize: 1024 }));
       const id = await openSession(app, 10_000);
       const { stream, state } = countedBody(10, 512);
 
@@ -1380,11 +1385,12 @@ describe("routes", () => {
 
       expect(res.status).toBe(413);
       expect(state.pulled).toBeLessThan(10);
+      expect(readdirSync(chunkDir)).toEqual([]);
     });
 
     it("should reject a chunk larger than the declared upload", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
       const id = await openSession(app, 10);
 
       const res = await postChunk(app, id, 0, new Uint8Array(20));
@@ -1392,9 +1398,20 @@ describe("routes", () => {
       expect(res.status).toBe(413);
     });
 
+    it("should reject chunks that together exceed the declared upload", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const id = await openSession(app, 30);
+
+      expect((await postChunk(app, id, 1, new Uint8Array(20))).status).toBe(200);
+      expect((await postChunk(app, id, 2, new Uint8Array(20))).status).toBe(413);
+      // The rejected bytes do not count, so the rest of the upload still fits.
+      expect((await postChunk(app, id, 0, new Uint8Array(10))).status).toBe(200);
+    });
+
     it("should reject a chunk index that already arrived", async () => {
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
       const id = await openSession(app, 30);
 
       expect((await postChunk(app, id, 0, new Uint8Array(10))).status).toBe(200);
@@ -1406,7 +1423,7 @@ describe("routes", () => {
     it("should limit the chunk requests of one session to FILE_UPLOAD_CONCURRENT_CHUNKS", async () => {
       vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_UPLOAD_CONCURRENT_CHUNKS: 1 });
       const app = new Hono();
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
       const id = await openSession(app, 30);
 
       // The first request stays open until its body is closed.
@@ -1431,37 +1448,40 @@ describe("routes", () => {
       expect((await postChunk(app, id, 1, new Uint8Array(10))).status).toBe(200);
     });
 
-    it("should keep all sessions together under the total memory limit", async () => {
+    it("should keep an out-of-order chunk in a file instead of in memory", async () => {
       const app = new Hono();
-      app.route(
-        "/api/upload",
-        createUploadRoute(storage, { ...CHUNK_LIMITS, maxTotalMemory: 1024 }),
-      );
-      const a = await openSession(app, 1000);
-      const b = await openSession(app, 1000);
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const id = await openSession(app, 10);
 
-      // Session a parks 800 bytes out of order, which leaves no room for 400 more.
-      expect((await postChunk(app, a, 1, new Uint8Array(800))).status).toBe(200);
-      expect((await postChunk(app, b, 1, new Uint8Array(400))).status).toBe(503);
+      expect((await postChunk(app, id, 1, new Uint8Array([6, 7, 8, 9, 10]))).status).toBe(200);
+      expect(readdirSync(chunkDir)).toEqual([`${id}.1`]);
 
-      // Writing the parked chunk frees its memory for session b.
-      expect((await postChunk(app, a, 0, new Uint8Array(200))).status).toBe(200);
-      expect((await postChunk(app, b, 1, new Uint8Array(400))).status).toBe(200);
+      expect((await postChunk(app, id, 0, new Uint8Array([1, 2, 3, 4, 5]))).status).toBe(200);
+      expect(readdirSync(chunkDir)).toEqual([]);
+      expect([...readFileSync(join(storageCtx.tempDir, `${id}.bin`))]).toEqual([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      ]);
     });
 
-    it("should free the parked chunks of a session that is finalized short", async () => {
+    it("should remove the chunk files of a session that is finalized short", async () => {
       const app = new Hono();
-      app.route(
-        "/api/upload",
-        createUploadRoute(storage, { ...CHUNK_LIMITS, maxTotalMemory: 1024 }),
-      );
-      const a = await openSession(app, 1000);
-      const b = await openSession(app, 1000);
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const id = await openSession(app, 30);
 
-      expect((await postChunk(app, a, 1, new Uint8Array(800))).status).toBe(200);
-      expect((await app.request(`/api/upload/${a}/finalize`, { method: "POST" })).status).toBe(400);
+      expect((await postChunk(app, id, 1, new Uint8Array(10))).status).toBe(200);
+      expect((await app.request(`/api/upload/${id}/finalize`, { method: "POST" })).status).toBe(400);
 
-      expect((await postChunk(app, b, 1, new Uint8Array(800))).status).toBe(200);
+      await vi.waitFor(() => expect(readdirSync(chunkDir)).toEqual([]));
+    });
+
+    it("should empty the chunk directory left behind by a crash", () => {
+      mkdirSync(chunkDir, { recursive: true });
+      writeFileSync(join(chunkDir, "stale-upload.3"), new Uint8Array(10));
+
+      createUploadRoute(storage, { chunkDir });
+
+      expect(existsSync(chunkDir)).toBe(true);
+      expect(readdirSync(chunkDir)).toEqual([]);
     });
   });
 
@@ -1491,7 +1511,7 @@ describe("routes", () => {
       };
       app.use("/api/note/*", noteGuard);
 
-      app.route("/api/upload", createUploadRoute(storage));
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
       app.route("/api/info", infoRoute);
       app.route("/api/download", createDownloadRoute(storage));
       app.route("/api/note", createNoteRoute(mockLockout));

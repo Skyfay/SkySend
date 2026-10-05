@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import { loadConfig } from "./lib/config.js";
@@ -209,12 +209,13 @@ api.use("*", async (c, next) => {
 // S-2 (Security Audit): Chunk upload requests are exempt from the global rate
 // limiter, because 60 req/min would block a single legitimate large-file upload
 // (a 1 GB file = ~100 chunks at 10 MB each). Opening a session through /init
-// stays rate limited. What bounds the chunk traffic instead is CHUNK_LIMITS in
-// routes/upload.ts, checked while the body is read (GHSA-9rmm-v3p2-c26g):
-//   1. A chunk is at most 16 MiB and never larger than the declared upload.
-//   2. A session has at most FILE_UPLOAD_CONCURRENT_CHUNKS requests in flight.
-//   3. A session buffers at most 50 MiB of out-of-order chunks.
-//   4. All sessions together hold at most 512 MiB of chunk data.
+// stays rate limited. What bounds the chunk traffic instead is routes/upload.ts,
+// checked while the body is read (GHSA-9rmm-v3p2-c26g):
+//   1. A chunk body is streamed into a file, never held in memory.
+//   2. A chunk is at most 16 MiB, and all chunks of a session together never
+//      exceed the declared upload size.
+//   3. A session has at most FILE_UPLOAD_CONCURRENT_CHUNKS requests in flight,
+//      and each chunk index is accepted once.
 // The quota does not bound chunk traffic, it only counts finished uploads.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
@@ -262,7 +263,8 @@ api.get("/quota", (c) => {
 });
 
 // Upload route with quota middleware
-const uploadRoute = createUploadRoute(storage);
+// Chunk bodies wait in DATA_DIR, which is writable for every storage backend.
+const uploadRoute = createUploadRoute(storage, { chunkDir: join(config.DATA_DIR, "tmp", "chunks") });
 const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
 
 // OIDC guard: protect file upload init when configured

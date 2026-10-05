@@ -108,7 +108,7 @@ The request body is empty. All metadata is passed via headers (same headers as `
 
 ### POST /api/upload/:id/chunk
 
-Append a chunk of encrypted data to a pending upload. Chunks may arrive out-of-order (parallel uploads). The server buffers out-of-order chunks in memory and writes them sequentially to the storage backend.
+Append a chunk of encrypted data to a pending upload. Chunks may arrive out-of-order (parallel uploads). The server streams every chunk into a file under `DATA_DIR/tmp/chunks/` and appends the files to the storage backend in index order, so chunk data never stays in memory.
 
 #### Query Parameters
 
@@ -120,12 +120,12 @@ Append a chunk of encrypted data to a pending upload. Chunks may arrive out-of-o
 
 The request body is the raw chunk bytes (binary). No additional headers are required.
 
-The server reads every chunk into memory before it writes it, so the size of a chunk is limited:
+Limits per chunk and per session:
 
-- A chunk is at most 16 MiB and never larger than the `X-Content-Length` declared at `/init`. The server checks `Content-Length` first and stops reading a body without one once it passes the limit.
+- A chunk is at most 16 MiB. The server checks `Content-Length` first and stops reading a body without one once it passes the limit.
+- All chunks of a session together never exceed the `X-Content-Length` declared at `/init`.
 - A session accepts at most `FILE_UPLOAD_CONCURRENT_CHUNKS` chunk requests at the same time.
 - Each chunk index is accepted once.
-- A session buffers at most 50 MiB of out-of-order chunks, and all sessions together hold at most 512 MiB of chunk data.
 
 The bundled clients send 10 MiB chunks and never more parallel requests than `fileUploadConcurrentChunks` from `/api/config`, so they stay within these limits.
 
@@ -143,9 +143,8 @@ The bundled clients send 10 MiB chunks and never more parallel requests than `fi
 | --- | --- | --- |
 | `409` | `Chunk already received` | The chunk index arrived before |
 | `413` | `Chunk too large` | Over 16 MiB or over the declared upload size |
+| `413` | `Chunks exceed the declared content length` | The chunks of the session together would pass `X-Content-Length` |
 | `429` | `Too many parallel chunk requests` | More than `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight for the session |
-| `429` | `Too many out-of-order chunks buffered` | The session already buffers 50 MiB |
-| `503` | `Server is busy, try again later` | All sessions together hold 512 MiB of chunk data |
 
 ### POST /api/upload/:id/finalize
 

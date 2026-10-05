@@ -14,7 +14,11 @@ data/
     skysend.db-shm      # Shared memory file (temporary)
   branding/
     logo.svg            # Your own branding assets (optional)
+  tmp/
+    chunks/             # Chunks of HTTP uploads in progress, emptied on start
 ```
+
+`tmp/` only holds uploads that are still in progress and needs no backup.
 
 Encrypted upload files are stored separately in `./uploads` by default (configurable via `UPLOADS_DIR`). In the Docker image, this defaults to `/uploads` as a dedicated volume:
 

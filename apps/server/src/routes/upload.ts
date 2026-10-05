@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { createReadStream, createWriteStream, mkdirSync, rmSync } from "node:fs";
+import { readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
@@ -9,36 +15,46 @@ import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
 import { uploadHeadersSchema, validateUploadHeaders } from "../lib/upload-validation.js";
 
-/**
- * Memory limits of the chunked upload. The chunk route reads every body into
- * memory before it writes it, so these bound what a request, a session, and all
- * sessions together can hold. Tests pass smaller ones.
- */
-export const CHUNK_LIMITS = {
-  /** Largest chunk body. The web app and the CLI send about 10 MiB. */
-  maxChunkSize: 16 * 1024 * 1024,
-  /** Out-of-order chunks one session may buffer. */
-  maxBufferPerSession: 50 * 1024 * 1024,
-  /** Chunk bytes all sessions together may hold, while being read or buffered. */
-  maxTotalMemory: 512 * 1024 * 1024,
-};
+/** Largest chunk body. The web app and the CLI send about 10 MiB. */
+export const MAX_CHUNK_SIZE = 16 * 1024 * 1024;
 
-export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS) {
+export interface UploadRouteOptions {
+  /**
+   * Where chunk bodies wait until they are appended in order. Emptied when the
+   * route is created, so it must belong to this server alone.
+   */
+  chunkDir: string;
+  /** Overrides MAX_CHUNK_SIZE in tests. */
+  maxChunkSize?: number;
+}
+
+export function createUploadRoute(
+  storage: StorageBackend,
+  { chunkDir, maxChunkSize = MAX_CHUNK_SIZE }: UploadRouteOptions,
+) {
   const route = new Hono<{ Variables: QuotaVariables }>();
+
+  // Chunk files left behind by a crash belong to sessions that no longer exist.
+  rmSync(chunkDir, { recursive: true, force: true });
+  mkdirSync(chunkDir, { recursive: true });
 
   // ── In-memory tracker for chunked uploads ────────
   // Maps upload ID -> session data. Cleaned up on finalize or timeout.
+  // Chunk bodies never stay in memory. Each one is streamed into a file in
+  // chunkDir and appended from there, so a session holds only bookkeeping.
 
   interface UploadSession {
     headers: z.infer<typeof uploadHeadersSchema>;
     bytesWritten: number;
     createdAt: number;
-    /** Chunks received out-of-order, waiting to be written. */
-    pendingChunks: Map<number, Uint8Array>;
+    /** Chunks received out-of-order, waiting in chunkDir to be appended. */
+    pendingChunks: Map<number, string>;
+    /** Chunk indexes whose bodies are being received right now. */
+    receivingChunks: Set<number>;
+    /** Bytes of all chunks received or being received. Never above the declared size. */
+    bytesReceived: number;
     /** Next chunk index the storage backend expects. */
     nextWriteIndex: number;
-    /** Total bytes held in pendingChunks (for memory limiting). */
-    bufferedBytes: number;
     /** Serialization chain - ensures appendChunk calls are never concurrent. */
     writePromise: Promise<void>;
     /** Timestamp (ms) of the first chunk received - for speed limiting. */
@@ -47,15 +63,19 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
     activeRequests: number;
   }
   const pendingSessions = new Map<string, UploadSession>();
-  /** Chunk bytes held across all sessions: bodies being read plus out-of-order buffers. */
-  let chunkMemory = 0;
 
-  /** Removes a session and frees the out-of-order chunks it still holds. */
-  function dropSession(id: string, session: UploadSession): void {
+  /** Removes a session and the chunk files it still has in chunkDir. */
+  function dropSession(id: string): void {
     pendingSessions.delete(id);
-    chunkMemory -= session.bufferedBytes;
-    session.bufferedBytes = 0;
-    session.pendingChunks.clear();
+    readdir(chunkDir)
+      .then((names) =>
+        Promise.all(
+          names
+            .filter((name) => name.startsWith(`${id}.`))
+            .map((name) => rm(join(chunkDir, name), { force: true })),
+        ),
+      )
+      .catch(() => {});
   }
 
   // Clean up stale sessions every 10 minutes (sessions older than 1 hour)
@@ -64,7 +84,7 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
     const now = Date.now();
     for (const [id, session] of pendingSessions) {
       if (now - session.createdAt > SESSION_TTL_MS) {
-        dropSession(id, session);
+        dropSession(id);
         storage.abortChunkedUpload(id).catch(() => {});
       }
     }
@@ -117,8 +137,9 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
       bytesWritten: 0,
       createdAt: Date.now(),
       pendingChunks: new Map(),
+      receivingChunks: new Set(),
+      bytesReceived: 0,
       nextWriteIndex: 0,
-      bufferedBytes: 0,
       writePromise: Promise.resolve(),
       firstChunkAt: 0,
       activeRequests: 0,
@@ -131,8 +152,8 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
    * POST /api/upload/:id/chunk?index=N
    * Append a chunk of encrypted data to a pending upload.
    * Chunks may arrive out-of-order (parallel uploads from the client).
-   * The server buffers out-of-order chunks and writes them sequentially
-   * to the storage backend to guarantee data integrity.
+   * Each body is streamed into a file in chunkDir, and the files are appended
+   * to the storage backend in index order to guarantee data integrity.
    */
   route.post("/:id/chunk", async (c) => {
     const id = c.req.param("id");
@@ -153,15 +174,19 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
       return c.json({ error: "Missing chunk body" }, 400);
     }
 
-    // ── Bound the memory of this chunk before reading it ──────────
-    // The body is read into memory below. A chunk is never larger than
-    // maxChunkSize or the declared upload, never arrives twice, and a session
-    // never has more requests in flight than a client sends in parallel.
-    const maxChunkSize = Math.min(limits.maxChunkSize, session.headers.contentLength);
-    if (Number(c.req.header("Content-Length")) > maxChunkSize) {
+    // ── Checks that need no body ─────────────────────
+    // A chunk is never larger than maxChunkSize or the declared upload, each
+    // index arrives once, and a session never has more requests in flight than
+    // a client sends in parallel (GHSA-9rmm-v3p2-c26g).
+    const chunkLimit = Math.min(maxChunkSize, session.headers.contentLength);
+    if (Number(c.req.header("Content-Length")) > chunkLimit) {
       return c.json({ error: "Chunk too large" }, 413);
     }
-    if (chunkIndex < session.nextWriteIndex || session.pendingChunks.has(chunkIndex)) {
+    if (
+      chunkIndex < session.nextWriteIndex ||
+      session.pendingChunks.has(chunkIndex) ||
+      session.receivingChunks.has(chunkIndex)
+    ) {
       return c.json({ error: "Chunk already received" }, 409);
     }
     if (session.activeRequests >= getConfig().FILE_UPLOAD_CONCURRENT_CHUNKS) {
@@ -169,8 +194,14 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
     }
 
     session.activeRequests++;
-    // Bytes of this body counted in chunkMemory until the session buffer takes them.
-    let reading = 0;
+    session.receivingChunks.add(chunkIndex);
+    const chunkPath = join(chunkDir, `${id}.${chunkIndex}`);
+    /** Bytes of this body counted in session.bytesReceived. */
+    let received = 0;
+    /** Why the body was cut off, answered with 413. */
+    let tooLarge: string | null = null;
+    /** Whether the session took over the chunk file. */
+    let kept = false;
     try {
       // Record when the first chunk arrives (for speed limiting)
       if (session.firstChunkAt === 0) {
@@ -181,73 +212,55 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
       // With parallel uploads over HTTP/2 through proxies (Traefik, Caddy),
       // deferring body reads causes flow-control deadlocks: the proxy waits
       // to forward the body, but the server isn't reading it because it's
-      // queued behind another write.  Reading into memory first avoids this.
-      // The limits are checked per read, so an oversized body is cut off
-      // instead of being read in full first.
-      const reader = body.getReader();
-      const parts: Uint8Array[] = [];
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (reading + value.byteLength > maxChunkSize) {
-          await reader.cancel();
-          return c.json({ error: "Chunk too large" }, 413);
-        }
-        if (chunkMemory + value.byteLength > limits.maxTotalMemory) {
-          await reader.cancel();
-          return c.json({ error: "Server is busy, try again later" }, 503);
-        }
-        chunkMemory += value.byteLength;
-        reading += value.byteLength;
-        parts.push(value);
+      // queued behind another write. Streaming it into a file reads it at
+      // once without holding it in memory. The limits are checked per read,
+      // so an oversized body is cut off instead of being read in full.
+      try {
+        await pipeline(
+          Readable.fromWeb(body as NodeReadableStream<Uint8Array>),
+          async function* (source: AsyncIterable<Buffer>) {
+            for await (const piece of source) {
+              if (received + piece.byteLength > chunkLimit) {
+                tooLarge = "Chunk too large";
+              } else if (
+                session.bytesReceived + piece.byteLength >
+                session.headers.contentLength
+              ) {
+                tooLarge = "Chunks exceed the declared content length";
+              }
+              if (tooLarge) throw new Error(tooLarge);
+              received += piece.byteLength;
+              session.bytesReceived += piece.byteLength;
+              yield piece;
+            }
+          },
+          createWriteStream(chunkPath),
+        );
+      } catch (err) {
+        if (tooLarge) return c.json({ error: tooLarge }, 413);
+        throw err;
       }
-      const totalBytes = reading;
 
-      // The session may have failed, or the same chunk arrived, while this body was read.
+      // The session may have failed or expired while the body was read.
       if (pendingSessions.get(id) !== session) {
         return c.json({ error: "Upload session not found or expired" }, 404);
       }
-      if (chunkIndex < session.nextWriteIndex || session.pendingChunks.has(chunkIndex)) {
-        return c.json({ error: "Chunk already received" }, 409);
-      }
 
-      // Memory guard: reject if buffering too much out-of-order data
-      if (session.bufferedBytes + totalBytes > limits.maxBufferPerSession) {
-        return c.json({ error: "Too many out-of-order chunks buffered" }, 429);
-      }
+      session.pendingChunks.set(chunkIndex, chunkPath);
+      kept = true;
 
-      // Concatenate parts into a single buffer
-      const chunkData = new Uint8Array(totalBytes);
-      let offset = 0;
-      for (const part of parts) {
-        chunkData.set(part, offset);
-        offset += part.byteLength;
-      }
-
-      // Store the chunk (may be in-order or out-of-order). Its bytes stay in
-      // chunkMemory, now on behalf of the session buffer.
-      session.pendingChunks.set(chunkIndex, chunkData);
-      session.bufferedBytes += totalBytes;
-      reading = 0;
-
-      // Flush all consecutive chunks starting from nextWriteIndex
+      // Append all consecutive chunks starting from nextWriteIndex
       while (session.pendingChunks.has(session.nextWriteIndex)) {
-        const data = session.pendingChunks.get(session.nextWriteIndex)!;
+        const path = session.pendingChunks.get(session.nextWriteIndex)!;
         session.pendingChunks.delete(session.nextWriteIndex);
-        session.bufferedBytes -= data.byteLength;
-        chunkMemory -= data.byteLength;
         const writeIndex = session.nextWriteIndex;
         session.nextWriteIndex++;
 
         // Chain the write to ensure sequential, non-concurrent appendChunk calls
         session.writePromise = session.writePromise.then(async () => {
-          const stream = new ReadableStream<Uint8Array>({
-            start(controller) {
-              controller.enqueue(data);
-              controller.close();
-            },
-          });
+          const stream = Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>;
           const bytesAppended = await storage.appendChunk(id, stream);
+          await rm(path, { force: true });
           session.bytesWritten += bytesAppended;
 
           if (session.bytesWritten > session.headers.contentLength) {
@@ -274,12 +287,16 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
 
       return c.json({ bytesWritten: session.bytesWritten }, 200);
     } catch (err) {
-      dropSession(id, session);
+      dropSession(id);
       await storage.abortChunkedUpload(id).catch(() => {});
       throw err;
     } finally {
       session.activeRequests--;
-      chunkMemory -= reading;
+      session.receivingChunks.delete(chunkIndex);
+      if (!kept) {
+        session.bytesReceived -= received;
+        await rm(chunkPath, { force: true });
+      }
     }
   });
 
@@ -294,7 +311,7 @@ export function createUploadRoute(storage: StorageBackend, limits = CHUNK_LIMITS
       return c.json({ error: "Upload session not found or expired" }, 404);
     }
 
-    dropSession(id, session);
+    dropSession(id);
     const { headers } = session;
 
     // Verify total bytes
