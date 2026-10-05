@@ -21,7 +21,7 @@ vi.mock("../src/lib/config.js", () => ({
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
 import { configRoute } from "../src/routes/config.js";
-import { createUploadRoute } from "../src/routes/upload.js";
+import { CHUNK_LIMITS, createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
 import { createDownloadRoute } from "../src/routes/download.js";
@@ -49,6 +49,7 @@ const DEFAULT_CONFIG = {
   FILE_MAX_FILES_PER_UPLOAD: 32,
   FILE_UPLOAD_QUOTA_BYTES: 0,
   FILE_UPLOAD_QUOTA_WINDOW: 86400,
+  FILE_UPLOAD_CONCURRENT_CHUNKS: 3,
   NOTE_MAX_SIZE: 1024 ** 2,
   NOTE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
   NOTE_DEFAULT_EXPIRE_SEC: 86400,
@@ -1316,6 +1317,151 @@ describe("routes", () => {
       expect(finalizeRes.status).toBe(400);
       const json = await finalizeRes.json();
       expect(json.error).toContain("content length");
+    });
+
+    // ── Memory limits (GHSA-9rmm-v3p2-c26g) ──────────
+    // The chunk route reads a body into memory before it writes it. These tests
+    // send bodies that the old route read in full, however large they were.
+
+    async function openSession(app: Hono, contentLength: number): Promise<string> {
+      const res = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": String(contentLength) }),
+      });
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { id: string }).id;
+    }
+
+    /** A body of `pieces` reads of `size` bytes, which counts how many were pulled. */
+    function countedBody(pieces: number, size: number) {
+      const state = { pulled: 0 };
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (state.pulled === pieces) {
+            controller.close();
+            return;
+          }
+          state.pulled++;
+          controller.enqueue(new Uint8Array(size));
+        },
+      });
+      return { stream, state };
+    }
+
+    function postChunk(app: Hono, id: string, index: number, body: BodyInit, headers = {}) {
+      return app.request(`/api/upload/${id}/chunk?index=${index}`, {
+        method: "POST",
+        body,
+        headers,
+        duplex: "half",
+      } as RequestInit);
+    }
+
+    it("should reject a chunk whose Content-Length is over the limit without reading it", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { ...CHUNK_LIMITS, maxChunkSize: 1024 }));
+      const id = await openSession(app, 10_000);
+
+      // A body that never ends: reading it would hang the request.
+      const res = await postChunk(app, id, 0, new ReadableStream<Uint8Array>(), {
+        "Content-Length": "2048",
+      });
+
+      expect(res.status).toBe(413);
+    });
+
+    it("should stop reading a body without Content-Length once it is over the limit", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { ...CHUNK_LIMITS, maxChunkSize: 1024 }));
+      const id = await openSession(app, 10_000);
+      const { stream, state } = countedBody(10, 512);
+
+      const res = await postChunk(app, id, 0, stream);
+
+      expect(res.status).toBe(413);
+      expect(state.pulled).toBeLessThan(10);
+    });
+
+    it("should reject a chunk larger than the declared upload", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+      const id = await openSession(app, 10);
+
+      const res = await postChunk(app, id, 0, new Uint8Array(20));
+
+      expect(res.status).toBe(413);
+    });
+
+    it("should reject a chunk index that already arrived", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+      const id = await openSession(app, 30);
+
+      expect((await postChunk(app, id, 0, new Uint8Array(10))).status).toBe(200);
+      expect((await postChunk(app, id, 0, new Uint8Array(10))).status).toBe(409);
+      expect((await postChunk(app, id, 2, new Uint8Array(10))).status).toBe(200);
+      expect((await postChunk(app, id, 2, new Uint8Array(10))).status).toBe(409);
+    });
+
+    it("should limit the chunk requests of one session to FILE_UPLOAD_CONCURRENT_CHUNKS", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_UPLOAD_CONCURRENT_CHUNKS: 1 });
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage));
+      const id = await openSession(app, 30);
+
+      // The first request stays open until its body is closed.
+      let release!: () => void;
+      let started!: () => void;
+      const reading = new Promise<void>((resolve) => (started = resolve));
+      const slowBody = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(new Uint8Array(10));
+          started();
+          await new Promise<void>((resolve) => (release = resolve));
+          controller.close();
+        },
+      });
+      const first = postChunk(app, id, 0, slowBody);
+      await reading;
+
+      expect((await postChunk(app, id, 1, new Uint8Array(10))).status).toBe(429);
+
+      release();
+      expect((await first).status).toBe(200);
+      expect((await postChunk(app, id, 1, new Uint8Array(10))).status).toBe(200);
+    });
+
+    it("should keep all sessions together under the total memory limit", async () => {
+      const app = new Hono();
+      app.route(
+        "/api/upload",
+        createUploadRoute(storage, { ...CHUNK_LIMITS, maxTotalMemory: 1024 }),
+      );
+      const a = await openSession(app, 1000);
+      const b = await openSession(app, 1000);
+
+      // Session a parks 800 bytes out of order, which leaves no room for 400 more.
+      expect((await postChunk(app, a, 1, new Uint8Array(800))).status).toBe(200);
+      expect((await postChunk(app, b, 1, new Uint8Array(400))).status).toBe(503);
+
+      // Writing the parked chunk frees its memory for session b.
+      expect((await postChunk(app, a, 0, new Uint8Array(200))).status).toBe(200);
+      expect((await postChunk(app, b, 1, new Uint8Array(400))).status).toBe(200);
+    });
+
+    it("should free the parked chunks of a session that is finalized short", async () => {
+      const app = new Hono();
+      app.route(
+        "/api/upload",
+        createUploadRoute(storage, { ...CHUNK_LIMITS, maxTotalMemory: 1024 }),
+      );
+      const a = await openSession(app, 1000);
+      const b = await openSession(app, 1000);
+
+      expect((await postChunk(app, a, 1, new Uint8Array(800))).status).toBe(200);
+      expect((await app.request(`/api/upload/${a}/finalize`, { method: "POST" })).status).toBe(400);
+
+      expect((await postChunk(app, b, 1, new Uint8Array(800))).status).toBe(200);
     });
   });
 

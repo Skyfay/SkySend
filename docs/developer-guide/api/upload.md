@@ -120,6 +120,15 @@ Append a chunk of encrypted data to a pending upload. Chunks may arrive out-of-o
 
 The request body is the raw chunk bytes (binary). No additional headers are required.
 
+The server reads every chunk into memory before it writes it, so the size of a chunk is limited:
+
+- A chunk is at most 16 MiB and never larger than the `X-Content-Length` declared at `/init`. The server checks `Content-Length` first and stops reading a body without one once it passes the limit.
+- A session accepts at most `FILE_UPLOAD_CONCURRENT_CHUNKS` chunk requests at the same time.
+- Each chunk index is accepted once.
+- A session buffers at most 50 MiB of out-of-order chunks, and all sessions together hold at most 512 MiB of chunk data.
+
+The bundled clients send 10 MiB chunks and never more parallel requests than `fileUploadConcurrentChunks` from `/api/config`, so they stay within these limits.
+
 #### Response
 
 **200 OK:**
@@ -130,13 +139,13 @@ The request body is the raw chunk bytes (binary). No additional headers are requ
 }
 ```
 
-**429 Too Many Requests** (too many out-of-order chunks buffered):
-
-```json
-{
-  "error": "Too many out-of-order chunks buffered"
-}
-```
+| Status | Error | Cause |
+| --- | --- | --- |
+| `409` | `Chunk already received` | The chunk index arrived before |
+| `413` | `Chunk too large` | Over 16 MiB or over the declared upload size |
+| `429` | `Too many parallel chunk requests` | More than `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight for the session |
+| `429` | `Too many out-of-order chunks buffered` | The session already buffers 50 MiB |
+| `503` | `Server is busy, try again later` | All sessions together hold 512 MiB of chunk data |
 
 ### POST /api/upload/:id/finalize
 
@@ -209,7 +218,7 @@ Errors are reported as `{"type":"error","message":"…"}` followed by a non-1000
 | `1002` | Protocol violation (e.g. binary frame after finalize) |
 | `1003` | Unsupported data type (e.g. non-JSON control frame) |
 | `1008` | Header validation, size mismatch, or quota violation |
-| `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER` |
+| `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER`, or a single message is larger than 1 MiB |
 | `1011` | Internal server error |
 
 ### Client Fallback

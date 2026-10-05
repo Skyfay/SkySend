@@ -113,13 +113,15 @@ Rules:
 
 Three transports, one validation path. All of them parse through `uploadHeadersSchema` and `validateUploadHeaders` in `src/lib/upload-validation.ts` - keep it that way, a check added to only one transport is a hole.
 
-**Chunked HTTP** (`src/routes/upload.ts`): `POST /init` opens an in-memory session, chunks arrive at `POST /:id/chunk?index=N` possibly out of order, the route buffers them (50 MB cap per session) and serializes writes through a promise chain so `appendChunk` is never concurrent. `POST /:id/finalize` commits the row. Sessions expire after one hour and are swept every ten minutes.
+**Chunked HTTP** (`src/routes/upload.ts`): `POST /init` opens an in-memory session, chunks arrive at `POST /:id/chunk?index=N` possibly out of order, the route buffers them and serializes writes through a promise chain so `appendChunk` is never concurrent. Every body is read into memory first, so `CHUNK_LIMITS` bounds it while it is read: 16 MiB per chunk and never more than the declared size, `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight per session, each index once, 50 MiB buffered per session, 512 MiB across all sessions. Check a new limit per read, never after the body is in memory (GHSA-9rmm-v3p2-c26g). `POST /:id/finalize` commits the row. Sessions expire after one hour and are swept every ten minutes.
 
 **Single-request HTTP** (`POST /api/upload`): streams one body straight to storage. Legacy, still kept as a simple fallback.
 
 **WebSocket** (`src/routes/upload-ws.ts`): the primary path when `FILE_UPLOAD_WS=true`. Registered only when the flag and the `file` service are both on, and it validates the `Origin` header itself as defence in depth. An empty origin is allowed on purpose so the CLI and curl still work - the comment at that check explains it.
 
-Chunk requests are intentionally exempt from the global rate limiter - the reasoning is written out at the exemption in `src/index.ts`. Read it before changing that condition. Quota, session validity, and per-session memory caps are what bound chunk traffic.
+Chunk requests are intentionally exempt from the global rate limiter - the reasoning is written out at the exemption in `src/index.ts`. Read it before changing that condition. `CHUNK_LIMITS` is what bounds chunk traffic. The quota does not, it only counts finished uploads.
+
+**WebSocket** (`src/routes/upload-ws.ts`): `ws` buffers a whole message before `onMessage` runs, so `src/index.ts` lowers `maxPayload` to 1 MiB. The clients send 256 KiB frames.
 
 ## Rate limiting, quota, and lockout
 
