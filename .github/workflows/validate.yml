@@ -2,8 +2,8 @@
 # Lint, type checking, unit tests and the builds of the docs and the website
 # run in parallel.
 # A quality gate on every pull request into main or dev, and called by the
-# release workflow on tags. The Docker image of a pull request into main is
-# built by docker-build.yml.
+# release workflow on tags. The Docker image and the CLI binaries of a pull
+# request into main are built by pr-build.yml.
 
 name: Validate
 

@@ -153,7 +153,7 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 | Changelog (released) | [docs/changelog.md](docs/changelog.md) |
 | Published env var reference | [docs/user-guide/configuration/environment-variables.md](docs/user-guide/configuration/environment-variables.md) |
 | Dev environment | [.env.dev](.env.dev), [.env.example](.env.example) |
-| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [docker-build.yml](.github/workflows/docker-build.yml) |
+| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [pr-build.yml](.github/workflows/pr-build.yml) |
 
 ## Before finishing a change
 
