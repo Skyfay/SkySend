@@ -89,7 +89,7 @@ A change spanning several scopes becomes several entries, one per scope. Never `
 
 **One entry per user-visible change.** A pull request touching 20 files to deliver one behavior change is one line. Two unrelated changes in one pull request are two lines.
 
-Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`.
+Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link.
 
 ## Section order
 

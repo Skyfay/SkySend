@@ -1,7 +1,7 @@
 ### 🔒 Security
 
-- **web**: A download that the server cut short at a record boundary now fails instead of being saved as a complete file (GHSA-w3p6-2vcf-mmv9).
-- **client**: A download that the server cut short at a record boundary now fails in the CLI and the TUI, and the incomplete file is removed (GHSA-w3p6-2vcf-mmv9).
+- **web**: A download that the server cut short at a record boundary now fails instead of being saved as a complete file. Thanks @rajnisht7 ([GHSA-w3p6-2vcf-mmv9](https://github.com/Skyfay/SkySend/security/advisories/GHSA-w3p6-2vcf-mmv9))
+- **client**: A download that the server cut short at a record boundary now fails in the CLI and the TUI, and the incomplete file is removed. Thanks @rajnisht7 ([GHSA-w3p6-2vcf-mmv9](https://github.com/Skyfay/SkySend/security/advisories/GHSA-w3p6-2vcf-mmv9))
 - **crypto**: Archive metadata now records the size of the zip, so archive downloads can be checked for completeness. Archives uploaded with older versions cannot be checked this way.
 
 ### 📝 Documentation
