@@ -97,11 +97,9 @@ skysend config
 
 ### WebSocket Transport
 
-By default, the CLI uses WebSocket upload transport (if the server supports it) with automatic fallback to HTTP chunked upload. You can disable WebSocket in two ways:
+The CLI currently always uploads over HTTP chunks, even when the server offers WebSocket uploads. WebSocket uploads are disabled in the CLI until large transfers over HTTPS no longer break off midway.
 
-- **CLI flag**: `skysend upload ./file.pdf --no-ws`
-- **TUI Settings**: Toggle "WebSocket upload" in the interactive Settings menu
-- **Config file**: Set `"websocket": false` in `~/.config/skysend/config.json`
+`skysend upload ./file.pdf --no-ws` keeps an upload on HTTP chunks once WebSocket uploads return to the CLI.
 
 ### Reset Config
 
