@@ -22,6 +22,7 @@
   "files": [],
   "references": [
     { "path": "packages/crypto" },
+    { "path": "packages/note-format" },
     { "path": "apps/server" },
     { "path": "apps/web" },
     { "path": "apps/cli" },

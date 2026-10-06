@@ -328,6 +328,12 @@ importers:
 
   packages/crypto: {}
 
+  packages/note-format:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
   website:
     dependencies:
       '@radix-ui/react-accordion':
