@@ -325,7 +325,6 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                 onChange={(e) => setComment(e.target.value)}
                 placeholder={t("sshKey.commentPlaceholder")}
                 disabled={generating}
-                className="bg-card"
               />
             </div>
             <div className="space-y-2">
@@ -339,7 +338,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                   placeholder={t("sshKey.passphrasePlaceholder")}
                   autoComplete="off"
                   disabled={generating}
-                  className="bg-card pr-10"
+                  className="pr-10"
                 />
                 <button
                   type="button"

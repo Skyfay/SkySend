@@ -111,7 +111,7 @@ function LanguageSelect({
         if (!o) setSearch("");
       }}
     >
-      <SelectTrigger className="h-8 w-40 rounded-lg bg-card text-xs" aria-label={t("code.language")}>
+      <SelectTrigger className="h-8 w-40 rounded-lg text-xs" aria-label={t("code.language")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent

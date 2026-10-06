@@ -10,6 +10,7 @@
   --color-card: #ffffff;
   --color-card-foreground: #0a0a0a;
   --color-well: #f5f5f5;
+  --color-field: var(--color-background);
   --color-popover: #ffffff;
   --color-popover-foreground: #0a0a0a;
   --color-secondary: #f0f0f0;
@@ -33,6 +34,7 @@
   --color-card: #0a0a0a;
   --color-card-foreground: #ededed;
   --color-well: #111111;
+  --color-field: var(--color-background);
   --color-popover: #0f0f0f;
   --color-popover-foreground: #ededed;
   --color-secondary: #1a1a1a;

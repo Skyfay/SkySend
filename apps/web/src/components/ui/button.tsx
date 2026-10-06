@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         // The one main action of a view. It carries the accent, so CUSTOM_COLOR reaches it.
-        default: "bg-primary font-semibold text-primary-foreground hover:bg-primary/90",
+        default: "bg-action font-semibold text-action-foreground hover:bg-action/90",
         destructive:
           "bg-destructive font-semibold text-destructive-foreground hover:bg-destructive/90",
         outline:

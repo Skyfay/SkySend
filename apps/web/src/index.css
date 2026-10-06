@@ -29,7 +29,9 @@
   --color-foreground: #0b0d17;
   --color-card: rgba(255, 255, 255, 0.6);
   --color-card-foreground: #0b0d17;
-  --color-well: rgba(255, 255, 255, 0.5);
+  --color-well: rgba(15, 17, 30, 0.04);
+  /* Inputs take a light tint of the surface they sit on instead of a white or black box. */
+  --color-field: rgba(15, 17, 30, 0.025);
   --color-popover: #ffffff;
   --color-popover-foreground: #0b0d17;
 
@@ -51,6 +53,10 @@
   --color-primary-soft: rgba(46, 182, 140, 0.12);
   --color-primary-line: rgba(46, 182, 140, 0.42);
   --color-primary-glow: rgba(46, 182, 140, 0.28);
+  /* The main button. In light it takes the darker text shade of the accent with white
+     text, which reads calmer than the bare accent. The text shade keeps 4.8:1 on white. */
+  --color-action: var(--color-primary-text);
+  --color-action-foreground: #ffffff;
   --color-ring: #2eb68c;
 
   /* Status colors keep their meaning whatever the accent is. */
@@ -104,6 +110,7 @@
   --color-card: rgba(255, 255, 255, 0.055);
   --color-card-foreground: #f4f5fa;
   --color-well: rgba(255, 255, 255, 0.045);
+  --color-field: rgba(255, 255, 255, 0.055);
   --color-popover: #12131b;
   --color-popover-foreground: #f4f5fa;
 
@@ -123,6 +130,8 @@
   --color-primary-soft: rgba(70, 200, 157, 0.16);
   --color-primary-line: rgba(70, 200, 157, 0.5);
   --color-primary-glow: rgba(70, 200, 157, 0.22);
+  --color-action: var(--color-primary);
+  --color-action-foreground: var(--color-primary-foreground);
   --color-ring: #46c89d;
 
   --color-destructive: #f87171;

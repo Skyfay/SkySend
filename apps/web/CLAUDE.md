@@ -174,7 +174,7 @@ A handful of `prose` and `<pre>` blocks still use plain `overflow-auto` with the
 
 ### Colors
 
-Use the semantic tokens from `src/index.css`: `bg-background`, `bg-card`, `bg-popover`, `bg-muted`, `bg-primary`, `bg-secondary`, `bg-accent`, `bg-destructive`, `bg-success`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`. They are defined in oklch for light and overridden under `.dark`, so they are already theme-aware. `--color-primary` is what `CUSTOM_COLOR` overrides at runtime, which is another reason not to hardcode a brand color.
+Use the semantic tokens from `src/index.css`: `bg-page`, `bg-background`, `bg-card`, `bg-well` (an inset area inside a card), `bg-field` (inputs, never white or black boxes), `bg-popover`, `bg-muted`, `bg-primary`, `bg-secondary`, `bg-accent`, `bg-destructive`, `bg-success`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`. They are defined in oklch for light and overridden under `.dark`, so they are already theme-aware. `--color-primary` is what `CUSTOM_COLOR` overrides at runtime, which is another reason not to hardcode a brand color.
 
 A raw palette color (`text-green-600`, `bg-red-100`) always needs a `dark:` variant. Verify in dark mode before finishing.
 

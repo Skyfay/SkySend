@@ -149,7 +149,7 @@ export function UploadZone({
               {t("upload.browseFolder")}
             </Button>
           </div>
-          <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">{limits}</p>
+          <p className="text-xs text-muted-foreground">{limits}</p>
         </div>
       ) : (
         <div

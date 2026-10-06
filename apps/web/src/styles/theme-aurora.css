@@ -17,10 +17,24 @@
     radial-gradient(60% 45% at 50% 62%, color-mix(in oklab, color-mix(in oklab, var(--color-primary) 40%, #0ea5e9) 18%, transparent), transparent 75%);
 }
 
+/* In the dark only the accent lights the page. The mixed hues of the light scheme
+   are too busy on black, and saturated glass would pick them up again. */
+[data-theme="aurora"].dark body {
+  background-image:
+    radial-gradient(55% 40% at 12% 0%, var(--color-primary-glow), transparent 70%),
+    radial-gradient(45% 35% at 88% 0%, color-mix(in oklab, var(--color-primary) 10%, transparent), transparent 70%);
+}
+
 [data-theme="aurora"] [data-slot="card"],
 [data-theme="aurora"] [data-slot="glass"] {
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   backdrop-filter: blur(22px) saturate(150%);
+}
+
+[data-theme="aurora"].dark [data-slot="card"],
+[data-theme="aurora"].dark [data-slot="glass"] {
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
 }
 
 [data-theme="aurora"] [data-slot="hero-title"] {
@@ -39,13 +53,23 @@
   color: transparent;
 }
 
+[data-theme="aurora"].dark [data-slot="hero-title"] {
+  background-image: linear-gradient(100deg, var(--color-foreground) 35%, var(--color-primary-text) 75%);
+}
+
 [data-theme="aurora"] [data-slot="button"][data-variant="default"] {
+  box-shadow: 0 6px 16px -10px var(--color-action);
+}
+
+[data-theme="aurora"].dark [data-slot="button"][data-variant="default"] {
   box-shadow: 0 10px 30px -10px var(--color-primary);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   [data-theme="aurora"] [data-slot="card"],
-  [data-theme="aurora"] [data-slot="glass"] {
+  [data-theme="aurora"] [data-slot="glass"],
+  [data-theme="aurora"].dark [data-slot="card"],
+  [data-theme="aurora"].dark [data-slot="glass"] {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

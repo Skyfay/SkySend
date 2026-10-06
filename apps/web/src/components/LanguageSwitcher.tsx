@@ -110,8 +110,8 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
           )}
         >
           <Globe className="h-4 w-4" />
-          <span className={cn(mobile ? "flex-1 text-left" : "text-xs font-semibold uppercase tracking-wide")}>
-            {mobile ? currentLabel : isAuto ? "Auto" : current.code}
+          <span className={cn(mobile ? "flex-1 text-left" : "text-[13px]")}>
+            {mobile ? currentLabel : isAuto ? "Auto" : current.code.toUpperCase()}
           </span>
         </button>
       </DropdownMenuTrigger>

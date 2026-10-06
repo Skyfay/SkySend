@@ -2,26 +2,37 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { parseEnv } from "node:util";
 
 const rootPkg = JSON.parse(
   readFileSync(resolve(__dirname, "../../package.json"), "utf-8"),
 );
 
+// The API server reads .env.dev through --env-file, Vite does not. In dev the values that
+// go into index.html come from that file, and a variable set in the shell still wins.
+const devEnvFile = resolve(__dirname, "../../.env.dev");
+
+function readDevEnv(): Record<string, string | undefined> {
+  const fileEnv = existsSync(devEnvFile) ? parseEnv(readFileSync(devEnvFile, "utf-8")) : {};
+  return { ...fileEnv, ...process.env };
+}
+
 export default defineConfig(({ command }) => {
   // In dev mode (Vite dev server) the server middleware is not involved,
   // so replace the placeholder directly with the env value.
+  const env = command === "serve" ? readDevEnv() : {};
   const customTitle = command === "serve"
-    ? (process.env.CUSTOM_TITLE ?? "SkySend")
+    ? (env.CUSTOM_TITLE ?? "SkySend")
     : "__CUSTOM_TITLE__";
   // Link previews never reach the dev server, so the built-in defaults are enough there.
   const ogImage = command === "serve" ? "/logo.png" : "__OG_IMAGE__";
   const twitterCard = command === "serve" ? "summary" : "__TWITTER_CARD__";
-  const envTheme = process.env.DEFAULT_THEME ?? "";
+  const envTheme = env.DEFAULT_THEME ?? "";
   const defaultTheme = command === "serve"
     ? (["aurora", "midnight", "graphite"].includes(envTheme) ? envTheme : "aurora")
     : "__DEFAULT_THEME__";
-  const envColorScheme = process.env.DEFAULT_COLOR_SCHEME ?? "";
+  const envColorScheme = env.DEFAULT_COLOR_SCHEME ?? "";
   const defaultColorScheme = command === "serve"
     ? (["dark", "light", "system"].includes(envColorScheme) ? envColorScheme : "system")
     : "__DEFAULT_COLOR_SCHEME__";
@@ -32,6 +43,13 @@ export default defineConfig(({ command }) => {
     tailwindcss(),
     {
       name: "inject-html-vars",
+      // index.html is filled when the config loads, so a change to .env.dev restarts Vite.
+      configureServer(server) {
+        server.watcher.add(devEnvFile);
+        server.watcher.on("change", (file) => {
+          if (file === devEnvFile) void server.restart();
+        });
+      },
       transformIndexHtml(html) {
         return html
           .replace(/__CUSTOM_TITLE__/g, customTitle)

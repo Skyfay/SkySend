@@ -99,6 +99,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
         )}
         <Button
           type="button"
+          variant="outline"
           size="sm"
           onClick={handleGenerate}
           disabled={disabled || !anySelected}
