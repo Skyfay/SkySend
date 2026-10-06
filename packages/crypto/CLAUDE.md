@@ -9,7 +9,7 @@ Everything the product promises rests on this package. Treat a change here the w
 1. **No dependencies.** `package.json` has no `dependencies` block and should not gain one. Anything that needs WASM (Argon2id) is injected by the caller as a function.
 2. **Web Crypto only.** No `node:crypto`, no polyfills, no `Buffer`. `crypto.getRandomValues` and `crypto.subtle` are the whole toolbox.
 3. **Never change a wire format without a migration path.** Uploads created by an older client must keep decrypting until they expire. `deriveKeys` still accepts 16-byte legacy salts for exactly that reason, and the `TODO` above it is the removal plan.
-4. **Never make a key extractable.** Every `deriveKey` call passes `false`. There is no reason to export a derived key.
+4. **Never make a key extractable.** Every `deriveKey` call passes `false`. There is no reason to export a derived key. The one exception is the private key of a file request in `createFileRequest()`, which has to be sealed into the vault once. Only its scalar leaves that function, inside the vault. After `openRequestKey()` it is imported non-extractable, for `deriveBits` only.
 5. **Never add a function that moves a secret toward the server.** The package's whole job is to keep the boundary.
 6. **Compare secrets with `constantTimeEqual`.** Never `===`, never `Buffer.compare`.
 7. **Randomness comes from `randomBytes()` in `util.ts`**, which wraps `crypto.getRandomValues`. Never `Math.random`.
@@ -41,6 +41,30 @@ Info strings (`keychain.ts`) provide domain separation and are part of the wire 
 
 Changing any of these strings invalidates every existing link. Do not.
 
+## File requests
+
+A requester asks for files, senders drop them in, only the requester reads them (`request.ts`, on top of `hpke.ts`). The requester's browser makes a P-256 key pair, an `inboxSecret` and a `linkSecret`. The private key is sealed into the vault with a key from `inboxSecret` and stored on the server. The public key and `linkSecret` travel only in the fragment of the upload link, `inboxSecret` only in the fragment of the inbox link. A sender uploads with a fresh file secret as usual and wraps it to the public key with HPKE.
+
+`createFileRequest()` returns `{ local, server }`. Only `server` is ever sent. Both secrets are 32 uniform bytes, so their keys are derived without a salt: each link is self-contained, and no endpoint has to answer before its token is checked. The upload token and the title key also take the public key, so a link rewritten with another key is rejected by the server.
+
+HPKE is RFC 9180 base mode, single-shot, for one suite: DHKEM(P-256, HKDF-SHA256), HKDF-SHA256, AES-256-GCM. P-256 because every browser a sender might use has it. The KEM binds enc and the recipient key into the shared secret, which is what stops a negated ephemeral point (P-256 ECDH only yields x) from opening the same wrap. Never replace it with a hand-rolled ECDH plus HKDF, a review proved that malleable.
+
+The public key must only ever come from the fragment, and the server must never learn it. A server that hands it out could swap in its own key and read every upload. A server that knows it could put uploads into the inbox, because base-mode HPKE does not authenticate senders.
+
+| Purpose | Info string or label |
+| :--- | :--- |
+| Vault key | `skysend-inbox-key` |
+| Inbox auth token | `skysend-inbox-auth` |
+| Inbox owner token | `skysend-inbox-owner-token` |
+| Upload token | `skysend-request-upload-token` followed by the public key |
+| Title key | `skysend-request-title` followed by the public key |
+| HPKE info | `skysend-request-v1` followed by the 16 bytes of the request ID |
+| HPKE aad | the 16 bytes of the upload ID |
+| Vault AAD | `skysend-inbox-privkey-v1` |
+| Title AAD | `skysend-request-title-v1` |
+
+The suite byte `REQUEST_SUITE` (`0x01`) opens the upload fragment and the vault, and a version byte opens the inbox fragment, so a later suite (X25519, or a hybrid with ML-KEM) can be added without breaking existing links. With a password, the inbox fragment carries the protected secret plus the 16-byte password salt. The vault holds only the 32-byte private scalar, so its length is fixed (`REQUEST_VAULT_LENGTH`). The server checks every length against the exported `REQUEST_*` and `WRAP_*` constants. `tests/fixtures/file-request.json` freezes the whole format and `tests/fixtures/hpke-p256-sha256-aes256gcm.json` holds the CFRG test vector. **From the first release on, never regenerate or edit either file.**
+
 ## Modules
 
 | File | Owns |
@@ -50,6 +74,8 @@ Changing any of these strings invalidates every existing link. Do not.
 | `metadata.ts` | AES-256-GCM over the JSON metadata blob |
 | `note.ts` | AES-256-GCM over note content, with its own nonce |
 | `password.ts` | Argon2id KDF plus the XOR protection layer |
+| `hpke.ts` | RFC 9180 HPKE, base mode, single-shot, one P-256 suite |
+| `request.ts` | File requests: vault, wrapped file secrets, tokens, title, upload fragment |
 | `util.ts` | base64url, UTF-8, concat, constant-time compare, random bytes, nonce XOR |
 | `index.ts` | The public API. Nothing outside this package imports a submodule directly. |
 
@@ -84,7 +110,7 @@ Build with `pnpm --filter @skysend/crypto build`. Consumers import from `dist/`,
 
 ## Tests
 
-`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 120 cases across 7 files - the most thoroughly tested package in the repo, and it should stay that way. The house naming style here is `it("should ...")`, unlike the rest of the monorepo.
+`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 180 cases across 9 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo.
 
 Every change needs:
 

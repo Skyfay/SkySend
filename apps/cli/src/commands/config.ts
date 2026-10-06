@@ -41,6 +41,19 @@ export async function showConfig(ctx: CliContext, options: ConfigOptions): Promi
   console.log(`View Options:       ${config.NOTE_VIEW_OPTIONS.map((v: number) => v === 0 ? "∞" : String(v)).join(", ")}`);
   console.log(`Default Views:      ${config.NOTE_DEFAULT_VIEWS === 0 ? "∞" : config.NOTE_DEFAULT_VIEWS}`);
   console.log();
+  console.log("File Request Settings");
+  console.log("---------------------");
+  console.log(
+    `Open For Options:   ${config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.map(formatExpiry).join(", ")}`,
+  );
+  console.log(`Default Open For:   ${formatExpiry(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)}`);
+  console.log(`Max Uploads:        ${config.FILE_REQUEST_MAX_UPLOADS}`);
+  console.log(`Max Total Size:     ${formatBytes(config.FILE_REQUEST_MAX_SIZE)}`);
+  console.log(`Retention:          ${formatExpiry(config.FILE_REQUEST_RETENTION_SEC)}`);
+  console.log(`Downloads per File: ${config.FILE_REQUEST_DOWNLOADS}`);
+  const dailyLimit = config.FILE_REQUEST_DAILY_LIMIT;
+  console.log(`Daily Limit:        ${dailyLimit === 0 ? "∞" : dailyLimit}`);
+  console.log();
   console.log("General");
   console.log("-------");
   console.log(`Cleanup Interval:   ${config.CLEANUP_INTERVAL}s`);

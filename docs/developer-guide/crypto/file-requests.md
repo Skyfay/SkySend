@@ -1,0 +1,89 @@
+# File Requests
+
+A file request reverses the usual direction: a requester publishes a link, senders upload into it, and only the requester can decrypt what arrives. The building blocks are the ones a normal upload uses, plus one public-key step, so the sender needs nothing the requester has to keep secret.
+
+The code is in `packages/crypto/src/request.ts`, on top of `hpke.ts`.
+
+## Overview
+
+```
+Requester (browser)
+  inboxSecret, linkSecret   32 random bytes each
+  P-256 key pair            private key sealed into the vault, public key into the upload link
+
+Upload link   /request/<id>#base64url(0x01 || publicKey 65 B || linkSecret 32 B)
+Inbox link    /inbox/<id>#base64url(0x01 || inboxSecret 32 B [|| passwordSalt 16 B])
+
+Sender (browser)
+  fileSecret, salt          fresh per upload, as for a normal upload
+  file, metadata            encrypted with the keys from fileSecret, as for a normal upload
+  wrap                      HPKE seal of fileSecret to the public key
+```
+
+The server stores the vault, three derived tokens, the encrypted title and, for each upload, the ciphertext, the encrypted metadata and the wrap. It never learns either secret or the public key.
+
+## Keys From the Links
+
+Both secrets are 32 uniform random bytes, so their keys come from HKDF-SHA256 without a salt. Each link is complete on its own, and no endpoint has to answer before its token is checked.
+
+| Purpose | Input | HKDF info |
+| --- | --- | --- |
+| Vault key (AES-256-GCM) | `inboxSecret` | `skysend-inbox-key` |
+| Inbox auth token (32 B) | `inboxSecret` | `skysend-inbox-auth` |
+| Inbox owner token (32 B) | `inboxSecret` | `skysend-inbox-owner-token` |
+| Upload token (32 B) | `linkSecret` | `skysend-request-upload-token` followed by the public key |
+| Title key (AES-256-GCM) | `linkSecret` | `skysend-request-title` followed by the public key |
+
+The upload token and the title key take the public key as well, so an upload link rewritten with another key is refused by the server. The info strings differ from those of [normal uploads](/developer-guide/crypto/key-derivation), so a token of a request never matches a token of a file.
+
+## The Vault
+
+```
+vault = AES-256-GCM(vaultKey, nonce 12 B, aad "skysend-inbox-privkey-v1",
+                    0x01 || publicKey 65 B || linkSecret 32 B || privateScalar 32 B)
+```
+
+It is always 146 bytes. Opening it with the inbox link gives back the private key and everything the upload link holds, so the inbox can show the upload link again. The private key is the one key in the package that is generated extractable, because its scalar has to go into the vault once. After that it is imported for `deriveBits` only.
+
+## The Wrap
+
+A sender seals the file secret with HPKE, RFC 9180, base mode, single shot, for one suite:
+
+| Part | Choice | ID |
+| --- | --- | --- |
+| KEM | DHKEM(P-256, HKDF-SHA256) | `0x0010` |
+| KDF | HKDF-SHA256 | `0x0001` |
+| AEAD | AES-256-GCM | `0x0002` |
+
+```
+info = "skysend-request-v1" || requestId (16 bytes of the UUID)
+aad  = uploadId (16 bytes of the UUID)
+wrap = { enc: 65 B, ciphertext: 48 B }
+```
+
+The info and the aad bind a wrap to one request and one upload, so a server cannot move a wrap to another request or another upload. P-256 was chosen because every browser a sender might use has it. The KEM binds the ephemeral key and the recipient key into the shared secret, which stops a negated ephemeral point from opening the same wrap.
+
+The implementation is checked against the CFRG test vectors for this suite, and a frozen fixture holds the exact bytes of every format above.
+
+## The Title
+
+```
+title = AES-256-GCM(titleKey, nonce 12 B, aad "skysend-request-title-v1", UTF-8 text, at most 256 bytes)
+```
+
+It comes from the link, so only someone with the upload link or the inbox can read it. Senders see it marked as written by the requester and not checked.
+
+## Password
+
+With a password the inbox link carries the secret after [password protection](/developer-guide/crypto/password-protection), the same Argon2id and XOR scheme a file uses, plus the 16-byte password salt. A wrong password yields wrong tokens, which the server answers like a wrong link, and the lockout counts it.
+
+## Why the Public Key Stays Out of the Server
+
+- A server that handed out the public key could swap in its own and read every upload.
+- A server that knew it could put uploads of its own into the inbox, because base-mode HPKE does not authenticate senders.
+
+So the public key only ever travels in the fragment of the upload link and inside the vault.
+
+## Versions
+
+The upload fragment and the vault start with the suite byte `0x01`, and the inbox fragment with a version byte. A later suite, such as X25519 or a hybrid with ML-KEM, can be added without breaking existing links.

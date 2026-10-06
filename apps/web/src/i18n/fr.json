@@ -27,7 +27,8 @@
   "nav": {
     "upload": "Téléverser",
     "myUploads": "Mes envois",
-    "menu": "Menu"
+    "menu": "Menu",
+    "requests": "Demandes"
   },
   "tab": {
     "file": "Fichier",
@@ -262,7 +263,8 @@
     "loginRequired": "Connexion requise pour téléverser",
     "loginButton": "Se connecter avec SSO",
     "logout": "Se déconnecter"
-  },  "debug": {
+  },
+  "debug": {
     "title": "Informations techniques",
     "download": "T\u00e9l\u00e9chargement",
     "upload": "Envoi",
@@ -287,7 +289,8 @@
     "copied": "Copi\u00e9 !",
     "timeline": "Historique",
     "close": "Fermer"
-  },  "language": {
+  },
+  "language": {
     "search": "Rechercher une langue..."
   },
   "errors": {
@@ -295,7 +298,9 @@
     "originNotAllowed": "Le serveur a bloqué cette origine",
     "s3CorsError": "CORS S3 non configuré",
     "linkRewritten": "Le lien a été modifié en transit",
-    "linkRewrittenDesc": "Un filtre de sécurité de messagerie a réécrit ce lien, la clé de déchiffrement a donc été visible par le serveur. Si le contenu est confidentiel, demandez à l'expéditeur de le supprimer une fois que vous l'avez."
+    "linkRewrittenDesc": "Un filtre de sécurité de messagerie a réécrit ce lien, la clé de déchiffrement a donc été visible par le serveur. Si le contenu est confidentiel, demandez à l'expéditeur de le supprimer une fois que vous l'avez.",
+    "linkRewrittenInboxDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, la clé de cette boîte était donc visible pour le serveur. Téléchargez ce dont vous avez besoin, puis supprimez la demande.",
+    "linkRewrittenUploadDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, le serveur l'a donc vu en entier. Vos fichiers restent chiffrés pour la personne qui demande, mais qui a le lien peut lire le titre et envoyer dans la demande."
   },
   "header": {
     "share": "Partager",
@@ -437,5 +442,124 @@
     "ctaTitle": "Prêt à partager quelque chose ?",
     "ctaText": "Cela prend quelques secondes, et personne d'autre que le destinataire ne peut le lire.",
     "ctaButton": "Commencer à partager"
+  },
+  "request": {
+    "titleLabel": "De quoi avez-vous besoin ? (facultatif)",
+    "titlePlaceholder": "p. ex. Documents pour la déclaration d'impôts",
+    "titleHint": "L'expéditeur voit ce texte. Il est chiffré, le serveur ne le lit jamais.",
+    "titleTooLong": "Le titre est trop long.",
+    "openFor": "Ouverte pendant",
+    "maxUploads": "Envois",
+    "uploads_one": "{{count}} envoi",
+    "uploads_other": "{{count}} envois",
+    "maxSize": "Taille totale",
+    "passwordHint": "Votre boîte ne s'ouvre qu'avec ce mot de passe.",
+    "passwordOff": "Le lien de la boîte suffit pour l'ouvrir.",
+    "summary": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b> et <b>{{size}}</b> au total.",
+    "create": "Créer la demande",
+    "creating": "Création…",
+    "created": "Demande créée",
+    "createdText": "Deux liens : un à envoyer, un à garder.",
+    "uploadLink": "Lien d'envoi",
+    "uploadLinkHint": "Envoyez-le à la personne qui doit vous transmettre des fichiers. Il permet seulement d'envoyer.",
+    "inboxLink": "Votre lien de boîte",
+    "inboxLinkHint": "Gardez celui-ci. Il ouvre votre boîte sur n'importe quel appareil.",
+    "inboxLinkPassword": "Gardez celui-ci. Avec votre mot de passe, il ouvre votre boîte sur n'importe quel appareil.",
+    "inboxLinkWarning": "Ne partagez pas le lien de la boîte. C'est la clé de tous les fichiers de cette demande et le seul accès. Enregistrez-le avant de quitter cette page.",
+    "openInbox": "Ouvrir la boîte",
+    "newRequest": "Nouvelle demande",
+    "error": {
+      "signInRequired": "Connectez-vous pour créer une demande.",
+      "dailyLimit": "Vous avez créé autant de demandes que ce serveur en autorise par jour. Réessayez demain.",
+      "failed": "La demande n'a pas pu être créée."
+    },
+    "retentionHint_one": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois.",
+    "retentionHint_other": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois."
+  },
+  "requests": {
+    "title": "Demandes de fichiers",
+    "intro": "Demandez des fichiers à quelqu'un. Il les envoie chiffrés, et vous seul pouvez les ouvrir.",
+    "yours": "Vos demandes",
+    "localHint": "Cette liste n'existe que dans ce navigateur. Le serveur ne sait pas quelles demandes sont les vôtres.",
+    "untitled": "Demande sans titre",
+    "passwordProtected": "Protégée par mot de passe",
+    "received_one": "{{count}} envoi reçu",
+    "received_other": "{{count}} envois reçus",
+    "closed": "Fermée",
+    "copyUploadLink": "Copier le lien d'envoi",
+    "deleteTitle": "Supprimer cette demande ?",
+    "deleteText": "La demande et tous ses fichiers sont supprimés définitivement. Le lien d'envoi cesse de fonctionner.",
+    "forgetTitle": "Retirer de cette liste ?",
+    "forgetText": "Cette demande a un mot de passe, seule sa boîte peut donc la supprimer. Ici elle est seulement retirée de la liste, et ses fichiers restent jusqu'à leur expiration.",
+    "forget": "Retirer",
+    "deleted": "Demande supprimée",
+    "forgotten": "Retirée de la liste",
+    "deleteFailed": "La demande n'a pas pu être supprimée."
+  },
+  "inbox": {
+    "title": "Boîte de réception",
+    "invalid": "Ce lien de boîte est incomplet",
+    "gone": "Cette demande n'existe plus",
+    "goneText": "Elle a été supprimée, ou elle est fermée et tous ses fichiers ont expiré.",
+    "deleted": "Demande supprimée",
+    "deletedText": "La demande et tous ses fichiers ont été supprimés définitivement.",
+    "usage": "{{used}} envois sur {{max}}, {{size}} sur {{maxSize}}",
+    "closesIn": "se ferme dans {{time}}",
+    "closed": "fermée",
+    "refresh": "Actualiser",
+    "empty": "Rien pour l'instant",
+    "emptyOpen": "Les fichiers apparaissent ici dès que quelqu'un utilise votre lien d'envoi.",
+    "emptyClosed": "Cette demande est fermée et aucun fichier n'est arrivé.",
+    "downloadsLeft_one": "{{count}} téléchargement restant",
+    "downloadsLeft_other": "{{count}} téléchargements restants",
+    "deletedIn": "supprimé dans {{time}}",
+    "unverified": "Non vérifié",
+    "unverifiedHint": "Toute personne ayant le lien d'envoi peut envoyer des fichiers. N'ouvrez que ce que vous attendiez.",
+    "damaged": "Cet envoi ne peut pas être ouvert",
+    "damagedHint": "Il est endommagé ou n'a pas été créé pour cette demande. Supprimez-le.",
+    "downloadFailed": "Le téléchargement a échoué.",
+    "actionFailed": "Cela n'a pas fonctionné. Réessayez.",
+    "fileDeleted": "Fichier supprimé",
+    "retentionHint": "Chaque fichier est supprimé automatiquement après le délai indiqué, ou une fois ses téléchargements épuisés.",
+    "close": "Fermer la demande",
+    "closeTitle": "Fermer cette demande ?",
+    "closeText": "Personne ne peut plus envoyer de fichiers. Les fichiers reçus restent jusqu'à leur expiration.",
+    "closedToast": "Demande fermée",
+    "delete": "Supprimer la demande",
+    "deleteTitle": "Supprimer cette demande ?",
+    "deleteText": "La demande et tous ses fichiers sont supprimés définitivement.",
+    "passwordRequired": "Cette boîte est protégée par mot de passe",
+    "deleteFileTitle": "Supprimer ce fichier ?",
+    "deleteFileText": "Il est supprimé définitivement. Sa place dans la demande reste occupée."
+  },
+  "requestUpload": {
+    "title": "Quelqu'un vous demande des <a>fichiers</a>",
+    "intro": "Vos fichiers sont chiffrés dans ce navigateur avant de le quitter. Seule la personne qui a créé cette demande peut les ouvrir.",
+    "titleFrom": "Écrit par la personne qui demande. Personne ne l'a vérifié.",
+    "host": "Vos fichiers vont vers <b>{{host}}</b>",
+    "report": "Signaler cette demande",
+    "limits_one": "Jusqu'à {{size}} par envoi, {{count}} envoi restant, se ferme dans {{time}}.",
+    "limits_other": "Jusqu'à {{size}} par envoi, {{count}} envois restants, se ferme dans {{time}}.",
+    "send": "Chiffrer et envoyer",
+    "tooLarge": "Plus que les {{size}} qu'un envoi peut avoir ici",
+    "delivered": "Livré",
+    "deliveredText": "Seule la personne qui a demandé peut l'ouvrir. Vous ne recevez aucun lien, il n'y a rien d'autre à faire.",
+    "sendMore": "Envoyer d'autres fichiers",
+    "invalid": "Ce lien d'envoi est incomplet",
+    "invalidText": "Demandez le lien complet à la personne qui vous l'a envoyé.",
+    "gone": "Cette demande n'existe pas",
+    "goneText": "Elle a été supprimée, ou le lien est erroné.",
+    "closed": "Cette demande est fermée",
+    "closedText": "Elle n'accepte plus de fichiers. Demandez un nouveau lien à la personne qui vous l'a envoyé.",
+    "full": "Cette demande est pleine",
+    "fullText": "Elle a reçu autant d'envois qu'elle en permet. Demandez un nouveau lien à la personne qui vous l'a envoyé.",
+    "error": {
+      "gone": "Cette demande n'existe plus.",
+      "full": "Cette demande est maintenant pleine.",
+      "closed": "Cette demande a été fermée entre-temps.",
+      "tooLarge": "Il ne reste plus assez de place dans cette demande.",
+      "quota": "Vous avez atteint la limite d'envoi de ce serveur. Réessayez plus tard."
+    },
+    "errorText": "La demande n'a pas pu être chargée. Rechargez la page pour réessayer."
   }
 }

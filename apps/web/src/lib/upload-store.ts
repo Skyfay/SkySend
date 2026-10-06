@@ -139,3 +139,53 @@ export async function clearExpiredNotes(activeIds: Set<string>): Promise<void> {
     }
   }
 }
+
+// ── File Request Storage ───────────────────────────────
+
+/**
+ * A file request created in this browser, for the Requests page. The two fragments are
+ * what the two links carry. With a password the inbox fragment holds the protected
+ * secret, so it opens nothing without the password, and no token is kept beside it.
+ */
+export interface StoredRequest {
+  id: string;
+  /** What follows "#" in the inbox link. */
+  inboxFragment: string;
+  /** What follows "#" in the upload link. */
+  uploadFragment: string;
+  hasPassword: boolean;
+  /** The title in plain text. Never leaves this browser unencrypted. */
+  title?: string;
+  closesAt: string;
+  createdAt: string;
+}
+
+const REQUEST_PREFIX = "request:";
+
+function requestKey(id: string): string {
+  return `${REQUEST_PREFIX}${id}`;
+}
+
+export async function saveRequest(request: StoredRequest): Promise<void> {
+  await set(requestKey(request.id), request);
+}
+
+export async function getRequest(id: string): Promise<StoredRequest | undefined> {
+  return get<StoredRequest>(requestKey(id));
+}
+
+export async function removeRequest(id: string): Promise<void> {
+  await del(requestKey(id));
+}
+
+export async function getAllRequests(): Promise<StoredRequest[]> {
+  const allKeys = await keys();
+  const requests: StoredRequest[] = [];
+  for (const k of allKeys) {
+    if (typeof k !== "string" || !k.startsWith(REQUEST_PREFIX)) continue;
+    const request = await get<StoredRequest>(k);
+    if (request) requests.push(request);
+  }
+  requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return requests;
+}

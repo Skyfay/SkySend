@@ -30,6 +30,11 @@ describe("redactSensitivePath", () => {
     expect(redactSensitivePath(`<-- GET /d/${ID}%23${SECRET}`)).toBe(`<-- GET /d/${ID}`);
   });
 
+  it("covers request and inbox links", () => {
+    expect(redactSensitivePath(`<-- GET /request/${ID}%23${SECRET}`)).toBe(`<-- GET /request/${ID}`);
+    expect(redactSensitivePath(`<-- GET /inbox/${ID}%23${SECRET}`)).toBe(`<-- GET /inbox/${ID}`);
+  });
+
   it("drops a query string appended to a share-link path", () => {
     expect(redactSensitivePath(`<-- GET /file/${ID}%23${SECRET}?utm_source=mail`)).toBe(
       `<-- GET /file/${ID}`,
@@ -47,6 +52,8 @@ describe("redactSensitivePath", () => {
     expect(redactSensitivePath("--> POST /api/upload/abc/chunk?index=3 200 9ms")).toBe(
       "--> POST /api/upload/abc/chunk?index=3 200 9ms",
     );
+    const request = `--> POST /api/request/${ID}/upload/${ID}/chunk?index=3 413 2ms`;
+    expect(redactSensitivePath(request)).toBe(request);
   });
 });
 

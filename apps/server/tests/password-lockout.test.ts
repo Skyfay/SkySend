@@ -40,4 +40,21 @@ describe("password lockout", () => {
     const result = lockout.check("upload:abc", "1.2.3.4");
     expect(result.locked).toBe(false);
   });
+
+  it("forgets failures that led to no lock once lockoutMs passed", () => {
+    vi.useFakeTimers();
+    // 3 attempts, 1 s lockout - cleanup runs every 2 s
+    const lockout = createPasswordLockout(3, 1000);
+
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    vi.advanceTimersByTime(2001);
+
+    // The two old failures are gone, so two new ones do not lock yet.
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(false);
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(true);
+  });
 });

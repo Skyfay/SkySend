@@ -26,6 +26,7 @@ import {
   applyPasswordProtection,
   deriveKeyFromPassword,
   randomBytes,
+  wrapFileSecret,
   PASSWORD_SALT_LENGTH,
   type FileMetadata,
   type Argon2idHashFn,
@@ -50,6 +51,15 @@ const hashWasmArgon2: Argon2idHashFn = async (
   return new Uint8Array(result);
 };
 
+/**
+ * Chrome and Brave serialize large HTTP/2 POST bodies through reverse proxies, so the
+ * chunked transport sends 10 MB per request, with server-configurable parallel requests.
+ */
+const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024;
+
+/** Upload IDs come from randomUUID() on the server, and the wrap binds this one. */
+const UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 // ── Message Types ──────────────────────────────────────
 
 export interface UploadWorkerRequest {
@@ -73,6 +83,11 @@ export interface UploadWorkerRequest {
   fileCount: number;
   /** Base URL for API requests (e.g. "http://localhost:3000" in dev). */
   apiBase: string;
+  /**
+   * Upload into a file request. The file secret is wrapped to `publicKey`, which comes from
+   * the upload link, and travels with the metadata at finalize. Chunked HTTP only.
+   */
+  request?: { id: string; uploadToken: string; publicKey: ArrayBuffer };
 }
 
 export type UploadWorkerMessage =
@@ -87,6 +102,10 @@ export type UploadWorkerMessage =
       ownerToken: string;
       effectiveSecret: string;
     }
+  /** An upload into a file request opened its session, so a cancel can end it. */
+  | { type: "session"; id: string }
+  /** An upload into a file request arrived. The sender gets nothing back to share. */
+  | { type: "delivered"; id: string }
   | { type: "error"; message: string };
 
 // ── Worker Logic ───────────────────────────────────────
@@ -187,6 +206,31 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     const encryptedSize = calculateEncryptedSize(plaintextSize);
 
+    // The archive size is only known once the zip is built. The recipient needs
+    // it to tell a complete download from one the server cut short.
+    const metadata: FileMetadata =
+      msg.metadata.type === "archive"
+        ? { ...msg.metadata, archiveSize: plaintextSize }
+        : msg.metadata;
+
+    if (msg.request) {
+      const uploadId = await uploadIntoRequest({
+        apiBase,
+        request: msg.request,
+        secret,
+        salt,
+        metadata,
+        metaKey: keys.metaKey,
+        fileCount: msg.fileCount,
+        encryptedStream: plaintextStream.pipeThrough(createEncryptStream(keys.fileKey)),
+        encryptedSize,
+        maxConcurrentUploads,
+        post,
+      });
+      post({ type: "delivered", id: uploadId });
+      return;
+    }
+
     // Compute auth tokens
     const authToken = await computeAuthToken(keys.authKey);
     const ownerToken = await computeOwnerToken(effectiveSecret, salt);
@@ -215,7 +259,6 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via parallel requests.
     // Chrome/Brave serialize large HTTP/2 POST bodies through reverse proxies,
     // so we use smaller chunks (10 MB) with server-configurable concurrent uploads.
-    const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB per request
     const encryptedStream = plaintextStream.pipeThrough(
       createEncryptStream(keys.fileKey),
     );
@@ -266,9 +309,13 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       console.info("[upload-worker] transport=http");
       post({ type: "transport", transport: "http", fallback: wsEnabled && !wsUsable });
       uploadResult = await uploadViaHttpChunks({
-        apiBase,
+        paths: {
+          init: `${apiBase}/api/upload/init`,
+          chunk: (id, index) => `${apiBase}/api/upload/${encodeURIComponent(id)}/chunk?index=${index}`,
+          finalize: (id) => `${apiBase}/api/upload/${encodeURIComponent(id)}/finalize`,
+        },
         headers,
-        ownerTokenB64,
+        finalizeRequest: async () => ({ method: "POST", headers: { "X-Owner-Token": ownerTokenB64 } }),
         encryptedStream,
         encryptedSize,
         maxConcurrentUploads,
@@ -280,12 +327,6 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // ── Save Encrypted Metadata ──────────────────────
     post({ type: "phase", phase: "saving-meta" });
 
-    // The archive size is only known once the zip is built. The recipient needs
-    // it to tell a complete download from one the server cut short.
-    const metadata: FileMetadata =
-      msg.metadata.type === "archive"
-        ? { ...msg.metadata, archiveSize: plaintextSize }
-        : msg.metadata;
     const encMeta = await encryptMetadata(metadata, keys.metaKey);
     const encryptedMeta = btoa(
       String.fromCharCode(...encMeta.ciphertext),
@@ -331,9 +372,19 @@ function post(msg: UploadWorkerMessage) {
 // ── HTTP Chunked Upload (fallback transport) ──────────
 
 interface HttpUploadOpts {
-  apiBase: string;
+  /** The init endpoint, its chunks and its finalize, as full URLs. */
+  paths: {
+    init: string;
+    chunk: (uploadId: string, index: number) => string;
+    finalize: (uploadId: string) => string;
+  };
   headers: Record<string, string>;
-  ownerTokenB64: string;
+  /** The finalize request, which may need the upload ID. */
+  finalizeRequest: (uploadId: string) => Promise<RequestInit>;
+  /** Turns a failed init or finalize into the message the page shows. */
+  httpError?: (status: number, message: string) => string;
+  /** Called with the upload ID once the session is open. */
+  onSession?: (uploadId: string) => void;
   encryptedStream: ReadableStream<Uint8Array>;
   encryptedSize: number;
   maxConcurrentUploads: number;
@@ -343,9 +394,11 @@ interface HttpUploadOpts {
 
 async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }> {
   const {
-    apiBase,
+    paths,
     headers,
-    ownerTokenB64,
+    finalizeRequest,
+    httpError,
+    onSession,
     encryptedStream,
     encryptedSize,
     maxConcurrentUploads,
@@ -355,15 +408,20 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
 
   const reader = encryptedStream.getReader();
 
-  const initRes = await fetch(`${apiBase}/api/upload/init`, {
+  const initRes = await fetch(paths.init, {
     method: "POST",
     headers,
   });
   if (!initRes.ok) {
     const data = await initRes.json().catch(() => ({ error: "Upload init failed" }));
-    throw new Error((data as { error?: string }).error ?? "Upload init failed");
+    const message = (data as { error?: string }).error ?? "Upload init failed";
+    throw new Error(httpError ? httpError(initRes.status, message) : message);
   }
-  const { id: uploadId } = (await initRes.json()) as { id: string };
+  const { id: uploadId } = (await initRes.json()) as { id?: unknown };
+  if (typeof uploadId !== "string" || !UPLOAD_ID.test(uploadId)) {
+    throw new Error("Upload init failed");
+  }
+  onSession?.(uploadId);
 
   let loaded = 0;
   let chunkParts: Uint8Array[] = [];
@@ -373,10 +431,7 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
   const active: Array<Promise<void>> = [];
 
   const uploadChunk = async (data: Blob, index: number) => {
-    const res = await fetch(
-      `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
-      { method: "POST", body: data },
-    );
+    const res = await fetch(paths.chunk(uploadId, index), { method: "POST", body: data });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ error: "Chunk upload failed" }));
       throw new Error((errData as { error?: string }).error ?? "Chunk upload failed");
@@ -439,19 +494,89 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
   await Promise.all(active);
   if (uploadError) throw uploadError;
 
-  const finalizeRes = await fetch(
-    `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/finalize`,
-    {
-      method: "POST",
-      headers: { "X-Owner-Token": ownerTokenB64 },
-    },
-  );
+  const finalizeRes = await fetch(paths.finalize(uploadId), await finalizeRequest(uploadId));
   if (!finalizeRes.ok) {
     const data = await finalizeRes.json().catch(() => ({ error: "Upload finalize failed" }));
-    throw new Error((data as { error?: string }).error ?? "Upload finalize failed");
+    const message = (data as { error?: string }).error ?? "Upload finalize failed";
+    throw new Error(httpError ? httpError(finalizeRes.status, message) : message);
   }
 
   return { id: uploadId };
+}
+
+// ── Upload Into a File Request ────────────────────────
+
+interface RequestUploadOpts {
+  apiBase: string;
+  request: NonNullable<UploadWorkerRequest["request"]>;
+  secret: Uint8Array;
+  salt: Uint8Array;
+  metadata: FileMetadata;
+  metaKey: CryptoKey;
+  fileCount: number;
+  encryptedStream: ReadableStream<Uint8Array>;
+  encryptedSize: number;
+  maxConcurrentUploads: number;
+  post: (m: UploadWorkerMessage) => void;
+}
+
+/** Why the server refused to open an upload into a request, as the key the page shows. */
+function requestHttpError(status: number, message: string): string {
+  // The upload quota of the sender answers with 413 or 429 too, and names itself.
+  if ((status === 413 || status === 429) && /quota/i.test(message)) return "quota";
+  if (status === 404 || status === 403) return "gone";
+  if (status === 409) return "full";
+  if (status === 410) return "closed";
+  if (status === 413) return "tooLarge";
+  return message;
+}
+
+/**
+ * Uploads into a file request over chunked HTTP. Init reserves a slot and returns the
+ * upload ID, which the wrap of the file secret binds, so the box cannot be moved to
+ * another upload or request. Finalize carries the box and the encrypted metadata together.
+ */
+async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
+  const { apiBase, request, secret, salt, metadata, metaKey, fileCount, encryptedSize, post } = opts;
+  const base = `${apiBase}/api/request/${encodeURIComponent(request.id)}/upload`;
+  const publicKey = new Uint8Array(request.publicKey);
+  const encMeta = await encryptMetadata(metadata, metaKey);
+
+  post({ type: "transport", transport: "http", fallback: false });
+  const { id } = await uploadViaHttpChunks({
+    paths: {
+      init: `${base}/init`,
+      chunk: (uploadId, index) => `${base}/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
+      finalize: (uploadId) => `${base}/${encodeURIComponent(uploadId)}/finalize`,
+    },
+    headers: {
+      "X-Upload-Token": request.uploadToken,
+      "X-Salt": toBase64url(salt),
+      "X-Content-Length": String(encryptedSize),
+      "X-File-Count": String(fileCount),
+    },
+    finalizeRequest: async (uploadId) => {
+      const wrapped = await wrapFileSecret(publicKey, request.id, uploadId, secret);
+      return {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wrapEnc: toBase64url(wrapped.enc),
+          wrapCiphertext: toBase64url(wrapped.ciphertext),
+          encryptedMeta: toBase64url(encMeta.ciphertext),
+          metaNonce: toBase64url(encMeta.iv),
+        }),
+      };
+    },
+    httpError: requestHttpError,
+    onSession: (uploadId) => post({ type: "session", id: uploadId }),
+    encryptedStream: opts.encryptedStream,
+    encryptedSize,
+    maxConcurrentUploads: opts.maxConcurrentUploads,
+    chunkSize: CHUNK_UPLOAD_SIZE,
+    post,
+  });
+  return id;
 }
 
 // ── WebSocket Upload (primary transport) ──────────────

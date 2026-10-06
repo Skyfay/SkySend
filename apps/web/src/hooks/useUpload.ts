@@ -34,12 +34,24 @@ interface UploadState {
   debugInfo: UploadDebugInfo | null;
 }
 
-interface UploadOptions {
+interface ShareUploadOptions {
   files: File[];
   maxDownloads: number;
   expireSec: number;
   password: string;
+  request?: undefined;
 }
+
+/**
+ * An upload into a file request: the file secret is wrapped to the requester's public key,
+ * and the sender gets no share link and no entry in My Uploads.
+ */
+interface RequestUploadOptions {
+  files: File[];
+  request: { id: string; uploadToken: string; publicKey: Uint8Array };
+}
+
+type UploadOptions = ShareUploadOptions | RequestUploadOptions;
 
 /**
  * Determine the API base URL.
@@ -65,6 +77,17 @@ export function useUpload() {
     debugInfo: null,
   });
   const workerRef = useRef<Worker | null>(null);
+  /** The open session of an upload into a request, so a cancel can give its slot back. */
+  const requestSessionRef = useRef<{ requestId: string; uploadId: string } | null>(null);
+
+  /** Ends the session on the server, best effort. Its reservation is free again at once. */
+  const endRequestSession = useCallback(() => {
+    const session = requestSessionRef.current;
+    requestSessionRef.current = null;
+    if (!session) return;
+    const path = `/api/request/${encodeURIComponent(session.requestId)}/upload/${encodeURIComponent(session.uploadId)}`;
+    fetch(`${getApiBase()}${path}`, { method: "DELETE" }).catch(() => {});
+  }, []);
 
   const reset = useCallback(() => {
     workerRef.current?.terminate();
@@ -84,6 +107,7 @@ export function useUpload() {
   const cancel = useCallback(() => {
     workerRef.current?.terminate();
     workerRef.current = null;
+    endRequestSession();
     setState({
       phase: "idle",
       progress: 0,
@@ -94,10 +118,13 @@ export function useUpload() {
       uploadId: null,
       debugInfo: null,
     });
-  }, []);
+  }, [endRequestSession]);
 
   const upload = useCallback(async (options: UploadOptions) => {
-    const { files, maxDownloads, expireSec, password } = options;
+    const { files, request } = options;
+    const maxDownloads = request ? 0 : options.maxDownloads;
+    const expireSec = request ? 0 : options.expireSec;
+    const password = request ? "" : options.password;
 
     try {
       // Pre-flight: verify all files are still readable
@@ -173,10 +200,11 @@ export function useUpload() {
       let uploadStartTime = 0;
       let uploadTotalBytes = 0;
 
+      // An upload into a request resolves with its ID only.
       const result = await new Promise<{
         id: string;
-        ownerToken: string;
-        effectiveSecret: string;
+        ownerToken?: string;
+        effectiveSecret?: string;
       }>((resolve, reject) => {
         worker.onmessage = (e: MessageEvent<UploadWorkerMessage>) => {
           const msg = e.data;
@@ -244,6 +272,13 @@ export function useUpload() {
             case "done":
               resolve(msg);
               break;
+            case "session":
+              if (request) requestSessionRef.current = { requestId: request.id, uploadId: msg.id };
+              break;
+            case "delivered":
+              requestSessionRef.current = null;
+              resolve({ id: msg.id });
+              break;
             case "transport": {
               const event = msg.fallback
                 ? { time: new Date().toISOString(), message: "WS failed \u2192 HTTP fallback" }
@@ -296,6 +331,11 @@ export function useUpload() {
             metadata,
             fileCount: files.length,
             apiBase: getApiBase(),
+            request: request && {
+              id: request.id,
+              uploadToken: request.uploadToken,
+              publicKey: request.publicKey.slice().buffer,
+            },
           },
           transferable,
         );
@@ -305,17 +345,19 @@ export function useUpload() {
       worker.terminate();
       workerRef.current = null;
 
-      // Build share link
-      const shareLink = `${window.location.origin}/file/${result.id}#${result.effectiveSecret}`;
-
-      // Store in IndexedDB (main thread - needs DOM)
-      await saveUpload({
-        id: result.id,
-        ownerToken: result.ownerToken,
-        secret: result.effectiveSecret,
-        fileNames,
-        createdAt: new Date().toISOString(),
-      });
+      // An upload into a request has no link to share and nothing to keep.
+      let shareLink: string | null = null;
+      if (!request && result.ownerToken && result.effectiveSecret) {
+        shareLink = `${window.location.origin}/file/${result.id}#${result.effectiveSecret}`;
+        // Store in IndexedDB (main thread - needs DOM)
+        await saveUpload({
+          id: result.id,
+          ownerToken: result.ownerToken,
+          secret: result.effectiveSecret,
+          fileNames,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       // Calculate average upload speed
       let averageSpeed: string | null = null;
@@ -344,13 +386,14 @@ export function useUpload() {
     } catch (err) {
       workerRef.current?.terminate();
       workerRef.current = null;
+      endRequestSession();
       setState((s) => ({
         ...s,
         phase: "error",
         error: err instanceof Error ? err.message : "Upload failed",
       }));
     }
-  }, []);
+  }, [endRequestSession]);
 
   return { ...state, upload, reset, cancel };
 }

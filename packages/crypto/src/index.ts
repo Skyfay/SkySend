@@ -66,6 +66,41 @@ export {
   nonceXorCounter,
 } from "./util.js";
 
+// File requests: HPKE wrap of file secrets to a requester's public key
+export {
+  createFileRequest,
+  deriveInboxKeys,
+  deriveLinkKeys,
+  openRequestKey,
+  wrapFileSecret,
+  unwrapFileSecret,
+  encryptRequestTitle,
+  decryptRequestTitle,
+  encodeUploadFragment,
+  decodeUploadFragment,
+  encodeInboxFragment,
+  decodeInboxFragment,
+  REQUEST_SUITE,
+  REQUEST_SECRET_LENGTH,
+  REQUEST_NONCE_LENGTH,
+  REQUEST_TOKEN_LENGTH,
+  REQUEST_VAULT_LENGTH,
+  REQUEST_TITLE_MAX_BYTES,
+  REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH,
+  WRAP_ENC_LENGTH,
+  WRAP_CIPHERTEXT_LENGTH,
+} from "./request.js";
+export type {
+  InboxKeys,
+  LinkKeys,
+  EncryptedRequestTitle,
+  FileRequestSecrets,
+  FileRequestPayload,
+  NewFileRequest,
+  RequestKey,
+  WrappedFileSecret,
+} from "./request.js";
+
 // Note encryption/decryption
 export {
   encryptNoteContent,

@@ -17,6 +17,7 @@ import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
 import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
 import { createPasswordLockout } from "./lib/password-lockout.js";
+import { createRequestLimiter } from "./lib/request-limit.js";
 import type { QuotaVariables } from "./types.js";
 
 // Routes
@@ -32,6 +33,8 @@ import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
 import { createNoteRoute } from "./routes/note.js";
 import { createAuthRoute } from "./routes/auth.js";
+import { createRequestRoute } from "./routes/request.js";
+import { createInboxRoute } from "./routes/inbox.js";
 
 // OIDC
 import { createOidcAdapter } from "./auth/index.js";
@@ -166,6 +169,9 @@ app.use(
       "X-Has-Password",
       "X-Password-Salt",
       "X-Password-Algo",
+      "X-Upload-Token",
+      "X-Inbox-Token",
+      "X-Inbox-Owner-Token",
       "Authorization",
     ],
     exposeHeaders: [
@@ -208,14 +214,17 @@ api.use("*", async (c, next) => {
 // Rate limiter on API routes (not static assets).
 // S-2 (Security Audit): Chunk upload requests are exempt from the global rate
 // limiter, because 60 req/min would block a single legitimate large-file upload
-// (a 1 GB file = ~100 chunks at 10 MB each). Opening a session through /init
-// stays rate limited. What bounds the chunk traffic instead is routes/upload.ts,
+// (a 1 GB file = ~100 chunks at 10 MB each). The same goes for the chunks of an
+// upload into a file request (/request/:id/upload/:uid/chunk), which the pattern
+// below matches too. Opening a session through an init stays rate limited. What
+// bounds the chunk traffic instead is lib/chunked-upload.ts, shared by both,
 // checked while the body is read (GHSA-9rmm-v3p2-c26g):
 //   1. A chunk body is streamed into a file, never held in memory.
 //   2. A chunk is at most 16 MiB, and all chunks of a session together never
 //      exceed the declared upload size.
 //   3. A session has at most FILE_UPLOAD_CONCURRENT_CHUNKS requests in flight,
 //      and each chunk index is accepted once.
+//   4. An empty chunk is refused, and at most 64 chunks wait for an earlier one.
 // The quota does not bound chunk traffic, it only counts finished uploads.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
@@ -300,6 +309,21 @@ if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
 
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
+
+// File requests. Both routes carry the guard for the "request" service themselves.
+// Request uploads wait in their own chunk folder, apart from the one of normal uploads.
+api.route(
+  "/request",
+  createRequestRoute({
+    storage,
+    limiter: createRequestLimiter(config.FILE_REQUEST_DAILY_LIMIT),
+    chunkDir: join(config.DATA_DIR, "tmp", "request-chunks"),
+    createGuard:
+      config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter ? createOidcGuard(config) : undefined,
+    quota,
+  }),
+);
+api.route("/inbox", createInboxRoute({ storage, lockout: passwordLockout }));
 
 // Note routes (E2EE encrypted notes) - guarded by ENABLED_SERVICES
 api.use("/note/*", async (c: Context, next: Next) => {

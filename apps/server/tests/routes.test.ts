@@ -123,6 +123,42 @@ describe("routes", () => {
       expect(body.noteBlocks).toBe(true);
     });
 
+    it("should keep request out of enabledServices for older CLI clients", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file", "note", "request"] });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+      const body = await (await app.request("/api/config")).json();
+      expect(body.enabledServices).toEqual(["file", "note"]);
+      expect(body.fileRequestsEnabled).toBe(true);
+
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file", "note"] });
+      const off = await (await app.request("/api/config")).json();
+      expect(off.fileRequestsEnabled).toBe(false);
+    });
+
+    it("should return the file request limits", async () => {
+      vi.mocked(getConfig).mockReturnValue({
+        ...DEFAULT_CONFIG,
+        FILE_REQUEST_EXPIRE_OPTIONS_SEC: [86400, 259200],
+        FILE_REQUEST_DEFAULT_EXPIRE_SEC: 86400,
+        FILE_REQUEST_MAX_UPLOADS: 4,
+        FILE_REQUEST_MAX_SIZE: 1024,
+        FILE_REQUEST_RETENTION_SEC: 3600,
+        FILE_REQUEST_DOWNLOADS: 2,
+      });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+      const body = await (await app.request("/api/config")).json();
+      expect(body).toMatchObject({
+        fileRequestExpireOptions: [86400, 259200],
+        fileRequestDefaultExpire: 86400,
+        fileRequestMaxUploads: 4,
+        fileRequestMaxSize: 1024,
+        fileRequestRetention: 3600,
+        fileRequestDownloads: 2,
+      });
+    });
+
     it("should include oidcProtectFiles=true when OIDC is enabled with file protection", async () => {
       vi.mocked(getConfig).mockReturnValueOnce({
         ...DEFAULT_CONFIG,
@@ -1157,6 +1193,27 @@ describe("routes", () => {
       expect(res.status).toBe(400);
       const json = await res.json();
       expect(json.error).toContain("expiry");
+    });
+
+    it("should cap the chunks that wait for an earlier one", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({ "X-Content-Length": "1000" }),
+      });
+      const { id } = await initRes.json();
+
+      // Chunk 0 never arrives, so every later one has to wait.
+      for (let index = 1; index <= 64; index++) {
+        const res = await app.request(`/api/upload/${id}/chunk?index=${index}`, { method: "POST", body: new Uint8Array(1) });
+        expect(res.status).toBe(200);
+      }
+      const over = await app.request(`/api/upload/${id}/chunk?index=65`, { method: "POST", body: new Uint8Array(1) });
+      expect(over.status).toBe(429);
+      // The chunk everything waits for is still taken.
+      const first = await app.request(`/api/upload/${id}/chunk?index=0`, { method: "POST", body: new Uint8Array(1) });
+      expect(first.status).toBe(200);
     });
 
     it("should return 404 for chunk with unknown session", async () => {

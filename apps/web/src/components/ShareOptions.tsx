@@ -39,7 +39,7 @@ export function useLimitLabel(kind: ShareKind) {
   };
 }
 
-function Row({ label, labelId, children }: { label: ReactNode; labelId: string; children: ReactNode }) {
+export function Row({ label, labelId, children }: { label: ReactNode; labelId: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
       <span id={labelId} className="flex items-center gap-2 text-[13px] font-medium sm:w-36 sm:shrink-0">
@@ -63,7 +63,7 @@ interface ExpiryPickerProps {
  * An invisible copy of the chips measures that line, so the switch follows the width of the
  * row, on a phone as on a wide screen.
  */
-function ExpiryPicker({ options, value, onChange, labelId, disabled }: ExpiryPickerProps) {
+export function ExpiryPicker({ options, value, onChange, labelId, disabled }: ExpiryPickerProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const [fits, setFits] = useState(true);

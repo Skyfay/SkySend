@@ -11,8 +11,10 @@ const configRoute = new Hono();
 configRoute.get("/", (c) => {
   const config = getConfig();
   return c.json({
-    // Service toggles
-    enabledServices: config.ENABLED_SERVICES,
+    // Service toggles. Released CLI clients accept only "file" and "note" in this list and
+    // refuse the whole config otherwise, so file requests get a field of their own.
+    enabledServices: config.ENABLED_SERVICES.filter((service) => service !== "request"),
+    fileRequestsEnabled: config.ENABLED_SERVICES.includes("request"),
     // File configuration
     fileMaxSize: config.FILE_MAX_SIZE,
     fileMaxFilesPerUpload: config.FILE_MAX_FILES_PER_UPLOAD,
@@ -34,6 +36,13 @@ configRoute.get("/", (c) => {
     // Since v3 the server accepts notes made of blocks. CLI clients check this before they
     // create one, so they can fall back to a legacy note on an older server.
     noteBlocks: true,
+    // File request configuration
+    fileRequestExpireOptions: config.FILE_REQUEST_EXPIRE_OPTIONS_SEC,
+    fileRequestDefaultExpire: config.FILE_REQUEST_DEFAULT_EXPIRE_SEC,
+    fileRequestMaxUploads: config.FILE_REQUEST_MAX_UPLOADS,
+    fileRequestMaxSize: config.FILE_REQUEST_MAX_SIZE,
+    fileRequestRetention: config.FILE_REQUEST_RETENTION_SEC,
+    fileRequestDownloads: config.FILE_REQUEST_DOWNLOADS,
     // General
     customTitle: config.CUSTOM_TITLE,
     customColor: config.CUSTOM_COLOR ?? null,

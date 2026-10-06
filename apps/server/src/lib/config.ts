@@ -164,18 +164,68 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().nonnegative()),
 
+  // --- File request configuration ---
+
+  /** How long a file request accepts uploads, as options for the requester. At most 7 days. */
+  FILE_REQUEST_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [86400, 259200, 604800]),
+
+  FILE_REQUEST_DEFAULT_EXPIRE_SEC: z
+    .string()
+    .default("259200")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive()),
+
+  /** Most uploads one request accepts. */
+  FILE_REQUEST_MAX_UPLOADS: z
+    .string()
+    .default("10")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().min(1).max(1000)),
+
+  /** Most bytes one request accepts in total. Unset means FILE_MAX_SIZE. */
+  FILE_REQUEST_MAX_SIZE: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseByteSize(v) : undefined))
+    .pipe(z.number().positive().optional()),
+
+  /** How long an upload stays after it arrived. At most 30 days. */
+  FILE_REQUEST_RETENTION_SEC: z
+    .string()
+    .default("604800")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().positive().max(2_592_000, "FILE_REQUEST_RETENTION_SEC must be at most 30 days")),
+
+  /** How often the requester can download each uploaded file. */
+  FILE_REQUEST_DOWNLOADS: z
+    .string()
+    .default("5")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().min(1).max(100)),
+
+  /** New requests per day and person, counted by OIDC user or IP. 0 turns the limit off. */
+  FILE_REQUEST_DAILY_LIMIT: z
+    .string()
+    .default("10")
+    .transform((v) => parseInt(v, 10))
+    .pipe(z.number().int().min(0)),
+
   // --- General configuration ---
 
   ENABLED_SERVICES: z
     .string()
-    .default("file,note")
+    .default("file,note,request")
     .transform((s) =>
       s
         .split(",")
         .map((v) => v.trim().toLowerCase())
-        .filter((v) => v === "file" || v === "note"),
+        .filter((v) => v === "file" || v === "note" || v === "request"),
     )
-    .pipe(z.array(z.enum(["file", "note"])).min(1, "ENABLED_SERVICES must contain at least one of: file, note")),
+    .pipe(
+      z
+        .array(z.enum(["file", "note", "request"]))
+        .min(1, "ENABLED_SERVICES must contain at least one of: file, note, request"),
+    ),
 
   CLEANUP_INTERVAL: z
     .string()
@@ -379,8 +429,10 @@ const configSchema = z.object({
 });
 
 type RawConfig = z.infer<typeof configSchema>;
-export type Config = Omit<RawConfig, "UPLOADS_DIR" | "BRANDING_DIR"> & {
+export type Config = Omit<RawConfig, "UPLOADS_DIR" | "BRANDING_DIR" | "FILE_REQUEST_MAX_SIZE"> & {
   UPLOADS_DIR: string;
+  /** Most bytes one request accepts in total, FILE_MAX_SIZE unless set. */
+  FILE_REQUEST_MAX_SIZE: number;
   /** Directory whose contents are served under /branding/ (custom logo etc.). */
   BRANDING_DIR: string;
   /** True when OIDC is fully configured (OIDC_ISSUER + OIDC_CLIENT_ID + OIDC_CLIENT_SECRET + OIDC_SESSION_SECRET are all set). */
@@ -405,6 +457,7 @@ export function loadConfig(): Config {
     ...parsed,
     UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
     BRANDING_DIR: parsed.BRANDING_DIR ?? join(parsed.DATA_DIR, "branding"),
+    FILE_REQUEST_MAX_SIZE: parsed.FILE_REQUEST_MAX_SIZE ?? parsed.FILE_MAX_SIZE,
     OIDC_ENABLED: false,
   } as Config;
 
@@ -432,6 +485,26 @@ export function loadConfig(): Config {
     if (!_config.NOTE_VIEW_OPTIONS.includes(_config.NOTE_DEFAULT_VIEWS)) {
       throw new Error(
         `NOTE_DEFAULT_VIEWS (${_config.NOTE_DEFAULT_VIEWS}) must be one of NOTE_VIEW_OPTIONS (${_config.NOTE_VIEW_OPTIONS.join(", ")})`
+      );
+    }
+  }
+
+  // Cross-field validation - File requests. A request that stays open longer than a week
+  // would turn an upload link into a standing drop box.
+  if (_config.ENABLED_SERVICES.includes("request")) {
+    const tooLong = _config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.filter((s) => s > 604800);
+    if (tooLong.length > 0) {
+      throw new Error(`FILE_REQUEST_EXPIRE_OPTIONS_SEC must not exceed 604800 (7 days), got ${tooLong.join(", ")}`);
+    }
+    if (!_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.includes(_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)) {
+      throw new Error(
+        `FILE_REQUEST_DEFAULT_EXPIRE_SEC (${_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC}) must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC (${_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.join(", ")})`,
+      );
+    }
+    const maxTotal = _config.FILE_MAX_SIZE * _config.FILE_REQUEST_MAX_UPLOADS;
+    if (_config.FILE_REQUEST_MAX_SIZE > maxTotal) {
+      throw new Error(
+        `FILE_REQUEST_MAX_SIZE (${_config.FILE_REQUEST_MAX_SIZE}) must not exceed FILE_MAX_SIZE × FILE_REQUEST_MAX_UPLOADS (${maxTotal})`,
       );
     }
   }

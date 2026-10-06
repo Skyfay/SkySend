@@ -11,11 +11,15 @@ The 32-byte secret lives in the URL fragment and nowhere else that leaves the ma
 ```
 https://host/file/<id>#<secret>          window.location.hash.slice(1)
 https://host/note/<id>#<secret>
+https://host/request/<id>#<pk+linkSecret>  upload link of a file request, for the sender
+https://host/inbox/<id>#<inboxSecret>      inbox link of a file request, for the requester
 ```
 
 - Never put the secret, a derived key, a filename, or note content into a request path, query string, header, or body.
 - Never log any of them, including in `catch` blocks. `console.warn` for a browser capability probe is fine, a value is not.
 - `upload-store.ts` persists `{ id, ownerToken, secret, fileNames, name }` in IndexedDB via `idb-keyval` for the "My Uploads" page. That store is local-only, and the optional `name` never leaves the browser.
+- It also keeps the file requests made in this browser, `{ id, inboxFragment, uploadFragment, hasPassword, title }`. For a request with a password it keeps no token beside the fragment, since a token next to a protected secret would let anyone with the store test passwords offline.
+- The public key of a request only ever comes from the upload link. Never take it from the server, which could swap in its own.
 - Filenames and MIME types are encrypted client-side into `encryptedMeta` before the `POST /api/meta/:id` call.
 
 ## Layout
@@ -23,7 +27,7 @@ https://host/note/<id>#<secret>
 ```
 src/main.tsx        Entry, imports i18n before rendering
 src/App.tsx         Router + provider stack (ErrorBoundary > Theme > Tooltip > ServerConfig)
-src/pages/          Upload, Download, NoteView, MyUploads, HowItWorks, NotFound
+src/pages/          Upload, Download, NoteView, MyUploads, Requests, Inbox, RequestUpload, HowItWorks, NotFound
 src/components/     Feature components (PascalCase)
 src/components/ui/  Radix + cva primitives, 20 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
@@ -31,7 +35,9 @@ src/lib/            api client, crypto glue, workers, toast helpers, utils
 src/i18n/           i18next setup + 13 locale JSON files
 ```
 
-Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/requests` file requests made here, `/inbox/:id` the inbox of a request, `/request/:id` the upload page for a sender, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+
+`/api/config` reports file requests as `fileRequestsEnabled`, apart from `enabledServices`, which stays `file` and `note` for older CLI clients. An instance with only requests enabled sends `/` on to `/requests`.
 
 ## Server config
 
@@ -51,7 +57,9 @@ All of it comes from `@skysend/crypto`. Do not reimplement key derivation or str
 
 **Upload** (`hooks/useUpload.ts` + `lib/upload-worker.ts`): the hook generates the secret and salt on the main thread, builds the metadata from `File` objects, then hands the work to a Web Worker that derives keys, encrypts, and uploads. Multi-file uploads are zipped first via `lib/zip.ts` (fflate). Transport is WebSocket when the server advertises `fileUploadWs`, with an HTTP chunk fallback - `debugInfo.transport` records which one ran.
 
-**Download** (`hooks/useDownload.ts` + `lib/opfs-download.ts` + `public/download-sw.js`): three tiers, selected by capability, recorded in `debugInfo.tier`.
+**File requests** (`lib/file-request.ts`, `hooks/useFileRequests.ts`, `hooks/useInbox.ts`, `hooks/useRequestUpload.ts`): the requester's browser creates the key pair and the sealed vault, and the server gets only the vault and three derived tokens. A sender uploads through `useUpload` with a `request` option, which makes the worker use chunked HTTP into `/api/request/:id/upload/*`, wrap the file secret to the request's public key at finalize, and skip the share link and My Uploads. The inbox opens every upload on its own, so a damaged or crafted one does not hide the others, and every name from a sender goes through `sanitizeFilename` before it is shown or saved.
+
+**Download** (`hooks/useDownload.ts` + `lib/download-tiers.ts` + `lib/opfs-download.ts` + `public/download-sw.js`): three tiers, selected by capability, recorded in `debugInfo.tier`. `saveDecryptedDownload` in `lib/download-tiers.ts` runs them for a normal download and for a file in an inbox alike. The two differ only in the endpoint and the token header, which the Service Worker takes from an allowlist of `X-Auth-Token` and `X-Inbox-Token`.
 
 | Tier | `tier` | Path | Used for |
 | :--- | :--- | :--- | :--- |
@@ -63,7 +71,7 @@ Tier 1 is the only shape that gets real backpressure in Firefox, which is why `d
 
 Safari is excluded from tier 1 deliberately - it terminates Service Workers early and buffers stream responses in RAM. A Safari download over `SAFARI_BIG_SIZE` shows a warning first. Firefox with DevTools open gets its own warning because the network panel buffers the response.
 
-`useDownload` only imports `ensureSwController` and `streamDownloadViaSw` from `lib/opfs-download.ts`. The OPFS-worker pipeline in that file (`checkOpfsSupport`, `startOpfsDownload`, `triggerSwDownload`, `triggerBlobDownload`, and all of `lib/opfs-worker.ts`) is not reachable from the app today - read the hook, not those functions, when reasoning about what actually runs.
+`lib/download-tiers.ts` only imports `ensureSwController` and `streamDownloadViaSw` from `lib/opfs-download.ts`. The OPFS-worker pipeline in that file (`checkOpfsSupport`, `startOpfsDownload`, `triggerSwDownload`, `triggerBlobDownload`, and all of `lib/opfs-worker.ts`) is not reachable from the app today - read `lib/download-tiers.ts`, not those functions, when reasoning about what actually runs.
 
 `docs/developer-guide/download-modes.md` is the long-form version and has to be updated whenever the tier logic changes.
 

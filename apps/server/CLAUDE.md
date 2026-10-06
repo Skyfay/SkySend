@@ -23,8 +23,11 @@ src/index.ts          Composition root: config, DB, storage, middleware order, r
 src/lib/config.ts     Zod schema for every env var + cross-field validation
 src/lib/index-html.ts Runtime placeholders in the SPA's index.html (title, theme, link preview tags)
 src/lib/cleanup.ts    Periodic expiry sweep, also exported for the admin CLI
-src/lib/password-lockout.ts   Failed-attempt tracking, shared by password and note routes
+src/lib/password-lockout.ts   Failed-attempt tracking, shared by the password, note and inbox routes
 src/lib/upload-validation.ts  Zod schema + limit checks shared by the HTTP and WS upload paths
+src/lib/chunked-upload.ts     Session layer of chunked HTTP uploads, shared by uploads and file requests
+src/lib/request-validation.ts Strict base64url fields and token headers of the file request routes
+src/lib/request-limit.ts      In-memory daily limit for creating file requests
 src/db/               Drizzle schema, connection, generated migrations
 src/routes/           One file per endpoint group
 src/middleware/       auth, oidc-guard, quota, rate-limit, branding
@@ -51,9 +54,17 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | `DELETE /api/upload/:id` | owner token | Delete blob and row |
 | `GET /api/quota` | none | Remaining upload quota for the caller |
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
+| `POST /api/request` | OIDC when `OIDC_PROTECT_FILES` | Create a file request, daily limit per user or IP |
+| `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, space left |
+| `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, no WebSocket |
+| `DELETE /api/request/:id/upload/:uid` | upload session | A cancelled upload gives its slot back at once |
+| `GET /api/inbox/:id`, `GET /api/inbox/:id/file/:uid` | `X-Inbox-Token` | Vault and uploads, download one file |
+| `DELETE /api/inbox/:id/file/:uid`, `POST /api/inbox/:id/close`, `DELETE /api/inbox/:id` | `X-Inbox-Owner-Token` | Manage a request |
 | `GET /auth/login\|callback\|logout\|session` | - | OIDC, mounted outside `/api` so redirects avoid CORS |
 
-Service gating: `/info`, `/exists`, `/password`, `/meta`, `/download`, `/upload`, `/quota` are behind a `file` guard and `/note/*` behind a `note` guard, both driven by `ENABLED_SERVICES`. A new route in either family needs the matching guard registered in `src/index.ts`.
+Service gating: `/info`, `/exists`, `/password`, `/meta`, `/download`, `/upload`, `/quota` are behind a `file` guard and `/note/*` behind a `note` guard, both driven by `ENABLED_SERVICES`. A new route in either family needs the matching guard registered in `src/index.ts`. The two file request routes are the exception: `createRequestRoute` and `createInboxRoute` register the `request` guard themselves and take the OIDC guard and the quota as options, so the tests mount exactly what production runs. Keep it that way for routes added to that family.
+
+`/api/config` lists `file` and `note` in `enabledServices` and reports file requests as `fileRequestsEnabled`. Released CLI clients refuse a config whose `enabledServices` holds anything else, so a new service gets a field of its own there too.
 
 ## Authentication and tokens
 
@@ -82,7 +93,9 @@ Adding a variable means four edits: `config.ts`, `.env.example`, `docs/user-guid
 
 ## Database
 
-Drizzle over better-sqlite3. Tables: `uploads`, `notes`, `quota_usage`, `quota_state` (`src/db/schema.ts`).
+Drizzle over better-sqlite3. Tables: `uploads`, `notes`, `quota_usage`, `quota_state`, `file_requests`, `request_uploads` (`src/db/schema.ts`).
+
+Files uploaded into a request live in `request_uploads`, never in `uploads`, so no route of a normal upload can serve one. `file_requests` keeps two pairs of counters: `reserved_*` counts running and finished uploads and is set back to `finished_*` at startup, because no session survives a restart. `finished_*` never goes down, so a deleted upload keeps its slot. Deleting a request goes through `deleteFileRequest` in `lib/cleanup.ts`, which removes the rows before the blobs so a finishing upload cannot leave one behind.
 
 `initDatabase(dataDir)` creates `<dataDir>/db/skysend.db`, applies the WAL, `busy_timeout`, `synchronous=NORMAL`, and `foreign_keys` pragmas, then runs pending migrations automatically. WAL mode is verified and a failure throws - do not soften that check.
 
@@ -113,7 +126,7 @@ Rules:
 
 Three transports, one validation path. All of them parse through `uploadHeadersSchema` and `validateUploadHeaders` in `src/lib/upload-validation.ts` - keep it that way, a check added to only one transport is a hole.
 
-**Chunked HTTP** (`src/routes/upload.ts`): `POST /init` opens an in-memory session, chunks arrive at `POST /:id/chunk?index=N` possibly out of order, each body is streamed into a file in `DATA_DIR/tmp/chunks/` (emptied on start), and the files are appended in index order through a promise chain so `appendChunk` is never concurrent. Chunk data never stays in memory. The limits are checked per read: 16 MiB per chunk, all chunks of a session within the declared size, `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight per session, each index once. Never go back to reading a whole body into memory before checking it (GHSA-9rmm-v3p2-c26g). `POST /:id/finalize` commits the row. Sessions expire after one hour and are swept every ten minutes.
+**Chunked HTTP** (`src/routes/upload.ts` on top of `src/lib/chunked-upload.ts`, which uploads into a file request share): `POST /init` opens an in-memory session, chunks arrive at `POST /:id/chunk?index=N` possibly out of order, each body is streamed into a file in `DATA_DIR/tmp/chunks/` (emptied on start), and the files are appended in index order through a promise chain so `appendChunk` is never concurrent. Chunk data never stays in memory. The limits are checked per read: 16 MiB per chunk, all chunks of a session within the declared size, `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight per session, each index once, no empty chunk, at most 64 chunks waiting for an earlier one. Never go back to reading a whole body into memory before checking it (GHSA-9rmm-v3p2-c26g). `POST /:id/finalize` commits the row. Sessions expire after one hour and are swept every ten minutes.
 
 **Single-request HTTP** (`POST /api/upload`): streams one body straight to storage. Legacy, still kept as a simple fallback.
 
@@ -127,7 +140,8 @@ Chunk requests are intentionally exempt from the global rate limiter - the reaso
 
 - **Rate limiter** (`middleware/rate-limit.ts`): in-memory sliding window keyed by client IP, `RATE_LIMIT_WINDOW` / `RATE_LIMIT_MAX`, emits `X-RateLimit-*` headers. Also applied to `/auth/*`. `getClientIp` honours `TRUST_PROXY` - only trust forwarded headers when the operator opted in.
 - **Quota** (`middleware/quota.ts`): per-IP byte budget over `FILE_UPLOAD_QUOTA_WINDOW`, disabled when `FILE_UPLOAD_QUOTA_BYTES=0`. IPs are HMAC-hashed with a key that rotates every 24 hours, and state is persisted in `quota_state` so restarts do not reset budgets. Never store or log a raw IP here.
-- **Password lockout** (`lib/password-lockout.ts`): one shared instance for the password and note routes, `PASSWORD_MAX_ATTEMPTS` failures lock a resource for `PASSWORD_LOCKOUT_MS`.
+- **Password lockout** (`lib/password-lockout.ts`): one shared instance for the password, note and inbox routes, `PASSWORD_MAX_ATTEMPTS` failures lock a resource for `PASSWORD_LOCKOUT_MS`. Failures that led to no lock are forgotten after `PASSWORD_LOCKOUT_MS`. The inbox counts a wrong token for a request that does not exist as well, so the lockout does not reveal which IDs exist.
+- **Daily request limit** (`lib/request-limit.ts`): `FILE_REQUEST_DAILY_LIMIT` new requests per OIDC user or IP, HMAC-hashed, in memory only. A restart resets it.
 
 ## Security headers and middleware order
 

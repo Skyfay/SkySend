@@ -1,5 +1,5 @@
 import { sql, gt, and, or } from "drizzle-orm";
-import { uploads, notes } from "@skysend/server/db/schema";
+import { uploads, notes, fileRequests, requestUploads } from "@skysend/server/db/schema";
 import type { CliContext } from "../lib/context.js";
 import { formatBytes } from "../lib/format.js";
 
@@ -59,6 +59,27 @@ export async function showStats(ctx: CliContext, options: StatsOptions): Promise
     )
     .get()!;
 
+  // File request stats
+  const totalRequests = ctx.db
+    .select({ count: sql<number>`count(*)` })
+    .from(fileRequests)
+    .get()!;
+
+  const openRequests = ctx.db
+    .select({ count: sql<number>`count(*)` })
+    .from(fileRequests)
+    .where(and(sql`${fileRequests.closed} = 0`, gt(fileRequests.closesAt, now)))
+    .get()!;
+
+  const keptUploads = ctx.db
+    .select({
+      count: sql<number>`count(*)`,
+      totalSize: sql<number>`coalesce(sum(${requestUploads.size}), 0)`,
+      totalDownloads: sql<number>`coalesce(sum(${requestUploads.downloadCount}), 0)`,
+    })
+    .from(requestUploads)
+    .get()!;
+
   const stats = {
     uploads: {
       total: totalResult.count,
@@ -73,6 +94,13 @@ export async function showStats(ctx: CliContext, options: StatsOptions): Promise
       active: activeNotes.count,
       expired: totalNotes.count - activeNotes.count,
       views: totalNotes.totalViews,
+    },
+    requests: {
+      total: totalRequests.count,
+      open: openRequests.count,
+      uploads: keptUploads.count,
+      size: keptUploads.totalSize,
+      downloads: keptUploads.totalDownloads,
     },
   };
 
@@ -92,4 +120,9 @@ export async function showStats(ctx: CliContext, options: StatsOptions): Promise
   console.log(`Active notes:     ${stats.notes.active}`);
   console.log(`Expired notes:    ${stats.notes.expired}`);
   console.log(`Total views:      ${stats.notes.views}`);
+  console.log();
+  console.log(`File requests:    ${stats.requests.total}`);
+  console.log(`Open requests:    ${stats.requests.open}`);
+  console.log(`Request uploads:  ${stats.requests.uploads} (${formatBytes(stats.requests.size)})`);
+  console.log(`Their downloads:  ${stats.requests.downloads}`);
 }

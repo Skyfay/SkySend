@@ -1220,7 +1220,7 @@ describe("useDownload", () => {
     });
 
     expect(result.current.phase).toBe("done");
-    expect(vi.mocked(opfs.streamDownloadViaSw).mock.calls[0]?.at(-1)).toBe(132);
+    expect(vi.mocked(opfs.streamDownloadViaSw).mock.calls[0]?.[11]).toBe(132);
   });
 
   it("download() SW-Tier-1 truncation → phase='error' without a fallback download", async () => {

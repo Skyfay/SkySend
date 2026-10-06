@@ -32,10 +32,10 @@ skysend-cli <command>
 
 | Command | Description |
 | --- | --- |
-| `list` | Show active uploads |
-| `delete <id>` | Delete an upload by ID |
+| `list` | Show active uploads, notes and file requests |
+| `delete <id>` | Delete an upload, a note or a file request by ID |
 | `stats` | Show storage overview |
-| `cleanup` | Remove expired uploads |
+| `cleanup` | Remove expired uploads, notes and file requests |
 | `config` | Show server configuration |
 
 See [Commands](/user-guide/admin-cli/commands) for detailed usage of each command.

@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { Upload, FolderOpen, LogOut, Menu, X, Sparkles } from "lucide-react";
+import { Upload, FolderOpen, Inbox, LogOut, Menu, X, Sparkles } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ColorSchemeToggle } from "@/components/ColorSchemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -57,10 +57,13 @@ export function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
 
+  // An instance with only file requests has nothing to share and no uploads to list.
+  const sharing = !config || config.enabledServices.length > 0;
   const navItems = [
-    { to: "/", label: t("header.share"), icon: Upload },
+    ...(sharing ? [{ to: "/", label: t("header.share"), icon: Upload }] : []),
+    ...(config?.fileRequestsEnabled ? [{ to: "/requests", label: t("nav.requests"), icon: Inbox }] : []),
     { to: "/how", label: t("header.howItWorks"), icon: Sparkles },
-    { to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen },
+    ...(sharing ? [{ to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen }] : []),
   ];
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);

@@ -52,11 +52,25 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `NOTE_VIEW_OPTIONS` | ❌ | `0,1,2,3,5,10,20,50,100` | Comma-separated list of selectable view limits for notes. Include `0` for an "Unlimited" option. |
 | `NOTE_DEFAULT_VIEWS` | ❌ | `0` | Default view limit for notes (must be one of `NOTE_VIEW_OPTIONS`). `0` means unlimited (the default). `1` means burn-after-reading. |
 
+## File Requests
+
+A file request is a link you send to someone so they can upload files to you, encrypted for you alone. These variables set what a requester can choose.
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `FILE_REQUEST_EXPIRE_OPTIONS_SEC` | ❌ | `86400,259200,604800` | Comma-separated list of how long a request accepts uploads, in seconds. Each value is at most `604800` (7 days). |
+| `FILE_REQUEST_DEFAULT_EXPIRE_SEC` | ❌ | `259200` | Default for new requests (must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`). |
+| `FILE_REQUEST_MAX_UPLOADS` | ❌ | `10` | Most uploads one request accepts, from `1` to `1000`. |
+| `FILE_REQUEST_MAX_SIZE` | ❌ | `FILE_MAX_SIZE` | Most bytes one request accepts in total. Supports units: `B`, `KB`, `MB`, `GB`. A single upload is still limited by `FILE_MAX_SIZE`. |
+| `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. At most `2592000` (30 days). |
+| `FILE_REQUEST_DOWNLOADS` | ❌ | `5` | How often the requester can download each uploaded file, from `1` to `100`. |
+| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `10` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. `0` turns the limit off. The count lives in memory and resets on restart. |
+
 ## Services
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `ENABLED_SERVICES` | ❌ | `file,note` | Comma-separated list of enabled services. Set to `file` for file sharing only, `note` for notes only, or `file,note` for both. Disabled services return HTTP 403 and their UI tabs are hidden. |
+| `ENABLED_SERVICES` | ❌ | `file,note,request` | Comma-separated list of enabled services: `file` for file sharing, `note` for notes, `request` for file requests. Leave one out to turn it off. Disabled services return HTTP 403 and their UI is hidden. An instance that sets this variable explicitly has to add `request` to offer file requests. |
 
 ## Cleanup
 
@@ -75,7 +89,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `PASSWORD_MAX_ATTEMPTS` | ❌ | `10` | Failed password attempts before a specific IP is locked out from a specific upload or note. |
+| `PASSWORD_MAX_ATTEMPTS` | ❌ | `10` | Failed password attempts before a specific IP is locked out from a specific upload, note or file request inbox. Failed attempts that led to no lockout are forgotten after `PASSWORD_LOCKOUT_MS`. |
 | `PASSWORD_LOCKOUT_MS` | ❌ | `900000` | Lockout duration in milliseconds (default: 15 minutes). |
 
 ## Storage Backend
@@ -112,7 +126,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `DEFAULT_THEME` | ❌ | `graphite` | Visual theme of the web app. One of `graphite`, `aurora`, or `midnight`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
 | `DEFAULT_COLOR_SCHEME` | ❌ | `system` | Color scheme for visitors who have not picked one. One of `dark`, `light`, or `system`. Visitors can still switch in the UI. |
 | `DEFAULT_TAB` | ❌ | `file` | Tab shown when opening the app. `file` or `note`. `text`, `password`, `code` or `sshkey` open the note tab with that block already added. Falls back to the first available tab if the configured one is not enabled via `ENABLED_SERVICES`. |
-| `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
+| `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected, and so must the inbox of every file request. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
 | `FORCE_NOTE_PASSWORD` | ❌ | `false` | When `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both frontend and server. |
 
 ::: tip Example
@@ -225,7 +239,7 @@ When `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set, OIDC
 | `OIDC_CLIENT_ID` | ⚠️ | - | Client ID of the application registered at your provider. |
 | `OIDC_CLIENT_SECRET` | ⚠️ | - | Client secret of the application registered at your provider. |
 | `OIDC_SESSION_SECRET` | ❌ | auto | Secret used to sign session JWT cookies. If not set, a random 48-byte secret is generated at startup - sessions will be invalidated on every server restart. Set this to a fixed value (minimum 32 characters, generate with `openssl rand -base64 48`) to persist sessions across restarts. |
-| `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files. Set to `false` to allow anonymous file uploads while OIDC is active. |
+| `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files and to create file requests. Uploading into a request never needs a login. Set to `false` to allow anonymous file uploads while OIDC is active. |
 | `OIDC_PROTECT_NOTES` | ❌ | `true` | Require login to create notes. Set to `false` to allow anonymous note creation while OIDC is active. |
 | `OIDC_REDIRECT_URI` | ❌ | `{BASE_URL}/auth/callback` | Override the OAuth2 redirect/callback URI. Only needed if SkySend is served under a sub-path or behind a proxy that changes the origin. |
 | `OIDC_SCOPES` | ❌ | `openid profile email` | Space-separated list of OIDC scopes to request. |
@@ -249,7 +263,9 @@ SkySend validates all environment variables on startup using Zod:
 - `FILE_DEFAULT_DOWNLOAD` must be one of the values in `FILE_DOWNLOAD_OPTIONS`
 - `NOTE_DEFAULT_EXPIRE_SEC` must be one of the values in `NOTE_EXPIRE_OPTIONS_SEC`
 - `NOTE_DEFAULT_VIEWS` must be one of the values in `NOTE_VIEW_OPTIONS`
-- `ENABLED_SERVICES` must contain at least one of `file` or `note`
+- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be one of the values in `FILE_REQUEST_EXPIRE_OPTIONS_SEC`, and no option may exceed 7 days
+- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE` times `FILE_REQUEST_MAX_UPLOADS`
+- `ENABLED_SERVICES` must contain at least one of `file`, `note` or `request`
 - `PORT` must be between 1 and 65535
 - `FILE_MAX_SIZE` must be a valid byte size string
 - `NOTE_MAX_SIZE` must be a valid byte size string

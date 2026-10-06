@@ -6,6 +6,8 @@ export default defineConfig({
       exclude: [
         // Pure re-export barrel - no executable logic to test
         "src/index.ts",
+        // Test helpers
+        "tests/**",
       ],
     },
   },

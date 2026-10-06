@@ -27,7 +27,8 @@
   "nav": {
     "upload": "Lähetä",
     "myUploads": "Omat lähetykset",
-    "menu": "Valikko"
+    "menu": "Valikko",
+    "requests": "Pyynnöt"
   },
   "tab": {
     "file": "Tiedosto",
@@ -262,7 +263,8 @@
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
     "loginButton": "Kirjaudu SSO:lla",
     "logout": "Kirjaudu ulos"
-  },  "debug": {
+  },
+  "debug": {
     "title": "Tekniset tiedot",
     "download": "Lataus",
     "upload": "L\u00e4hetys",
@@ -287,7 +289,8 @@
     "copied": "Kopioitu!",
     "timeline": "Aikajana",
     "close": "Sulje"
-  },  "language": {
+  },
+  "language": {
     "search": "Hae kieltä..."
   },
   "errors": {
@@ -295,7 +298,9 @@
     "originNotAllowed": "Palvelin esti tämän alkuperän",
     "s3CorsError": "S3 CORS ei ole määritetty",
     "linkRewritten": "Linkkiä muutettiin siirron aikana",
-    "linkRewrittenDesc": "Sähköpostin suojaussuodatin kirjoitti tämän linkin uudelleen, joten salauksen purkuavain näkyi palvelimelle. Jos sisältö on luottamuksellista, pyydä lähettäjää poistamaan se heti kun olet saanut sen."
+    "linkRewrittenDesc": "Sähköpostin suojaussuodatin kirjoitti tämän linkin uudelleen, joten salauksen purkuavain näkyi palvelimelle. Jos sisältö on luottamuksellista, pyydä lähettäjää poistamaan se heti kun olet saanut sen.",
+    "linkRewrittenInboxDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten näiden saapuneiden avain näkyi palvelimelle. Lataa tarvitsemasi ja poista sitten pyyntö.",
+    "linkRewrittenUploadDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten palvelin näki sen kokonaan. Tiedostosi pysyvät salattuina pyytäjälle, mutta linkin haltija voi lukea otsikon ja lähettää pyyntöön."
   },
   "header": {
     "share": "Jaa",
@@ -437,5 +442,124 @@
     "ctaTitle": "Valmis jakamaan jotain?",
     "ctaText": "Se vie vain muutaman sekunnin, eikä kukaan muu kuin vastaanottaja voi lukea sitä.",
     "ctaButton": "Aloita jakaminen"
+  },
+  "request": {
+    "titleLabel": "Mitä tarvitset? (valinnainen)",
+    "titlePlaceholder": "esim. Asiakirjat veroilmoitusta varten",
+    "titleHint": "Lähettäjä näkee tämän tekstin. Se on salattu, palvelin ei koskaan lue sitä.",
+    "titleTooLong": "Otsikko on liian pitkä.",
+    "openFor": "Auki",
+    "maxUploads": "Lähetykset",
+    "uploads_one": "{{count}} lähetys",
+    "uploads_other": "{{count}} lähetystä",
+    "maxSize": "Kokonaiskoko",
+    "passwordHint": "Saapuneet aukeavat vain tällä salasanalla.",
+    "passwordOff": "Pelkkä saapuneiden linkki avaa saapuneet.",
+    "summary": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b> ja yhteensä <b>{{size}}</b>.",
+    "create": "Luo pyyntö",
+    "creating": "Luodaan…",
+    "created": "Pyyntö luotu",
+    "createdText": "Kaksi linkkiä: toinen lähetettäväksi, toinen itsellesi.",
+    "uploadLink": "Lähetyslinkki",
+    "uploadLinkHint": "Lähetä tämä sille, jonka pitää lähettää sinulle tiedostoja. Sillä voi vain lähettää.",
+    "inboxLink": "Saapuneiden linkkisi",
+    "inboxLinkHint": "Säilytä tämä. Se avaa saapuneesi millä tahansa laitteella.",
+    "inboxLinkPassword": "Säilytä tämä. Yhdessä salasanasi kanssa se avaa saapuneesi millä tahansa laitteella.",
+    "inboxLinkWarning": "Älä jaa saapuneiden linkkiä. Se on avain tämän pyynnön kaikkiin tiedostoihin ja ainoa pääsy niihin. Tallenna se ennen kuin poistut sivulta.",
+    "openInbox": "Avaa saapuneet",
+    "newRequest": "Uusi pyyntö",
+    "error": {
+      "signInRequired": "Kirjaudu sisään luodaksesi pyynnön.",
+      "dailyLimit": "Olet luonut niin monta pyyntöä kuin tämä palvelin sallii päivässä. Yritä huomenna uudelleen.",
+      "failed": "Pyyntöä ei voitu luoda."
+    },
+    "retentionHint_one": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kerran.",
+    "retentionHint_other": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kertaa."
+  },
+  "requests": {
+    "title": "Tiedostopyynnöt",
+    "intro": "Pyydä joltakulta tiedostoja. Hän lähettää ne salattuina, ja vain sinä voit avata ne.",
+    "yours": "Pyyntösi",
+    "localHint": "Tämä luettelo on vain tässä selaimessa. Palvelin ei tiedä, mitkä pyynnöt ovat sinun.",
+    "untitled": "Nimetön pyyntö",
+    "passwordProtected": "Salasanasuojattu",
+    "received_one": "{{count}} lähetys vastaanotettu",
+    "received_other": "{{count}} lähetystä vastaanotettu",
+    "closed": "Suljettu",
+    "copyUploadLink": "Kopioi lähetyslinkki",
+    "deleteTitle": "Poistetaanko tämä pyyntö?",
+    "deleteText": "Pyyntö ja kaikki sen tiedostot poistetaan pysyvästi. Lähetyslinkki lakkaa toimimasta.",
+    "forgetTitle": "Poistetaanko luettelosta?",
+    "forgetText": "Tällä pyynnöllä on salasana, joten vain sen saapuneet voi poistaa sen. Tässä se vain poistetaan luettelosta, ja sen tiedostot säilyvät, kunnes ne vanhenevat.",
+    "forget": "Poista luettelosta",
+    "deleted": "Pyyntö poistettu",
+    "forgotten": "Poistettu luettelosta",
+    "deleteFailed": "Pyyntöä ei voitu poistaa."
+  },
+  "inbox": {
+    "title": "Saapuneet",
+    "invalid": "Tämä saapuneiden linkki on puutteellinen",
+    "gone": "Tätä pyyntöä ei ole enää",
+    "goneText": "Se poistettiin, tai se on suljettu ja kaikki sen tiedostot ovat vanhentuneet.",
+    "deleted": "Pyyntö poistettu",
+    "deletedText": "Pyyntö ja kaikki sen tiedostot on poistettu pysyvästi.",
+    "usage": "{{used}}/{{max}} lähetystä, {{size}}/{{maxSize}}",
+    "closesIn": "sulkeutuu {{time}} kuluttua",
+    "closed": "suljettu",
+    "refresh": "Päivitä",
+    "empty": "Täällä ei ole vielä mitään",
+    "emptyOpen": "Tiedostot näkyvät täällä, kun joku käyttää lähetyslinkkiäsi.",
+    "emptyClosed": "Tämä pyyntö on suljettu, eikä yhtään tiedostoa saapunut.",
+    "downloadsLeft_one": "{{count}} lataus jäljellä",
+    "downloadsLeft_other": "{{count}} latausta jäljellä",
+    "deletedIn": "poistetaan {{time}} kuluttua",
+    "unverified": "Vahvistamaton",
+    "unverifiedHint": "Kuka tahansa, jolla on lähetyslinkki, voi lähettää tiedostoja. Avaa vain se, mitä odotit.",
+    "damaged": "Tätä lähetystä ei voi avata",
+    "damagedHint": "Se on vioittunut tai sitä ei tehty tätä pyyntöä varten. Poista se.",
+    "downloadFailed": "Lataus epäonnistui.",
+    "actionFailed": "Se ei onnistunut. Yritä uudelleen.",
+    "fileDeleted": "Tiedosto poistettu",
+    "retentionHint": "Jokainen tiedosto poistetaan automaattisesti näytetyn ajan kuluttua tai kun sen lataukset on käytetty.",
+    "close": "Sulje pyyntö",
+    "closeTitle": "Suljetaanko tämä pyyntö?",
+    "closeText": "Kukaan ei voi enää lähettää uusia tiedostoja. Saapuneet tiedostot säilyvät, kunnes ne vanhenevat.",
+    "closedToast": "Pyyntö suljettu",
+    "delete": "Poista pyyntö",
+    "deleteTitle": "Poistetaanko tämä pyyntö?",
+    "deleteText": "Pyyntö ja kaikki sen tiedostot poistetaan pysyvästi.",
+    "passwordRequired": "Nämä saapuneet on suojattu salasanalla",
+    "deleteFileTitle": "Poistetaanko tämä tiedosto?",
+    "deleteFileText": "Se poistetaan pysyvästi. Sen paikka pyynnössä pysyy käytettynä."
+  },
+  "requestUpload": {
+    "title": "Joku pyytää sinulta <a>tiedostoja</a>",
+    "intro": "Tiedostosi salataan tässä selaimessa ennen kuin ne lähtevät siitä. Vain tämän pyynnön luoja voi avata ne.",
+    "titleFrom": "Pyytäjän kirjoittama. Kukaan ei ole tarkistanut sitä.",
+    "host": "Tiedostosi menevät osoitteeseen <b>{{host}}</b>",
+    "report": "Ilmoita tästä pyynnöstä",
+    "limits_one": "Enintään {{size}} lähetystä kohden, {{count}} lähetys jäljellä, sulkeutuu {{time}} kuluttua.",
+    "limits_other": "Enintään {{size}} lähetystä kohden, {{count}} lähetystä jäljellä, sulkeutuu {{time}} kuluttua.",
+    "send": "Salaa ja lähetä",
+    "tooLarge": "Enemmän kuin {{size}}, joka yhdellä lähetyksellä tässä saa olla",
+    "delivered": "Toimitettu",
+    "deliveredText": "Vain pyytäjä voi avata sen. Et saa linkkiä, eikä sinun tarvitse tehdä muuta.",
+    "sendMore": "Lähetä lisää tiedostoja",
+    "invalid": "Tämä lähetyslinkki on puutteellinen",
+    "invalidText": "Pyydä koko linkki siltä, joka sen lähetti.",
+    "gone": "Tätä pyyntöä ei ole",
+    "goneText": "Se poistettiin, tai linkki on väärä.",
+    "closed": "Tämä pyyntö on suljettu",
+    "closedText": "Se ei enää ota vastaan tiedostoja. Pyydä uusi linkki siltä, joka sen lähetti.",
+    "full": "Tämä pyyntö on täynnä",
+    "fullText": "Se on saanut niin monta lähetystä kuin se sallii. Pyydä uusi linkki siltä, joka sen lähetti.",
+    "error": {
+      "gone": "Tätä pyyntöä ei ole enää.",
+      "full": "Tämä pyyntö on nyt täynnä.",
+      "closed": "Tämä pyyntö suljettiin sillä välin.",
+      "tooLarge": "Tässä pyynnössä ei ole enää tarpeeksi tilaa.",
+      "quota": "Olet saavuttanut tämän palvelimen lähetysrajan. Yritä myöhemmin uudelleen."
+    },
+    "errorText": "Pyyntöä ei voitu ladata. Lataa sivu uudelleen yrittääksesi uudestaan."
   }
 }

@@ -27,7 +27,8 @@
   "nav": {
     "upload": "Prześlij",
     "myUploads": "Moje przesyłki",
-    "menu": "Menu"
+    "menu": "Menu",
+    "requests": "Prośby"
   },
   "tab": {
     "file": "Plik",
@@ -262,7 +263,8 @@
     "loginRequired": "Wymagane logowanie do przesyłania",
     "loginButton": "Zaloguj przez SSO",
     "logout": "Wyloguj"
-  },  "debug": {
+  },
+  "debug": {
     "title": "Informacje techniczne",
     "download": "Pobieranie",
     "upload": "Wysy\u0142anie",
@@ -287,7 +289,8 @@
     "copied": "Skopiowano!",
     "timeline": "O\u015b czasu",
     "close": "Zamknij"
-  },  "language": {
+  },
+  "language": {
     "search": "Wyszukaj język..."
   },
   "errors": {
@@ -295,7 +298,9 @@
     "originNotAllowed": "Serwer zablokował to źródło",
     "s3CorsError": "CORS S3 nie jest skonfigurowany",
     "linkRewritten": "Link został zmieniony w trakcie przesyłania",
-    "linkRewrittenDesc": "Filtr bezpieczeństwa poczty przepisał ten link, przez co klucz deszyfrujący był widoczny dla serwera. Jeśli treść jest poufna, poproś nadawcę o jej usunięcie, gdy tylko ją pobierzesz."
+    "linkRewrittenDesc": "Filtr bezpieczeństwa poczty przepisał ten link, przez co klucz deszyfrujący był widoczny dla serwera. Jeśli treść jest poufna, poproś nadawcę o jej usunięcie, gdy tylko ją pobierzesz.",
+    "linkRewrittenInboxDesc": "Filtr bezpieczeństwa poczty przepisał ten link, więc klucz do tej skrzynki był widoczny dla serwera. Pobierz to, czego potrzebujesz, a potem usuń prośbę.",
+    "linkRewrittenUploadDesc": "Filtr bezpieczeństwa poczty przepisał ten link, więc serwer zobaczył go w całości. Twoje pliki pozostają zaszyfrowane dla osoby proszącej, ale każdy z tym linkiem może odczytać tytuł i przesyłać do prośby."
   },
   "header": {
     "share": "Udostępnij",
@@ -437,5 +442,124 @@
     "ctaTitle": "Chcesz coś udostępnić?",
     "ctaText": "To zajmuje kilka sekund, a przeczytać to może tylko odbiorca.",
     "ctaButton": "Zacznij udostępniać"
+  },
+  "request": {
+    "titleLabel": "Czego potrzebujesz? (opcjonalnie)",
+    "titlePlaceholder": "np. Dokumenty do zeznania podatkowego",
+    "titleHint": "Nadawca widzi ten tekst. Jest zaszyfrowany, serwer nigdy go nie czyta.",
+    "titleTooLong": "Tytuł jest za długi.",
+    "openFor": "Otwarta przez",
+    "maxUploads": "Przesyłki",
+    "uploads_one": "{{count}} przesyłka",
+    "uploads_other": "Przesyłki: {{count}}",
+    "maxSize": "Łączny rozmiar",
+    "passwordHint": "Twoja skrzynka otworzy się tylko z tym hasłem.",
+    "passwordOff": "Sam link do skrzynki ją otwiera.",
+    "summary": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b> i <b>{{size}}</b> łącznie.",
+    "create": "Utwórz prośbę",
+    "creating": "Tworzenie…",
+    "created": "Prośba utworzona",
+    "createdText": "Dwa linki: jeden do wysłania, drugi do zachowania.",
+    "uploadLink": "Link do przesyłania",
+    "uploadLinkHint": "Wyślij go osobie, która ma przesłać ci pliki. Pozwala tylko przesyłać.",
+    "inboxLink": "Twój link do skrzynki",
+    "inboxLinkHint": "Zachowaj go. Otwiera twoją skrzynkę na każdym urządzeniu.",
+    "inboxLinkPassword": "Zachowaj go. Razem z hasłem otwiera twoją skrzynkę na każdym urządzeniu.",
+    "inboxLinkWarning": "Nie udostępniaj linku do skrzynki. To klucz do wszystkich plików tej prośby i jedyna droga do nich. Zapisz go przed opuszczeniem tej strony.",
+    "openInbox": "Otwórz skrzynkę",
+    "newRequest": "Nowa prośba",
+    "error": {
+      "signInRequired": "Zaloguj się, aby utworzyć prośbę.",
+      "dailyLimit": "Utworzono tyle próśb, ile ten serwer pozwala dziennie. Spróbuj jutro.",
+      "failed": "Nie udało się utworzyć prośby."
+    },
+    "retentionHint_one": "Każdy plik zostaje przez {{time}} od dotarcia, a pobrać go można {{count}} raz.",
+    "retentionHint_other": "Każdy plik zostaje przez {{time}} od dotarcia, a liczba pobrań wynosi: {{count}}."
+  },
+  "requests": {
+    "title": "Prośby o pliki",
+    "intro": "Poproś kogoś o pliki. Prześle je zaszyfrowane, a tylko ty możesz je otworzyć.",
+    "yours": "Twoje prośby",
+    "localHint": "Ta lista istnieje tylko w tej przeglądarce. Serwer nie wie, które prośby są twoje.",
+    "untitled": "Prośba bez tytułu",
+    "passwordProtected": "Chroniona hasłem",
+    "received_one": "Otrzymano {{count}} przesyłkę",
+    "received_other": "Otrzymane przesyłki: {{count}}",
+    "closed": "Zamknięta",
+    "copyUploadLink": "Kopiuj link do przesyłania",
+    "deleteTitle": "Usunąć tę prośbę?",
+    "deleteText": "Prośba i wszystkie jej pliki zostaną trwale usunięte. Link do przesyłania przestanie działać.",
+    "forgetTitle": "Usunąć z tej listy?",
+    "forgetText": "Ta prośba ma hasło, więc usunąć ją może tylko jej skrzynka. Tutaj zostanie tylko usunięta z listy, a jej pliki pozostaną do wygaśnięcia.",
+    "forget": "Usuń z listy",
+    "deleted": "Prośba usunięta",
+    "forgotten": "Usunięto z listy",
+    "deleteFailed": "Nie udało się usunąć prośby."
+  },
+  "inbox": {
+    "title": "Skrzynka",
+    "invalid": "Ten link do skrzynki jest niepełny",
+    "gone": "Ta prośba już nie istnieje",
+    "goneText": "Została usunięta albo jest zamknięta i wszystkie jej pliki wygasły.",
+    "deleted": "Prośba usunięta",
+    "deletedText": "Prośba i wszystkie jej pliki zostały trwale usunięte.",
+    "usage": "{{used}} z {{max}} przesyłek, {{size}} z {{maxSize}}",
+    "closesIn": "zamyka się za {{time}}",
+    "closed": "zamknięta",
+    "refresh": "Odśwież",
+    "empty": "Jeszcze nic tu nie ma",
+    "emptyOpen": "Pliki pojawią się tutaj, gdy ktoś użyje twojego linku do przesyłania.",
+    "emptyClosed": "Ta prośba jest zamknięta i nie dotarł żaden plik.",
+    "downloadsLeft_one": "Pozostało pobrań: {{count}}",
+    "downloadsLeft_other": "Pozostało pobrań: {{count}}",
+    "deletedIn": "usunięcie za {{time}}",
+    "unverified": "Niezweryfikowane",
+    "unverifiedHint": "Każdy z linkiem do przesyłania może wysyłać pliki. Otwieraj tylko to, czego się spodziewasz.",
+    "damaged": "Tej przesyłki nie można otworzyć",
+    "damagedHint": "Jest uszkodzona lub nie powstała dla tej prośby. Usuń ją.",
+    "downloadFailed": "Pobieranie nie powiodło się.",
+    "actionFailed": "Nie udało się. Spróbuj ponownie.",
+    "fileDeleted": "Plik usunięty",
+    "retentionHint": "Każdy plik jest usuwany automatycznie po wskazanym czasie albo po wykorzystaniu pobrań.",
+    "close": "Zamknij prośbę",
+    "closeTitle": "Zamknąć tę prośbę?",
+    "closeText": "Nikt nie będzie mógł wysłać nowych plików. Otrzymane pliki zostaną do wygaśnięcia.",
+    "closedToast": "Prośba zamknięta",
+    "delete": "Usuń prośbę",
+    "deleteTitle": "Usunąć tę prośbę?",
+    "deleteText": "Prośba i wszystkie jej pliki zostaną trwale usunięte.",
+    "passwordRequired": "Ta skrzynka jest chroniona hasłem",
+    "deleteFileTitle": "Usunąć ten plik?",
+    "deleteFileText": "Zostanie trwale usunięty. Jego miejsce w prośbie pozostanie zajęte."
+  },
+  "requestUpload": {
+    "title": "Ktoś prosi cię o <a>pliki</a>",
+    "intro": "Twoje pliki są szyfrowane w tej przeglądarce, zanim ją opuszczą. Otworzyć je może tylko osoba, która utworzyła tę prośbę.",
+    "titleFrom": "Napisane przez osobę proszącą. Nikt tego nie sprawdził.",
+    "host": "Twoje pliki trafią do <b>{{host}}</b>",
+    "report": "Zgłoś tę prośbę",
+    "limits_one": "Do {{size}} na przesyłkę, pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
+    "limits_other": "Do {{size}} na przesyłkę, pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
+    "send": "Zaszyfruj i wyślij",
+    "tooLarge": "Więcej niż {{size}}, które może mieć tu jedna przesyłka",
+    "delivered": "Dostarczono",
+    "deliveredText": "Otworzyć to może tylko osoba, która prosiła. Nie dostajesz żadnego linku i nie musisz nic więcej robić.",
+    "sendMore": "Wyślij więcej plików",
+    "invalid": "Ten link do przesyłania jest niepełny",
+    "invalidText": "Poproś osobę, która go wysłała, o pełny link.",
+    "gone": "Ta prośba nie istnieje",
+    "goneText": "Została usunięta albo link jest błędny.",
+    "closed": "Ta prośba jest zamknięta",
+    "closedText": "Nie przyjmuje już plików. Poproś osobę, która ją wysłała, o nowy link.",
+    "full": "Ta prośba jest pełna",
+    "fullText": "Otrzymała tyle przesyłek, ile pozwala. Poproś osobę, która ją wysłała, o nowy link.",
+    "error": {
+      "gone": "Ta prośba już nie istnieje.",
+      "full": "Ta prośba jest już pełna.",
+      "closed": "Ta prośba została w międzyczasie zamknięta.",
+      "tooLarge": "W tej prośbie nie ma już wystarczająco miejsca.",
+      "quota": "Osiągnięto limit przesyłania tego serwera. Spróbuj później."
+    },
+    "errorText": "Nie udało się wczytać prośby. Odśwież stronę, aby spróbować ponownie."
   }
 }

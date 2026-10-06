@@ -16,6 +16,10 @@ interface HistoryRowProps {
   detail?: string;
   meta: ReactNode;
   link: string;
+  /** Where "open" leads, when that is not the link that is copied. */
+  openLink?: string;
+  /** The label of the copy button. */
+  copyLabel?: string;
   openIcon: LucideIcon;
   openLabel: string;
   onRename?: () => void;
@@ -24,7 +28,7 @@ interface HistoryRowProps {
 }
 
 /**
- * One upload or note on the My Uploads page: what it is, how much of it is left, a copy
+ * One upload, note or file request in a history list: what it is, how much of it is left, a copy
  * button for the link, and the rarer actions in a menu.
  */
 export function HistoryRow({
@@ -33,6 +37,8 @@ export function HistoryRow({
   detail,
   meta,
   link,
+  openLink,
+  copyLabel,
   openIcon: OpenIcon,
   openLabel,
   onRename,
@@ -68,7 +74,7 @@ export function HistoryRow({
       <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
         <Button variant="outline" size="sm" onClick={copyLink}>
           {copied ? <Check className="text-primary-text" /> : <Copy />}
-          {copied ? t("common.copied") : t("myUploads.copyLink")}
+          {copied ? t("common.copied") : (copyLabel ?? t("myUploads.copyLink"))}
         </Button>
         {/* Not modal, so a dialog opened from an item gets the focus and the pointer back. */}
         <DropdownMenu modal={false}>
@@ -79,7 +85,7 @@ export function HistoryRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <a href={link}>
+              <a href={openLink ?? link}>
                 <OpenIcon />
                 {openLabel}
               </a>

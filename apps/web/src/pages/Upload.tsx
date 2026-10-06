@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { showKnownErrorToast } from "@/lib/toast";
 import {
@@ -137,6 +137,11 @@ export function UploadPage() {
     if (config.forceFilePassword) {
       setPasswordEnabled(true);
     }
+  }
+
+  // An instance that offers only file requests has nothing to share here.
+  if (config && availableTabs.length === 0 && config.fileRequestsEnabled) {
+    return <Navigate to="/requests" replace />;
   }
 
   if (configLoading || !config) {

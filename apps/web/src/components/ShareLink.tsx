@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Check, Copy, Lock, Plus, QrCode, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { SplitLink } from "@/components/SplitLink";
 
 interface ShareLinkProps {
   link: string;
@@ -22,11 +23,6 @@ export function ShareLink({ link, averageSpeed, onNewUpload, children }: ShareLi
   const [qrLarge, setQrLarge] = useState(false);
 
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-  // The key is the fragment. Showing it apart makes visible what never reaches the server.
-  const hashIndex = link.indexOf("#");
-  const base = hashIndex >= 0 ? link.slice(0, hashIndex) : link;
-  const key = hashIndex >= 0 ? link.slice(hashIndex) : "";
-
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(link);
@@ -59,15 +55,7 @@ export function ShareLink({ link, averageSpeed, onNewUpload, children }: ShareLi
       </div>
 
       <div className="flex flex-col gap-2 rounded-2xl border border-border bg-well p-2 sm:flex-row sm:items-center sm:pl-4">
-        {/* One click selects the whole link. It wraps instead of truncating, so the key
-            at its end always stays visible. */}
-        <p
-          aria-label={t("upload.shareLink")}
-          className="min-w-0 flex-1 select-all break-all px-2 py-1.5 font-mono text-[13px] leading-relaxed sm:px-0"
-        >
-          <span className="text-muted-foreground">{base}</span>
-          <span className="font-semibold text-primary-text">{key}</span>
-        </p>
+        <SplitLink link={link} label={t("upload.shareLink")} />
         <div className="flex gap-2">
           <Button onClick={copyToClipboard} className="flex-1 sm:flex-none">
             {copied ? <Check /> : <Copy />}

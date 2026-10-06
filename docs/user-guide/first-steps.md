@@ -41,6 +41,10 @@ When uploading multiple files, they are automatically zipped in your browser usi
 
 The recipient downloads a `.zip` file containing all original files with their names preserved.
 
+## Request Files
+
+To get files from someone instead, open **Requests**, set how long the request stays open and how much it takes, and send them the upload link. What they upload is encrypted in their browser for you alone, and you open it with your inbox link. See [File Requests](/user-guide/file-requests).
+
 ## Download a File
 
 1. Open the share link in your browser

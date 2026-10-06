@@ -11,12 +11,13 @@ import { logger } from "hono/logger";
  * Hono's logger derives its path from the raw, still percent-encoded URL, so the
  * key would otherwise appear in every log line for such a request.
  *
- * Everything after a file, note, or legacy download ID is therefore dropped. The
- * pattern is deliberately wider than "%23" so any other appended value is cut too.
+ * Everything after a file, note, request, inbox, or legacy download ID is therefore
+ * dropped. The pattern is deliberately wider than "%23" so any other appended value
+ * is cut too. API paths never carry a key and keep their full path.
  * `\S*` stops at whitespace, which keeps the status code and the elapsed time on
  * the outgoing line intact.
  */
-const SENSITIVE_PATH = /(\/(?:file|note|d)\/[0-9a-fA-F-]{36})\S*/g;
+const SENSITIVE_PATH = /((?<!\/api)\/(?:file|note|d|request|inbox)\/[0-9a-fA-F-]{36})\S*/g;
 
 /**
  * Remove anything a share-link path carries beyond its resource ID.

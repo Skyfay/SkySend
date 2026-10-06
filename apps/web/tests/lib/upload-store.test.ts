@@ -36,6 +36,10 @@ const {
   removeNote,
   getAllNotes,
   clearExpiredNotes,
+  saveRequest,
+  getRequest,
+  removeRequest,
+  getAllRequests,
 } = await import("../../src/lib/upload-store.js");
 
 function makeUpload(overrides: Partial<StoredUpload> = {}): StoredUpload {
@@ -270,5 +274,31 @@ describe("getAllNotes skips null values from idb", () => {
     store.set("note:orphan", undefined);
     const notes = await getAllNotes();
     expect(notes).toHaveLength(0);
+  });
+});
+
+describe("file request storage", () => {
+  beforeEach(() => {
+    store.clear();
+  });
+
+  const request = (id: string, createdAt: string) => ({
+    id,
+    inboxFragment: `inbox-${id}`,
+    uploadFragment: `upload-${id}`,
+    hasPassword: false,
+    closesAt: "2099-01-01T00:00:00Z",
+    createdAt,
+  });
+
+  it("keeps requests apart from uploads and notes, newest first", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    await saveRequest(request("b", "2026-02-01T00:00:00Z"));
+    store.set("upload:x", { id: "x" });
+    expect((await getAllRequests()).map((r) => r.id)).toEqual(["b", "a"]);
+    expect(await getRequest("a")).toMatchObject({ inboxFragment: "inbox-a" });
+    await removeRequest("a");
+    expect(await getRequest("a")).toBeUndefined();
+    expect((await getAllRequests()).map((r) => r.id)).toEqual(["b"]);
   });
 });

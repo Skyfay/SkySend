@@ -65,6 +65,56 @@ function makeFile(name = "test.txt", content = "hello"): File {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("useUpload", () => {
+  it("uploads into a file request without a share link or a history entry", async () => {
+    const { saveUpload } = await import("../../src/lib/upload-store.js");
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    const publicKey = new Uint8Array(65).fill(4);
+
+    act(() => {
+      result.current.upload({
+        files: [makeFile()],
+        maxDownloads: 0,
+        expireSec: 0,
+        password: "",
+        request: { id: "req-1", uploadToken: "token", publicKey },
+      });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    const worker = MockWorker.lastInstance!;
+    const sent = worker.postMessage.mock.calls[0]![0] as {
+      request: { id: string; uploadToken: string; publicKey: ArrayBuffer };
+    };
+    expect(sent.request.id).toBe("req-1");
+    expect(sent.request.uploadToken).toBe("token");
+    expect(new Uint8Array(sent.request.publicKey)).toEqual(publicKey);
+
+    act(() => worker.emit({ type: "delivered", id: "upload-1" }));
+    await waitFor(() => expect(result.current.phase).toBe("done"));
+    expect(result.current.shareLink).toBeNull();
+    expect(result.current.uploadId).toBe("upload-1");
+    expect(saveUpload).not.toHaveBeenCalled();
+  });
+
+  it("ends the session of a cancelled upload into a request on the server", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    act(() => {
+      result.current.upload({
+        files: [makeFile()],
+        request: { id: "req-1", uploadToken: "token", publicKey: new Uint8Array(65) },
+      });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => MockWorker.lastInstance!.emit({ type: "session", id: "up-1" }));
+    act(() => result.current.cancel());
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringMatching(/\/api\/request\/req-1\/upload\/up-1$/), {
+      method: "DELETE",
+    });
+  });
+
   it("starts in idle state", async () => {
     const { useUpload } = await import("../../src/hooks/useUpload.js");
     const { result } = renderHook(() => useUpload());
