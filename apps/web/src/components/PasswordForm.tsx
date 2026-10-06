@@ -1,36 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { showKnownErrorToast } from "@/lib/toast";
-import {
-  Lock,
-  Eye,
-  EyeOff,
-  Copy,
-  Check,
-  Send,
-  Loader2,
-  Plus,
-  Wand2,
-  X,
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Eye, EyeOff, Copy, Check, Send, Plus, Wand2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareLink } from "@/components/ShareLink";
+import { ShareOptions } from "@/components/ShareOptions";
+import { ShareFooter } from "@/components/ShareFooter";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
-import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import { formatDuration, formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 
 export function PasswordForm({ forcePassword = false }: { forcePassword?: boolean }) {
   const { t } = useTranslation();
@@ -126,219 +108,152 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
     setShowValues([false]);
     setGeneratorIndex(null);
     setNotePassword("");
-    setNotePasswordEnabled(false);
+    setNotePasswordEnabled(forcePassword);
   };
 
   if (noteHook.phase === "done" && noteHook.shareLink) {
     return <ShareLink link={noteHook.shareLink} onNewUpload={handleNewNote} />;
   }
 
-  return (
-    <Card>
-      <CardContent className="space-y-6 pt-6">
-        {/* Password fields */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>{t("password.passwords")}</Label>
-            <span
-              className={`text-xs ${sizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
-            >
-              {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
-            </span>
-          </div>
+  const iconButton = (label: string, onClick: () => void, icon: ReactNode, options: { disabled?: boolean; expanded?: boolean; className?: string } = {}) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className={cn("shrink-0 aria-expanded:border-primary-line aria-expanded:bg-primary-soft aria-expanded:text-primary-text", options.className)}
+          onClick={onClick}
+          disabled={options.disabled}
+          aria-label={label}
+          aria-expanded={options.expanded}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[20px] border border-border bg-well">
+        <div className="flex items-center justify-between border-b border-border py-2.5 pl-4 pr-4">
+          <Label className="text-[13px]">{t("password.passwords")}</Label>
+          <span className={cn("font-mono text-[11px]", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+            {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
+          </span>
+        </div>
+
+        <div className="space-y-3 p-3">
           {passwords.map((pw, index) => (
-            <div key={index} className="space-y-2">
-              <Input
-                type="text"
-                value={pw.label}
-                onChange={(e) => updateLabel(index, e.target.value)}
-                placeholder={t("password.labelPlaceholder", { number: index + 1 })}
-                className="text-xs h-8"
-                disabled={isSubmitting}
-                autoComplete="off"
-              />
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showValues[index] ? "text" : "password"}
-                    value={pw.value}
-                    onChange={(e) => updatePassword(index, e.target.value)}
-                    placeholder={t("password.enterPassword")}
-                    className="pr-9 font-mono"
-                    disabled={isSubmitting}
-                    autoComplete="off"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => toggleVisibility(index)}
-                  >
-                    {showValues[index] ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => copyPassword(index)}
-                  disabled={isSubmitting || !pw.value}
-                  title={copiedIndex === index ? t("common.copied") : t("common.copy")}
-                >
-                  {copiedIndex === index ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-                <Button
-                  type="button"
-                  variant={generatorIndex === index ? "secondary" : "outline"}
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => toggleGenerator(index)}
+            <div key={index} className="space-y-2.5">
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  type="text"
+                  value={pw.label}
+                  onChange={(e) => updateLabel(index, e.target.value)}
+                  placeholder={t("password.labelPlaceholder", { number: index + 1 })}
+                  aria-label={t("password.labelPlaceholder", { number: index + 1 })}
+                  className="min-w-40 flex-1 basis-44"
                   disabled={isSubmitting}
-                  title={t("passwordGenerator.title")}
-                >
-                  <Wand2 className="h-4 w-4" />
-                </Button>
-                {passwords.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-destructive-foreground"
-                    onClick={() => removeField(index)}
-                    disabled={isSubmitting}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                  autoComplete="off"
+                />
+                <div className="flex min-w-0 flex-[2] basis-60 items-center gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Input
+                      type={showValues[index] ? "text" : "password"}
+                      value={pw.value}
+                      onChange={(e) => updatePassword(index, e.target.value)}
+                      placeholder={t("password.enterPassword")}
+                      aria-label={t("password.passwordNumber", { number: index + 1 })}
+                      className="pr-10 font-mono"
+                      disabled={isSubmitting}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      onClick={() => toggleVisibility(index)}
+                      aria-label={showValues[index] ? t("share.hidePassword") : t("share.showPassword")}
+                    >
+                      {showValues[index] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {iconButton(
+                    copiedIndex === index ? t("common.copied") : t("common.copy"),
+                    () => copyPassword(index),
+                    copiedIndex === index ? <Check className="text-primary-text" /> : <Copy />,
+                    { disabled: isSubmitting || !pw.value },
+                  )}
+                  {iconButton(t("passwordGenerator.title"), () => toggleGenerator(index), <Wand2 />, {
+                    disabled: isSubmitting,
+                    expanded: generatorIndex === index,
+                  })}
+                  {passwords.length > 1 &&
+                    iconButton(t("common.delete"), () => removeField(index), <X />, {
+                      disabled: isSubmitting,
+                      className: "hover:text-destructive-text",
+                    })}
+                </div>
               </div>
 
               {/* Generator panel for this field */}
               {generatorIndex === index && (
-                <PasswordGenerator
-                  onGenerate={(v) => handleGenerate(index, v)}
-                  disabled={isSubmitting}
-                />
+                <PasswordGenerator onGenerate={(v) => handleGenerate(index, v)} disabled={isSubmitting} />
               )}
             </div>
           ))}
 
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={addField}
             disabled={isSubmitting}
-            className="w-full"
+            className="text-primary-text"
           >
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus />
             {t("password.addAnother")}
           </Button>
-
-          {sizeExceeded && (
-            <p className="text-sm text-destructive-foreground" role="alert">
-              {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
-            </p>
-          )}
         </div>
+      </div>
 
-        {/* Expiry + Max Views */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>{t("note.expiry")}</Label>
-            <Select
-              value={String(effectiveExpireSec)}
-              onValueChange={(v) => setExpireSec(parseInt(v, 10))}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {config.noteExpireOptions.map((sec) => (
-                  <SelectItem key={sec} value={String(sec)}>
-                    {formatDuration(sec)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {sizeExceeded && (
+        <p className="px-2 text-sm text-destructive-text" role="alert">
+          {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
+        </p>
+      )}
 
-          <div className="space-y-2">
-            <Label>{t("note.maxViews")}</Label>
-            <Select
-              value={String(effectiveMaxViews)}
-              onValueChange={(v) => setMaxViews(parseInt(v, 10))}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {config.noteViewOptions.map((num) => (
-                  <SelectItem key={num} value={String(num)}>
-                    {num === 0
-                      ? t("note.unlimited")
-                      : num === 1
-                        ? t("note.burnAfterReading")
-                        : String(num)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      <div className="px-2 sm:px-3">
+        <ShareOptions
+          kind="note"
+          expireOptions={config.noteExpireOptions}
+          expireSec={effectiveExpireSec}
+          onExpireChange={setExpireSec}
+          limitOptions={config.noteViewOptions}
+          limit={effectiveMaxViews}
+          onLimitChange={setMaxViews}
+          passwordEnabled={notePasswordEnabled}
+          onPasswordEnabledChange={setNotePasswordEnabled}
+          password={notePassword}
+          onPasswordChange={setNotePassword}
+          forcePassword={forcePassword}
+          disabled={isSubmitting}
+        />
+      </div>
 
-        {/* Password protection */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              {t("upload.password")}
-              {forcePassword && (
-                <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
-              )}
-            </Label>
-            {!forcePassword && (
-              <Switch
-                checked={notePasswordEnabled}
-                onCheckedChange={setNotePasswordEnabled}
-                disabled={isSubmitting}
-              />
-            )}
-          </div>
-          {notePasswordEnabled && (
-            <PasswordProtectionInput
-              value={notePassword}
-              onChange={setNotePassword}
-              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-              disabled={isSubmitting}
-            />
-          )}
-        </div>
-
-        {/* Error */}
-        {/* Error is shown via toast (see useEffect below) */}
-
-        {/* Submit */}
-        <Button
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className="w-full"
-          size="lg"
-        >
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="mr-2 h-5 w-5" />
-          )}
-          {isSubmitting ? t("note.creating") : t("note.create")}
-        </Button>
-      </CardContent>
-    </Card>
+      <ShareFooter
+        kind="note"
+        expireSec={effectiveExpireSec}
+        limit={effectiveMaxViews}
+        label={t("share.encryptShare")}
+        busyLabel={t("note.creating")}
+        icon={<Send />}
+        busy={isSubmitting}
+        disabled={!canSubmit}
+        onSubmit={handleSubmit}
+      />
+    </div>
   );
 }

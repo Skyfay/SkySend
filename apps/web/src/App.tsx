@@ -9,6 +9,7 @@ import { UploadPage } from "@/pages/Upload";
 import { DownloadPage } from "@/pages/Download";
 import { NoteViewPage } from "@/pages/NoteView";
 import { MyUploadsPage } from "@/pages/MyUploads";
+import { HowItWorksPage } from "@/pages/HowItWorks";
 import { NotFoundPage } from "@/pages/NotFound";
 
 /**
@@ -42,6 +43,7 @@ export function App() {
                 <Route path="/note/:id" element={<NoteViewPage />} />
                 <Route path="/d/:id" element={<LegacyDownloadRedirect />} />
                 <Route path="/uploads" element={<MyUploadsPage />} />
+                <Route path="/how" element={<HowItWorksPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>

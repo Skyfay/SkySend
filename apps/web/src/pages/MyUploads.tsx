@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Inbox, File, FileText, Layers, KeyRound, Code, Heading, Terminal } from "lucide-react";
+import { ArrowRight, Inbox, File, FileText, Layers, KeyRound, Code, Heading, Terminal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
@@ -118,86 +122,86 @@ export function MyUploadsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-        <FolderOpen className="h-7 w-7 text-primary" />
-        {t("myUploads.title")}
-      </h1>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header>
+        <h1
+          data-slot="hero-title"
+          className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[38px]"
+        >
+          {t("myUploads.title")}
+        </h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{t("myUploads.emptyHint")}</p>
+      </header>
 
-      {/* Filter tabs */}
       {(uploads.length > 0 || notes.length > 0) && (
-        <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1">
+        <ToggleGroup
+          type="single"
+          value={filter}
+          onValueChange={(v) => v && setFilter(v as Filter)}
+          aria-label={t("share.filter")}
+        >
           {filters.map((f) => {
             const Icon = FILTER_ICONS[f];
-            const count = getFilterCount(f);
             return (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{t(`myUploads.filter.${f}`)}</span>
-                <span className="ml-0.5 text-xs text-muted-foreground">
-                  {count}
-                </span>
-              </button>
+              <ToggleGroupItem key={f} value={f}>
+                <Icon />
+                {t(`myUploads.filter.${f}`)}
+                <span className="font-mono text-[11px] opacity-70">{getFilterCount(f)}</span>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-border bg-card p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-9 w-9 rounded" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
+        <Card className="overflow-hidden" aria-busy="true">
+          <ul className="divide-y divide-border">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i} className="flex items-center gap-3.5 px-4 py-3.5 sm:px-5">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <Skeleton className="h-8 w-8 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
+                <Skeleton className="h-8 w-24 rounded-xl" />
+              </li>
+            ))}
+          </ul>
+        </Card>
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-muted-foreground">
-          <Inbox className="h-12 w-12" />
-          <div>
-            <p className="text-lg font-medium">{t("myUploads.empty")}</p>
-            <p className="text-sm">{t("myUploads.emptyHint")}</p>
-          </div>
-        </div>
+        <Card className="flex flex-col items-center gap-4 px-6 py-14 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary-text">
+            <Inbox className="h-6 w-6" />
+          </span>
+          <p className="text-lg font-semibold tracking-tight">{t("myUploads.empty")}</p>
+          <Button asChild>
+            <Link to="/">
+              {t("share.goneAction")}
+              <ArrowRight />
+            </Link>
+          </Button>
+        </Card>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) =>
-            item.type === "upload" ? (
-              <UploadCard
-                key={`upload-${item.data.id}`}
-                upload={item.data}
-                onDelete={handleDeleteUpload}
-                onRename={handleRenameUpload}
-              />
-            ) : (
-              <NoteCard
-                key={`note-${item.data.id}`}
-                note={item.data}
-                onDelete={handleDeleteNote}
-              />
-            ),
-          )}
-        </div>
+        <Card className="overflow-hidden">
+          <ul className="divide-y divide-border" role="list">
+            {items.map((item) =>
+              item.type === "upload" ? (
+                <UploadCard
+                  key={`upload-${item.data.id}`}
+                  upload={item.data}
+                  onDelete={handleDeleteUpload}
+                  onRename={handleRenameUpload}
+                />
+              ) : (
+                <NoteCard
+                  key={`note-${item.data.id}`}
+                  note={item.data}
+                  onDelete={handleDeleteNote}
+                />
+              ),
+            )}
+          </ul>
+        </Card>
       )}
     </div>
   );

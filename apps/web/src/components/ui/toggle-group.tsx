@@ -2,35 +2,53 @@ import * as React from "react";
 import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group";
 import { cn } from "@/lib/utils";
 
+type ToggleGroupVariant = "chips" | "segmented";
+
+const VariantContext = React.createContext<ToggleGroupVariant>("chips");
+
 /**
- * A row of chips. With type="single" it replaces a select for a short list of options,
- * like the expiry times, so a choice takes one click instead of two.
+ * Chips for a short list of options, like the expiry times, so a choice takes one click
+ * instead of two. The segmented variant is a compact switch between two or three modes,
+ * like plain text and Markdown.
  */
 const ToggleGroup = React.forwardRef<
   React.ComponentRef<typeof ToggleGroupPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <ToggleGroupPrimitive.Root
-    ref={ref}
-    className={cn("flex flex-wrap gap-1.5", className)}
-    {...props}
-  />
+  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root> & { variant?: ToggleGroupVariant }
+>(({ className, variant = "chips", ...props }, ref) => (
+  <VariantContext.Provider value={variant}>
+    <ToggleGroupPrimitive.Root
+      ref={ref}
+      className={cn(
+        variant === "chips"
+          ? "flex flex-wrap gap-1.5"
+          : "inline-flex gap-0.5 rounded-xl bg-muted p-0.5",
+        className,
+      )}
+      {...props}
+    />
+  </VariantContext.Provider>
 ));
 ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName;
 
 const ToggleGroupItem = React.forwardRef<
   React.ComponentRef<typeof ToggleGroupPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <ToggleGroupPrimitive.Item
-    ref={ref}
-    className={cn(
-      "inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-transparent px-3 text-[13px] font-medium text-foreground transition-[color,background-color,border-color] hover:border-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=on]:border-primary-line data-[state=on]:bg-primary-soft data-[state=on]:text-primary-text [&_svg]:size-3.5",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const variant = React.useContext(VariantContext);
+  return (
+    <ToggleGroupPrimitive.Item
+      ref={ref}
+      className={cn(
+        "inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-[color,background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+        variant === "chips"
+          ? "h-8 rounded-full border border-border bg-transparent px-3 text-[13px] text-foreground hover:border-input data-[state=on]:border-primary-line data-[state=on]:bg-primary-soft data-[state=on]:text-primary-text [&_svg]:size-3.5"
+          : "h-7 rounded-[10px] px-2.5 text-xs text-muted-foreground hover:text-foreground data-[state=on]:bg-primary-soft data-[state=on]:text-primary-text data-[state=on]:shadow-[inset_0_0_0_1px_var(--color-primary-line)] [&_svg]:size-3.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName;
 
 export { ToggleGroup, ToggleGroupItem };

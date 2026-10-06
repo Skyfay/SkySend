@@ -1,33 +1,65 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import {
   FileText,
   KeyRound,
   Code,
+  Terminal,
   AlertCircle,
   Clock,
   Ban,
   FileQuestion,
   Flame,
   Eye,
+  Loader2,
+  Lock,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ReceiveShell } from "@/components/ReceiveShell";
+import { LinkGone } from "@/components/LinkGone";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { NoteContent } from "@/components/NoteContent";
-import { Button } from "@/components/ui/button";
 import { useNoteView } from "@/hooks/useNoteView";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { formatTimeRemaining } from "@/lib/utils";
 
 const CONTENT_TYPE_ICONS = {
   text: FileText,
+  markdown: FileText,
   password: KeyRound,
   code: Code,
+  sshkey: Terminal,
 } as const;
+
+type KnownType = keyof typeof CONTENT_TYPE_ICONS;
+
+function isKnownType(type: string | null | undefined): type is KnownType {
+  return !!type && type in CONTENT_TYPE_ICONS;
+}
+
+/** The icon tile and type name above a note, like "Code" or "SSH Key". */
+function NoteType({ contentType, children }: { contentType?: string | null; children?: React.ReactNode }) {
+  const { t } = useTranslation();
+  const Icon = isKnownType(contentType) ? CONTENT_TYPE_ICONS[contentType] : FileText;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold tracking-tight">
+          {isKnownType(contentType) ? t(`tab.${contentType}`) : t("noteView.title")}
+        </p>
+        <p className="text-xs text-muted-foreground">{t("noteView.title")}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export function NoteViewPage() {
   const { t } = useTranslation();
@@ -60,32 +92,35 @@ export function NoteViewPage() {
     }
   }, [noteHook.phase, noteHook.info, noteHook.error]);
 
+  const title = (
+    <Trans
+      i18nKey="share.receivedNote"
+      components={{ a: <span data-slot="accent" className="text-primary-text" /> }}
+    />
+  );
+
   if (!id || !secret) {
-    return (
-      <ErrorDisplay
-        icon={<FileQuestion className="h-8 w-8" />}
-        title={t("noteView.notFound")}
-      />
-    );
+    return <LinkGone icon={FileQuestion} title={t("noteView.notFound")} />;
   }
 
   if (noteHook.phase === "loading-info") {
     return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-7 w-7 rounded" />
-            <Skeleton className="h-8 w-48" />
+      <ReceiveShell title={title}>
+        <div className="space-y-4" aria-busy="true">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
           </div>
-          <Skeleton className="h-4 w-64" />
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-14 rounded-2xl" />
+            <Skeleton className="h-14 rounded-2xl" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
         </div>
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <Skeleton className="h-32 w-full rounded-md" />
-            <Skeleton className="h-4 w-40" />
-          </CardContent>
-        </Card>
-      </div>
+      </ReceiveShell>
     );
   }
 
@@ -95,16 +130,8 @@ export function NoteViewPage() {
     const isLimitReached = error.includes("limit") || error.includes("View");
 
     return (
-      <ErrorDisplay
-        icon={
-          isExpired ? (
-            <Clock className="h-8 w-8" />
-          ) : isLimitReached ? (
-            <Ban className="h-8 w-8" />
-          ) : (
-            <AlertCircle className="h-8 w-8" />
-          )
-        }
+      <LinkGone
+        icon={isExpired ? Clock : isLimitReached ? Ban : AlertCircle}
         title={
           isExpired
             ? t("noteView.expired")
@@ -126,18 +153,9 @@ export function NoteViewPage() {
     };
 
     return (
-      <div className="space-y-6">
-        <PageHeader contentType={noteHook.info?.contentType} />
-        <Card>
-          <CardContent className="space-y-6 pt-6">
-            <PasswordPrompt
-              onSubmit={handlePasswordSubmit}
-              loading={false}
-              error={noteHook.error}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <ReceiveShell title={title}>
+        <PasswordPrompt onSubmit={handlePasswordSubmit} loading={false} error={noteHook.error} />
+      </ReceiveShell>
     );
   }
 
@@ -146,50 +164,56 @@ export function NoteViewPage() {
     const info = noteHook.info;
     const isBurnAfterReading = info.maxViews === 1;
     const isUnlimited = info.maxViews === 0;
+    const stats = [
+      {
+        icon: Eye,
+        label: isUnlimited
+          ? t("noteView.viewsUnlimited")
+          : t("noteView.viewsRemaining", {
+              remaining: info.maxViews - info.viewCount,
+              max: info.maxViews,
+            }),
+      },
+      { icon: Clock, label: t("noteView.expiresIn", { time: formatTimeRemaining(info.expiresAt) }) },
+    ];
 
     return (
-      <div className="space-y-6">
-        <PageHeader contentType={info.contentType} />
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                <span>
-                  {isUnlimited
-                    ? t("noteView.viewsUnlimited")
-                    : t("noteView.viewsRemaining", {
-                        remaining: info.maxViews - info.viewCount,
-                        max: info.maxViews,
-                      })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {t("noteView.expiresIn", {
-                    time: formatTimeRemaining(info.expiresAt),
-                  })}
-                </span>
-              </div>
+      <ReceiveShell title={title}>
+        <div className="space-y-4">
+          <NoteType contentType={info.contentType} />
+
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {stats.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-center gap-2 rounded-2xl bg-well px-3.5 py-3 text-[13px]">
+                <Icon className="h-4 w-4 shrink-0 text-primary-text" />
+                {label}
+              </li>
+            ))}
+          </ul>
+
+          {isBurnAfterReading && !isUnlimited && (
+            <div className="flex items-center gap-2.5 rounded-2xl bg-destructive-soft p-3.5 text-sm text-destructive-text">
+              <Flame className="h-4 w-4 shrink-0" />
+              <span>{t("noteView.burnWarning")}</span>
             </div>
+          )}
 
-            {isBurnAfterReading && !isUnlimited && (
-              <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <Flame className="h-4 w-4 shrink-0" />
-                <span>{t("noteView.burnWarning")}</span>
-              </div>
-            )}
-
+          <div className="space-y-3">
             <Button
+              size="lg"
               className="w-full"
               onClick={() => noteHook.view(id, secret, passwordInput, hashWasmArgon2)}
             >
+              <Eye />
               {t("noteView.viewNote")}
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              {t("share.decryptHint")}
+            </p>
+          </div>
+        </div>
+      </ReceiveShell>
     );
   }
 
@@ -200,91 +224,43 @@ export function NoteViewPage() {
     noteHook.contentType !== null
   ) {
     return (
-      <div className="space-y-6">
-        <PageHeader contentType={noteHook.contentType} />
-        <Card
-          className={
-            noteHook.phase === "destroyed"
-              ? "border-destructive/30"
-              : ""
-          }
-        >
-          <CardContent className="space-y-4 pt-6">
-            {/* View counter */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              <span>
-                {noteHook.maxViews === 0
-                  ? t("noteView.viewCountUnlimited", { current: noteHook.viewCount })
-                  : t("noteView.viewCount", {
-                      current: noteHook.viewCount,
-                      max: noteHook.maxViews,
-                    })}
-              </span>
+      <ReceiveShell title={title} wide>
+        <div className="space-y-4">
+          <NoteType contentType={noteHook.contentType}>
+            <span className="shrink-0 rounded-full bg-well px-3 py-1 font-mono text-[11px] text-muted-foreground">
+              {noteHook.maxViews === 0
+                ? t("noteView.viewCountUnlimited", { current: noteHook.viewCount })
+                : t("noteView.viewCount", {
+                    current: noteHook.viewCount,
+                    max: noteHook.maxViews,
+                  })}
+            </span>
+          </NoteType>
+
+          {noteHook.phase === "destroyed" && (
+            <div role="alert" className="flex items-start gap-2.5 rounded-2xl bg-destructive-soft p-3.5 text-sm text-destructive-text">
+              <Flame className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t("noteView.destroyed")}</span>
             </div>
+          )}
 
-            {/* Destroyed warning */}
-            {noteHook.phase === "destroyed" && (
-              <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <Flame className="h-4 w-4 shrink-0" />
-                <span>{t("noteView.destroyed")}</span>
-              </div>
-            )}
-
-            {/* Note content */}
-            <NoteContent
-              content={noteHook.content}
-              contentType={noteHook.contentType}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          <NoteContent content={noteHook.content} contentType={noteHook.contentType} />
+        </div>
+      </ReceiveShell>
     );
   }
 
   // Verifying password state
   if (noteHook.phase === "verifying-password") {
     return (
-      <div className="space-y-6">
-        <PageHeader contentType={noteHook.info?.contentType} />
-        <Card>
-          <CardContent className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
-            <Skeleton className="h-4 w-4 rounded-full" />
-            <span>{t("noteView.verifying")}</span>
-          </CardContent>
-        </Card>
-      </div>
+      <ReceiveShell title={title}>
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground" role="status">
+          <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
+          <span>{t("noteView.verifying")}</span>
+        </div>
+      </ReceiveShell>
     );
   }
 
-
   return null;
-}
-
-function PageHeader({ contentType }: { contentType?: string | null }) {
-  const { t } = useTranslation();
-  const Icon =
-    CONTENT_TYPE_ICONS[(contentType as keyof typeof CONTENT_TYPE_ICONS) ?? "text"] ?? FileText;
-
-  return (
-    <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-      <Icon className="h-7 w-7 text-primary" />
-      {t("noteView.title")}
-    </h1>
-  );
-}
-
-function ErrorDisplay({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center text-muted-foreground">
-      {icon}
-      <p className="text-lg font-medium">{title}</p>
-    </div>
-  );
 }

@@ -66,7 +66,7 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
       </Button>
 
       {open && (
-        <div className="mt-1 rounded-lg border border-border/60 bg-muted/30 p-4 text-xs">
+        <div className="mt-1 rounded-2xl bg-well p-4 text-xs">
           {/* Header row */}
           <div className="mb-3 flex items-center justify-between">
             <span className="font-semibold text-foreground">{t("debug.title")}</span>
@@ -117,7 +117,7 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
 
           {/* Divider between sections */}
           {downloadInfo && uploadInfo && (
-            <hr className="my-3 border-border/40" />
+            <hr className="my-3 border-border" />
           )}
 
           {/* Upload section */}
@@ -137,7 +137,7 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
           {/* Timeline */}
           {allEvents.length > 0 && (
             <>
-              <hr className="my-3 border-border/40" />
+              <hr className="my-3 border-border" />
               <p className="mb-1.5 font-medium text-foreground">{t("debug.timeline")}</p>
               <ul className="space-y-0.5 text-muted-foreground">
                 {allEvents.map((ev, i) => (

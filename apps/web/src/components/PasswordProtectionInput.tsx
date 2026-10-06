@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Copy, Check, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
 
 interface PasswordProtectionInputProps {
@@ -45,38 +46,49 @@ export function PasswordProtectionInput({
           />
           <button
             type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}
+            aria-label={show ? t("share.hidePassword") : t("share.showPassword")}
             disabled={disabled}
           >
             {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="shrink-0"
-          onClick={handleCopy}
-          disabled={disabled || !value}
-          title={copied ? t("common.copied") : t("common.copy")}
-        >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={handleCopy}
+              disabled={disabled || !value}
+              aria-label={copied ? t("common.copied") : t("common.copy")}
+            >
+              {copied ? <Check className="h-4 w-4 text-primary-text" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{copied ? t("common.copied") : t("common.copy")}</TooltipContent>
+        </Tooltip>
 
-        <Button
-          type="button"
-          variant={showGenerator ? "secondary" : "outline"}
-          size="icon"
-          className="shrink-0"
-          onClick={() => setShowGenerator((s) => !s)}
-          disabled={disabled}
-          title={t("passwordGenerator.title")}
-        >
-          <Wand2 className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 aria-expanded:border-primary-line aria-expanded:bg-primary-soft aria-expanded:text-primary-text"
+              onClick={() => setShowGenerator((s) => !s)}
+              disabled={disabled}
+              aria-label={t("passwordGenerator.title")}
+              aria-expanded={showGenerator}
+            >
+              <Wand2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("passwordGenerator.title")}</TooltipContent>
+        </Tooltip>
       </div>
 
       {showGenerator && (

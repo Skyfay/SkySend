@@ -18,6 +18,8 @@ const sanitizeSchema = {
   tagNames: [...(defaultSchema.tagNames ?? []), "input"],
 };
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { NoteContentType } from "@skysend/crypto";
 import hljs from "highlight.js/lib/core";
 import "highlight.js/styles/github.min.css";
@@ -124,6 +126,39 @@ interface ParsedCodeBlock {
   code: string;
   html: string;
   detectedLanguage: string;
+}
+
+function IconAction({
+  label,
+  onClick,
+  children,
+  className,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="outline" size="icon" className={cn("shrink-0", className)} onClick={onClick} aria-label={label}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function CopyLabel({ copied }: { copied: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {copied ? <Check className="text-primary-text" /> : <Copy />}
+      {copied ? t("common.copied") : t("common.copy")}
+    </>
+  );
 }
 
 interface NoteContentProps {
@@ -287,44 +322,30 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
     };
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {entries.map((entry, index) => (
-          <div key={index} className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">
+          <div key={index} className="space-y-2 rounded-2xl bg-well p-3">
+            <span className="block px-1 text-xs font-medium text-muted-foreground">
               {entry.label || t("password.passwordNumber", { number: index + 1 })}
             </span>
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-lg border bg-muted/50 px-4 py-2.5 font-mono text-sm break-all">
+              <div className="min-h-10 flex-1 break-all rounded-xl border border-border bg-card px-4 py-2 font-mono text-sm leading-6">
                 {revealedPasswords.has(index)
                   ? entry.value
                   : "•".repeat(Math.min(entry.value.length, 40))}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
+              <IconAction
+                label={revealedPasswords.has(index) ? t("noteView.hide") : t("noteView.reveal")}
                 onClick={() => togglePasswordReveal(index)}
-                title={revealedPasswords.has(index) ? t("noteView.hide") : t("noteView.reveal")}
               >
-                {revealedPasswords.has(index) ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
+                {revealedPasswords.has(index) ? <EyeOff /> : <Eye />}
+              </IconAction>
+              <IconAction
+                label={copiedPasswords.has(index) ? t("common.copied") : t("common.copy")}
                 onClick={() => copyPassword(entry.value, index)}
-                title={copiedPasswords.has(index) ? t("common.copied") : t("common.copy")}
               >
-                {copiedPasswords.has(index) ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+                {copiedPasswords.has(index) ? <Check className="text-primary-text" /> : <Copy />}
+              </IconAction>
             </div>
           </div>
         ))}
@@ -363,7 +384,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
         {publicKey && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{t("sshKey.publicKey")}</span>
+              <span className="text-[13px] font-medium">{t("sshKey.publicKey")}</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -371,15 +392,10 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
                 className="h-7 px-2 text-xs"
                 onClick={() => copyText(publicKey, setCopiedPublic)}
               >
-                {copiedPublic ? (
-                  <Check className="mr-1 h-3 w-3" />
-                ) : (
-                  <Copy className="mr-1 h-3 w-3" />
-                )}
-                {copiedPublic ? t("common.copied") : t("common.copy")}
+                <CopyLabel copied={copiedPublic} />
               </Button>
             </div>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs break-all whitespace-pre-wrap scrollbar-thin">
+            <pre className="scrollbar-thin overflow-x-auto whitespace-pre-wrap break-all rounded-xl border border-border bg-well p-3 font-mono text-xs">
               {publicKey}
             </pre>
           </div>
@@ -389,7 +405,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
         {privateKey && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{t("sshKey.privateKey")}</span>
+              <span className="text-[13px] font-medium">{t("sshKey.privateKey")}</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -397,15 +413,10 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
                 className="h-7 px-2 text-xs"
                 onClick={() => copyText(privateKey, setCopiedPrivate)}
               >
-                {copiedPrivate ? (
-                  <Check className="mr-1 h-3 w-3" />
-                ) : (
-                  <Copy className="mr-1 h-3 w-3" />
-                )}
-                {copiedPrivate ? t("common.copied") : t("common.copy")}
+                <CopyLabel copied={copiedPrivate} />
               </Button>
             </div>
-            <pre className="max-h-40 overflow-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs scrollbar-thin">
+            <pre className="scrollbar-thin max-h-40 overflow-auto rounded-xl border border-border bg-well p-3 font-mono text-xs">
               {privateKey}
             </pre>
           </div>
@@ -415,7 +426,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
         {passphrase && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{t("sshKey.passphrase")}</span>
+              <span className="text-[13px] font-medium">{t("sshKey.passphrase")}</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -423,15 +434,10 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
                 className="h-7 px-2 text-xs"
                 onClick={() => copyText(passphrase, setCopiedPassphrase)}
               >
-                {copiedPassphrase ? (
-                  <Check className="mr-1 h-3 w-3" />
-                ) : (
-                  <Copy className="mr-1 h-3 w-3" />
-                )}
-                {copiedPassphrase ? t("common.copied") : t("common.copy")}
+                <CopyLabel copied={copiedPassphrase} />
               </Button>
             </div>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs break-all whitespace-pre-wrap scrollbar-thin">
+            <pre className="scrollbar-thin overflow-x-auto whitespace-pre-wrap break-all rounded-xl border border-border bg-well p-3 font-mono text-xs">
               {passphrase}
             </pre>
           </div>
@@ -521,47 +527,39 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
           const lineNumberWidth = String(lines.length).length;
 
           return (
-            <div key={index} className="overflow-hidden rounded-lg border border-border">
+            <div key={index} className="overflow-hidden rounded-2xl border border-border">
               {/* Block header */}
-              <div
-                className="flex cursor-pointer items-center justify-between gap-2 bg-muted/40 px-3 py-2 hover:bg-muted/60 transition-colors"
-                onClick={() => toggleBlock(index)}
-                role="button"
-                aria-expanded={!isCollapsed}
-              >
-                <div className="flex min-w-0 items-center gap-2">
+              <div className="flex items-center gap-2 bg-well py-1.5 pl-1.5 pr-2">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-accent"
+                  onClick={() => toggleBlock(index)}
+                  aria-expanded={!isCollapsed}
+                >
                   {isCollapsed ? (
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   ) : (
                     <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
-                  <span className="truncate font-mono text-sm font-medium">{displayTitle}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                    {block.language === "auto"
-                      ? t("code.detectedAs", { lang: langLabel })
-                      : langLabel}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 shrink-0"
-                    onClick={(e) => { e.stopPropagation(); void copyBlock(block.code, index); }}
-                    title={copiedBlocks.has(index) ? t("common.copied") : t("common.copy")}
-                  >
-                    {copiedBlocks.has(index) ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </div>
+                  <span className="truncate font-mono text-[13px] font-medium">{displayTitle}</span>
+                </button>
+                <span className="shrink-0 rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  {block.language === "auto"
+                    ? t("code.detectedAs", { lang: langLabel })
+                    : langLabel}
+                </span>
+                <IconAction
+                  label={copiedBlocks.has(index) ? t("common.copied") : t("common.copy")}
+                  onClick={() => void copyBlock(block.code, index)}
+                  className="h-7 w-7 border-0 bg-transparent shadow-none [&_svg]:size-3.5"
+                >
+                  {copiedBlocks.has(index) ? <Check className="text-primary-text" /> : <Copy />}
+                </IconAction>
               </div>
 
               {/* Block body */}
               {!isCollapsed && (
-                <div className="bg-[#f6f8fa] dark:bg-[#222] text-[#24292e] dark:text-[#aaa]">
+                <div className="border-t border-border bg-[#f6f8fa] text-[#24292e] dark:bg-[#1c1c20] dark:text-[#aaa]">
                   <div className="overflow-x-auto scrollbar-thin">
                     <table className="w-full border-collapse font-mono text-sm">
                       <tbody>
@@ -593,18 +591,13 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   if (contentType === "markdown") {
     return (
       <div className="space-y-3">
-        <div className="rounded-lg border bg-muted/50 p-4 prose prose-sm dark:prose-invert max-w-none overflow-auto">
+        <div className="prose prose-sm max-w-none overflow-auto rounded-2xl bg-well p-5 dark:prose-invert">
           {/* C-2: rehype-sanitize prevents XSS from future react-markdown upstream changes
               that could enable allowDangerousHtml. Explicit sanitization is best practice. */}
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, sanitizeSchema]]} components={markdownComponents}>{content}</ReactMarkdown>
         </div>
         <Button variant="outline" size="sm" onClick={copyToClipboard}>
-          {copied ? (
-            <Check className="mr-1.5 h-4 w-4" />
-          ) : (
-            <Copy className="mr-1.5 h-4 w-4" />
-          )}
-          {copied ? t("common.copied") : t("common.copy")}
+          <CopyLabel copied={copied} />
         </Button>
       </div>
     );
@@ -613,16 +606,11 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
   // Default: text
   return (
     <div className="space-y-3">
-      <div className="whitespace-pre-wrap rounded-lg border bg-muted/50 p-4 text-sm wrap-break-word">
+      <div className="whitespace-pre-wrap wrap-break-word rounded-2xl bg-well p-5 text-[15px] leading-relaxed">
         {content}
       </div>
       <Button variant="outline" size="sm" onClick={copyToClipboard}>
-        {copied ? (
-          <Check className="mr-1.5 h-4 w-4" />
-        ) : (
-          <Copy className="mr-1.5 h-4 w-4" />
-        )}
-        {copied ? t("common.copied") : t("common.copy")}
+        <CopyLabel copied={copied} />
       </Button>
     </div>
   );

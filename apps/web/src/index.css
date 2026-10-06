@@ -193,6 +193,32 @@
   }
 }
 
+/* The flow diagram on the How it works page: data packets between the nodes and the
+   key's path over the server. Reduced motion stops both with motion-reduce:. */
+@keyframes how-packet-x {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(4rem);
+  }
+}
+
+@keyframes how-packet-y {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(2rem);
+  }
+}
+
+@keyframes how-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
 /* Custom scrollbar matching shadcn ScrollArea style */
 .scrollbar-thin {
   scrollbar-width: thin;

@@ -1,19 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Copy,
-  Check,
-  Trash2,
-  FileText,
-  KeyRound,
-  Code,
-  Loader2,
-  Clock,
-  Eye,
-  QrCode,
-  Heading,
-  Terminal,
-} from "lucide-react";
+import { FileText, KeyRound, Code, Loader2, Clock, Eye, Heading, Terminal } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { HistoryRow, HistoryStat } from "@/components/HistoryRow";
 import { formatTimeRemaining } from "@/lib/utils";
 import type { NoteWithStatus } from "@/hooks/useNoteHistory";
 
@@ -42,23 +30,12 @@ interface NoteCardProps {
 
 export function NoteCard({ note, onDelete }: NoteCardProps) {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const shareLink = `${window.location.origin}/note/${note.id}#${note.secret}`;
   const Icon = CONTENT_TYPE_ICONS[note.contentType] ?? FileText;
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API not available
-    }
-  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -76,83 +53,36 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center">
-        {/* Icon + note info */}
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">
-              {t(`tab.${note.contentType}`)} {t("myUploads.note")}
-            </p>
-            {note.loading ? (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>{t("common.loading")}</span>
-              </div>
-            ) : info ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {info.maxViews === 0
-                    ? `${info.viewCount} / ∞`
-                    : `${info.viewCount}/${info.maxViews}`}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatTimeRemaining(info.expiresAt)}
-                </span>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("myUploads.unavailable")}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" onClick={copyLink}>
-            {copied ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            <span className="ml-1 hidden sm:inline">
-              {copied ? t("common.copied") : t("myUploads.copyLink")}
+      <HistoryRow
+        tile={
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
+            <Icon className="h-4 w-4" />
+          </span>
+        }
+        title={`${t(`tab.${note.contentType}`)} ${t("myUploads.note")}`}
+        meta={
+          note.loading ? (
+            <span className="inline-flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {t("common.loading")}
             </span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowQrDialog(true)}
-          >
-            <QrCode className="h-4 w-4" />
-            <span className="sr-only">QR</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-          >
-            <a href={shareLink}>
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">{t("common.view")}</span>
-            </a>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-            className="px-2.5 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">{t("common.delete")}</span>
-          </Button>
-        </div>
-      </div>
+          ) : info ? (
+            <>
+              <HistoryStat icon={Eye}>
+                {info.maxViews === 0 ? `${info.viewCount} / ∞` : `${info.viewCount}/${info.maxViews}`}
+              </HistoryStat>
+              <HistoryStat icon={Clock}>{formatTimeRemaining(info.expiresAt)}</HistoryStat>
+            </>
+          ) : (
+            <span className="rounded-full bg-muted px-2 py-0.5">{t("myUploads.unavailable")}</span>
+          )
+        }
+        link={shareLink}
+        openIcon={Eye}
+        openLabel={t("common.view")}
+        onQr={() => setShowQrDialog(true)}
+        onDelete={() => setShowDeleteDialog(true)}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -176,7 +106,7 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              {deleting && <Loader2 className="animate-spin" />}
               {t("common.delete")}
             </Button>
           </DialogFooter>
@@ -187,10 +117,10 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
       <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>QR Code</DialogTitle>
+            <DialogTitle>{t("share.qrCode")}</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center">
-            <div className="rounded-lg bg-white p-3">
+            <div className="rounded-2xl bg-white p-3 shadow-chip">
               <QRCodeSVG value={shareLink} size={240} level="L" />
             </div>
           </div>

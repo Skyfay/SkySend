@@ -23,15 +23,15 @@ https://host/note/<id>#<secret>
 ```
 src/main.tsx        Entry, imports i18n before rendering
 src/App.tsx         Router + provider stack (ErrorBoundary > Theme > Tooltip > ServerConfig)
-src/pages/          Upload, Download, NoteView, MyUploads, NotFound
+src/pages/          Upload, Download, NoteView, MyUploads, HowItWorks, NotFound
 src/components/     Feature components (PascalCase)
-src/components/ui/  Radix + cva primitives, 15 of them
+src/components/ui/  Radix + cva primitives, 20 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
 src/lib/            api client, crypto glue, workers, toast helpers, utils
 src/i18n/           i18next setup + 13 locale JSON files
 ```
 
-Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
 
 ## Server config
 
@@ -129,9 +129,11 @@ No user-facing string is hardcoded in a component. Errors that surface as toasts
 
 `src/components/ui/` holds the Shadcn UI components. **Use them instead of the browser-native element, and instead of a hand-rolled div.** This is the single most important rule in this section - a native control looks fine on your machine and wrong on Windows, in dark mode, or against the operator's `CUSTOM_COLOR`.
 
-The 15 available primitives:
+The 20 available primitives:
 
-`button` · `card` · `custom-toast` · `dialog` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `switch` · `textarea` · `toast` · `tooltip`
+`badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toast` · `toggle-group` · `tooltip`
+
+`toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons.
 
 Never hand-roll what already exists:
 
@@ -145,7 +147,7 @@ Never hand-roll what already exists:
 | `alert()`, `confirm()`, `window.prompt()` | a `<Dialog>` or a toast |
 | a bare centered spinner while content loads | `<Skeleton>` shaped like the content |
 
-The native elements that remain are deliberate and narrow: icon-only affordances and segmented tab bars use a plain `<button>`, and `<input>` survives only for the types the `Input` primitive does not cover (`type="file"` in `UploadZone`, `type="range"` in `PasswordGenerator`, the search field in `LanguageSwitcher`, task-list checkboxes in `markdownComponents`). Those are the exceptions, not the pattern to copy.
+The native elements that remain are deliberate and narrow: icon-only affordances and segmented tab bars use a plain `<button>`, and `<input>` survives only for the types the `Input` primitive does not cover (`type="file"` in `UploadZone`, `type="range"` in `PasswordGenerator`, the search field in `LanguageSwitcher`, task-list checkboxes in `markdownComponents`). The FAQ on the How it works page uses `<details>`, since there is no accordion primitive. Those are the exceptions, not the pattern to copy.
 
 Before writing a new primitive, check whether an existing one plus a variant covers it.
 

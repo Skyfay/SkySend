@@ -1,7 +1,13 @@
-import { Moon, Sun, Contrast, ChevronDown, Check } from "lucide-react";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { Moon, Sun, Contrast } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useColorScheme, type ColorScheme } from "@/hooks/useColorScheme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const schemes = [
@@ -10,65 +16,48 @@ const schemes = [
   { value: "dark", icon: Moon },
 ] as const;
 
+function isColorScheme(value: string): value is ColorScheme {
+  return schemes.some((s) => s.value === value);
+}
+
 export function ColorSchemeToggle({ mobile }: { mobile?: boolean }) {
   const { colorScheme, setColorScheme } = useColorScheme();
   const { t } = useTranslation();
 
   const current = schemes.find((s) => s.value === colorScheme) ?? schemes[0];
   const CurrentIcon = current.icon;
-
-  const label = (value: string) => t(`colorScheme.${value}`);
-
-  const trigger = mobile ? (
-    <button
-      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-      aria-label={label(colorScheme)}
-    >
-      <CurrentIcon className="h-4 w-4" />
-      <span className="flex-1 text-left">{label(colorScheme)}</span>
-      <ChevronDown className="h-3.5 w-3.5 opacity-50 mr-1" />
-    </button>
-  ) : (
-    <button
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-      aria-label={label(colorScheme)}
-    >
-      <CurrentIcon className="h-4 w-4" />
-      <span className="hidden sm:inline">{label(colorScheme)}</span>
-      <ChevronDown className="h-3 w-3 opacity-50" />
-    </button>
-  );
+  const label = t(`colorScheme.${colorScheme}`);
 
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        {trigger}
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          className="z-50 min-w-35 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-          sideOffset={5}
-          align="end"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className={cn(
+            "inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            mobile ? "w-full rounded-xl px-3 py-2.5" : "h-9 w-9 justify-center rounded-full",
+          )}
+        >
+          <CurrentIcon className="h-4 w-4" />
+          {mobile && <span className="flex-1 text-left">{label}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={colorScheme}
+          onValueChange={(value) => {
+            if (isColorScheme(value)) setColorScheme(value);
+          }}
         >
           {schemes.map(({ value, icon: Icon }) => (
-            <DropdownMenu.Item
-              key={value}
-              className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                value === colorScheme && "bg-accent/50",
-              )}
-              onSelect={() => setColorScheme(value)}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1">{label(value)}</span>
-              {value === colorScheme && (
-                <Check className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-            </DropdownMenu.Item>
+            <DropdownMenuRadioItem key={value} value={value}>
+              <Icon />
+              {t(`colorScheme.${value}`)}
+            </DropdownMenuRadioItem>
           ))}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

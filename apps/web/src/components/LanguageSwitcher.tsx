@@ -1,8 +1,14 @@
 import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Globe, ChevronDown, Check, Search } from "lucide-react";
+import { Globe, Check, Search } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { getSavedLanguage, saveLanguage } from "@/i18n";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -86,104 +92,80 @@ export function LanguageSwitcher({ mobile }: { mobile?: boolean }) {
   );
   const showAuto = search === "" || "auto".includes(search.toLowerCase());
 
-  const trigger = mobile ? (
-    <button
-      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-      aria-label="Change language"
-    >
-      <Globe className="h-4 w-4" />
-      <span className="flex-1 text-left">{currentLabel}</span>
-      <ChevronDown className="h-3.5 w-3.5 opacity-50 mr-1" />
-    </button>
-  ) : (
-    <button
-      className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
-      aria-label="Change language"
-    >
-      <Globe className="h-4 w-4" />
-      <span className="hidden sm:inline uppercase">{current.code}</span>
-      <ChevronDown className="h-3 w-3 opacity-50" />
-    </button>
-  );
-
   return (
-    <DropdownMenu.Root
+    <DropdownMenu
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
         if (!o) setSearch("");
       }}
     >
-      <DropdownMenu.Trigger asChild>
-        {trigger}
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          className="z-50 w-52 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-          sideOffset={5}
-          align="end"
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("header.language")}
+          className={cn(
+            "inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            mobile ? "w-full rounded-xl px-3 py-2.5" : "h-9 rounded-full px-2.5",
+          )}
         >
-          <div className="p-1 pb-0">
-            <div className="flex items-center gap-1.5 rounded-sm border border-input px-2 py-1.5">
-              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <input
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                placeholder={t("language.search")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.stopPropagation()}
-              />
-            </div>
+          <Globe className="h-4 w-4" />
+          <span className={cn(mobile ? "flex-1 text-left" : "text-xs font-semibold uppercase tracking-wide")}>
+            {mobile ? currentLabel : isAuto ? "Auto" : current.code}
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent className="w-56 p-0" align="end">
+        <div className="p-1.5 pb-0">
+          <div className="flex items-center gap-2 rounded-lg border border-input px-2.5 py-1.5 focus-within:border-primary">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              placeholder={t("language.search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
           </div>
+        </div>
 
-          <DropdownMenu.Separator className="my-1 h-px bg-border" />
+        <DropdownMenuSeparator className="mx-0 mt-1.5 mb-0" />
 
-          <div ref={containerCallbackRef} className="relative">
+        <div ref={containerCallbackRef} className="relative">
           <ScrollArea className="h-60">
-            <div className="p-1 pt-0">
+            <div className="p-1.5">
               {showAuto && (
-                <DropdownMenu.Item
-                  className={cn(
-                    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                    isAuto && "bg-accent/50",
-                  )}
-                  onSelect={handleAuto}
-                >
-                  <Globe className="h-4 w-4" />
+                <DropdownMenuItem onSelect={handleAuto} className={cn(isAuto && "font-medium")}>
+                  <Globe />
                   <span className="flex-1">Auto</span>
-                  {isAuto && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
-                </DropdownMenu.Item>
+                  {isAuto && <Check className="text-primary-text" />}
+                </DropdownMenuItem>
               )}
 
-              {showAuto && filteredLanguages.length > 0 && (
-                <DropdownMenu.Separator className="my-1 h-px bg-border" />
-              )}
+              {showAuto && filteredLanguages.length > 0 && <DropdownMenuSeparator />}
 
-              {filteredLanguages.map((lang) => (
-                <DropdownMenu.Item
-                  key={lang.code}
-                  className={cn(
-                    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                    !isAuto && lang.code === current.code && "bg-accent/50",
-                  )}
-                  onSelect={() => handleSelect(lang.code)}
-                >
-                  <span className={`fi fi-${lang.flag} rounded-sm`} />
-                  <span className="flex-1">{lang.name}</span>
-                  {!isAuto && lang.code === current.code && (
-                    <Check className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
-                </DropdownMenu.Item>
-              ))}
+              {filteredLanguages.map((lang) => {
+                const selected = !isAuto && lang.code === current.code;
+                return (
+                  <DropdownMenuItem
+                    key={lang.code}
+                    onSelect={() => handleSelect(lang.code)}
+                    className={cn(selected && "font-medium")}
+                  >
+                    <span className={`fi fi-${lang.flag} rounded-sm`} />
+                    <span className="flex-1">{lang.name}</span>
+                    {selected && <Check className="text-primary-text" />}
+                  </DropdownMenuItem>
+                );
+              })}
             </div>
           </ScrollArea>
           {showScrollHint && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 rounded-b-md bg-linear-to-t from-popover to-transparent" />
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 rounded-b-xl bg-linear-to-t from-popover to-transparent" />
           )}
-          </div>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
