@@ -39,7 +39,7 @@ Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local his
 
 Never hardcode a limit or an option list that the server already sends. When the server gains a config field, add it to `configResponseSchema` in `src/lib/api.ts` as well, with `.optional().default(...)` so an older server does not break a newer SPA.
 
-The provider also applies `defaultTheme` (only when the user has no stored preference) and injects `customColor` as a style element.
+The server writes `DEFAULT_THEME` (`data-theme`) and `DEFAULT_COLOR_SCHEME` (`data-default-color-scheme`) into `index.html`, and `public/theme-init.js` applies them before the first paint, so the provider does not touch either. It injects the accent derived from `customColor` as a style element.
 
 ## API client
 

@@ -125,7 +125,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
               }`}
             >
               <Heading className="h-4 w-4" />
-              Markdown
+              {t("tab.markdown")}
             </button>
           </div>
         )}
@@ -213,7 +213,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
               <DialogTitle className="flex items-center gap-2">
                 {t("note.content")}
                 {markdownMode && (
-                  <span className="text-sm font-normal text-muted-foreground">- Markdown</span>
+                  <span className="text-sm font-normal text-muted-foreground">· {t("tab.markdown")}</span>
                 )}
               </DialogTitle>
               <div className="flex items-center gap-3 pr-8">

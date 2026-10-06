@@ -252,7 +252,7 @@
     "fileTooLarge": "ファイルが残り容量（{{remaining}}）を超えています",
     "resetsIn": "{{time}} 後にリセット"
   },
-  "theme": {
+  "colorScheme": {
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム設定に従う"

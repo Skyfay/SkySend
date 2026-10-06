@@ -1,0 +1,52 @@
+/*
+ * Aurora, the default theme: frosted glass over soft light that is mixed from the accent.
+ * Its tokens are the base values in index.css, so this file only adds what tokens cannot
+ * express. Components opt in through data-slot attributes:
+ *
+ *   data-slot="card"         Card, a glass surface
+ *   data-slot="glass"        any other surface that should be glass, like the header
+ *   data-slot="button"       Button, together with data-variant
+ *   data-slot="hero-title"   the large page headline
+ *   data-emphasis="main"     the one card a page is about, like the upload form
+ */
+
+[data-theme="aurora"] body {
+  background-image:
+    radial-gradient(55% 40% at 12% 0%, var(--color-primary-glow), transparent 70%),
+    radial-gradient(45% 38% at 88% 6%, color-mix(in oklab, color-mix(in oklab, var(--color-primary) 45%, #6366f1) 32%, transparent), transparent 70%),
+    radial-gradient(60% 45% at 50% 62%, color-mix(in oklab, color-mix(in oklab, var(--color-primary) 40%, #0ea5e9) 18%, transparent), transparent 75%);
+}
+
+[data-theme="aurora"] [data-slot="card"],
+[data-theme="aurora"] [data-slot="glass"] {
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+[data-theme="aurora"] [data-slot="hero-title"] {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-foreground) 30%,
+    var(--color-primary-text) 70%,
+    color-mix(in oklab, var(--color-primary-text) 55%, #8b5cf6)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme="aurora"] [data-slot="hero-title"] * {
+  color: transparent;
+}
+
+[data-theme="aurora"] [data-slot="button"][data-variant="default"] {
+  box-shadow: 0 10px 30px -10px var(--color-primary);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-theme="aurora"] [data-slot="card"],
+  [data-theme="aurora"] [data-slot="glass"] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

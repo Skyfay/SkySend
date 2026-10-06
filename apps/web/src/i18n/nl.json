@@ -193,7 +193,7 @@
     "fileTooLarge": "Bestand overschrijdt resterend quotum ({{remaining}} over)",
     "resetsIn": "Reset over {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Licht",
     "dark": "Donker",
     "system": "Systeem"

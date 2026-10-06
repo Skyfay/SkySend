@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { Upload, FolderOpen, LogOut, Menu, X } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ColorSchemeToggle } from "@/components/ColorSchemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useServerConfig } from "@/hooks/useServerConfig";
@@ -94,7 +94,7 @@ export function Layout() {
               </Link>
             ))}
             <LanguageSwitcher />
-            <ThemeToggle />
+            <ColorSchemeToggle />
             {oidcEnabled && isLoggedIn && (
               authLoading ? (
                 <Skeleton className="h-8 w-8 rounded-md" />
@@ -150,7 +150,7 @@ export function Layout() {
                 ))}
                 <div className="-mx-1 my-1 h-px bg-border" />
                 <LanguageSwitcher mobile />
-                <ThemeToggle mobile />
+                <ColorSchemeToggle mobile />
                 {oidcEnabled && isLoggedIn && (
                   <>
                     <div className="-mx-1 my-1 h-px bg-border" />

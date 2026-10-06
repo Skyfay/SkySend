@@ -188,7 +188,7 @@
     "fileTooLarge": "Datei überschreitet das verbleibende Kontingent ({{remaining}} übrig)",
     "resetsIn": "Wird zurückgesetzt in {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System"

@@ -386,6 +386,26 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Must be a valid URL (`https://...`) |
 | Description | URL to a report or abuse page. When set, a "Report" link is displayed in the footer. |
 
+### DEFAULT_THEME
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `aurora` |
+| Validation | One of `aurora`, `midnight`, `graphite`. Before v3 this variable held the color scheme, so `dark`, `light` and `system` fail with a message that points to `DEFAULT_COLOR_SCHEME`. |
+| Description | Visual theme of the web UI. The server writes it into `index.html` as `data-theme`, so it applies before the first paint. |
+
+### DEFAULT_COLOR_SCHEME
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `system` |
+| Validation | One of `dark`, `light`, `system` |
+| Description | Color scheme for visitors who have not picked one. A choice made in the UI is stored in the browser and wins over this default. |
+
 ### STORAGE_BACKEND
 
 | Property | Value |

@@ -188,7 +188,7 @@
     "fileTooLarge": "File exceeds remaining quota ({{remaining}} left)",
     "resetsIn": "Resets in {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Light",
     "dark": "Dark",
     "system": "System"

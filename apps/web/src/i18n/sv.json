@@ -191,7 +191,7 @@
     "fileTooLarge": "Filen överskrider kvarvarande kvot ({{remaining}} kvar)",
     "resetsIn": "Återställs om {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Ljust",
     "dark": "Mörkt",
     "system": "System"

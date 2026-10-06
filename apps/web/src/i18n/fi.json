@@ -193,7 +193,7 @@
     "fileTooLarge": "Tiedosto ylittää jäljellä olevan kiintiön ({{remaining}} jäljellä)",
     "resetsIn": "Nollautuu {{time}} kuluttua"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Vaalea",
     "dark": "Tumma",
     "system": "Järjestelmä"

@@ -253,7 +253,7 @@
     "fileTooLarge": "Arquivo excede a cota restante ({{remaining}} disponível)",
     "resetsIn": "Redefine em {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Claro",
     "dark": "Escuro",
     "system": "Sistema"

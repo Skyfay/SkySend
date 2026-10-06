@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { generatePassword, calculateEntropy } from "@/lib/password-generator";
 
+const MIN_LENGTH = 8;
+
 interface PasswordGeneratorProps {
   onGenerate: (password: string) => void;
   disabled?: boolean;
@@ -19,7 +21,9 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
   const [numbers, setNumbers] = useState(true);
   const [symbols, setSymbols] = useState(true);
 
-  const options = { length, uppercase, lowercase, numbers, symbols };
+  // The number field accepts any value while typing, so 1 can become 12. A password is
+  // never shorter than the slider's minimum, and leaving the field snaps it back to it.
+  const options = { length: Math.max(MIN_LENGTH, length), uppercase, lowercase, numbers, symbols };
   const entropy = calculateEntropy(options);
   const anySelected = uppercase || lowercase || numbers || symbols;
 
@@ -39,7 +43,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
         <Label className="shrink-0 text-sm">{t("passwordGenerator.length")}</Label>
         <input
           type="range"
-          min={8}
+          min={MIN_LENGTH}
           max={128}
           value={length}
           onChange={(e) => setLength(parseInt(e.target.value, 10))}
@@ -48,13 +52,14 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
         />
         <Input
           type="number"
-          min={8}
+          min={MIN_LENGTH}
           max={128}
           value={length}
           onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             if (v >= 1 && v <= 128) setLength(v);
           }}
+          onBlur={() => setLength((l) => Math.max(MIN_LENGTH, l))}
           className="h-8 w-20 text-center font-mono text-sm"
           disabled={disabled}
         />

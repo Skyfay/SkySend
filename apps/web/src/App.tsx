@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "
 import { Layout } from "@/components/Layout";
 import { Toaster } from "@/components/Toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ThemeProvider } from "@/hooks/useTheme";
+import { ColorSchemeProvider } from "@/hooks/useColorScheme";
 import { ServerConfigProvider } from "@/hooks/useServerConfig";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UploadPage } from "@/pages/Upload";
@@ -24,7 +24,7 @@ function LegacyDownloadRedirect() {
 export function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <TooltipProvider delayDuration={0}>
         <ServerConfigProvider>
           {/*
@@ -48,7 +48,7 @@ export function App() {
           </BrowserRouter>
         </ServerConfigProvider>
         </TooltipProvider>
-      </ThemeProvider>
+      </ColorSchemeProvider>
     </ErrorBoundary>
   );
 }

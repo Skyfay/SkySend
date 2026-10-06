@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { fetchConfig, type ServerConfig } from "@/lib/api";
-import { useTheme } from "@/hooks/useTheme";
+import { accentCss, deriveAccent } from "@/lib/accent";
 
 interface ServerConfigContextValue {
   config: ServerConfig | null;
@@ -18,7 +18,6 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { setTheme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -29,21 +28,14 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
           setConfig(cfg);
           setLoading(false);
 
-          // Apply server default theme only when the user has no stored preference
-          if (!localStorage.getItem("skysend-theme")) {
-            setTheme(cfg.defaultTheme);
-          }
+          // The theme and the default color scheme need nothing here: the server writes
+          // both into index.html, and public/theme-init.js applies them before the first paint.
 
-          // Apply custom brand color if configured
+          // Derive every accent shade from the custom color. Without one, index.css
+          // already carries the shades of SkySend green.
           if (cfg.customColor) {
             const style = document.createElement("style");
-            style.textContent = `
-              :root, .dark {
-                --color-primary: ${cfg.customColor} !important;
-                --color-primary-foreground: #ffffff !important;
-                --color-ring: ${cfg.customColor} !important;
-              }
-            `;
+            style.textContent = accentCss(deriveAccent(cfg.customColor));
             document.head.appendChild(style);
           }
 
@@ -64,7 +56,7 @@ export function ServerConfigProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [setTheme]);
+  }, []);
 
   return (
     <ServerConfigContext.Provider value={{ config, loading, error }}>

@@ -193,7 +193,7 @@
     "fileTooLarge": "Filen overskrider gjenværende kvote ({{remaining}} igjen)",
     "resetsIn": "Tilbakestilles om {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Lyst",
     "dark": "Mørkt",
     "system": "System"

@@ -193,7 +193,7 @@
     "fileTooLarge": "El archivo supera la cuota restante ({{remaining}} disponibles)",
     "resetsIn": "Se restablece en {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Claro",
     "dark": "Oscuro",
     "system": "Sistema"

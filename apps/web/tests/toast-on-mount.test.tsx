@@ -4,7 +4,7 @@ import { describe, expect, it, afterEach, beforeAll, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { toast } from "sonner";
 import { Toaster } from "../src/components/Toaster";
-import { ThemeProvider } from "../src/hooks/useTheme";
+import { ColorSchemeProvider } from "../src/hooks/useColorScheme";
 
 /**
  * Sonner delivers a toast only to subscribers that exist at publish time, and its
@@ -21,7 +21,7 @@ function TogglesOnMount({ message }: { message: string }) {
   return null;
 }
 
-// ThemeProvider reads a stored preference and the OS colour scheme on mount.
+// ColorSchemeProvider reads a stored preference and the OS colour scheme on mount.
 // This jsdom build ships localStorage without its methods and no matchMedia.
 beforeAll(() => {
   vi.stubGlobal("localStorage", {
@@ -41,10 +41,10 @@ afterEach(cleanup);
 describe("a toast fired while a page mounts", () => {
   it("is delivered when the Toaster mounts first, as App.tsx arranges it", async () => {
     render(
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <Toaster />
         <TogglesOnMount message="mounted-first" />
-      </ThemeProvider>,
+      </ColorSchemeProvider>,
     );
 
     expect(await screen.findByText("mounted-first")).toBeDefined();
@@ -52,10 +52,10 @@ describe("a toast fired while a page mounts", () => {
 
   it("is lost when the Toaster mounts after the page, which is the bug this guards", async () => {
     render(
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <TogglesOnMount message="mounted-last" />
         <Toaster />
-      </ThemeProvider>,
+      </ColorSchemeProvider>,
     );
 
     await new Promise((resolve) => setTimeout(resolve, 50));

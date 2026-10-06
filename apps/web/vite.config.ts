@@ -19,8 +19,12 @@ export default defineConfig(({ command }) => {
   const twitterCard = command === "serve" ? "summary" : "__TWITTER_CARD__";
   const envTheme = process.env.DEFAULT_THEME ?? "";
   const defaultTheme = command === "serve"
-    ? (["dark", "light", "system"].includes(envTheme) ? envTheme : "system")
+    ? (["aurora", "midnight", "graphite"].includes(envTheme) ? envTheme : "aurora")
     : "__DEFAULT_THEME__";
+  const envColorScheme = process.env.DEFAULT_COLOR_SCHEME ?? "";
+  const defaultColorScheme = command === "serve"
+    ? (["dark", "light", "system"].includes(envColorScheme) ? envColorScheme : "system")
+    : "__DEFAULT_COLOR_SCHEME__";
 
   return {
   plugins: [
@@ -32,6 +36,7 @@ export default defineConfig(({ command }) => {
         return html
           .replace(/__CUSTOM_TITLE__/g, customTitle)
           .replace(/__DEFAULT_THEME__/g, defaultTheme)
+          .replace(/__DEFAULT_COLOR_SCHEME__/g, defaultColorScheme)
           .replace(/__OG_IMAGE__/g, ogImage)
           .replace(/__TWITTER_CARD__/g, twitterCard);
       },

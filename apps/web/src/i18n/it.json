@@ -193,7 +193,7 @@
     "fileTooLarge": "Il file supera la quota rimanente ({{remaining}} disponibili)",
     "resetsIn": "Si ripristina tra {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Chiaro",
     "dark": "Scuro",
     "system": "Sistema"

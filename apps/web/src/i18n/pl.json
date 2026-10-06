@@ -193,7 +193,7 @@
     "fileTooLarge": "Plik przekracza pozostały limit (pozostało {{remaining}})",
     "resetsIn": "Resetuje się za {{time}}"
   },
-  "theme": {
+  "colorScheme": {
     "light": "Jasny",
     "dark": "Ciemny",
     "system": "System"
