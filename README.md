@@ -49,7 +49,7 @@ Inspired by [timvisee/send](https://github.com/timvisee/send), the community for
 ## ✨ Highlights
 
 - **Zero knowledge** - AES-256-GCM in the browser, and the key never leaves the share link
-- **Files and folders** - up to 2 GB and 32 files per upload by default, several files or a whole folder zipped in the browser
+- **Files and folders** - single files, several at once or a whole folder, zipped in the browser, with size and file limits you set yourself
 - **Notes made of blocks** - text and Markdown, passwords with a generator, code with highlighting and SSH keys, combined in one note
 - **Shares that delete themselves** - expiry times, download and view limits, and burn after reading
 - **Password protection** - an optional password on top of the link, derived with Argon2id
