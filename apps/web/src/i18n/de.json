@@ -248,7 +248,10 @@
     "keySize": "Schlüsselgröße",
     "publicKey": "Öffentlicher Schlüssel",
     "privateKey": "Privater Schlüssel",
-    "shareAs": "Als verschlüsselte Notiz teilen"
+    "shareAs": "Als verschlüsselte Notiz teilen",
+    "extrasDropped": "Dieser Browser kann Ed25519-Schlüsseln keinen Kommentar und keine Passphrase hinzufügen. Der Schlüssel wurde ohne sie erzeugt.",
+    "ed25519Unsupported": "Dieser Browser kann keine Ed25519-Schlüssel erzeugen. Wähle RSA oder nutze eine aktuelle Version von Chrome, Firefox oder Safari.",
+    "generateFailed": "Das Schlüsselpaar konnte nicht erzeugt werden."
   },
   "auth": {
     "loginRequired": "Anmeldung erforderlich zum Hochladen",

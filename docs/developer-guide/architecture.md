@@ -290,7 +290,6 @@ apps/web/src/
     useNoteHistory.ts   # IndexedDB note history
     useServerConfig.tsx # Fetch server config
     useColorScheme.tsx  # Dark/light mode
-    useToast.ts         # Toast notifications
   lib/
     api.ts              # API client
     note-editor.ts      # Draft blocks, empty blocks, blocks to send
@@ -300,6 +299,7 @@ apps/web/src/
     upload-store.ts     # IndexedDB operations
     upload-worker.ts    # Web Worker: encrypt + upload (WS primary, HTTP fallback)
     zip.ts              # Client-side zip/unzip (fflate)
+    toast.tsx           # Toast helpers on top of Sonner
     utils.ts            # Utility functions
   i18n/
     index.ts            # i18next setup with auto-detection

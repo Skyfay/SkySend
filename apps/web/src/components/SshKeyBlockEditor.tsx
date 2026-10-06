@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
 import { copyText } from "@/lib/clipboard";
-import { generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "@/lib/ssh-keygen";
+import { Ed25519UnsupportedError, generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "@/lib/ssh-keygen";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -65,9 +65,10 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
           : await generateRSAKeyPair(rsaBits, comment || undefined, passphrase || undefined);
       setKeyPair(pair);
       onChange(fromPair(pair, parts, passphrase));
-      if (pair.warning) toast.warning(pair.warning);
+      if (pair.extrasDropped) toast.warning(t("sshKey.extrasDropped"));
     } catch (err) {
-      showKnownErrorToast(err instanceof Error ? err.message : "Key generation failed");
+      if (err instanceof Ed25519UnsupportedError) toast.error(t("sshKey.ed25519Unsupported"));
+      else showKnownErrorToast(err instanceof Error ? err.message : t("sshKey.generateFailed"));
     } finally {
       setGenerating(false);
     }

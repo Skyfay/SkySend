@@ -248,7 +248,10 @@
     "keySize": "Key size",
     "publicKey": "Public Key",
     "privateKey": "Private Key",
-    "shareAs": "Share as encrypted note"
+    "shareAs": "Share as encrypted note",
+    "extrasDropped": "This browser cannot add a comment or passphrase to Ed25519 keys. The key was generated without them.",
+    "ed25519Unsupported": "This browser cannot generate Ed25519 keys. Choose RSA or use a current version of Chrome, Firefox or Safari.",
+    "generateFailed": "The key pair could not be generated."
   },
   "auth": {
     "loginRequired": "Login required to upload",

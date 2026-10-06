@@ -110,6 +110,8 @@ Adding a pattern means five edits, in this order: a troubleshooting section in `
 
 Architecturally, `showToast()` always goes through Sonner's own `toast.error()` / `toast.warning()` / etc. When `copyText` or `docsUrl` is set it passes a `ToastActionButtons` node as the `description`, so Sonner keeps its close button, animation, and layout. There is no `toast.custom()` call.
 
+The look lives in `components/ui/sonner.tsx`: Sonner's own styling is off (`unstyled`), the toasts carry the app's classes, and an `offset` keeps them below the sticky header. Change the look there, not with CSS against Sonner's `data-*` attributes.
+
 ## i18n
 
 Files in `src/i18n/`. `en.json` and `de.json` are the source of truth - add every new key to both by hand. The other 11 locales (`es`, `fr`, `fi`, `it`, `ja`, `nb`, `nl`, `pl`, `pt-BR`, `sv`, `zh`) are AI-translated.
@@ -133,7 +135,7 @@ No user-facing string is hardcoded in a component. Errors that surface as toasts
 
 The 20 available primitives:
 
-`badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toast` · `toggle-group` · `tooltip`
+`badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
 
 `toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
 

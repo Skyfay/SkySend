@@ -253,7 +253,10 @@
     "keySize": "Dimensione chiave",
     "publicKey": "Chiave pubblica",
     "privateKey": "Chiave privata",
-    "shareAs": "Condividi come nota crittografata"
+    "shareAs": "Condividi come nota crittografata",
+    "extrasDropped": "Questo browser non può aggiungere un commento o una passphrase alle chiavi Ed25519. La chiave è stata generata senza.",
+    "ed25519Unsupported": "Questo browser non può generare chiavi Ed25519. Scegli RSA o usa una versione recente di Chrome, Firefox o Safari.",
+    "generateFailed": "Impossibile generare la coppia di chiavi."
   },
   "auth": {
     "loginRequired": "Accesso richiesto per caricare",

@@ -253,7 +253,10 @@
     "keySize": "Taille de clé",
     "publicKey": "Clé publique",
     "privateKey": "Clé privée",
-    "shareAs": "Partager comme note chiffrée"
+    "shareAs": "Partager comme note chiffrée",
+    "extrasDropped": "Ce navigateur ne peut pas ajouter de commentaire ni de phrase secrète aux clés Ed25519. La clé a été générée sans.",
+    "ed25519Unsupported": "Ce navigateur ne peut pas générer de clés Ed25519. Choisissez RSA ou utilisez une version récente de Chrome, Firefox ou Safari.",
+    "generateFailed": "La paire de clés n'a pas pu être générée."
   },
   "auth": {
     "loginRequired": "Connexion requise pour téléverser",

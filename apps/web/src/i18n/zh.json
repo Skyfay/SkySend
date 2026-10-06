@@ -309,7 +309,10 @@
     "keySize": "密钥大小",
     "publicKey": "公钥",
     "privateKey": "私钥",
-    "shareAs": "以加密笔记形式分享"
+    "shareAs": "以加密笔记形式分享",
+    "extrasDropped": "此浏览器无法为 Ed25519 密钥添加注释或密码短语。密钥已在没有它们的情况下生成。",
+    "ed25519Unsupported": "此浏览器无法生成 Ed25519 密钥。请选择 RSA，或使用最新版本的 Chrome、Firefox 或 Safari。",
+    "generateFailed": "无法生成密钥对。"
   },
   "auth": {
     "loginRequired": "上传需要登录",

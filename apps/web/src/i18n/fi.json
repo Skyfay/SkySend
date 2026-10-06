@@ -253,7 +253,10 @@
     "keySize": "Avaimen koko",
     "publicKey": "Julkinen avain",
     "privateKey": "Yksityinen avain",
-    "shareAs": "Jaa salattuna muistiinpanona"
+    "shareAs": "Jaa salattuna muistiinpanona",
+    "extrasDropped": "Tämä selain ei voi lisätä Ed25519-avaimiin kommenttia tai salasanaa. Avain luotiin ilman niitä.",
+    "ed25519Unsupported": "Tämä selain ei voi luoda Ed25519-avaimia. Valitse RSA tai käytä Chromen, Firefoxin tai Safarin uutta versiota.",
+    "generateFailed": "Avainparia ei voitu luoda."
   },
   "auth": {
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",

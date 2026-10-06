@@ -35,7 +35,7 @@ showToast(t("errors.insecureContext"), {
 | `duration` | `number` | Override the auto-dismiss timeout in milliseconds. |
 | `id` | `string` | Deduplication key - a second call with the same ID updates the existing toast instead of opening a new one. |
 
-When neither `copyText` nor `docsUrl` is provided, `showToast()` delegates to the native Sonner helpers so the toast benefits from Sonner's built-in animations. When action buttons are needed, it uses Sonner's native `toast.error()` (or the matching type variant) and passes a `ToastActionButtons` component as the `description` node. This keeps Sonner's native layout, close button, and animations intact.
+`showToast()` always goes through Sonner's own `toast.error()` (or the matching type variant). When action buttons are needed, it passes a `ToastActionButtons` component as the `description` node, so the toast keeps the same layout, close button and animations as every other one.
 
 ## showKnownErrorToast()
 
@@ -72,20 +72,23 @@ For unknown errors it falls back to `toast.error(message)`.
 
 The action buttons (Copy, Docs) live in `apps/web/src/components/ui/custom-toast.tsx` as the exported `ToastActionButtons` component. It is only used indirectly through `showToast()` and is not meant to be rendered directly.
 
-The component handles clipboard writes with a `navigator.clipboard` primary path and a `document.execCommand` fallback for HTTP contexts where the Clipboard API is unavailable.
+The buttons are small outline `Button`s. Copying goes through `copyText()` in `lib/clipboard.ts`, which falls back to `document.execCommand` in HTTP contexts where the Clipboard API is unavailable.
 
-## Toaster placement
+## Toaster
 
-The `<Toaster />` component is rendered once in `App.tsx` outside the router. It is configured via `apps/web/src/components/ui/sonner.tsx`:
+The `<Toaster />` component is rendered once in `App.tsx`, ahead of the router. It is configured in `apps/web/src/components/ui/sonner.tsx`:
 
-- **Position**: `top-center`
-- **Close button**: enabled (Sonner's native close button, positioned top-right)
-- **Theme**: follows the user's current theme (dark / light / system) via `useTheme()`
-- **Icons**: custom Lucide icons (`AlertCircle`, `AlertTriangle`, `CheckCircle2`, `Info`) replace Sonner's built-in icons to match the app's design
-- **Colors**: overridden via CSS in `index.css` to use the app's card tokens (`--color-card`, `--color-border`, `--color-card-foreground`) in both light and dark mode
+- **Position**: `top-center`, 84px from the top (80px on a phone), so toasts sit below the sticky header instead of covering it
+- **Width**: 380px, the full width minus 16px on each side on a phone
+- **Look**: Sonner's own styling is switched off with `unstyled`, and the toasts get the app's classes: the popover surface, the border, 18px corners, the lift shadow and Geist
+- **Icon tile**: the Lucide icon (`AlertCircle`, `AlertTriangle`, `CheckCircle2`, `Info`) sits in a tile tinted by the toast's type: destructive for errors, warning for warnings, success for success and the accent for info
+- **Close button**: inside the toast at the top right, labelled with `common.close`
+- **Theme**: follows the user's color scheme (dark, light or system) via `useColorScheme()`
+
+Positioning, stacking, swiping and timing stay Sonner's own.
 
 ## i18n
 
-Action button labels (`Copy`, `Copied!`, `Docs`) are looked up via `common.copy`, `common.copied`, and `common.docs` in the translation files. Error titles use keys in the `errors.*` namespace.
+Action button labels (`Copy`, `Copied!`, `Docs`) are looked up via `common.copy`, `common.copied`, and `common.docs` in the translation files, the close button label via `common.close`. Error titles use keys in the `errors.*` namespace.
 
 When adding a new key, add it to `en.json` and `de.json` first - those two are the source of truth. Then add AI-translated values to the remaining language files. A file whose `__meta` block has `"aiGenerated": true` needs no further tracking, a file with `"aiGeneratedKeys"` needs the new key appended to that array.

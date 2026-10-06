@@ -253,7 +253,10 @@
     "keySize": "Nøkkelstørrelse",
     "publicKey": "Offentlig nøkkel",
     "privateKey": "Privat nøkkel",
-    "shareAs": "Del som kryptert notat"
+    "shareAs": "Del som kryptert notat",
+    "extrasDropped": "Denne nettleseren kan ikke legge til en kommentar eller passfrase i Ed25519-nøkler. Nøkkelen ble generert uten dem.",
+    "ed25519Unsupported": "Denne nettleseren kan ikke generere Ed25519-nøkler. Velg RSA eller bruk en oppdatert versjon av Chrome, Firefox eller Safari.",
+    "generateFailed": "Nøkkelparet kunne ikke genereres."
   },
   "auth": {
     "loginRequired": "Pålogging kreves for å laste opp",

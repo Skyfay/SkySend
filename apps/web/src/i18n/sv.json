@@ -251,7 +251,10 @@
     "keySize": "Nyckelstorlek",
     "publicKey": "Offentlig nyckel",
     "privateKey": "Privat nyckel",
-    "shareAs": "Dela som krypterad anteckning"
+    "shareAs": "Dela som krypterad anteckning",
+    "extrasDropped": "Den här webbläsaren kan inte lägga till en kommentar eller lösenfras i Ed25519-nycklar. Nyckeln skapades utan dem.",
+    "ed25519Unsupported": "Den här webbläsaren kan inte skapa Ed25519-nycklar. Välj RSA eller använd en aktuell version av Chrome, Firefox eller Safari.",
+    "generateFailed": "Nyckelparet kunde inte skapas."
   },
   "auth": {
     "loginRequired": "Inloggning krävs för att ladda upp",

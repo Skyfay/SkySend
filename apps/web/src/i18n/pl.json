@@ -253,7 +253,10 @@
     "keySize": "Rozmiar klucza",
     "publicKey": "Klucz publiczny",
     "privateKey": "Klucz prywatny",
-    "shareAs": "Udostępnij jako zaszyfrowaną notatkę"
+    "shareAs": "Udostępnij jako zaszyfrowaną notatkę",
+    "extrasDropped": "Ta przeglądarka nie może dodać komentarza ani frazy hasłowej do kluczy Ed25519. Klucz został wygenerowany bez nich.",
+    "ed25519Unsupported": "Ta przeglądarka nie może generować kluczy Ed25519. Wybierz RSA lub użyj aktualnej wersji Chrome, Firefox albo Safari.",
+    "generateFailed": "Nie udało się wygenerować pary kluczy."
   },
   "auth": {
     "loginRequired": "Wymagane logowanie do przesyłania",

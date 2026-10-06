@@ -253,7 +253,10 @@
     "keySize": "Sleutelgrootte",
     "publicKey": "Publieke sleutel",
     "privateKey": "Privésleutel",
-    "shareAs": "Delen als versleutelde notitie"
+    "shareAs": "Delen als versleutelde notitie",
+    "extrasDropped": "Deze browser kan geen opmerking of wachtwoordzin aan Ed25519-sleutels toevoegen. De sleutel is zonder gegenereerd.",
+    "ed25519Unsupported": "Deze browser kan geen Ed25519-sleutels genereren. Kies RSA of gebruik een recente versie van Chrome, Firefox of Safari.",
+    "generateFailed": "Het sleutelpaar kon niet worden gegenereerd."
   },
   "auth": {
     "loginRequired": "Inloggen vereist om te uploaden",

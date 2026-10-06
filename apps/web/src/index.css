@@ -69,6 +69,7 @@
   --color-warning: #92400e;
   --color-warning-foreground: #ffffff;
   --color-warning-soft: rgba(245, 158, 11, 0.12);
+  --color-success-soft: rgba(21, 128, 61, 0.1);
 
   /* Tailwind copies a shadow value into its utility instead of pointing at the variable,
      so .dark and the theme files set --lift-shadow and --chip-shadow below instead. */
@@ -81,18 +82,6 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
-
-  --animate-toast-in: toast-in 0.2s ease-out;
-  --animate-toast-out: toast-out 0.15s ease-in;
-
-  @keyframes toast-in {
-    from { opacity: 0; transform: translateY(100%); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes toast-out {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(100%); }
-  }
 }
 
 /* In the theme layer like the @theme tokens, so .dark and the theme files win over it. */
@@ -143,6 +132,7 @@
   --color-warning: #fcd34d;
   --color-warning-foreground: #000000;
   --color-warning-soft: rgba(251, 191, 36, 0.1);
+  --color-success-soft: rgba(74, 222, 128, 0.1);
 
   --lift-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 30px 80px -30px rgba(0, 0, 0, 0.9);
   --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -253,30 +243,6 @@
   background-color: var(--color-border);
   border-radius: 9999px;
   border: 1px solid transparent;
-}
-
-/* Sonner toast - match app design tokens */
-[data-sonner-toaster] {
-  /* Move close button to the right */
-  --toast-close-button-start: unset !important;
-  --toast-close-button-end: 0 !important;
-  --toast-close-button-transform: translate(35%, -35%) !important;
-  /* Background, border, and text use the popover colors, which are opaque in every theme */
-  --normal-bg: var(--color-popover) !important;
-  --normal-border: var(--color-border) !important;
-  --normal-text: var(--color-popover-foreground) !important;
-  --error-bg: var(--color-popover) !important;
-  --error-border: var(--color-border) !important;
-  --error-text: var(--color-popover-foreground) !important;
-  --success-bg: var(--color-popover) !important;
-  --success-border: var(--color-border) !important;
-  --success-text: var(--color-popover-foreground) !important;
-  --warning-bg: var(--color-popover) !important;
-  --warning-border: var(--color-border) !important;
-  --warning-text: var(--color-popover-foreground) !important;
-  --info-bg: var(--color-popover) !important;
-  --info-border: var(--color-border) !important;
-  --info-text: var(--color-popover-foreground) !important;
 }
 
 /* Glass needs a backdrop to be readable. Without one, surfaces turn opaque. */

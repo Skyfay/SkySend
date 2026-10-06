@@ -7,8 +7,13 @@
 - **server**: `/api/config` reports `noteBlocks`, so a client can tell whether the server accepts notes made of blocks.
 - **server**: `DEFAULT_TAB` accepts `note`, and `text`, `password`, `code` or `sshkey` open the note tab with that block already added.
 
+### 🐛 Bug Fixes
+
+- **web**: Messages about generating an SSH key are translated instead of always shown in English.
+
 ### 🎨 Improvements
 
+- **web**: Notifications match the design of the app and appear below the header instead of covering it.
 - **web**: Every part of a received note is shown in a frame of its own with a copy button, and code blocks can be folded one by one.
 - **web**: A note that cannot be read in its format is shown as it arrived instead of failing, so a note that deleted itself on opening is not lost.
 
@@ -17,8 +22,13 @@
 - **web**: The share form has two tabs, File and Note, instead of one tab per note type.
 - **server**: Notes created since v3 are stored with the content type `blocks`, so the server no longer learns whether a note holds text, a password, code or an SSH key.
 
+### 🗑️ Removed
+
+- **web**: Removed an unused toast component and its dependency.
+
 ### 📝 Documentation
 
+- **docs**: The toast system page describes the new look and position of notifications.
 - **docs**: The config endpoint shows its current response, and the notes API documents the `blocks` content type and the 32-byte salt.
 - **docs**: A new page describes the note format and when support for notes from before v3 is removed. The guides and the architecture page describe notes made of blocks, and `note:view` no longer lists options it does not have.
 

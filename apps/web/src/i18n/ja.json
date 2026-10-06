@@ -207,7 +207,10 @@
       "note.addBlock",
       "note.moveUp",
       "note.moveDown",
-      "note.removeBlock"
+      "note.removeBlock",
+      "sshKey.extrasDropped",
+      "sshKey.ed25519Unsupported",
+      "sshKey.generateFailed"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -460,7 +463,10 @@
     "keySize": "鍵サイズ",
     "publicKey": "公開鍵",
     "privateKey": "秘密鍵",
-    "shareAs": "暗号化メモとして共有"
+    "shareAs": "暗号化メモとして共有",
+    "extrasDropped": "このブラウザーでは Ed25519 鍵にコメントやパスフレーズを追加できません。鍵はそれらなしで生成されました。",
+    "ed25519Unsupported": "このブラウザーでは Ed25519 鍵を生成できません。RSA を選ぶか、最新の Chrome、Firefox、Safari を使用してください。",
+    "generateFailed": "鍵ペアを生成できませんでした。"
   },
   "auth": {
     "loginRequired": "アップロードにはログインが必要です",
