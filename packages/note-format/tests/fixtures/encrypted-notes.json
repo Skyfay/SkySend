@@ -1,0 +1,234 @@
+{
+  "about": "Notes encrypted with the SkySend v2 code and the v3.0 format. Generated once, never regenerated: a reader that fails one of these breaks real notes. The secrets are made up for this file.",
+  "notes": [
+    {
+      "name": "a v2 text note",
+      "kind": "text",
+      "link": "ZFtzktSy9Q3ILs74QEwod1ZcRWVT6CC3Rvc7HjljGgU",
+      "salt": "4e2Y_kVU-89V55nfww67DarO3Yl4dtNPRExX0DmN83g",
+      "nonce": "65r5knLyrmO2IOSr",
+      "ciphertext": "x4ujy/sEnu/wT0LwjF9XC/tOjXibe7kopjDd3ni2F8y/OnmP3VoemXWP/bbAAYjYCLE0RUYv2x4sBuk3N4lO2cNtpqi5d2IJy5GuATVEStQzLfq4/l4ysiG7",
+      "authToken": "Tbiq4VvTIcpGiV9SgRdXWOFam5jbtwQR7y9fUxAxAEQ",
+      "ownerToken": "u7GNIUeMfuOhbmPAoT9CQSRE6U-RSiwUOKmr7VmgNJc",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "plain",
+          "text": "Access to the new server.\n\nChange the root password after the first login."
+        }
+      ]
+    },
+    {
+      "name": "a v2 text note with characters outside ASCII",
+      "kind": "text",
+      "link": "20a_lZAfOiaf-z5UOEbwSim-P5hP_DR9G9KDSunpt0k",
+      "salt": "UdBQOJD47x-xSmZ8uDfdgP6qXzfqNKzD5pCcU_kXwHo",
+      "nonce": "LAKE1AnjbT7xZvHX",
+      "ciphertext": "vD8UM8v5fGJwTNmbBT/RjXutQpTRZZ0m7c0a2ql6cFIQ5ndX8CaTtfCs0iM1Fg6+/sMDiV7+OxkDMKLP8NeMczpx8LAA",
+      "authToken": "IUJ8EUMU_ikeR3Z3irGnQ47mrTunXd1pirtbG4saX7A",
+      "ownerToken": "K3qjUIhczLQerraSquCvYk3F8XOtEMHYUWnWDNbm324",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "plain",
+          "text": "Grüße aus Zürich 👋 — «quoted» and 日本語"
+        }
+      ]
+    },
+    {
+      "name": "a v2 Markdown note",
+      "kind": "markdown",
+      "link": "zZKw68kLKs4qRx9-0z6H4dL0uyxbtaFDwZyzdSoFUig",
+      "salt": "mRXq-crFr6pIlpwVflTnBqTlqW34lku_hBBmHGA5TIU",
+      "nonce": "SXxKRtvFgVO/2PUI",
+      "ciphertext": "+mdLPvwtPlYSh019QOgVF/NuGDiuFd+4b/btuE4RBL9Am7TiI2Ls4GKuE1TmZxQukf5idQmMmX+SQTk1Kn1ppxPgvXXSJqPGLT7iZQ==",
+      "authToken": "eel-ZbywkchT6P-bwKdiyr-0LKAAYYNf9R01EzFvzoo",
+      "ownerToken": "1jJuTF5tRIrdeRAVOufiGYSxKBVM7weG_mnxivyt38A",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "markdown",
+          "text": "# Deploy\n\n- [x] Backup\n- [ ] Update\n\n```bash\nmake deploy\n```"
+        }
+      ]
+    },
+    {
+      "name": "a v2 password note with labels, protected by a note password",
+      "kind": "password",
+      "link": "6_E6m8N1DxRe2kLUZhd-C7DQWsqOLs6Z3dTxV4oDcXw",
+      "salt": "YxSdP98mAus_3D8AJnCQv1O_vLuIgrNH9kOJ-V83qDs",
+      "password": "correct horse battery staple",
+      "passwordSalt": "TNn_xrgHS3iJ2iGB5Sw98g",
+      "nonce": "9Eq9pwSJQlyXXP+G",
+      "ciphertext": "gcJSWaxP5+QUAO7DN6PgaWVzSaXhlNsJKikCivb/Lu8ubs9JZvqCqTir8FHi+j7q9VUaSVnXCYeGTGlJwCdB1Ml2pWIzttzx4uhFr4g7HOV6b3UABMJZBF178w5P6Wp8+USEZQ==",
+      "authToken": "hCvTvyp4YejmJrutSQEJqss134lHO6j-tPYb1skPsxU",
+      "ownerToken": "e_eJvi7IbXWTghdQgJu3XAqEn6BgYboMeyVS1FodAmE",
+      "blocks": [
+        {
+          "type": "password",
+          "entries": [
+            {
+              "label": "root",
+              "value": "tR7#kq2Lm9x!vB4w"
+            },
+            {
+              "label": "",
+              "value": "pg-9fK2wQ7rN3zL"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a password note in the oldest format, with a 16-byte salt",
+      "kind": "password",
+      "link": "1-dqm5IMKSDL0Rn0pAB68-v_9W8ye0WbevzeXL8V2-s",
+      "salt": "4OacgwCF2Wc9V94O2RFC5w",
+      "nonce": "g2EFs3idrKtoKZgq",
+      "ciphertext": "VD2DPtKk2zCpYccj5S8Zhsa+hrKE/TMV0/eYi6QrZHqLY0NfaW5sPRXKcQqAiZ0=",
+      "authToken": "IMliG47vqowDJ-Wx_jBO6_Sdw8KZGTWC_Zt893HjH3E",
+      "ownerToken": "r0eyGnfpxCd21e81Ne9p02oTfmVHJw2U6Nc5MD67jNU",
+      "blocks": [
+        {
+          "type": "password",
+          "entries": [
+            {
+              "label": "",
+              "value": "first-password"
+            },
+            {
+              "label": "",
+              "value": "second-password"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a v2 code note with two snippets",
+      "kind": "code",
+      "link": "NQUh-MVAIk6KAVNAIM-8p9STjORpkdN6lPEGNQNgJl4",
+      "salt": "r0FL6JM7a0nfHKfe6q-ZUsKMgbTxspV3lWMILAtORZo",
+      "nonce": "5QOroCuGzpM3pPqD",
+      "ciphertext": "pnmyD04h8kJ+frTlgJFKTuHFKAkZuvvSSCQfFLnj03FV4H/aD/laj0UFuctvEzbIWeheWduX1HUztDhiIDKrA58/ylHAFUUFM9hh+Dmc2bxdx7v+colmISN+azCBW0EGtfQIgX9kQObstuO0ncEz9cjyWQOV8DIXVfL6S83VVJgDPvqK23nkFaLwSlHj0ikTyHP6XeKzo0hWAO4YltLHoHTJjn9lXCW5",
+      "authToken": "dYBEQECBpi3VDiaZZc9BKS99Pf-HiZ4uGiP3LCF_rDE",
+      "ownerToken": "Qj916qGhw61LqbPgcuFr7BPNQW5SjuITxT-Tj6XGCgk",
+      "blocks": [
+        {
+          "type": "code",
+          "title": "deploy.sh",
+          "language": "bash",
+          "code": "cd /srv/app\ndocker compose up -d"
+        },
+        {
+          "type": "code",
+          "title": "",
+          "language": "auto",
+          "code": "SELECT count(*) FROM notes;"
+        }
+      ]
+    },
+    {
+      "name": "a code note in the oldest format",
+      "kind": "code",
+      "link": "p6M9nbJRUnB2qaWAWO_LPY3qiCYZLw-v_qjuWBsgfUY",
+      "salt": "qVUscRowZt-mn9IH1TO40Pg8zF8Zzv_adMRfAy1Y3FM",
+      "nonce": "qDcKMaaC+Q8zpboi",
+      "ciphertext": "QKjlfjP6PMBbT/6oiBnpnxlSVkwC+Zw/o/XD4Y4pGDodett0M7Kh9j2nizw=",
+      "authToken": "t4mUWh2yE65cWzH_yk2p7w-8cnvf83JxJQnp-7FF7os",
+      "ownerToken": "mAPf1fcrOgx3678qq7Kv44pAR3iNWbGkWFjirWvYczI",
+      "blocks": [
+        {
+          "type": "code",
+          "title": "",
+          "language": "auto",
+          "code": "def main():\n    print('hi')\n"
+        }
+      ]
+    },
+    {
+      "name": "a v2 SSH key note with a generated pair and its passphrase",
+      "kind": "sshkey",
+      "link": "MFEDpPxfLdnLkor8L62LQA4EOA9sX2yz5fiQFsFhlLM",
+      "salt": "FcrXx6yOCpT-vSMGs1ah63MDHtjdXcUvHO6NGljkFQY",
+      "nonce": "0Qh6NcGuctck1SVR",
+      "ciphertext": "6xkhG1d1BWYTX9Ms5aDMYVUc4zHE1at0SQe95laWQ72gfsKyYgdK1Yrgi5PfplEYeHIaaID75OIcunF2TY68vh8LRIzlvS8LlE9ODsJcSG5wkfhJ1G1TSSgv4Gu9Kai/rX/2C2ZF3BtVpG7k3ncevIyjucR56caFLej2EpdVu4ZCKNKRlJYGXEAC4vapk7M4aUMM2kaP1QKJjSgoICQilvbKUI0yA8tvxCeGYF66r0vMDZuPVgz0l8kOSzKD80l3rfmDZYmvkNjEDWUIIIhujQerxgJgSxz8kjtxAq6kKvGCq79dph+UK6S7Hesnmzd2pzLf7yvy3OQz8CDi86uv8UXwWy/FwRcLgBOnmjE2",
+      "authToken": "kZSLfcYu4yhTin62pCkWy3znIyouVx2eqIPBWU4m-tA",
+      "ownerToken": "WfKSTo-QN_TwbZu9pzY32RqpDOIZOLkiTzo9-CmZhCc",
+      "blocks": [
+        {
+          "type": "sshkey",
+          "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyForTestsOnlyNotARealKey0000000 ops@example.com",
+          "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nfake-key-for-tests-only-not-a-real-key\nsecond-line-of-the-fake-key\n-----END OPENSSH PRIVATE KEY-----",
+          "passphrase": "horse staple"
+        }
+      ]
+    },
+    {
+      "name": "a v3 note made of blocks",
+      "kind": "blocks",
+      "link": "ZKQybHCtYFS5sPUdpoDdGpNRRRP1j8DSLhh7C_NrV44",
+      "salt": "c4AUTVWTqdVHyR5GtdHw4HpxWCmAASS7I9tHuAbbZWE",
+      "nonce": "QmgK/yUCd/B4JGis",
+      "ciphertext": "qh6V96vmlHkhNzT9sUIi91FYOAyZeeh72MNqk3RE3fdm/F16gIo+R7XEKvUIAL9J4r2alTU1pQMiXMdAztHdR3G1Csca+0+K0a8PHWMmIpfv4EbV0yEt9Meg+tkp53pQWCRpv4AEtEhTSC4J9k16yEOKL5s5YUPckILcxyNZHuWIBIJLJCwM1aJK+ExHUBi05AZ1JWbAjdVJs00haBAPYWExaYz8eaVepxiAOdjuddLC0jtLoyIwIsL1okEh+AFa8qSP+B70BY3SJGNwKvoHxw+8E+mcyAJyLbhn0rbd62ere/4ggLF+5ynBsWVNKXcS73Z/Nzp487Y107dyEAkLh2ab4UilkgVXpMOwiIOL/sl9TdX8qneVYHaYyWs1hQxwAqyLYhLu2mAfJ607vJmVMTyZGoh3eS83hef+M6xkI6euVkLrn1fAB5zEB1zYd7Mn4kJWIAqEnps9K63y6LtW4bI5NXkNM2+5vmmuPJv/UStcaynu/JHDP7sughznBm0i14eVMsicYfpHQ69JODMKb130amSaMWuXi2ZeYLypytF7lp3GEH0raSbGLOZ+Ch8jyK0a2dyJ",
+      "authToken": "MlyyMOcnGvwvTeS9GKWn9A1PsrwAxR4RwMzC-zpuO4Y",
+      "ownerToken": "5BvaQ4iT4TqWxkhec6Ce5xU_zyBTHuQDefjbU-J1nSY",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "markdown",
+          "text": "## Server\n\nCredentials for **staging**."
+        },
+        {
+          "type": "password",
+          "entries": [
+            {
+              "label": "admin",
+              "value": "Xq8!pL2#vN7@kR4m"
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "title": "login.sh",
+          "language": "bash",
+          "code": "ssh admin@203.0.113.10"
+        },
+        {
+          "type": "sshkey",
+          "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyForTestsOnlyNotARealKey0000000 ops@example.com",
+          "privateKey": "",
+          "passphrase": ""
+        }
+      ]
+    },
+    {
+      "name": "a v3 note made of blocks, protected by a note password",
+      "kind": "blocks",
+      "link": "QDzGbpIiWuxPB-CigAba1hrC73dXzHH87JaMibSXUkk",
+      "salt": "HUfuqaGEFxKfmvW17t5DjPE5lq2iXjKz71JR488h2cM",
+      "password": "Tr0ub4dor&3",
+      "passwordSalt": "XAqdntAqbWWqLhII5AvzoQ",
+      "nonce": "3JrrJ5ScpSmT/0DL",
+      "ciphertext": "K6YZt/s1i77OSMX1RDFh2rM7zMwnmevCunaPDWnUwzFNGmXzc6jiKQMmNIHuGYr+Nc3g6QGfp46D/8Pgvydq7Ma9ExTS9mOvEybGtZa0UZh2MyZFx1O4wLAKLB+RGftDFEhIn8j+9SxTSni2adwJZPM/WipqjHVn9K5CWj6g+MDMlxgOH8E54HT0XAeedOXLf0sKHkXHdAFsRMI1SLfFBK6Dyg1fcrmDsMg7gaqDqAnLr9oV+Q/6rijqEgyrhBFHFuGccbzD",
+      "authToken": "LKrBNCT_ixdADP7SJBntqnvNIHGcRO5Gc8f3rw_WzxE",
+      "ownerToken": "OhEdPfj_eDRg28Jnew15KTgwNvikeC9df42V9PdcEiA",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "markdown",
+          "text": "## Server\n\nCredentials for **staging**."
+        },
+        {
+          "type": "password",
+          "entries": [
+            {
+              "label": "admin",
+              "value": "Xq8!pL2#vN7@kR4m"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

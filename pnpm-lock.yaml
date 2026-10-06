@@ -333,6 +333,13 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    devDependencies:
+      '@skysend/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      hash-wasm:
+        specifier: ^4.12.0
+        version: 4.12.0
 
   website:
     dependencies:

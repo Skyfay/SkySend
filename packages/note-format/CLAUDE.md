@@ -9,7 +9,7 @@ blocks --serializeNote--> JSON document --encryptNoteContent (@skysend/crypto)--
 ciphertext --decryptNoteContent--> plaintext --readNote(kind, plaintext)--> blocks
 ```
 
-The encryption never sees blocks, only a string. This package never sees a key. Keep it that way: nothing here may import `@skysend/crypto` or touch a secret.
+The encryption never sees blocks, only a string. This package never sees a key. Keep it that way: nothing in `src/` may import `@skysend/crypto` or touch a secret. Only the tests use it, as a dev dependency, to run the whole path.
 
 `kind` is the `contentType` the server stores. New notes use `NOTE_KIND` (`"blocks"`), so which blocks a note holds stays inside the ciphertext.
 
@@ -29,3 +29,5 @@ Every piece that only exists for those notes is marked `LEGACY(notes-v1)`, and t
 ## Tests
 
 `tests/`, run with `pnpm --filter @skysend/note-format test`. Coverage is 100% and should stay there. Every format change needs a round-trip test, a test that a reader of the previous version still copes, and a test for what a crafted document does.
+
+`tests/encrypted.test.ts` runs the real path with `@skysend/crypto` and hash-wasm's Argon2id: link secret, note password, HKDF, auth and owner token, AES-256-GCM, reader. `tests/fixtures/encrypted-notes.json` holds notes encrypted with the v2 code and the v3.0 format, one per legacy kind, with a note password, and with a 16-byte salt. **Never regenerate or edit that file.** A failing fixture means real notes on real servers stop opening. Add a new fixture when a new format version ships, and leave the old ones in place.

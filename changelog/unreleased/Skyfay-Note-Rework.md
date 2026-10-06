@@ -1,6 +1,7 @@
 ### 🧪 Tests
 
 - **infra**: Tests for the note format, including every format a note from before v3 can have.
+- **crypto**: Notes encrypted before v3 are kept as test fixtures, so a change that stops them from opening fails the tests. They cover every note type, a note password and the older 16-byte salt.
 
 ### 🔧 CI/CD
 

@@ -18,5 +18,9 @@
   },
   "dependencies": {
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@skysend/crypto": "workspace:*",
+    "hash-wasm": "^4.12.0"
   }
 }
