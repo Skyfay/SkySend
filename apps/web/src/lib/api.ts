@@ -35,7 +35,7 @@ const configResponseSchema = z.object({
   // A server from before v3 sends a color scheme as defaultTheme, catch() keeps the default.
   defaultTheme: z.enum(["aurora", "midnight", "graphite"]).catch("graphite"),
   defaultColorScheme: z.enum(["dark", "light", "system"]).catch("system"),
-  defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),
+  defaultTab: z.enum(["file", "note", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
   // OIDC auth

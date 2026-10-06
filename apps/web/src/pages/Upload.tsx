@@ -144,7 +144,8 @@ export function UploadPage() {
     setExpireSec(config.fileDefaultExpire);
     setMaxDownloads(config.fileDefaultDownload);
     // Set initial tab: use server default if available, else first available tab
-    const preferredTab = config.defaultTab;
+    // Until the note tab replaces the four note forms, DEFAULT_TAB=note opens the text form.
+    const preferredTab = config.defaultTab === "note" ? "text" : config.defaultTab;
     const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;
     setActiveTab(targetTab);
     // Apply force-password for file uploads
