@@ -5,21 +5,15 @@
 <h1 align="center">SkySend</h1>
 
 <p align="center">
-  <strong>End-to-end encrypted, self-hostable file and note sharing service built for speed and security.</strong>
+  <strong>End-to-end encrypted, self-hostable file and note sharing, built for speed and security.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License">
-  <img src="https://img.shields.io/docker/pulls/skyfay/skysend?logo=docker&logoColor=white" alt="Docker Pulls">
-  <img src="https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/self--hosted-yes-%239B59B6" alt="Self-hosted">
-  <img src="https://img.shields.io/badge/open_source-%E2%9D%A4%EF%B8%8F-red" alt="Open Source">
-  <br>
   <a href="https://github.com/Skyfay/SkySend/actions/workflows/release.yml"><img src="https://github.com/Skyfay/SkySend/actions/workflows/release.yml/badge.svg" alt="Release"></a>
-  <a href="https://github.com/Skyfay/SkySend/commits"><img src="https://img.shields.io/github/last-commit/Skyfay/SkySend?color=%234B8BBE" alt="Last Commit"></a>
-  <a href="https://discord.com/invite/YvgPyky"><img src="https://img.shields.io/discord/580801656707350529?label=Discord&color=%235865f2" alt="Discord"></a>
+  <a href="https://hub.docker.com/r/skyfay/skysend"><img src="https://img.shields.io/docker/pulls/skyfay/skysend?logo=docker&logoColor=white" alt="Docker Pulls"></a>
   <a href="https://codecov.io/gh/Skyfay/SkySend"><img src="https://img.shields.io/codecov/c/github/Skyfay/SkySend?label=coverage" alt="Coverage"></a>
-  <a href="https://codecov.io/gh/Skyfay/SkySend"><img src="https://img.shields.io/codecov/c/github/Skyfay/SkySend?flag=crypto&label=crypto%20coverage" alt="Crypto Coverage"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License"></a>
+  <a href="https://discord.com/invite/YvgPyky"><img src="https://img.shields.io/discord/580801656707350529?label=Discord&color=%235865f2" alt="Discord"></a>
 </p>
 
 <p align="center">
@@ -31,114 +25,50 @@
   <a href="https://skysend.app/roadmap/">Roadmap</a>
 </p>
 
-### What is SkySend?
-
-SkySend is a minimalist, self-hostable file and note sharing service with end-to-end encryption. Files and notes are encrypted entirely in the browser using AES-256-GCM before they ever reach the server - the server stores only encrypted blobs and never has access to the decryption key. No accounts, no tracking, no analytics just Open Source.
-
-This Project is community ready to get self hosted and for those who don't want or could not host their own instance, there are public instances available. If you want to make the internet safer, you can host your own instance and add it to the public instances list by creating a Issue with your instance details or a PR [Instances List](https://github.com/Skyfay/SkySend/blob/main/docs/public/instances.json).
-
-Inspired by [timvisee/send](https://github.com/timvisee/send) (the community fork of Mozilla Send) and [PrivateBin](https://privatebin.info/), SkySend is built from scratch with higher security standards, more features, and a minimal, maintainable codebase.
-
-We used a leightweight tech stack (Node.js, Hono, Vite, React) and modern security practices to create a fast, secure, and user-friendly experience. Check out our [Benchmarks](https://docs.skysend.app/benchmarks).
+<!-- Premium Sponsors ($500 a month): their logo at the very top, linking to their site. Kept by hand,
+     uncomment and fill in, one link per sponsor:
+<p align="center">
+  <sub>🏆 Premium Sponsors · $500 a month</sub>
+  <br>
+  <a href="https://example.com"><img src="https://example.com/logo.svg" alt="Company" height="60"></a>
+</p>
+-->
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/screenshots/overview.png" alt="SkySend Screenshot" width="800">
+  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/readme-banner.png" alt="The SkySend share page on a desktop and the download page on a phone" width="800">
 </div>
 
-## ✨ Features
+### What is SkySend?
 
-### 🔒 End-to-End Encryption
+SkySend shares files and notes so that only the recipient can read them. Everything is encrypted in the browser before it leaves the device, and the key travels in the fragment of the share link, which browsers never send to a server. The server stores ciphertext and nothing else.
 
-- **AES-256-GCM** streaming encryption with 64KB record size
-- **HKDF-SHA256** key derivation with domain-separated keys (fileKey, metaKey, authKey)
-- **Zero Knowledge** - the encryption key lives only in the URL fragment (`#`) and never leaves the browser
-- **Argon2id** password protection via WASM (memory-hard, GPU-resistant)
+It runs as one Docker container with SQLite and needs no accounts. Host your own instance, or use one of the [public instances](https://docs.skysend.app/instances), and if you run one yourself, you can [add it to the list](https://docs.skysend.app/instances).
 
-### 📁 Upload & Sharing
+Inspired by [timvisee/send](https://github.com/timvisee/send), the community fork of Mozilla Send, and by [PrivateBin](https://privatebin.info/), SkySend is built from scratch with higher security standards, more features and a minimal, maintainable codebase. Its whole crypto design is [documented](https://docs.skysend.app/developer-guide/crypto/).
 
-- **Drag & Drop** - files and folders
-- **Multi-File Upload** - up to 32 files per upload, zipped client-side with fflate
-- **Folder Upload** - entire directories via the folder picker
-- **Configurable Expiry** - choose download limits and expiration times
-- **Password Protection** - optional, GPU-resistant key derivation
-- **Share Links** - copy and share with one click
+## ✨ Highlights
 
-### 📝 Encrypted Notes
+- **Zero knowledge** - AES-256-GCM in the browser, and the key never leaves the share link
+- **Files and folders** - up to 2 GB and 32 files per upload by default, several files or a whole folder zipped in the browser
+- **Notes made of blocks** - text and Markdown, passwords with a generator, code with highlighting and SSH keys, combined in one note
+- **Shares that delete themselves** - expiry times, download and view limits, and burn after reading
+- **Password protection** - an optional password on top of the link, derived with Argon2id
+- **A CLI for the terminal** - upload, download and notes with the same encryption, plus an interactive TUI
+- **No accounts** - My Uploads lives in the browser, and optional OIDC sign-in limits who may share
+- **Runs anywhere** - local storage or any S3-compatible bucket, 13 languages and three themes
 
-- **Blocks** - combine text, passwords, code and SSH keys in one note, in any order
-- **Text Notes** - share encrypted text snippets with optional Markdown rendering (GFM support with live preview)
-- **Password Sharing** - store multiple passwords with individual masked display, reveal toggles, copy buttons, and a built-in password generator
-- **Code Snippets** - share code with syntax highlighting (43 auto-detected languages) and line numbers
-- **Markdown** - write and preview Markdown notes with full GitHub Flavored Markdown support
-- **SSH Keys** - generate Ed25519 or RSA key pairs in the browser, or paste existing keys, and share them as encrypted notes
-- **Burn After Reading** - notes that self-destruct after a single view
-- **View Limits** - configurable maximum number of views (including unlimited)
+## 🔒 Security Design
 
-### 👥 OIDC / SSO Authentication
-
-- **Optional SSO** - restrict who can upload by connecting any OIDC-compliant provider
-- **Supported Providers** - built-in presets for PocketID, Authentik, Keycloak, and any generic OIDC provider
-- **Granular Protection** - independently require login for file uploads and/or note creation via `OIDC_PROTECT_FILES` / `OIDC_PROTECT_NOTES`
-- **Downloads always public** - authentication only gates the upload action, consistent with the zero-knowledge design
-- **Stateless sessions** - signed JWT cookies, no database changes required
-- **CLI support** - the CLI automatically opens a browser for login when the server requires it; tokens are cached per-server in `~/.config/skysend/`
-- **PKCE flow** - uses authorization code grant with PKCE for all clients
-
-### 📊 Upload Dashboard
-
-- **No Account Needed** - upload and note history stored locally in IndexedDB
-- **Live Status** - download/view counts, remaining downloads/views, expiry countdowns
-- **Filter & Manage** - filter by files or notes, re-copy share links, or delete entries
-- **Auto-Cleanup** - expired entries removed automatically
-
-### ☁️ S3 Storage Support
-
-- **S3-Compatible** - optional backend for Cloudflare R2, AWS S3, MinIO, Hetzner, Wasabi, and more
-- **Direct Downloads** - serve files via presigned URLs (short-lived, enforces expiry and download limits)
-- **Tunable Performance** - configurable part size and upload concurrency
-
-### 🐳 Docker Ready
-
-- **Single Container** - deploy with `docker compose up -d`
-- **Multi-Arch** - AMD64 and ARM64 images
-- **Health Checks** - built-in health endpoint at `/api/health`
-- **Configurable UID/GID** - `PUID`/`PGID` for proper volume permissions
-- **Graceful Shutdown** - handles SIGTERM cleanly
-
-### 💻 Client CLI
-
-- **Cross-platform** - pre-built binaries for Linux, macOS, and Windows (compiled with Bun)
-- **End-to-end encrypted** - same AES-256-GCM encryption as the web client
-- **`skysend upload <files...>`** - upload single or multiple files with progress bar
-- **`skysend download <url>`** - download and decrypt files
-- **`skysend note <text>`** - create encrypted notes (text, password, code, markdown, sshkey)
-- **`skysend note:view <url>`** - view encrypted notes
-- **`skysend update`** - self-update from GitHub Releases with checksum verification
-- **`skysend auth login`** - authenticate against an OIDC-protected server
-- **`skysend auth logout`** - remove the stored session token
-- **`skysend auth status`** - show the current session state
-- **Scriptable** - `--json` flag for machine-readable output
-- **WebSocket & HTTP** - same dual transport as the web client
-
-### 🛠️ Admin CLI
-
-- **`skysend-cli list`** - show active uploads
-- **`skysend-cli delete <id>`** - delete an upload
-- **`skysend-cli stats`** - storage overview
-- **`skysend-cli cleanup`** - trigger manual cleanup
-- **`skysend-cli config`** - show current configuration
-
-### 🌍 Additional
-
-- **Multi-Language** - automatic browser language detection with English fallback
-- **Dark Mode** - with automatic OS detection
-- **Rate Limiting** - sliding window, per-IP
-- **Upload Quota** - privacy-preserving with HMAC-hashed IPs and daily key rotation
-- **Responsive** - mobile and desktop
+| Component | Algorithm |
+| :--- | :--- |
+| Secret key | 256-bit random, in the URL fragment only |
+| Key derivation | HKDF-SHA256, a separate key for content, metadata and auth |
+| File encryption | AES-256-GCM, streamed in 64 KB records |
+| Note and metadata encryption | AES-256-GCM with a random IV |
+| Auth token | HMAC-SHA256 |
+| Password KDF | Argon2id (WASM) |
 
 ## 🚀 Quick Start
-
-**Supported Platforms**: AMD64 (x86_64) • ARM64 (aarch64)
 
 ```yaml
 # docker-compose.yml
@@ -154,140 +84,83 @@ services:
       - ./uploads:/uploads
     environment:
       - BASE_URL=http://localhost:3000
-      # All environment variables: https://docs.skysend.app/user-guide/configuration/environment-variables
-      # There are a lot of customization options available, so make sure to check the documentation for more details.
 ```
 
 ```bash
 docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000). The documentation covers [every environment variable](https://docs.skysend.app/user-guide/configuration/environment-variables), [reverse proxies](https://docs.skysend.app/user-guide/self-hosting/reverse-proxy) and [S3 storage](https://docs.skysend.app/user-guide/configuration/s3). Images are built for AMD64 and ARM64.
 
-📖 **Full installation guide**: [docs.skysend.app/user-guide/getting-started](https://docs.skysend.app/user-guide/getting-started)
-
-## 💻 Client CLI
-
-Upload and download files from the terminal with the same end-to-end encryption as the web interface.
-
-**Install (Linux/macOS):**
+The [CLI client](https://docs.skysend.app/user-guide/client-cli/) installs with one line, on Linux and macOS:
 
 ```bash
 curl -fsSL https://skysend.app/install.sh | sh
 ```
 
-**Install (Windows PowerShell):**
+On Windows, in PowerShell:
 
 ```powershell
 irm https://skysend.app/install.ps1 | iex
 ```
 
-**Usage:**
+## 💖 Sponsors
 
-```bash
-# Set your server
-skysend config set-server https://your-instance.com
+SkySend is free and open source. [Sponsoring it](https://github.com/sponsors/Skyfay) keeps it that way, and from $15 a month or $100 once your name shows up here by itself.
 
-# Upload a file
-skysend upload ./document.pdf
+<!-- Company Sponsors ($150 a month): their logo shown large, linking to their site. Kept by hand,
+     uncomment and fill in, one link per sponsor:
+<p align="center">
+  <strong>🏢 Company Sponsors</strong> · $150 a month
+  <br><br>
+  <a href="https://example.com"><img src="https://example.com/logo.svg" alt="Company" height="80"></a>
+</p>
+-->
 
-# Upload with password and expiry
-skysend upload ./secret.zip --password --expires 1h --downloads 5
+<p align="center">
+  <a href="https://github.com/sponsors/Skyfay">
+    <img src="https://raw.githubusercontent.com/Skyfay/DBackup/sponsors/sponsors.svg" alt="The monthly sponsors of SkySend" width="800">
+  </a>
+</p>
 
-# Download a file
-skysend download https://your-instance.com/file/abc123#secret
+### One-time Sponsors
 
-# Create an encrypted note
-skysend note "This is a secret message" --type text --expires 24h
+<!-- Patrons ($500 once): the image below draws them with their avatar. Kay sponsored while this
+     tier still came with a logo, so his stays here by hand and the image leaves him out. -->
+<p align="center">
+  <strong>🏆 Patrons</strong> · $500 once
+  <br><br>
+  <a href="https://www.ictwebsolution.nl"><img src="https://ictwebsolution.nl/wp-content/uploads/2021/05/Logo-ICTWebSolution.png" alt="ICT WebSolution" height="60"></a>
+  <br>
+  <a href="https://www.ictwebsolution.nl"><sub>Kay van Aarssen</sub></a>
+</p>
 
-# Login to an OIDC-protected server
-skysend auth login
+<p align="center">
+  <a href="https://github.com/sponsors/Skyfay">
+    <img src="https://raw.githubusercontent.com/Skyfay/DBackup/sponsors/sponsors-onetime.svg" alt="The one-time sponsors of SkySend" width="800">
+  </a>
+</p>
 
-# Self-update
-skysend update
-```
+<!-- The two images are drawn every night by the Sponsors workflow of Skyfay/DBackup, which publishes
+     the GitHub Sponsors of Skyfay to its sponsors branch for both READMEs. -->
 
-📖 **Full CLI documentation**: [docs.skysend.app/user-guide/client-cli](https://docs.skysend.app/user-guide/client-cli/)
+## 🛠️ Contributing
 
-## 🔒 Security Design
-
-| Component | Algorithm |
-| :--- | :--- |
-| Secret Key | 256-bit Random (32 Bytes) |
-| Key Derivation | HKDF-SHA256 |
-| File Encryption | AES-256-GCM, 64KB Record Size |
-| Note Encryption | AES-256-GCM + Random IV |
-| Metadata Encryption | AES-256-GCM + Random IV |
-| Nonce Handling | Counter-based (XOR) |
-| Auth Token | HMAC-SHA256 |
-| Password KDF | Argon2id (WASM) |
-
-The complete crypto design is publicly documented at [docs.skysend.app/developer-guide/crypto](https://docs.skysend.app/developer-guide/crypto/).
-
-## 🛠️ Tech Stack
-
-| Area | Technology |
-| :--- | :--- |
-| Runtime | Node.js 24 LTS |
-| Backend | Hono |
-| Frontend | Vite + React 19 + Shadcn UI |
-| CLI Client | Commander.js + Bun compile |
-| Database | SQLite (Drizzle ORM) |
-| Crypto | Web Crypto API + Argon2id (WASM) |
-| Validation | Zod |
-| i18n | react-i18next |
-| Docs | VitePress |
-| Monorepo | pnpm Workspaces |
-
-## 📚 Documentation
-
-Full documentation is available at **[docs.skysend.app](https://docs.skysend.app)**:
-
-- [User Guide](https://docs.skysend.app/user-guide/getting-started) - Installation, configuration, usage
-- [Developer Guide](https://docs.skysend.app/developer-guide/) - Architecture, crypto design, contributing
-- [Changelog](https://docs.skysend.app/changelog) - Release history
-- [Roadmap](https://skysend.app/roadmap/) - Planned features
-
-## 🛠️ Development
-
-```bash
-# Clone & install
-git clone https://github.com/Skyfay/SkySend.git && cd SkySend
-pnpm install
-
-# Start dev server (all packages in parallel)
-pnpm dev
-
-# Run all checks (lint, typecheck, tests)
-pnpm validate
-```
-
-For contribution guidelines, see the [CONTRIBUTING.md](CONTRIBUTING.md).
+Pull requests go into the `dev` branch, never into `main`. [CONTRIBUTING.md](CONTRIBUTING.md) explains the setup and the workflow, and the [Developer Guide](https://docs.skysend.app/developer-guide/) the architecture, the crypto library and the tests. Please read [PHILOSOPHY.md](PHILOSOPHY.md) before proposing a feature.
 
 ## 💬 Community & Support
 
-- 💬 **Discord**: Join our community at [https://dc.skyfay.ch](https://dc.skyfay.ch)
-- 📝 **Documentation**: Full guides at [docs.skysend.app](https://docs.skysend.app)
-- 🐛 **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/Skyfay/SkySend/issues)
-- 📧 **Support**: General questions and support via [support@skysend.app](mailto:support@skysend.app)
-- 🔒 **Security**: Report vulnerabilities responsibly via [security@skysend.app](mailto:security@skysend.app) (please do **not** open public issues for security reports)
+- 💬 **Discord**: [dc.skyfay.ch](https://dc.skyfay.ch)
+- 🐛 **Issues**: bugs and feature requests on [GitHub Issues](https://github.com/Skyfay/SkySend/issues)
+- 📧 **Support**: [support@skysend.app](mailto:support@skysend.app)
+- 🔒 **Security**: report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), never in a public issue
 
 ## 🤖 AI Development Transparency
 
-### Architecture & Concept
+The architecture, the cryptographic design, the technology stack and the feature specifications of SkySend were designed and directed by a human system engineer. The code is written by AI coding agents that follow those specifications and the guidelines of the project. Every feature is tested by hand, backed by unit tests with coverage tracking, CodeQL and security audits.
 
-The system architecture, cryptographic design, strict technology stack selection, and feature specifications for SkySend were entirely conceptualized and directed by a human System Engineer to solve real-world privacy challenges in file sharing.
-
-### Implementation
-
-The application code was generated by AI coding agents following detailed architectural specifications and coding guidelines. All features were manually tested for correctness, stability, and real-world reliability. Automated unit tests (Vitest) with coverage tracking via Codecov, CodeQL static analysis, and security audits complement the manual QA process.
-
-### Open for Review
-
-SkySend is thoroughly tested and used in production, but a formal manual security audit by an external developer has not yet been completed. The entire cryptographic design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to facilitate independent review. If you are a software developer or cybersecurity professional, your expertise is highly welcome! We invite the open-source community to review the code, submit PRs, and help us elevate SkySend to a fully verified standard.
-
-> **Security Disclosure**: If you discover a security vulnerability, please **do not** open a public GitHub issue. Instead, report it responsibly via email to **[security@skysend.app](mailto:security@skysend.app)**.
+A manual security audit by an external developer has not been done yet. The crypto design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to make an independent review easy. If you review code or work in security, your findings are very welcome, see [SECURITY.md](SECURITY.md) for how to report them.
 
 ## 📝 License
 
-[GNU Affero General Public License v3.0](LICENSE) - Any hosted instance must release its source code.
+[GNU Affero General Public License v3.0](LICENSE). Any hosted instance must release its source code.

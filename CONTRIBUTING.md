@@ -8,23 +8,42 @@ Contributions are welcome! Before submitting a pull request, please:
 
 Small fixes (language translations, typos, documentation improvements) can be submitted directly as PRs.
 
+## Branches
+
+| Branch | What it holds |
+| :--- | :--- |
+| `main` | The released code. Each release merges `dev` into `main` and is tagged `vX.Y.Z` |
+| `dev` | Everything that is finished, waiting for the next release |
+| Feature branches | One feature or fix each, branched off `dev` |
+
+**Pull requests go into `dev`, never into `main`.** Branch off `dev`, and open the pull request against `dev`. Only the maintainer merges `dev` into `main` for a release.
+
 ## Development Setup
 
 ### Prerequisites
 
-- Node.js 24 LTS or later
-- pnpm 9 or later
+- Node.js 24, the version CI and the Docker image use
+- pnpm 10
 
 ### Getting Started
 
 ```bash
-git clone https://github.com/skyfay/skysend.git
-cd skysend
+git clone https://github.com/Skyfay/SkySend.git
+cd SkySend
+git checkout dev
 pnpm install
 pnpm dev
 ```
 
 This starts both the backend (Hono) and frontend (Vite) in development mode.
+
+Start your work on a branch of its own:
+
+```bash
+git checkout -b fix/short-description dev
+```
+
+Working from a fork, add this repository as `upstream` and branch off `upstream/dev`, so your branch starts from the newest state.
 
 ### Project Structure
 
@@ -37,6 +56,8 @@ apps/
 packages/
   crypto/    # Shared encryption library (Web Crypto API)
 docs/        # VitePress documentation
+website/     # Next.js marketing site
+workers/     # Cloudflare Workers for the instance list and abuse reports
 ```
 
 ### Commands
@@ -66,6 +87,7 @@ pnpm test         # Run unit tests
 
 ### Pull Requests
 
+- Open it against `dev`. A pull request against `main` is retargeted or closed
 - One feature/fix per PR
 - Include tests for new functionality
 - Update documentation if relevant
@@ -74,7 +96,7 @@ pnpm test         # Run unit tests
 
 ## Security
 
-If you discover a security vulnerability, **do not** open a public issue. Instead, please report it responsibly by contacting the maintainer directly.
+If you discover a security vulnerability, **do not** open a public issue or pull request. See [SECURITY.md](SECURITY.md) for how to report it privately.
 
 ## Philosophy
 

@@ -5,7 +5,7 @@ Set up a local development environment for SkySend.
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 24 LTS or later
-- [pnpm](https://pnpm.io/) 9+
+- [pnpm](https://pnpm.io/) 10
 - [Git](https://git-scm.com/)
 
 ## Clone and Install
@@ -13,8 +13,11 @@ Set up a local development environment for SkySend.
 ```bash
 git clone https://github.com/Skyfay/SkySend.git
 cd SkySend
+git checkout dev
 pnpm install
 ```
+
+New work happens on a branch off `dev`, and its pull request goes back into `dev`, never into `main`. See [Branches and Pull Requests](/developer-guide/#branches-and-pull-requests).
 
 ## Development
 

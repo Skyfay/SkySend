@@ -38,6 +38,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 6. **Typography**: no em dashes, no semicolons joining clauses. Use a hyphen where a dash is needed, and end sentences with a period. Applies to code comments, docs, changelog entries, and commit messages.
 7. **Language**: all code, comments, and documentation in English. User-facing strings go through i18n, never inline.
 8. **Never log secrets, keys, tokens, plaintext, or IP addresses.** The request logger records method, path, status, and duration only. Quota tracking uses HMAC-hashed IPs with a daily rotating key.
+9. **Branches: feature branch, then `dev`, then `main`.** Work happens on a feature branch off `dev`, its pull request goes into `dev`, and a release merges `dev` into `main`. A pull request or a base branch suggested to anyone points at `dev`, never at `main`.
 
 ## Architecture
 
