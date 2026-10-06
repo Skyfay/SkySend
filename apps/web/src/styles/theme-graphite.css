@@ -20,8 +20,8 @@
   --color-accent-foreground: #111113;
   --color-border: #e2e2e6;
   --color-input: #cfcfd5;
-  --shadow-lift: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.3);
-  --shadow-chip: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.08);
+  --lift-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.3);
+  --chip-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="graphite"].dark {
@@ -41,8 +41,8 @@
   --color-accent-foreground: #f2f2f3;
   --color-border: #2a2a2e;
   --color-input: #36363b;
-  --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(0, 0, 0, 0.6), 0 30px 60px -30px rgba(0, 0, 0, 0.85);
-  --shadow-chip: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 1px rgba(0, 0, 0, 0.5);
+  --lift-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(0, 0, 0, 0.6), 0 30px 60px -30px rgba(0, 0, 0, 0.85);
+  --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="graphite"] body {
@@ -69,5 +69,5 @@
 [data-theme="graphite"] [data-slot="button"][data-variant="outline"],
 [data-theme="graphite"] [data-slot="button"][data-variant="secondary"] {
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-card), #ffffff 6%), var(--color-card));
-  box-shadow: var(--shadow-chip);
+  box-shadow: var(--chip-shadow);
 }
