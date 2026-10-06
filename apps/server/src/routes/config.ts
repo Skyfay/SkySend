@@ -42,6 +42,7 @@ configRoute.get("/", (c) => {
     customReportUrl: config.CUSTOM_REPORT_URL ?? null,
     // UI defaults
     defaultTheme: config.DEFAULT_THEME,
+    defaultColorScheme: config.DEFAULT_COLOR_SCHEME,
     defaultTab: config.DEFAULT_TAB,
     forceFilePassword: config.FORCE_FILE_PASSWORD,
     forceNotePassword: config.FORCE_NOTE_PASSWORD,

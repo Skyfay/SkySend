@@ -38,7 +38,7 @@ export const notes = sqliteTable(
     salt: blob("salt", { mode: "buffer" }).notNull(),
     encryptedContent: blob("encrypted_content", { mode: "buffer" }).notNull(),
     nonce: blob("nonce", { mode: "buffer" }).notNull(),
-    contentType: text("content_type").notNull(), // "text" | "password" | "code"
+    contentType: text("content_type").notNull(), // "text" | "password" | "code" | "markdown" | "sshkey"
     hasPassword: integer("has_password", { mode: "boolean" }).default(false).notNull(),
     passwordSalt: blob("password_salt", { mode: "buffer" }),
     passwordAlgo: text("password_algo"),

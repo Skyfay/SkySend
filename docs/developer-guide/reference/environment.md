@@ -6,6 +6,20 @@ Complete reference of all environment variables, their types, defaults, and vali
 
 All environment variables are validated on startup using Zod. Invalid values cause the server to fail with a descriptive error message. None of the variables are strictly required - all have sensible defaults for local development. For Docker deployments, `DATA_DIR` and `UPLOADS_DIR` are set automatically in the image.
 
+::: warning v3.0.0 Breaking Change
+`DEFAULT_THEME` now selects the visual theme (`graphite`, `aurora`, `midnight`). The color scheme moved to `DEFAULT_COLOR_SCHEME`. The old values `dark`, `light` and `system` in `DEFAULT_THEME` stop the server on startup with a message that names the replacement. See the migration table below.
+:::
+
+### Migration from v2.x
+
+| Before (v2) | Since v3 |
+| --- | --- |
+| `DEFAULT_THEME=dark` | `DEFAULT_COLOR_SCHEME=dark` |
+| `DEFAULT_THEME=light` | `DEFAULT_COLOR_SCHEME=light` |
+| `DEFAULT_THEME=system` | `DEFAULT_COLOR_SCHEME=system`, or leave both unset |
+
+`DEFAULT_THEME` can then be left unset for the default `graphite`, or set to `aurora` or `midnight`.
+
 ::: warning v2.0.0 Breaking Change
 All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FILE_SIZE` -> `FILE_MAX_SIZE`). Old names are no longer supported. See the migration table below.
 :::
@@ -385,6 +399,26 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | - (not shown in footer) |
 | Validation | Must be a valid URL (`https://...`) |
 | Description | URL to a report or abuse page. When set, a "Report" link is displayed in the footer. |
+
+### DEFAULT_THEME
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `graphite` |
+| Validation | One of `graphite`, `aurora`, `midnight`. Before v3 this variable held the color scheme, so `dark`, `light` and `system` fail with a message that points to `DEFAULT_COLOR_SCHEME`. |
+| Description | Visual theme of the web UI. The server writes it into `index.html` as `data-theme`, so it applies before the first paint. |
+
+### DEFAULT_COLOR_SCHEME
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Enum |
+| Default | `system` |
+| Validation | One of `dark`, `light`, `system` |
+| Description | Color scheme for visitors who have not picked one. A choice made in the UI is stored in the browser and wins over this default. |
 
 ### STORAGE_BACKEND
 

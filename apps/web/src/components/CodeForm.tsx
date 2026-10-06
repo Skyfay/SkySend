@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { showKnownErrorToast } from "@/lib/toast";
-import { Lock, Send, Loader2, Plus, X, Search } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Send, Plus, X, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -16,10 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareLink } from "@/components/ShareLink";
-import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
+import { ShareOptions } from "@/components/ShareOptions";
+import { ShareFooter } from "@/components/ShareFooter";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import { formatDuration, formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 
 export const CODE_LANGUAGES = [
   { value: "auto", label: "Auto Detect" },
@@ -111,13 +111,13 @@ function LanguageSelect({
         if (!o) setSearch("");
       }}
     >
-      <SelectTrigger className="h-8 w-44 text-xs">
+      <SelectTrigger className="h-8 w-40 rounded-lg text-xs" aria-label={t("code.language")}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent
         header={
           <div className="p-1 pb-0">
-            <div className="flex items-center gap-1.5 rounded-sm border border-input px-2 py-1">
+            <div className="flex items-center gap-1.5 rounded-lg border border-input px-2 py-1.5">
               <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
                 className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
@@ -203,7 +203,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
     noteHook.reset();
     setBlocks([{ title: "", language: "auto", code: "" }]);
     setPassword("");
-    setPasswordEnabled(false);
+    setPasswordEnabled(forcePassword);
   };
 
   if (noteHook.phase === "done" && noteHook.shareLink) {
@@ -211,169 +211,114 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-6 pt-6">
-        {/* Code blocks */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>{t("code.blocks")}</Label>
-            <span
-              className={`text-xs ${sizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
-            >
-              {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
-            </span>
-          </div>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between px-2">
+        <Label className="text-[13px]">{t("code.blocks")}</Label>
+        <span className={cn("text-xs tabular-nums", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+          {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
+        </span>
+      </div>
 
-          {blocks.map((block, index) => (
-            <div key={index} className="space-y-2 rounded-lg border border-border p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  type="text"
-                  value={block.title}
-                  onChange={(e) => updateBlock(index, "title", e.target.value)}
-                  placeholder={t("code.titlePlaceholder")}
-                  className="h-8 flex-1 text-xs"
-                  disabled={isSubmitting}
-                  autoComplete="off"
-                />
-                <div className="flex items-center gap-2">
-                <LanguageSelect
-                  value={block.language}
-                  onValueChange={(v) => updateBlock(index, "language", v)}
-                  disabled={isSubmitting}
-                />
-                {blocks.length > 1 && (
+      {blocks.map((block, index) => (
+        <div
+          key={index}
+          className="rounded-[20px] border border-border bg-well transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-soft"
+        >
+          <div className="flex flex-wrap items-center gap-2 border-b border-border p-2 pl-3">
+            <Input
+              type="text"
+              value={block.title}
+              onChange={(e) => updateBlock(index, "title", e.target.value)}
+              placeholder={t("code.titlePlaceholder")}
+              aria-label={t("code.noTitle", { number: index + 1 })}
+              className="h-8 min-w-40 flex-1 rounded-lg border-0 bg-transparent px-1 font-mono text-[13px] shadow-none focus-visible:ring-0"
+              disabled={isSubmitting}
+              autoComplete="off"
+            />
+            <LanguageSelect
+              value={block.language}
+              onValueChange={(v) => updateBlock(index, "language", v)}
+              disabled={isSubmitting}
+            />
+            {blocks.length > 1 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive-foreground"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive-text"
                     onClick={() => removeBlock(index)}
                     disabled={isSubmitting}
-                    title={t("common.delete")}
+                    aria-label={t("common.delete")}
                   >
-                    <X className="h-4 w-4" />
+                    <X />
                   </Button>
-                )}
-                </div>
-              </div>
-              <Textarea
-                value={block.code}
-                onChange={(e) => updateBlock(index, "code", e.target.value)}
-                placeholder={t("code.placeholder")}
-                className="min-h-40 resize-y font-mono text-sm"
-                disabled={isSubmitting}
-              />
-            </div>
-          ))}
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addBlock}
-            disabled={isSubmitting}
-            className="w-full"
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("code.addBlock")}
-          </Button>
-
-          {sizeExceeded && (
-            <p className="text-sm text-destructive-foreground" role="alert">
-              {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
-            </p>
-          )}
-        </div>
-
-        {/* Expiry + Max Views */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>{t("note.expiry")}</Label>
-            <Select
-              value={String(effectiveExpireSec)}
-              onValueChange={(v) => setExpireSec(parseInt(v, 10))}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {config.noteExpireOptions.map((sec) => (
-                  <SelectItem key={sec} value={String(sec)}>
-                    {formatDuration(sec)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t("note.maxViews")}</Label>
-            <Select
-              value={String(effectiveMaxViews)}
-              onValueChange={(v) => setMaxViews(parseInt(v, 10))}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {config.noteViewOptions.map((num) => (
-                  <SelectItem key={num} value={String(num)}>
-                    {num === 0
-                      ? t("note.unlimited")
-                      : num === 1
-                        ? t("note.burnAfterReading")
-                        : String(num)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Password */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              {t("upload.password")}
-              {forcePassword && (
-                <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
-              )}
-            </Label>
-            {!forcePassword && (
-              <Switch
-                checked={passwordEnabled}
-                onCheckedChange={setPasswordEnabled}
-                disabled={isSubmitting}
-              />
+                </TooltipTrigger>
+                <TooltipContent>{t("common.delete")}</TooltipContent>
+              </Tooltip>
             )}
           </div>
-          {passwordEnabled && (
-            <PasswordProtectionInput
-              value={password}
-              onChange={setPassword}
-              placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
+          <div className="p-1.5">
+            <Textarea
+              value={block.code}
+              onChange={(e) => updateBlock(index, "code", e.target.value)}
+              placeholder={t("code.placeholder")}
+              aria-label={block.title || t("code.noTitle", { number: index + 1 })}
+              className="min-h-44 resize-y rounded-xl border-0 bg-transparent px-3 font-mono text-sm shadow-none focus-visible:ring-0"
               disabled={isSubmitting}
             />
-          )}
+          </div>
         </div>
+      ))}
 
-        {/* Error */}
-        {/* Error is shown via toast (see useEffect below) */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={addBlock}
+        disabled={isSubmitting}
+        className="text-primary-text"
+      >
+        <Plus />
+        {t("code.addBlock")}
+      </Button>
 
-        {/* Submit */}
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full" size="lg">
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="mr-2 h-5 w-5" />
-          )}
-          {isSubmitting ? t("note.creating") : t("note.create")}
-        </Button>
-      </CardContent>
-    </Card>
+      {sizeExceeded && (
+        <p className="px-2 text-sm text-destructive-text" role="alert">
+          {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
+        </p>
+      )}
+
+      <div className="px-2 sm:px-3">
+        <ShareOptions
+          kind="note"
+          expireOptions={config.noteExpireOptions}
+          expireSec={effectiveExpireSec}
+          onExpireChange={setExpireSec}
+          limitOptions={config.noteViewOptions}
+          limit={effectiveMaxViews}
+          onLimitChange={setMaxViews}
+          passwordEnabled={passwordEnabled}
+          onPasswordEnabledChange={setPasswordEnabled}
+          password={password}
+          onPasswordChange={setPassword}
+          forcePassword={forcePassword}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <ShareFooter
+        kind="note"
+        expireSec={effectiveExpireSec}
+        limit={effectiveMaxViews}
+        label={t("share.encryptShare")}
+        busyLabel={t("note.creating")}
+        icon={<Send />}
+        busy={isSubmitting}
+        disabled={!canSubmit}
+        onSubmit={handleSubmit}
+      />
+    </div>
   );
 }

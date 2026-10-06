@@ -26,9 +26,9 @@ export function UploadProgress({ phase, progress, speed }: UploadProgressProps) 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
         <span className="text-sm font-medium">{label}</span>
-        <span className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
           {speed && (phase === "uploading" || phase === "zipping") && (
             <span>{speed}</span>
           )}
@@ -36,7 +36,7 @@ export function UploadProgress({ phase, progress, speed }: UploadProgressProps) 
         </span>
       </div>
       {isIndeterminate ? (
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-secondary">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
           <div className="absolute h-full w-1/3 animate-[indeterminate_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
         </div>
       ) : (

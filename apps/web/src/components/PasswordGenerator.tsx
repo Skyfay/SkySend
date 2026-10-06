@@ -4,7 +4,10 @@ import { Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { generatePassword, calculateEntropy } from "@/lib/password-generator";
+
+const MIN_LENGTH = 8;
 
 interface PasswordGeneratorProps {
   onGenerate: (password: string) => void;
@@ -19,9 +22,18 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
   const [numbers, setNumbers] = useState(true);
   const [symbols, setSymbols] = useState(true);
 
-  const options = { length, uppercase, lowercase, numbers, symbols };
+  // The number field accepts any value while typing, so 1 can become 12. A password is
+  // never shorter than the slider's minimum, and leaving the field snaps it back to it.
+  const options = { length: Math.max(MIN_LENGTH, length), uppercase, lowercase, numbers, symbols };
   const entropy = calculateEntropy(options);
   const anySelected = uppercase || lowercase || numbers || symbols;
+
+  const sets = [
+    { key: "uppercase", label: "A-Z", checked: uppercase, set: setUppercase },
+    { key: "lowercase", label: "a-z", checked: lowercase, set: setLowercase },
+    { key: "numbers", label: "0-9", checked: numbers, set: setNumbers },
+    { key: "symbols", label: "!@#$", checked: symbols, set: setSymbols },
+  ];
 
   const handleGenerate = () => {
     const password = generatePassword(options);
@@ -29,7 +41,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-border/50 bg-muted/30 p-3">
+    <div className="space-y-3.5 rounded-2xl bg-well p-4">
       <Label className="text-xs font-medium text-muted-foreground">
         {t("passwordGenerator.title")}
       </Label>
@@ -39,50 +51,42 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
         <Label className="shrink-0 text-sm">{t("passwordGenerator.length")}</Label>
         <input
           type="range"
-          min={8}
+          min={MIN_LENGTH}
           max={128}
           value={length}
           onChange={(e) => setLength(parseInt(e.target.value, 10))}
-          className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-muted accent-primary"
+          className="flex-1 cursor-pointer accent-primary"
           disabled={disabled}
         />
         <Input
           type="number"
-          min={8}
+          min={MIN_LENGTH}
           max={128}
           value={length}
           onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             if (v >= 1 && v <= 128) setLength(v);
           }}
-          className="h-8 w-20 text-center font-mono text-sm"
+          onBlur={() => setLength((l) => Math.max(MIN_LENGTH, l))}
+          className="h-8 w-20 text-center text-sm tabular-nums"
           disabled={disabled}
         />
       </div>
 
       {/* Character type toggles */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { key: "uppercase", label: "A-Z", checked: uppercase, set: setUppercase },
-          { key: "lowercase", label: "a-z", checked: lowercase, set: setLowercase },
-          { key: "numbers", label: "0-9", checked: numbers, set: setNumbers },
-          { key: "symbols", label: "!@#$", checked: symbols, set: setSymbols },
-        ].map(({ key, label, checked, set }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => set(!checked)}
-            disabled={disabled}
-            className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-              checked
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
+      <ToggleGroup
+        type="multiple"
+        value={sets.filter((c) => c.checked).map((c) => c.key)}
+        onValueChange={(on) => sets.forEach((c) => c.set(on.includes(c.key)))}
+        aria-label={t("share.characters")}
+        disabled={disabled}
+      >
+        {sets.map(({ key, label }) => (
+          <ToggleGroupItem key={key} value={key} className="font-mono">
             {label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
 
       {/* Entropy + Generate */}
       <div className="flex items-center justify-between">
@@ -100,7 +104,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
           onClick={handleGenerate}
           disabled={disabled || !anySelected}
         >
-          <Shuffle className="mr-1.5 h-3.5 w-3.5" />
+          <Shuffle />
           {t("passwordGenerator.generate")}
         </Button>
       </div>

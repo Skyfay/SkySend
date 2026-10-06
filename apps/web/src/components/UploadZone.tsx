@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Upload, FolderOpen, X, FileIcon } from "lucide-react";
+import { ArrowUp, FolderOpen, Plus, Upload, X } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
+import { fileBadge } from "@/lib/file-badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -11,6 +12,35 @@ interface UploadZoneProps {
   maxFiles: number;
   maxSize: number;
   disabled?: boolean;
+}
+
+/** Three file cards that fan out on hover, with the upload arrow in the accent. */
+function FileFan() {
+  const card = "absolute top-2.5 h-[72px] w-14 rounded-[10px] border border-border bg-card shadow-chip transition-transform duration-300 motion-reduce:transition-none";
+  const line = "absolute left-2 h-1 rounded-full bg-input";
+  const label = "absolute bottom-2 left-2 text-[10px] font-bold";
+  return (
+    <div aria-hidden="true" className="relative h-24 w-40">
+      <span className={cn(card, "left-5 -rotate-[14deg] group-hover:-translate-x-2 group-hover:-rotate-[20deg]")}>
+        <i className={cn(line, "top-3 w-7")} />
+        <i className={cn(line, "top-5 w-5")} />
+        <b className={cn(label, "text-blue-700 dark:text-blue-300")}>PDF</b>
+      </span>
+      <span className={cn(card, "left-[78px] rotate-[14deg] group-hover:translate-x-2 group-hover:rotate-[20deg]")}>
+        <i className={cn(line, "top-3 w-7")} />
+        <i className={cn(line, "top-5 w-5")} />
+        <b className={cn(label, "text-amber-800 dark:text-amber-300")}>ZIP</b>
+      </span>
+      <span className={cn(card, "left-[50px] top-0.5 z-10 group-hover:-translate-y-1.5")}>
+        <i className={cn(line, "top-3 w-7")} />
+        <i className={cn(line, "top-5 w-5")} />
+        <b className={cn(label, "text-sky-700 dark:text-sky-300")}>PNG</b>
+      </span>
+      <span className="absolute -bottom-1 left-16 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground ring-4 ring-well">
+        <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+      </span>
+    </div>
+  );
 }
 
 export function UploadZone({
@@ -61,68 +91,118 @@ export function UploadZone({
   };
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  const dropHandlers = {
+    onDragOver: handleDragOver,
+    onDragLeave: handleDragLeave,
+    onDrop: handleDrop,
+  };
+  const browse = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    fileInputRef.current?.click();
+  };
+  const limits = `${t("upload.maxFiles", { count: maxFiles })} · ${t("upload.maxSize", { size: formatBytes(maxSize) })}`;
 
   return (
-    <div className="space-y-4">
-      {/* Drop zone */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={t("upload.dropzone")}
-        className={cn(
-          "relative flex min-h-50 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors",
-          isDragging
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-muted-foreground/50",
-          disabled && "pointer-events-none opacity-50",
-        )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            fileInputRef.current?.click();
-          }
-        }}
-      >
-        <Upload className="h-10 w-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          {isDragging ? t("upload.dropzoneActive") : t("upload.dropzone")}
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={disabled}
-            onClick={(e) => {
-              e.stopPropagation();
+    <div className="space-y-3">
+      {files.length === 0 ? (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={t("upload.dropzone")}
+          className={cn(
+            "group flex cursor-pointer flex-col items-center gap-4 rounded-[20px] border border-dashed border-input bg-well px-5 pb-7 pt-8 text-center transition-colors hover:border-primary-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            isDragging && "border-primary bg-primary-soft",
+            disabled && "pointer-events-none opacity-50",
+          )}
+          {...dropHandlers}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
               fileInputRef.current?.click();
-            }}
-          >
-            <Upload className="mr-1 h-4 w-4" />
-            {t("upload.browseFiles")}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={disabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              folderInputRef.current?.click();
-            }}
-          >
-            <FolderOpen className="mr-1 h-4 w-4" />
-            {t("upload.browseFolder")}
-          </Button>
+            }
+          }}
+        >
+          <FileFan />
+          <div>
+            <p className="text-[17px] font-semibold tracking-tight">
+              {isDragging ? t("upload.dropzoneActive") : t("share.dropTitle")}
+            </p>
+            <p className="mt-1 text-[13px] text-muted-foreground">{t("share.dropSubtitle")}</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={browse}>
+              <Upload />
+              {t("upload.browseFiles")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                folderInputRef.current?.click();
+              }}
+            >
+              <FolderOpen />
+              {t("upload.browseFolder")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{limits}</p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {t("upload.maxFiles", { count: maxFiles })} - {t("upload.maxSize", { size: formatBytes(maxSize) })}
-        </p>
-      </div>
+      ) : (
+        <div
+          className={cn(
+            "rounded-[20px] bg-well p-1.5 transition-colors",
+            isDragging && "bg-primary-soft",
+          )}
+          {...dropHandlers}
+        >
+          {/* Cap the viewport, not the root, so the list actually scrolls. */}
+          <ScrollArea viewportClassName="max-h-72">
+            <ul className="space-y-1.5" role="list">
+              {files.map((file, i) => {
+                const badge = fileBadge(file.name);
+                const path = file.webkitRelativePath || file.name;
+                return (
+                  <li
+                    key={`${file.name}-${file.size}-${i}`}
+                    className="flex items-center gap-3 rounded-[14px] bg-card py-2 pl-2.5 pr-2 shadow-chip"
+                  >
+                    <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-bold", badge.className)}>
+                      {badge.label}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{path}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      aria-label={t("share.removeFile", { name: file.name })}
+                      disabled={disabled}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </ScrollArea>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-1 pt-2.5">
+            <span className="text-xs text-muted-foreground">
+              {t("upload.selectedFiles", { count: files.length })} · {formatBytes(totalSize)}
+              {files.length > 1 && <> · {t("share.zipHint")}</>}
+            </span>
+            <Button type="button" variant="ghost" size="sm" className="text-primary-text" disabled={disabled} onClick={browse}>
+              <Plus />
+              {t("share.addMore")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Hidden inputs */}
       <input
@@ -146,48 +226,6 @@ export function UploadZone({
           e.target.value = "";
         }}
       />
-
-      {/* File list */}
-      {files.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            {t("upload.selectedFiles", { count: files.length })}
-            {" - "}
-            {t("upload.totalSize", { size: formatBytes(totalSize) })}
-          </p>
-          {/* Cap the viewport, not the root, so the list actually scrolls. */}
-          <ScrollArea viewportClassName="max-h-60">
-            <ul className="space-y-1 pr-3" role="list">
-              {files.map((file, i) => (
-                <li
-                  key={`${file.name}-${file.size}-${i}`}
-                  className="flex items-center gap-2 overflow-hidden rounded-md bg-muted/50 px-3 py-2 text-sm"
-                >
-                  <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span
-                    className="min-w-0 flex-1 truncate"
-                    title={file.webkitRelativePath || file.name}
-                  >
-                    {file.webkitRelativePath || file.name}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatBytes(file.size)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(i)}
-                    className="shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
-                    aria-label={`Remove ${file.name}`}
-                    disabled={disabled}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </ScrollArea>
-        </div>
-      )}
     </div>
   );
 }

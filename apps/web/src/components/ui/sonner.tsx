@@ -1,21 +1,21 @@
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 export function Toaster(props: ToasterProps) {
-  const { theme } = useTheme();
+  const { colorScheme } = useColorScheme();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={colorScheme}
       className="toaster group"
       position="top-center"
       closeButton
       icons={{
         error: <AlertCircle className="h-4 w-4 text-destructive" />,
-        warning: <AlertTriangle className="h-4 w-4 text-amber-500" />,
+        warning: <AlertTriangle className="h-4 w-4 text-warning" />,
         success: <CheckCircle2 className="h-4 w-4 text-success" />,
-        info: <Info className="h-4 w-4 text-blue-500" />,
+        info: <Info className="h-4 w-4 text-primary-text" />,
       }}
       {...props}
     />

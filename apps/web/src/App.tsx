@@ -2,13 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "
 import { Layout } from "@/components/Layout";
 import { Toaster } from "@/components/Toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ThemeProvider } from "@/hooks/useTheme";
+import { ColorSchemeProvider } from "@/hooks/useColorScheme";
 import { ServerConfigProvider } from "@/hooks/useServerConfig";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UploadPage } from "@/pages/Upload";
 import { DownloadPage } from "@/pages/Download";
 import { NoteViewPage } from "@/pages/NoteView";
 import { MyUploadsPage } from "@/pages/MyUploads";
+import { HowItWorksPage } from "@/pages/HowItWorks";
 import { NotFoundPage } from "@/pages/NotFound";
 
 /**
@@ -24,7 +25,7 @@ function LegacyDownloadRedirect() {
 export function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <TooltipProvider delayDuration={0}>
         <ServerConfigProvider>
           {/*
@@ -42,13 +43,14 @@ export function App() {
                 <Route path="/note/:id" element={<NoteViewPage />} />
                 <Route path="/d/:id" element={<LegacyDownloadRedirect />} />
                 <Route path="/uploads" element={<MyUploadsPage />} />
+                <Route path="/how" element={<HowItWorksPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>
           </BrowserRouter>
         </ServerConfigProvider>
         </TooltipProvider>
-      </ThemeProvider>
+      </ColorSchemeProvider>
     </ErrorBoundary>
   );
 }

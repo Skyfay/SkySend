@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Lock,
   Eye,
   EyeOff,
   Send,
@@ -13,26 +12,20 @@ import {
   Wand2,
   ClipboardPaste,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShareLink } from "@/components/ShareLink";
-import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
+import { ShareOptions } from "@/components/ShareOptions";
+import { ShareFooter } from "@/components/ShareFooter";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { toast } from "sonner";
 import { showKnownErrorToast } from "@/lib/toast";
-import { formatDuration, formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import {
   generateEd25519KeyPair,
   generateRSAKeyPair,
@@ -188,7 +181,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
     setPassphrase("");
     setComment("");
     setNotePassword("");
-    setNotePasswordEnabled(false);
+    setNotePasswordEnabled(forcePassword);
     setSharePublicKey(true);
     setSharePrivateKey(true);
     setSharePassphrase(true);
@@ -201,219 +194,131 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
   const pasteContentBytes = new TextEncoder().encode(pasteContent).length;
   const pasteSizeExceeded = pasteContentBytes > config.noteMaxSize;
 
-  // --- Shared UI pieces ---
+  const shareParts = [
+    sharePublicKey && "public",
+    sharePrivateKey && "private",
+    sharePassphrase && "passphrase",
+  ].filter((v): v is string => Boolean(v));
+  const editorBox =
+    "rounded-[20px] border border-border bg-well transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-3 focus-within:ring-primary-soft";
+  const keyTextarea =
+    "resize-y rounded-xl border-0 bg-transparent px-3 font-mono text-sm shadow-none focus-visible:ring-0";
 
-  const renderShareSettings = () => (
-    <>
-      {/* Expiry + Max Views */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>{t("note.expiry")}</Label>
-          <Select
-            value={String(effectiveExpireSec)}
-            onValueChange={(v) => setExpireSec(parseInt(v, 10))}
-            disabled={isSubmitting}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {config.noteExpireOptions.map((sec) => (
-                <SelectItem key={sec} value={String(sec)}>
-                  {formatDuration(sec)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>{t("note.maxViews")}</Label>
-          <Select
-            value={String(effectiveMaxViews)}
-            onValueChange={(v) => setMaxViews(parseInt(v, 10))}
-            disabled={isSubmitting}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {config.noteViewOptions.map((num) => (
-                <SelectItem key={num} value={String(num)}>
-                  {num === 0
-                    ? t("note.unlimited")
-                    : num === 1
-                      ? t("note.burnAfterReading")
-                      : String(num)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Note Password */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            {t("upload.password")}
-            {forcePassword && (
-              <span className="text-xs text-muted-foreground">({t("upload.passwordRequired")})</span>
-            )}
-          </Label>
-          {!forcePassword && (
-            <Switch
-              checked={notePasswordEnabled}
-              onCheckedChange={setNotePasswordEnabled}
-              disabled={isSubmitting}
-            />
-          )}
-        </div>
-        {notePasswordEnabled && (
-          <PasswordProtectionInput
-            value={notePassword}
-            onChange={setNotePassword}
-            placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
-            disabled={isSubmitting}
-          />
-        )}
-      </div>
-
-      {/* Error */}
-      {/* Errors are shown via toast (see useEffect above) */}
-    </>
+  const copyButton = (copied: boolean, onClick: () => void) => (
+    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClick}>
+      {copied ? <Check className="text-primary-text" /> : <Copy />}
+      {copied ? t("common.copied") : t("common.copy")}
+    </Button>
   );
 
   return (
-    <Card>
-      <CardContent className="space-y-6 pt-6">
-        {/* Mode toggle */}
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
-          {([
-            { key: "generate" as const, icon: Wand2, label: t("sshKey.modeGenerate") },
-            { key: "paste" as const, icon: ClipboardPaste, label: t("sshKey.modePaste") },
-          ]).map(({ key, icon: Icon, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => { setMode(key); setKeyPair(null); }}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                mode === key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2">
+        <Label className="text-[13px]">{t("sshKey.pasteLabel")}</Label>
+        <ToggleGroup
+          variant="segmented"
+          type="single"
+          value={mode}
+          onValueChange={(v) => {
+            if (!v) return;
+            setMode(v as Mode);
+            setKeyPair(null);
+          }}
+          aria-label={t("share.sshMode")}
+        >
+          <ToggleGroupItem value="generate" disabled={isSubmitting}>
+            <Wand2 />
+            {t("sshKey.modeGenerate")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="paste" disabled={isSubmitting}>
+            <ClipboardPaste />
+            {t("sshKey.modePaste")}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
-        {/* ====== PASTE MODE ====== */}
-        {mode === "paste" && (
-          <>
-            {/* Public Key */}
-            <div className="space-y-2">
-              <Label htmlFor="ssh-paste-public">{t("sshKey.publicKey")}</Label>
+      {/* ====== PASTE MODE ====== */}
+      {mode === "paste" && (
+        <>
+          <div className={editorBox}>
+            <div className="border-b border-border px-4 py-2.5">
+              <Label htmlFor="ssh-paste-public" className="text-[13px]">{t("sshKey.publicKey")}</Label>
+            </div>
+            <div className="p-1.5">
               <Textarea
                 id="ssh-paste-public"
                 value={pastePublicKey}
                 onChange={(e) => setPastePublicKey(e.target.value)}
                 placeholder={t("sshKey.pastePlaceholderPublic")}
-                className="min-h-20 resize-y font-mono text-sm"
+                className={cn(keyTextarea, "min-h-20")}
                 disabled={isSubmitting}
               />
             </div>
-
-            {/* Private Key */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="ssh-paste-private">{t("sshKey.privateKey")}</Label>
-                <span
-                  className={`text-xs ${pasteSizeExceeded ? "text-destructive-foreground" : "text-muted-foreground"}`}
-                >
-                  {formatBytes(pasteContentBytes)} / {formatBytes(config.noteMaxSize)}
-                </span>
-              </div>
+            <div className="border-y border-border px-4 py-2.5">
+              <Label htmlFor="ssh-paste-private" className="text-[13px]">{t("sshKey.privateKey")}</Label>
+            </div>
+            <div className="p-1.5">
               <Textarea
                 id="ssh-paste-private"
                 value={pastePrivateKey}
                 onChange={(e) => setPastePrivateKey(e.target.value)}
                 placeholder={t("sshKey.pastePlaceholderPrivate")}
-                className="min-h-30 resize-y font-mono text-sm"
+                className={cn(keyTextarea, "min-h-32")}
                 disabled={isSubmitting}
               />
-              {pasteSizeExceeded && (
-                <p className="text-sm text-destructive-foreground" role="alert">
-                  {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
-                </p>
-              )}
             </div>
+            <div className="flex justify-end border-t border-border px-4 py-2">
+              <span className={cn("text-xs tabular-nums", pasteSizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+                {formatBytes(pasteContentBytes)} / {formatBytes(config.noteMaxSize)}
+              </span>
+            </div>
+          </div>
+          {pasteSizeExceeded && (
+            <p className="px-2 text-sm text-destructive-text" role="alert">
+              {t("note.tooLarge", { size: formatBytes(config.noteMaxSize) })}
+            </p>
+          )}
+        </>
+      )}
 
-            {renderShareSettings()}
-
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit || isSubmitting}
-              className="w-full"
-              size="lg"
+      {/* ====== GENERATE MODE ====== */}
+      {mode === "generate" && !keyPair && (
+        <div className="space-y-4 rounded-[20px] border border-border bg-well p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Label className="w-24 text-[13px]">{t("sshKey.algorithm")}</Label>
+            <ToggleGroup
+              variant="segmented"
+              type="single"
+              value={algorithm}
+              onValueChange={(v) => v && setAlgorithm(v as Algorithm)}
+              aria-label={t("sshKey.algorithm")}
             >
-              {isSubmitting ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-5 w-5" />
-              )}
-              {isSubmitting ? t("note.creating") : t("sshKey.createNote")}
-            </Button>
-          </>
-        )}
+              <ToggleGroupItem value="ed25519" disabled={generating}>Ed25519</ToggleGroupItem>
+              <ToggleGroupItem value="rsa" disabled={generating}>RSA</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
-        {/* ====== GENERATE MODE ====== */}
-        {mode === "generate" && !keyPair && (
-          <>
-            {/* Algorithm */}
-            <div className="space-y-2">
-              <Label>{t("sshKey.algorithm")}</Label>
-              <Select
-                value={algorithm}
-                onValueChange={(v) => setAlgorithm(v as Algorithm)}
-                disabled={generating}
+          {algorithm === "rsa" && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Label className="w-24 text-[13px]">{t("sshKey.keySize")}</Label>
+              <ToggleGroup
+                type="single"
+                value={String(rsaBits)}
+                onValueChange={(v) => v && setRsaBits(parseInt(v, 10) as RSABits)}
+                aria-label={t("sshKey.keySize")}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ed25519">Ed25519</SelectItem>
-                  <SelectItem value="rsa">RSA</SelectItem>
-                </SelectContent>
-              </Select>
+                {[1024, 2048, 4096].map((bits) => (
+                  <ToggleGroupItem key={bits} value={String(bits)} disabled={generating}>
+                    {bits} bit
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
+          )}
 
-            {/* RSA bits */}
-            {algorithm === "rsa" && (
-              <div className="space-y-2">
-                <Label>{t("sshKey.keySize")}</Label>
-                <Select
-                  value={String(rsaBits)}
-                  onValueChange={(v) => setRsaBits(parseInt(v, 10) as RSABits)}
-                  disabled={generating}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1024">1024 bit</SelectItem>
-                    <SelectItem value="2048">2048 bit</SelectItem>
-                    <SelectItem value="4096">4096 bit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Comment */}
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ssh-comment">{t("sshKey.comment")}</Label>
+              <Label htmlFor="ssh-comment" className="text-[13px]">{t("sshKey.comment")}</Label>
               <Input
                 id="ssh-comment"
                 value={comment}
@@ -422,12 +327,8 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                 disabled={generating}
               />
             </div>
-
-            {/* Passphrase */}
             <div className="space-y-2">
-              <Label htmlFor="ssh-passphrase">
-                {t("sshKey.passphrase")}
-              </Label>
+              <Label htmlFor="ssh-passphrase" className="text-[13px]">{t("sshKey.passphrase")}</Label>
               <div className="relative">
                 <Input
                   id="ssh-passphrase"
@@ -437,187 +338,144 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
                   placeholder={t("sshKey.passphrasePlaceholder")}
                   autoComplete="off"
                   disabled={generating}
+                  className="pr-10"
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   onClick={() => setShowPassphrase(!showPassphrase)}
+                  aria-label={showPassphrase ? t("share.hidePassword") : t("share.showPassword")}
                 >
-                  {showPassphrase ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassphrase ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t("sshKey.passphraseHint")}
-              </p>
             </div>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">{t("sshKey.passphraseHint")}</p>
 
-            {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="w-full"
-              size="lg"
-            >
-              {generating ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <KeyRound className="mr-2 h-5 w-5" />
-              )}
-              {generating ? t("sshKey.generating") : t("sshKey.generate")}
-            </Button>
-          </>
-        )}
+          <Button onClick={handleGenerate} disabled={generating} className="w-full sm:w-auto">
+            {generating ? <Loader2 className="animate-spin" /> : <KeyRound />}
+            {generating ? t("sshKey.generating") : t("sshKey.generate")}
+          </Button>
+        </div>
+      )}
 
-        {/* ====== GENERATE MODE - KEY DISPLAY ====== */}
-        {mode === "generate" && keyPair && (
-          <>
-            {/* Key Info */}
-            <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <KeyRound className="h-4 w-4 text-primary" />
-                {keyPair.algorithm === "ed25519"
-                  ? "Ed25519"
-                  : `RSA-${rsaBits}`}
+      {/* ====== GENERATE MODE - KEY DISPLAY ====== */}
+      {mode === "generate" && keyPair && (
+        <>
+          <div className="rounded-[20px] border border-border bg-well">
+            <div className="flex items-center gap-3 border-b border-border p-3 pl-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
+                <KeyRound className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">
+                  {keyPair.algorithm === "ed25519" ? "Ed25519" : `RSA-${rsaBits}`}
+                </p>
+                <p className="break-all font-mono text-[11px] text-muted-foreground">{keyPair.fingerprint}</p>
               </div>
-              <p className="mt-1 font-mono text-xs text-muted-foreground break-all">
-                {keyPair.fingerprint}
-              </p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRegenerate}
+                    disabled={isSubmitting}
+                    aria-label={t("share.sshRegenerate")}
+                  >
+                    <RefreshCw />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("share.sshRegenerate")}</TooltipContent>
+              </Tooltip>
             </div>
 
-            {/* Public Key */}
-            <div className="space-y-2">
+            <div className="space-y-2 p-3 pl-4">
               <div className="flex items-center justify-between">
-                <Label>{t("sshKey.publicKey")}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => copyText(keyPair.publicKey, setCopiedPublic)}
-                >
-                  {copiedPublic ? (
-                    <Check className="mr-1 h-3 w-3" />
-                  ) : (
-                    <Copy className="mr-1 h-3 w-3" />
-                  )}
-                  {copiedPublic ? t("common.copied") : t("common.copy")}
-                </Button>
+                <Label className="text-[13px]">{t("sshKey.publicKey")}</Label>
+                {copyButton(copiedPublic, () => copyText(keyPair.publicKey, setCopiedPublic))}
               </div>
-              <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs break-all whitespace-pre-wrap scrollbar-thin">
+              <pre className="scrollbar-thin overflow-x-auto whitespace-pre-wrap break-all rounded-xl border border-border bg-card p-3 font-mono text-xs">
                 {keyPair.publicKey}
               </pre>
             </div>
 
-            {/* Private Key */}
-            <div className="space-y-2">
+            <div className="space-y-2 border-t border-border p-3 pl-4">
               <div className="flex items-center justify-between">
-                <Label>{t("sshKey.privateKey")}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() =>
-                    copyText(keyPair.privateKey, setCopiedPrivate)
-                  }
-                >
-                  {copiedPrivate ? (
-                    <Check className="mr-1 h-3 w-3" />
-                  ) : (
-                    <Copy className="mr-1 h-3 w-3" />
-                  )}
-                  {copiedPrivate ? t("common.copied") : t("common.copy")}
-                </Button>
+                <Label className="text-[13px]">{t("sshKey.privateKey")}</Label>
+                {copyButton(copiedPrivate, () => copyText(keyPair.privateKey, setCopiedPrivate))}
               </div>
-              <pre className="max-h-40 overflow-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs scrollbar-thin">
+              <pre className="scrollbar-thin max-h-40 overflow-auto rounded-xl border border-border bg-card p-3 font-mono text-xs">
                 {keyPair.privateKey}
               </pre>
             </div>
+          </div>
 
-            {/* Share Selection */}
-            <div className="space-y-3">
-              <Label>{t("sshKey.shareAs")}</Label>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setSharePublicKey(!sharePublicKey)}
-                  className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
-                    sharePublicKey
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePublicKey ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
-                    {sharePublicKey && <Check className="h-3 w-3" />}
-                  </div>
-                  {t("sshKey.publicKey")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSharePrivateKey(!sharePrivateKey)}
-                  className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
-                    sharePrivateKey
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePrivateKey ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
-                    {sharePrivateKey && <Check className="h-3 w-3" />}
-                  </div>
-                  {t("sshKey.privateKey")}
-                </button>
-                {passphrase && (
-                  <button
-                    type="button"
-                    onClick={() => setSharePassphrase(!sharePassphrase)}
-                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
-                      sharePassphrase
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sharePassphrase ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"}`}>
-                      {sharePassphrase && <Check className="h-3 w-3" />}
-                    </div>
-                    {t("sshKey.passphrase")}
-                  </button>
-                )}
-              </div>
-            </div>
+          <div className="flex flex-col gap-2 px-2 sm:flex-row sm:items-center sm:gap-4">
+            <Label className="text-[13px] sm:w-36 sm:shrink-0">{t("sshKey.shareAs")}</Label>
+            <ToggleGroup
+              type="multiple"
+              value={shareParts}
+              onValueChange={(v) => {
+                setSharePublicKey(v.includes("public"));
+                setSharePrivateKey(v.includes("private"));
+                setSharePassphrase(v.includes("passphrase"));
+              }}
+              aria-label={t("sshKey.shareAs")}
+            >
+              <ToggleGroupItem value="public" disabled={isSubmitting}>
+                {sharePublicKey && <Check />}
+                {t("sshKey.publicKey")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="private" disabled={isSubmitting}>
+                {sharePrivateKey && <Check />}
+                {t("sshKey.privateKey")}
+              </ToggleGroupItem>
+              {passphrase && (
+                <ToggleGroupItem value="passphrase" disabled={isSubmitting}>
+                  {sharePassphrase && <Check />}
+                  {t("sshKey.passphrase")}
+                </ToggleGroupItem>
+              )}
+            </ToggleGroup>
+          </div>
+        </>
+      )}
 
-            {renderShareSettings()}
+      {(mode === "paste" || keyPair) && (
+        <>
+          <div className="px-2 sm:px-3">
+            <ShareOptions
+              kind="note"
+              expireOptions={config.noteExpireOptions}
+              expireSec={effectiveExpireSec}
+              onExpireChange={setExpireSec}
+              limitOptions={config.noteViewOptions}
+              limit={effectiveMaxViews}
+              onLimitChange={setMaxViews}
+              passwordEnabled={notePasswordEnabled}
+              onPasswordEnabledChange={setNotePasswordEnabled}
+              password={notePassword}
+              onPasswordChange={setNotePassword}
+              forcePassword={forcePassword}
+              disabled={isSubmitting}
+            />
+          </div>
 
-            {/* Submit + Regenerate */}
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex-1"
-                size="lg"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-5 w-5" />
-                )}
-                {isSubmitting ? t("note.creating") : t("sshKey.createNote")}
-              </Button>
-              <Button
-                onClick={handleRegenerate}
-                variant="outline"
-                size="lg"
-                disabled={isSubmitting}
-              >
-                <RefreshCw className="h-5 w-5" />
-              </Button>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+          <ShareFooter
+            kind="note"
+            expireSec={effectiveExpireSec}
+            limit={effectiveMaxViews}
+            label={t("share.encryptShare")}
+            busyLabel={t("note.creating")}
+            icon={<Send />}
+            busy={isSubmitting}
+            disabled={!canSubmit}
+            onSubmit={handleSubmit}
+          />
+        </>
+      )}
+    </div>
   );
 }

@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { applyRewrittenShareLinkFix } from "./lib/rewritten-link";
 import "./i18n";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./index.css";
 import "flag-icons/css/flag-icons.min.css";
 

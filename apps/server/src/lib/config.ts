@@ -261,7 +261,19 @@ const configSchema = z.object({
 
   // --- UI defaults ---
 
+  // Since v3 DEFAULT_THEME picks the visual theme. Its old values moved to
+  // DEFAULT_COLOR_SCHEME, so an instance that still sets one of them is told where to.
   DEFAULT_THEME: z
+    .enum(["aurora", "midnight", "graphite"], {
+      error: (issue) =>
+        typeof issue.input === "string" && ["dark", "light", "system"].includes(issue.input)
+          ? `DEFAULT_THEME=${issue.input} is a color scheme. Since v3 DEFAULT_THEME picks the theme `
+            + `(aurora, midnight or graphite). Set DEFAULT_COLOR_SCHEME=${issue.input} instead.`
+          : undefined,
+    })
+    .default("graphite"),
+
+  DEFAULT_COLOR_SCHEME: z
     .enum(["dark", "light", "system"])
     .default("system"),
 

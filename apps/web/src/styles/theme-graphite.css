@@ -1,0 +1,75 @@
+/*
+ * Graphite: tactile surfaces lit from above and buttons with a light top edge, like a
+ * native app. Slots are listed in theme-aurora.css.
+ */
+
+[data-theme="graphite"] {
+  --color-page: #efeff1;
+  --color-background: #ffffff;
+  --color-foreground: #111113;
+  --color-card: #ffffff;
+  --color-card-foreground: #111113;
+  --color-well: #f4f4f6;
+  --color-field: var(--color-background);
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111113;
+  --color-secondary: #ececef;
+  --color-secondary-foreground: #111113;
+  --color-muted: #f0f0f2;
+  --color-muted-foreground: #5f5f68;
+  --color-accent: #ececef;
+  --color-accent-foreground: #111113;
+  --color-border: #e2e2e6;
+  --color-input: #cfcfd5;
+  --lift-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.3);
+  --chip-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="graphite"].dark {
+  --color-page: #101012;
+  --color-background: #141416;
+  --color-foreground: #f2f2f3;
+  --color-card: #1b1b1e;
+  --color-card-foreground: #f2f2f3;
+  --color-well: #141416;
+  --color-field: var(--color-background);
+  --color-popover: #1e1e21;
+  --color-popover-foreground: #f2f2f3;
+  --color-secondary: #26262a;
+  --color-secondary-foreground: #f2f2f3;
+  --color-muted: #222225;
+  --color-muted-foreground: #9c9ca4;
+  --color-accent: #26262a;
+  --color-accent-foreground: #f2f2f3;
+  --color-border: #2a2a2e;
+  --color-input: #36363b;
+  --lift-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(0, 0, 0, 0.6), 0 30px 60px -30px rgba(0, 0, 0, 0.85);
+  --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="graphite"] body {
+  background-image: radial-gradient(color-mix(in srgb, var(--color-foreground) 7%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+[data-theme="graphite"] [data-slot="card"] {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-card), #ffffff 3%), var(--color-card));
+}
+
+[data-theme="graphite"] [data-slot="button"][data-variant="default"] {
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-primary), #ffffff 20%), var(--color-primary));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 10px 22px -10px var(--color-primary);
+}
+
+[data-theme="graphite"] [data-slot="button"][data-variant="default"]:hover {
+  filter: brightness(1.05);
+}
+
+[data-theme="graphite"] [data-slot="button"][data-variant="outline"],
+[data-theme="graphite"] [data-slot="button"][data-variant="secondary"] {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-card), #ffffff 6%), var(--color-card));
+  box-shadow: var(--chip-shadow);
+}

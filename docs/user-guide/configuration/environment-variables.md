@@ -109,7 +109,8 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
 | `CUSTOM_LINK_NAME` | ❌ | _(none)_ | Display text for the custom footer link (max 50 characters). |
 | `CUSTOM_REPORT_URL` | ❌ | _(none)_ | URL to a report/abuse page. When set, a "Report" link is shown in the footer. |
-| `DEFAULT_THEME` | ❌ | `system` | Default theme for users who have not set a preference. One of `dark`, `light`, or `system`. Users can still override this in the UI. |
+| `DEFAULT_THEME` | ❌ | `graphite` | Visual theme of the web app. One of `graphite`, `aurora`, or `midnight`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
+| `DEFAULT_COLOR_SCHEME` | ❌ | `system` | Color scheme for visitors who have not picked one. One of `dark`, `light`, or `system`. Visitors can still switch in the UI. |
 | `DEFAULT_TAB` | ❌ | `file` | Default upload tab shown when opening the app. One of `file`, `text`, `password`, `code`, or `sshkey`. Falls back to the first available tab if the configured tab is not enabled via `ENABLED_SERVICES`. |
 | `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
 | `FORCE_NOTE_PASSWORD` | ❌ | `false` | When `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both frontend and server. |
@@ -129,6 +130,32 @@ environment:
 
 ::: tip
 The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are valid. Omitting the `#` avoids quoting issues in `.env` files.
+:::
+
+### Themes and accent color
+
+`DEFAULT_THEME` picks one of three looks for the whole web app. Each one has a light and a dark color scheme.
+
+| Theme | Look |
+| :--- | :--- |
+| `graphite` | The default. Neutral gray surfaces lit from above and buttons with a light top edge, close to a native desktop app. |
+| `aurora` | Frosted glass cards over a soft light that is mixed from the accent color. |
+| `midnight` | Plain black or white surfaces, a beam of the accent from the top, and a glowing outline around the main card. |
+
+The theme is the same for every visitor. The color scheme is not: `DEFAULT_COLOR_SCHEME` only sets it for visitors who have not picked one. Anyone can switch between light, dark and system in the header, and that choice is stored in their browser.
+
+`CUSTOM_COLOR` replaces the SkySend green in every theme: buttons, the active tab, selected options, links, the share link's key and the glow behind the main card. Any color works. Text on the accent turns white or black on its own, and where the accent is used as text it is darkened or lightened until it stays readable in both color schemes.
+
+```yaml
+# docker-compose.yml
+environment:
+  DEFAULT_THEME: midnight
+  DEFAULT_COLOR_SCHEME: dark
+  CUSTOM_COLOR: 6366f1
+```
+
+::: warning Upgrading from v2
+Before v3, `DEFAULT_THEME` held the color scheme. An instance that still sets it to `dark`, `light` or `system` refuses to start and prints the line to use instead. Move the value to `DEFAULT_COLOR_SCHEME` and either remove `DEFAULT_THEME` or set it to a theme.
 :::
 
 ### Custom logo

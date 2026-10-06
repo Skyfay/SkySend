@@ -23,15 +23,15 @@ https://host/note/<id>#<secret>
 ```
 src/main.tsx        Entry, imports i18n before rendering
 src/App.tsx         Router + provider stack (ErrorBoundary > Theme > Tooltip > ServerConfig)
-src/pages/          Upload, Download, NoteView, MyUploads, NotFound
+src/pages/          Upload, Download, NoteView, MyUploads, HowItWorks, NotFound
 src/components/     Feature components (PascalCase)
-src/components/ui/  Radix + cva primitives, 15 of them
+src/components/ui/  Radix + cva primitives, 20 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
 src/lib/            api client, crypto glue, workers, toast helpers, utils
 src/i18n/           i18next setup + 13 locale JSON files
 ```
 
-Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
 
 ## Server config
 
@@ -39,7 +39,7 @@ Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local his
 
 Never hardcode a limit or an option list that the server already sends. When the server gains a config field, add it to `configResponseSchema` in `src/lib/api.ts` as well, with `.optional().default(...)` so an older server does not break a newer SPA.
 
-The provider also applies `defaultTheme` (only when the user has no stored preference) and injects `customColor` as a style element.
+The server writes `DEFAULT_THEME` (`data-theme`) and `DEFAULT_COLOR_SCHEME` (`data-default-color-scheme`) into `index.html`, and `public/theme-init.js` applies them before the first paint, so the provider does not touch either. It injects the accent derived from `customColor` as a style element.
 
 ## API client
 
@@ -129,9 +129,11 @@ No user-facing string is hardcoded in a component. Errors that surface as toasts
 
 `src/components/ui/` holds the Shadcn UI components. **Use them instead of the browser-native element, and instead of a hand-rolled div.** This is the single most important rule in this section - a native control looks fine on your machine and wrong on Windows, in dark mode, or against the operator's `CUSTOM_COLOR`.
 
-The 15 available primitives:
+The 20 available primitives:
 
-`button` · `card` · `custom-toast` · `dialog` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `switch` · `textarea` · `toast` · `tooltip`
+`badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toast` · `toggle-group` · `tooltip`
+
+`toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons.
 
 Never hand-roll what already exists:
 
@@ -145,7 +147,7 @@ Never hand-roll what already exists:
 | `alert()`, `confirm()`, `window.prompt()` | a `<Dialog>` or a toast |
 | a bare centered spinner while content loads | `<Skeleton>` shaped like the content |
 
-The native elements that remain are deliberate and narrow: icon-only affordances and segmented tab bars use a plain `<button>`, and `<input>` survives only for the types the `Input` primitive does not cover (`type="file"` in `UploadZone`, `type="range"` in `PasswordGenerator`, the search field in `LanguageSwitcher`, task-list checkboxes in `markdownComponents`). Those are the exceptions, not the pattern to copy.
+The native elements that remain are deliberate and narrow: icon-only affordances and segmented tab bars use a plain `<button>`, and `<input>` survives only for the types the `Input` primitive does not cover (`type="file"` in `UploadZone`, `type="range"` in `PasswordGenerator`, the search field in `LanguageSwitcher`, task-list checkboxes in `markdownComponents`). The FAQ on the How it works page uses `<details>`, since there is no accordion primitive. Those are the exceptions, not the pattern to copy.
 
 Before writing a new primitive, check whether an existing one plus a variant covers it.
 
@@ -172,7 +174,7 @@ A handful of `prose` and `<pre>` blocks still use plain `overflow-auto` with the
 
 ### Colors
 
-Use the semantic tokens from `src/index.css`: `bg-background`, `bg-card`, `bg-popover`, `bg-muted`, `bg-primary`, `bg-secondary`, `bg-accent`, `bg-destructive`, `bg-success`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`. They are defined in oklch for light and overridden under `.dark`, so they are already theme-aware. `--color-primary` is what `CUSTOM_COLOR` overrides at runtime, which is another reason not to hardcode a brand color.
+Use the semantic tokens from `src/index.css`: `bg-page`, `bg-background`, `bg-card`, `bg-well` (an inset area inside a card), `bg-field` (inputs, never white or black boxes), `bg-popover`, `bg-muted`, `bg-primary`, `bg-secondary`, `bg-accent`, `bg-destructive`, `bg-success`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`. They are defined in oklch for light and overridden under `.dark`, so they are already theme-aware. `--color-primary` is what `CUSTOM_COLOR` overrides at runtime, which is another reason not to hardcode a brand color.
 
 A raw palette color (`text-green-600`, `bg-red-100`) always needs a `dark:` variant. Verify in dark mode before finishing.
 
