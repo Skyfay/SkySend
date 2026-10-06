@@ -3,6 +3,7 @@
 ### ✨ Features
 
 - **web**: A note is made of blocks, so text, passwords, code and SSH keys can be shared together in any order. The note tab starts with a card for each block type, and blocks can be added, moved and removed.
+- **client**: The CLI client opens notes made of blocks and creates them on servers from v3 on. On an older server it still creates notes in the format that server knows.
 - **server**: `/api/config` reports `noteBlocks`, so a client can tell whether the server accepts notes made of blocks.
 - **server**: `DEFAULT_TAB` accepts `note`, and `text`, `password`, `code` or `sshkey` open the note tab with that block already added.
 
@@ -26,6 +27,7 @@
 - **crypto**: Notes encrypted before v3 are kept as test fixtures, so a change that stops them from opening fails the tests. They cover every note type, a note password and the older 16-byte salt.
 - **server**: Tests for notes made of blocks, the note tab in `DEFAULT_TAB` and the `noteBlocks` flag.
 - **web**: Tests for opening notes made of blocks and notes from before v3, for code highlighting against injected markup, and for copying to the clipboard.
+- **client**: Tests for turning CLI input into a note, for the format sent to older servers and for a round trip through the real encryption.
 - **web**: Tests for building a note from its blocks, for the upload that only tells the server it is made of blocks, and for the kinds kept for My Uploads.
 
 ### 🔧 CI/CD

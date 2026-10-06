@@ -1,13 +1,15 @@
 import React, { useState, useCallback } from "react";
 import * as fs from "node:fs";
 import { Box, Text, useInput } from "ink";
-import { encryptNoteContent, toBase64url, type NoteContentType } from "@skysend/crypto";
+import { encryptNoteContent, toBase64url } from "@skysend/crypto";
+import type { NoteBlock } from "@skysend/note-format";
 import { createNote } from "../../lib/api.js";
 import { prepareUpload } from "../../lib/auth.js";
 import { buildShareUrl } from "../../lib/url.js";
 import { addNote } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
 import { generatePassword } from "../../lib/password-generator.js";
+import { prepareNote, textToBlock, type CliNoteType } from "../../lib/note.js";
 import { generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "../../lib/ssh-keygen.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
 import { SelectList, type SelectItem } from "../components/SelectList.js";
@@ -44,8 +46,9 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   const accent = useAccent();
   const { server, config } = appState;
   const [phase, setPhase] = useState<Phase>("type");
-  const [contentType, setContentType] = useState<NoteContentType>("text");
-  const [content, setContent] = useState("");
+  const [contentType, setContentType] = useState<CliNoteType>("text");
+  const [block, setBlock] = useState<NoteBlock | null>(null);
+  const [sshComment, setSshComment] = useState("");
   const [expireSec, setExpireSec] = useState(config.noteDefaultExpire);
   const [maxViews, setMaxViews] = useState(config.noteDefaultViews);
   const [password, setPassword] = useState<string | undefined>();
@@ -62,18 +65,21 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   const [sshParts, setSshParts] = useState<{ publicKey: string; privateKey: string; passphrase?: string }>({ publicKey: "", privateKey: "" });
   const [sshShare, setSshShare] = useState<{ pub: boolean; priv: boolean; pass: boolean }>({ pub: true, priv: true, pass: true });
 
-  const setContentAndProceed = useCallback((noteContent: string) => {
-    if (new TextEncoder().encode(noteContent).byteLength > config.noteMaxSize) {
+  // The note is one block. It is checked against the size the server will see.
+  const proceedWith = useCallback((next: NoteBlock) => {
+    const { plaintext } = prepareNote(next, config.noteBlocks);
+    if (new TextEncoder().encode(plaintext).byteLength > config.noteMaxSize) {
       setErrorMsg(`Note too large (max ${formatBytes(config.noteMaxSize)})`);
       setPhase("error");
       return;
     }
-    setContent(noteContent);
+    setBlock(next);
     setPhase("expiry");
-  }, [config.noteMaxSize]);
+  }, [config.noteMaxSize, config.noteBlocks]);
 
   const doCreate = useCallback(async (passwordOverride?: string) => {
     const effectivePassword = passwordOverride !== undefined ? passwordOverride : password;
+    if (!block) return;
     try {
       // Authenticate with OIDC before creating the note if the server requires it.
       let oidcToken: string | undefined;
@@ -83,7 +89,9 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       }
       setPhase("creating");
       const creds = await prepareUpload(effectivePassword);
-      const encrypted = await encryptNoteContent(content, creds.keys.metaKey);
+      // A server from before v3 gets the note in the legacy format.
+      const note = prepareNote(block, config.noteBlocks);
+      const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
 
       const result = await createNote(server, {
         encryptedContent: toBase64url(encrypted.ciphertext),
@@ -91,7 +99,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         salt: toBase64url(creds.salt),
         ownerToken: creds.ownerTokenB64,
         authToken: creds.authTokenB64,
-        contentType, maxViews, expireSec,
+        contentType: note.contentType, maxViews, expireSec,
         hasPassword: creds.hasPassword,
         ...(creds.hasPassword && creds.passwordSalt && creds.passwordAlgo
           ? { passwordSalt: toBase64url(creds.passwordSalt), passwordAlgo: creds.passwordAlgo }
@@ -113,7 +121,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, [content, contentType, maxViews, expireSec, password, server, config.oidcProtectNotes]);
+  }, [block, contentType, maxViews, expireSec, password, server, config.oidcProtectNotes, config.noteBlocks]);
 
   useInput((input, key) => {
     if (phase === "done" && input === "q") {
@@ -128,7 +136,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
   // ─── Type selection ───────────────────────────────────────────────────
 
   if (phase === "type") {
-    const items: Array<SelectItem<NoteContentType>> = [
+    const items: Array<SelectItem<CliNoteType>> = [
       { label: "Text", value: "text" },
       { label: "Password", value: "password" },
       { label: "Code", value: "code" },
@@ -171,7 +179,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       <MultiLineInput
         label={`${contentType} content`}
         placeholder="Start typing..."
-        onSubmit={(val) => setContentAndProceed(val)}
+        onSubmit={(val) => proceedWith(textToBlock(contentType, val))}
         onCancel={() => setPhase("text-source")}
       />
     );
@@ -185,7 +193,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
           const filePath = files[0]!;
           try {
             const fileContent = fs.readFileSync(filePath, "utf-8");
-            setContentAndProceed(fileContent);
+            proceedWith(textToBlock(contentType, fileContent));
           } catch (err) {
             setErrorMsg(err instanceof Error ? err.message : String(err));
             setPhase("error");
@@ -234,10 +242,10 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
             } else if (val === "remove") {
               setPwEntries((prev) => prev.slice(0, -1));
             } else if (val === "done") {
-              const serialized = JSON.stringify(
-                pwEntries.map((e) => ({ label: e.label, value: e.value })),
-              );
-              setContentAndProceed(serialized);
+              proceedWith({
+                type: "password",
+                entries: pwEntries.map((e) => ({ label: e.label, value: e.value })),
+              });
             }
           }}
           onCancel={() => {
@@ -355,8 +363,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         label="Comment (optional)"
         placeholder="e.g. user@hostname"
         onSubmit={(val) => {
-          // Store comment temporarily in content field
-          setContent(val.trim());
+          setSshComment(val.trim());
           setPhase("ssh-passphrase");
         }}
         onCancel={() => setPhase("ssh-algo")}
@@ -372,7 +379,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
           label="Key passphrase (optional)"
           mask="*"
           onSubmit={(val) => {
-            const comment = content; // stored from previous phase
+            const comment = sshComment;
             const passphrase = val.trim() || undefined;
             setPhase("ssh-generating");
             void (async () => {
@@ -462,12 +469,13 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
               if (val === "priv") { setSshShare((s) => ({ ...s, priv: !s.priv })); return; }
               if (val === "pass") { setSshShare((s) => ({ ...s, pass: !s.pass })); return; }
               if (val === "done") {
-                const parts: string[] = [];
-                if (sshShare.pub && hasPub) parts.push(sshParts.publicKey);
-                if (sshShare.priv && hasPriv) parts.push(sshParts.privateKey);
-                if (sshShare.pass && hasPass) parts.push(`Passphrase: ${sshParts.passphrase}`);
-                if (parts.length === 0) return;
-                setContentAndProceed(parts.join("\n\n"));
+                if (!anySelected) return;
+                proceedWith({
+                  type: "sshkey",
+                  publicKey: sshShare.pub && hasPub ? sshParts.publicKey : "",
+                  privateKey: sshShare.priv && hasPriv ? sshParts.privateKey : "",
+                  passphrase: sshShare.pass && hasPass ? (sshParts.passphrase ?? "") : "",
+                });
               }
             }}
             onCancel={() => setPhase("ssh-source")}
