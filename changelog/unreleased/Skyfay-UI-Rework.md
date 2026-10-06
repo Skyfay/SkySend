@@ -1,8 +1,8 @@
-> ⚠️ **Breaking:** `DEFAULT_THEME` now selects the visual theme (`aurora`, `midnight` or `graphite`) and the color scheme moved to the new `DEFAULT_COLOR_SCHEME`. An instance that still sets `DEFAULT_THEME` to `dark`, `light` or `system` refuses to start and names the value to set in `DEFAULT_COLOR_SCHEME` instead.
+> ⚠️ **Breaking:** `DEFAULT_THEME` now selects the visual theme (`graphite`, `aurora` or `midnight`) and the color scheme moved to the new `DEFAULT_COLOR_SCHEME`. An instance that still sets `DEFAULT_THEME` to `dark`, `light` or `system` refuses to start and names the value to set in `DEFAULT_COLOR_SCHEME` instead.
 
 ### ✨ Features
 
-- **web**: Three visual themes, Aurora, Midnight and Graphite, each in a light and a dark color scheme.
+- **web**: Three visual themes, Graphite, Aurora and Midnight, each in a light and a dark color scheme. Graphite is the default.
 - **server**: `DEFAULT_THEME` picks the theme of the web app and the new `DEFAULT_COLOR_SCHEME` sets the color scheme for new visitors.
 - **web**: A new How it works page explains the encryption step by step and lets visitors encrypt a sample text in their own browser.
 

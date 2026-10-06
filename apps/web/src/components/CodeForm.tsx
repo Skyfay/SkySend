@@ -214,7 +214,7 @@ export function CodeForm({ forcePassword = false }: { forcePassword?: boolean })
     <div className="space-y-5">
       <div className="flex items-center justify-between px-2">
         <Label className="text-[13px]">{t("code.blocks")}</Label>
-        <span className={cn("font-mono text-[11px]", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+        <span className={cn("text-xs tabular-nums", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
           {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
         </span>
       </div>

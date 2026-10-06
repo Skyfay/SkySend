@@ -543,7 +543,7 @@ export function NoteContent({ content, contentType }: NoteContentProps) {
                   )}
                   <span className="truncate font-mono text-[13px] font-medium">{displayTitle}</span>
                 </button>
-                <span className="shrink-0 rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                <span className="shrink-0 rounded-md bg-card px-1.5 py-0.5 text-xs text-muted-foreground">
                   {block.language === "auto"
                     ? t("code.detectedAs", { lang: langLabel })
                     : langLabel}

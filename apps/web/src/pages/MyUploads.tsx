@@ -146,7 +146,7 @@ export function MyUploadsPage() {
               <ToggleGroupItem key={f} value={f}>
                 <Icon />
                 {t(`myUploads.filter.${f}`)}
-                <span className="font-mono text-[11px] opacity-70">{getFilterCount(f)}</span>
+                <span className="text-xs tabular-nums opacity-70">{getFilterCount(f)}</span>
               </ToggleGroupItem>
             );
           })}

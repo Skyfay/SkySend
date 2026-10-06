@@ -82,7 +82,7 @@ export function UploadCard({ upload, onDelete, onRename }: UploadCardProps) {
           ) : (
             <span
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-[10px] font-bold",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[10px] font-bold",
                 fileBadge(upload.fileNames[0] ?? "").className,
               )}
             >

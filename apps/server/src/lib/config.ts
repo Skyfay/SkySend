@@ -271,7 +271,7 @@ const configSchema = z.object({
             + `(aurora, midnight or graphite). Set DEFAULT_COLOR_SCHEME=${issue.input} instead.`
           : undefined,
     })
-    .default("aurora"),
+    .default("graphite"),
 
   DEFAULT_COLOR_SCHEME: z
     .enum(["dark", "light", "system"])

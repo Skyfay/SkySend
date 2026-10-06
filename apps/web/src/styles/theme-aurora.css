@@ -1,6 +1,6 @@
 /*
- * Aurora, the default theme: frosted glass over soft light that is mixed from the accent.
- * Its tokens are the base values in index.css, so this file only adds what tokens cannot
+ * Aurora: frosted glass over soft light that is mixed from the accent. It is not the
+ * default theme, but its tokens are the base values in index.css, so this file only adds what tokens cannot
  * express. Components opt in through data-slot attributes:
  *
  *   data-slot="card"         Card, a glass surface

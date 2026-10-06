@@ -140,7 +140,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
       <div className="rounded-[20px] border border-border bg-well">
         <div className="flex items-center justify-between border-b border-border py-2.5 pl-4 pr-4">
           <Label className="text-[13px]">{t("password.passwords")}</Label>
-          <span className={cn("font-mono text-[11px]", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+          <span className={cn("text-xs tabular-nums", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
             {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
           </span>
         </div>
@@ -167,7 +167,7 @@ export function PasswordForm({ forcePassword = false }: { forcePassword?: boolea
                       onChange={(e) => updatePassword(index, e.target.value)}
                       placeholder={t("password.enterPassword")}
                       aria-label={t("password.passwordNumber", { number: index + 1 })}
-                      className="pr-10 font-mono"
+                      className="pr-10 font-mono placeholder:font-sans"
                       disabled={isSubmitting}
                       autoComplete="off"
                     />

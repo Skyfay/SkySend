@@ -18,7 +18,7 @@ interface UploadZoneProps {
 function FileFan() {
   const card = "absolute top-2.5 h-[72px] w-14 rounded-[10px] border border-border bg-card shadow-chip transition-transform duration-300 motion-reduce:transition-none";
   const line = "absolute left-2 h-1 rounded-full bg-input";
-  const label = "absolute bottom-2 left-2 font-mono text-[10px] font-bold";
+  const label = "absolute bottom-2 left-2 text-[10px] font-bold";
   return (
     <div aria-hidden="true" className="relative h-24 w-40">
       <span className={cn(card, "left-5 -rotate-[14deg] group-hover:-translate-x-2 group-hover:-rotate-[20deg]")}>
@@ -170,7 +170,7 @@ export function UploadZone({
                     key={`${file.name}-${file.size}-${i}`}
                     className="flex items-center gap-3 rounded-[14px] bg-card py-2 pl-2.5 pr-2 shadow-chip"
                   >
-                    <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] font-mono text-[10px] font-bold", badge.className)}>
+                    <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-bold", badge.className)}>
                       {badge.label}
                     </span>
                     <div className="min-w-0 flex-1">

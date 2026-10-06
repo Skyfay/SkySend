@@ -242,7 +242,7 @@ function Demo() {
                 <p className="line-clamp-3 break-all font-mono text-xs leading-relaxed text-muted-foreground">
                   {result?.ciphertext}
                 </p>
-                <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
+                <p className="mt-1.5 text-xs text-muted-foreground">
                   {t("how.demoBytes", { count: result?.bytes ?? 0 })}
                 </p>
               </DemoOutput>
@@ -274,7 +274,7 @@ function Steps() {
             <Card className="h-full space-y-3 p-5">
               <div className="flex items-center justify-between">
                 <IconTile icon={icon} />
-                <span className="font-mono text-xs font-semibold text-primary-text">0{i + 1}</span>
+                <span className="text-sm font-semibold tabular-nums text-primary-text">0{i + 1}</span>
               </div>
               <p className="font-semibold leading-snug">{title}</p>
               <p className="text-sm leading-relaxed text-muted-foreground">{text}</p>
@@ -413,7 +413,7 @@ function Specs() {
           {specs.map(([label, value]) => (
             <div key={label} className="grid gap-1 px-5 py-3.5 sm:grid-cols-[11rem_1fr] sm:gap-4">
               <dt className="text-sm font-medium">{label}</dt>
-              <dd className="font-mono text-[13px] text-muted-foreground">{value}</dd>
+              <dd className="text-sm text-muted-foreground">{value}</dd>
             </div>
           ))}
         </dl>

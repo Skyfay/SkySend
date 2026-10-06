@@ -33,7 +33,7 @@ const configResponseSchema = z.object({
   customReportUrl: z.string().nullable(),
   // UI defaults
   // A server from before v3 sends a color scheme as defaultTheme, catch() keeps the default.
-  defaultTheme: z.enum(["aurora", "midnight", "graphite"]).catch("aurora"),
+  defaultTheme: z.enum(["aurora", "midnight", "graphite"]).catch("graphite"),
   defaultColorScheme: z.enum(["dark", "light", "system"]).catch("system"),
   defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),

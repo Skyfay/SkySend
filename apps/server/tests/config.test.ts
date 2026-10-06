@@ -367,9 +367,9 @@ describe("config", () => {
   });
 
   describe("DEFAULT_THEME and DEFAULT_COLOR_SCHEME", () => {
-    it("should default to the aurora theme and the system color scheme", async () => {
+    it("should default to the graphite theme and the system color scheme", async () => {
       const config = await loadFreshConfig();
-      expect(config.DEFAULT_THEME).toBe("aurora");
+      expect(config.DEFAULT_THEME).toBe("graphite");
       expect(config.DEFAULT_COLOR_SCHEME).toBe("system");
     });
 

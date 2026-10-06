@@ -8,7 +8,7 @@
   // The visual theme comes from the server too. A page served without the
   // placeholder filled in falls back to the default theme.
   if (!["aurora", "midnight", "graphite"].includes(root.dataset.theme)) {
-    root.dataset.theme = "aurora";
+    root.dataset.theme = "graphite";
   }
   // Server DEFAULT_COLOR_SCHEME, injected into index.html when the page is served.
   let scheme = root.dataset.defaultColorScheme;

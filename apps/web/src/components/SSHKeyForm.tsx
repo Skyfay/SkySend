@@ -268,7 +268,7 @@ export function SSHKeyForm({ forcePassword = false }: { forcePassword?: boolean 
               />
             </div>
             <div className="flex justify-end border-t border-border px-4 py-2">
-              <span className={cn("font-mono text-[11px]", pasteSizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+              <span className={cn("text-xs tabular-nums", pasteSizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
                 {formatBytes(pasteContentBytes)} / {formatBytes(config.noteMaxSize)}
               </span>
             </div>

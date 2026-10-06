@@ -31,7 +31,7 @@ export function QuotaBar({ quota }: QuotaBarProps) {
           <HardDrive className="h-4 w-4 text-primary-text" />
           {t("quota.title")}
         </span>
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-xs tabular-nums text-muted-foreground">
           {formatBytes(quota.used)} / {formatBytes(quota.limit)}
         </span>
       </div>

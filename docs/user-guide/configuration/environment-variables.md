@@ -109,7 +109,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_LINK_URL` | ❌ | _(none)_ | URL for a custom footer link. Must be used together with `CUSTOM_LINK_NAME`. |
 | `CUSTOM_LINK_NAME` | ❌ | _(none)_ | Display text for the custom footer link (max 50 characters). |
 | `CUSTOM_REPORT_URL` | ❌ | _(none)_ | URL to a report/abuse page. When set, a "Report" link is shown in the footer. |
-| `DEFAULT_THEME` | ❌ | `aurora` | Visual theme of the web app. One of `aurora`, `midnight`, or `graphite`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
+| `DEFAULT_THEME` | ❌ | `graphite` | Visual theme of the web app. One of `graphite`, `aurora`, or `midnight`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
 | `DEFAULT_COLOR_SCHEME` | ❌ | `system` | Color scheme for visitors who have not picked one. One of `dark`, `light`, or `system`. Visitors can still switch in the UI. |
 | `DEFAULT_TAB` | ❌ | `file` | Default upload tab shown when opening the app. One of `file`, `text`, `password`, `code`, or `sshkey`. Falls back to the first available tab if the configured tab is not enabled via `ENABLED_SERVICES`. |
 | `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
@@ -138,9 +138,9 @@ The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are v
 
 | Theme | Look |
 | :--- | :--- |
-| `aurora` | The default. Frosted glass cards over a soft light that is mixed from the accent color. |
+| `graphite` | The default. Neutral gray surfaces lit from above and buttons with a light top edge, close to a native desktop app. |
+| `aurora` | Frosted glass cards over a soft light that is mixed from the accent color. |
 | `midnight` | Plain black or white surfaces, a beam of the accent from the top, and a glowing outline around the main card. |
-| `graphite` | Neutral gray surfaces lit from above and buttons with a light top edge, close to a native desktop app. |
 
 The theme is the same for every visitor. The color scheme is not: `DEFAULT_COLOR_SCHEME` only sets it for visitors who have not picked one. Anyone can switch between light, dark and system in the header, and that choice is stored in their browser.
 

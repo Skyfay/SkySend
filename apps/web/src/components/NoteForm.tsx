@@ -116,7 +116,7 @@ export function NoteForm({ contentType, forcePassword = false }: NoteFormProps) 
     </ToggleGroup>
   );
   const sizeLabel = (
-    <span className={cn("font-mono text-[11px]", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
+    <span className={cn("text-xs tabular-nums", sizeExceeded ? "text-destructive-text" : "text-muted-foreground")}>
       {formatBytes(contentBytes)} / {formatBytes(config.noteMaxSize)}
     </span>
   );

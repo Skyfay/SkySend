@@ -28,7 +28,7 @@ export function UploadProgress({ phase, progress, speed }: UploadProgressProps) 
       <div className="flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
         <span className="text-sm font-medium">{label}</span>
-        <span className="ml-auto flex items-center gap-3 font-mono text-xs text-muted-foreground">
+        <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
           {speed && (phase === "uploading" || phase === "zipping") && (
             <span>{speed}</span>
           )}

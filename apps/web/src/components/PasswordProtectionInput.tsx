@@ -42,7 +42,7 @@ export function PasswordProtectionInput({
             placeholder={placeholder}
             autoComplete="off"
             disabled={disabled}
-            className="pr-9 font-mono"
+            className="pr-9 font-mono placeholder:font-sans"
           />
           <button
             type="button"

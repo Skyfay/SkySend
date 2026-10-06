@@ -227,7 +227,7 @@ export function NoteViewPage() {
       <ReceiveShell title={title} wide>
         <div className="space-y-4">
           <NoteType contentType={noteHook.contentType}>
-            <span className="shrink-0 rounded-full bg-well px-3 py-1 font-mono text-[11px] text-muted-foreground">
+            <span className="shrink-0 rounded-full bg-well px-3 py-1 text-xs text-muted-foreground">
               {noteHook.maxViews === 0
                 ? t("noteView.viewCountUnlimited", { current: noteHook.viewCount })
                 : t("noteView.viewCount", {

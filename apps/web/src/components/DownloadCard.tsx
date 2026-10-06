@@ -28,7 +28,7 @@ function FileRow({ name, size }: { name: string; size: number }) {
     <li className="flex items-center gap-3 rounded-[14px] bg-card py-2 pl-2.5 pr-3 shadow-chip">
       <span
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] font-mono text-[10px] font-bold",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-bold",
           badge.className,
         )}
       >
@@ -36,7 +36,7 @@ function FileRow({ name, size }: { name: string; size: number }) {
       </span>
       {/* Names wrap instead of truncating, so the whole name stays readable. */}
       <p className="min-w-0 flex-1 text-sm font-medium wrap-anywhere">{name}</p>
-      <span className="shrink-0 font-mono text-xs text-muted-foreground">{formatBytes(size)}</span>
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatBytes(size)}</span>
     </li>
   );
 }
@@ -112,7 +112,7 @@ export function DownloadCard({
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
               <span className="text-sm font-medium">{t("download.downloading")}</span>
-              <span className="ml-auto flex items-center gap-3 font-mono text-xs text-muted-foreground">
+              <span className="ml-auto flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
                 {speed && <span>{speed}</span>}
                 <span>{progress}%</span>
               </span>
@@ -136,7 +136,7 @@ export function DownloadCard({
             </span>
             <div className="min-w-0">
               <p className="font-semibold">{t("download.complete")}</p>
-              {averageSpeed && <p className="font-mono text-xs text-muted-foreground">Ø {averageSpeed}</p>}
+              {averageSpeed && <p className="text-xs tabular-nums text-muted-foreground">Ø {averageSpeed}</p>}
             </div>
           </div>
           <Button onClick={() => navigate("/")} variant="outline" className="w-full">

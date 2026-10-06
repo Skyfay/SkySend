@@ -30,7 +30,7 @@ export default defineConfig(({ command }) => {
   const twitterCard = command === "serve" ? "summary" : "__TWITTER_CARD__";
   const envTheme = env.DEFAULT_THEME ?? "";
   const defaultTheme = command === "serve"
-    ? (["aurora", "midnight", "graphite"].includes(envTheme) ? envTheme : "aurora")
+    ? (["aurora", "midnight", "graphite"].includes(envTheme) ? envTheme : "graphite")
     : "__DEFAULT_THEME__";
   const envColorScheme = env.DEFAULT_COLOR_SCHEME ?? "";
   const defaultColorScheme = command === "serve"

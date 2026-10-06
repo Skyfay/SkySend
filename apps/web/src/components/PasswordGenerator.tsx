@@ -68,7 +68,7 @@ export function PasswordGenerator({ onGenerate, disabled }: PasswordGeneratorPro
             if (v >= 1 && v <= 128) setLength(v);
           }}
           onBlur={() => setLength((l) => Math.max(MIN_LENGTH, l))}
-          className="h-8 w-20 text-center font-mono text-sm"
+          className="h-8 w-20 text-center text-sm tabular-nums"
           disabled={disabled}
         />
       </div>
