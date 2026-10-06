@@ -38,3 +38,5 @@
 
 - **server**: Tests for the new theme and color scheme variables and for the hint a pre-v3 value gets.
 - **web**: Tests that text on and next to the accent reaches a contrast of at least 4.5:1 for any color.
+- **web**: Tests for the color scheme choice, the accent injected for `CUSTOM_COLOR` and the file type badges.
+- **web**: The coverage report also counts hooks that are written as `.tsx` files.

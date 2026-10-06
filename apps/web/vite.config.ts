@@ -62,7 +62,8 @@ export default defineConfig(({ command }) => {
   ],
   test: {
     coverage: {
-      include: ["src/lib/**/*.ts", "src/hooks/**/*.ts"],
+      // Hooks that render a provider are .tsx files, so both extensions count.
+      include: ["src/lib/**/*.ts", "src/hooks/**/*.{ts,tsx}"],
       exclude: [
         // Browser OPFS / Worker context - not unit-testable in Node
         "src/lib/opfs-download.ts",
