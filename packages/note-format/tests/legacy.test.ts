@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { LEGACY_NOTE_KINDS, isLegacyKind, legacyToBlocks } from "../src/index.js";
 
+// LEGACY(notes-v1): this file goes with src/legacy.ts.
+//
 // The plaintext of each legacy note below is exactly what the v2 web app or CLI client wrote
 // before encrypting it, so these tests pin how notes from before v3 keep opening.
 

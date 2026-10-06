@@ -24,10 +24,10 @@ The encryption never sees blocks, only a string. This package never sees a key. 
 
 Before v3 every note had one content type with a plaintext format of its own. `legacy.ts` turns those into blocks, following the v2 web app's parsing exactly, and `tests/legacy.test.ts` pins it with the formats v2 wrote.
 
-Every piece that only exists for those notes is marked `LEGACY(notes-v1)`, and the exported ones are `@deprecated`. `grep -rn "LEGACY(notes-v1)"` across the repo finds all of them. They go once no legacy note can exist anymore, following the removal checklist in the developer docs. Do not extend them.
+Every piece that only exists for those notes is marked `LEGACY(notes-v1)`, and the exported ones are `@deprecated`. `grep -rn "LEGACY(notes-v1)"` across the repo finds all of them. They go once no legacy note can exist anymore, following the removal checklist in [docs/developer-guide/crypto/note-format.md](../../docs/developer-guide/crypto/note-format.md#legacy-removal-checklist). Do not extend them.
 
 ## Tests
 
 `tests/`, run with `pnpm --filter @skysend/note-format test`. Coverage is 100% and should stay there. Every format change needs a round-trip test, a test that a reader of the previous version still copes, and a test for what a crafted document does.
 
-`tests/encrypted.test.ts` runs the real path with `@skysend/crypto` and hash-wasm's Argon2id: link secret, note password, HKDF, auth and owner token, AES-256-GCM, reader. `tests/fixtures/encrypted-notes.json` holds notes encrypted with the v2 code and the v3.0 format, one per legacy kind, with a note password, and with a 16-byte salt. **Never regenerate or edit that file.** A failing fixture means real notes on real servers stop opening. Add a new fixture when a new format version ships, and leave the old ones in place.
+`tests/encrypted.test.ts` runs the real path with `@skysend/crypto` and hash-wasm's Argon2id: link secret, note password, HKDF, auth and owner token, AES-256-GCM, reader. `tests/fixtures/encrypted-notes.json` holds notes encrypted with the v2 code and the v3.0 format, one per legacy kind, with a note password, and with a 16-byte salt. **Never regenerate or edit that file.** A failing fixture means real notes on real servers stop opening. Add a new fixture when a new format version ships, and leave the old ones in place. The one exception is phase 2 of the removal checklist, which removes the legacy fixtures.

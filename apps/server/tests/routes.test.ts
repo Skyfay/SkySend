@@ -1551,7 +1551,7 @@ describe("routes", () => {
       const res = await app.request("/api/note", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: "text" }),
+        body: JSON.stringify({ contentType: "blocks" }),
       });
       expect(res.status).toBe(403);
       const json = await res.json();

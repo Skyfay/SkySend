@@ -67,6 +67,7 @@ describe("sshKeyFromText", () => {
   });
 });
 
+// LEGACY(notes-v1): drop with toLegacyNote.
 describe("toLegacyNote", () => {
   it.each(BLOCKS.map((block) => [block.type, block] as const))(
     "writes a %s block so the reader for notes before v3 gets it back unchanged",
@@ -95,10 +96,12 @@ describe("prepareNote", () => {
     expect(parseNote(note.plaintext)).toEqual([BLOCKS[2]]);
   });
 
+  // LEGACY(notes-v1): drop with toLegacyNote.
   it("falls back to the legacy format for an older server", () => {
     expect(prepareNote(BLOCKS[3]!, false)).toEqual(toLegacyNote(BLOCKS[3]!));
   });
 
+  // LEGACY(notes-v1): the false case goes with toLegacyNote.
   it.each([true, false])("round-trips through the real encryption (server takes blocks: %s)", async (takesBlocks) => {
     for (const block of BLOCKS) {
       const note = prepareNote(block, takesBlocks);
@@ -111,6 +114,7 @@ describe("prepareNote", () => {
 });
 
 describe("readReceivedNote", () => {
+  // LEGACY(notes-v1): drop with the legacy readers.
   it("reads a legacy note", () => {
     expect(readReceivedNote("text", "old")).toEqual({
       blocks: [{ type: "text", format: "plain", text: "old" }],

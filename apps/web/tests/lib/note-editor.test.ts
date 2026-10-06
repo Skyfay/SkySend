@@ -87,6 +87,7 @@ describe("storedNoteKinds", () => {
     expect(storedNoteKinds({ contentType: "blocks" })).toEqual([]);
   });
 
+  // LEGACY(notes-v1): drop with the legacy branch of storedNoteKinds.
   it("uses the content type of a note from before v3 as its only kind", () => {
     expect(storedNoteKinds({ contentType: "markdown" })).toEqual(["markdown"]);
     expect(storedNoteKinds({ contentType: "sshkey" })).toEqual(["sshkey"]);

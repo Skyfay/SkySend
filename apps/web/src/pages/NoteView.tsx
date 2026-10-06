@@ -55,11 +55,6 @@ function blockKey(block: ReadBlock): KnownType | null {
   return block.type;
 }
 
-/**
- * The icon tile and name above a note. Before it is opened only the content type the server
- * keeps is known, which for a note made of blocks says nothing about them. Once it is open,
- * a single block shows its type and several show their count and types.
- */
 /** Copies every block of the note as one text. */
 function CopyAll({ blocks }: { blocks: readonly ReadBlock[] }) {
   const { t } = useTranslation();
@@ -82,6 +77,11 @@ function CopyAll({ blocks }: { blocks: readonly ReadBlock[] }) {
   );
 }
 
+/**
+ * The icon tile and name above a note. Before it is opened only the content type the server
+ * keeps is known, which for a note made of blocks says nothing about them. Once it is open,
+ * a single block shows its type and several show their count and types.
+ */
 function NoteType({
   contentType,
   blocks,

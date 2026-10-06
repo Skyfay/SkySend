@@ -7,6 +7,7 @@ describe("readNote", () => {
     expect(readNote(NOTE_KIND, plaintext)).toEqual([{ type: "text", format: "plain", text: "hi" }]);
   });
 
+  // LEGACY(notes-v1): drop with the legacy readers.
   it("reads a legacy note through the legacy reader", () => {
     expect(readNote("markdown", "# Title")).toEqual([{ type: "text", format: "markdown", text: "# Title" }]);
   });
@@ -19,6 +20,7 @@ describe("readNote", () => {
     expect(() => readNote(NOTE_KIND, "just text")).toThrow(NoteFormatError);
   });
 
+  // LEGACY(notes-v1): drop with the legacy readers.
   it("shows a document as plain text when a server labels it as a legacy text note", () => {
     const plaintext = serializeNote([{ type: "password", entries: [{ label: "", value: "x" }] }]);
     expect(readNote("text", plaintext)).toEqual([{ type: "text", format: "plain", text: plaintext }]);

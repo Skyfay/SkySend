@@ -5,6 +5,7 @@ The `@skysend/crypto` package (`packages/crypto`) is the shared encryption libra
 - Key generation and derivation (HKDF-SHA256)
 - Streaming file encryption/decryption (AES-256-GCM)
 - Metadata encryption/decryption (AES-256-GCM)
+- Note content encryption/decryption (AES-256-GCM)
 - Password-based key derivation (Argon2id)
 - Utility functions (base64url, constant-time comparison)
 
@@ -36,9 +37,9 @@ encryptMetadata(metadata, metaKey): Promise<{ ciphertext, iv }>
 decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>
 expectedPlaintextSize(metadata): number | undefined
 
-// Note Content
-encryptNoteContent(content, metaKey): Promise<{ ciphertext, iv }>
-decryptNoteContent(ciphertext, iv, metaKey): Promise<string>
+// Note Content (the content is a note document, see Note Format)
+encryptNoteContent(content, metaKey): Promise<{ ciphertext, nonce }>
+decryptNoteContent(ciphertext, nonce, metaKey): Promise<string>
 
 // Password
 deriveKeyFromPassword(password, salt, argon2id?): Promise<{ key, algorithm }>
@@ -56,4 +57,5 @@ randomBytes(length): Uint8Array
 - [Key Derivation](/developer-guide/crypto/key-derivation) - HKDF-SHA256 key generation and derivation
 - [Streaming Encryption](/developer-guide/crypto/streaming-encryption) - AES-256-GCM ECE format
 - [Metadata Encryption](/developer-guide/crypto/metadata-encryption) - File metadata encryption
+- [Note Format](/developer-guide/crypto/note-format) - The blocks a note is made of, before it is encrypted
 - [Password Protection](/developer-guide/crypto/password-protection) - Argon2id password-based key derivation

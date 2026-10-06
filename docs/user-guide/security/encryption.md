@@ -144,25 +144,28 @@ The encrypted metadata and IV are stored in the database and returned via the in
 
 ## Note Encryption
 
-Note content is encrypted using the same AES-256-GCM algorithm as metadata, but with a dedicated key derivation path:
+Note content is encrypted with the same AES-256-GCM algorithm and the same key as file metadata:
 
 - **Key**: `metaKey` (derived via HKDF, same as metadata encryption)
 - **IV**: 12-byte random per note
-- **Plaintext**: The raw note content (text, password, code, Markdown, or SSH key data)
+- **Plaintext**: The note document, a JSON document that holds the blocks of the note (text, passwords, code and SSH keys)
 
-Unlike files, notes do not use streaming ECE because note content is limited in size (`NOTE_MAX_SIZE`, default 1 MB). The entire content is encrypted in a single AES-256-GCM operation.
+Unlike files, notes do not use streaming ECE because note content is limited in size (`NOTE_MAX_SIZE`, default 1 MB). The entire document is encrypted in a single AES-256-GCM operation. The [Note Format](/developer-guide/crypto/note-format) page describes the document.
 
 ### Content Types
 
-The `contentType` field is stored unencrypted on the server so the client knows how to render the decrypted content. It does not reveal the actual note content. Supported values:
+The `contentType` field is stored unencrypted on the server so the client knows which reader to use for the decrypted content. Since v3 every new note is stored as `blocks`, so the server does not learn which blocks a note holds.
+
+Notes created before v3 have the content type of their single kind, and still open:
 
 | contentType | Description |
 | --- | --- |
-| `text` | Plain text |
-| `markdown` | Markdown (GitHub Flavored Markdown) |
-| `password` | One or more passwords (separated by `\n\n`) |
-| `code` | Code snippets |
-| `sshkey` | SSH key pairs (public and/or private key) |
+| `blocks` | A note made of blocks (since v3) |
+| `text` | Plain text (before v3) |
+| `markdown` | Markdown (before v3) |
+| `password` | One or more passwords (before v3) |
+| `code` | Code snippets (before v3) |
+| `sshkey` | SSH key pairs (before v3) |
 
 ## Password Protection
 

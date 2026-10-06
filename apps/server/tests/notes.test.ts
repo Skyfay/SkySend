@@ -62,7 +62,7 @@ function validNotePayload(overrides: Record<string, unknown> = {}) {
     salt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url"),
     ownerToken: fakeBase64urlToken(),
     authToken: fakeBase64urlToken(),
-    contentType: "text",
+    contentType: "blocks",
     maxViews: 1,
     expireSec: 3600,
     hasPassword: false,
@@ -107,7 +107,7 @@ describe("note routes", () => {
         where: eq(notes.id, body.id),
       });
       expect(note).toBeDefined();
-      expect(note!.contentType).toBe("text");
+      expect(note!.contentType).toBe("blocks");
       expect(note!.maxViews).toBe(1);
       expect(note!.viewCount).toBe(0);
     });
@@ -360,7 +360,7 @@ describe("note routes", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.id).toBe(TEST_UUID);
-      expect(body.contentType).toBe("text");
+      expect(body.contentType).toBe("blocks");
       expect(body.hasPassword).toBe(false);
       expect(body.maxViews).toBe(10);
       expect(body.viewCount).toBe(0);

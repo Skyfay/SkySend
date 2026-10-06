@@ -14,12 +14,13 @@
 
 ### 🔄 Changed
 
-- **web**: The share form has two tabs, Datei and Notiz, instead of one tab per note type.
+- **web**: The share form has two tabs, File and Note, instead of one tab per note type.
 - **server**: Notes created since v3 are stored with the content type `blocks`, so the server no longer learns whether a note holds text, a password, code or an SSH key.
 
 ### 📝 Documentation
 
 - **docs**: The config endpoint shows its current response, and the notes API documents the `blocks` content type and the 32-byte salt.
+- **docs**: A new page describes the note format and when support for notes from before v3 is removed. The guides and the architecture page describe notes made of blocks, and `note:view` no longer lists options it does not have.
 
 ### 🧪 Tests
 

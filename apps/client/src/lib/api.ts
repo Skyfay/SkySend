@@ -303,7 +303,7 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  /** "blocks", or a legacy type for a server that does not report noteBlocks. */
+  /** "blocks". LEGACY(notes-v1): or a legacy type for a server that does not report noteBlocks. */
   contentType: typeof NOTE_KIND | LegacyNoteKind;
   maxViews: number;
   expireSec: number;

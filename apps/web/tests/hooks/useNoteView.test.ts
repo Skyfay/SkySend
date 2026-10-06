@@ -340,6 +340,7 @@ describe("useNoteView", () => {
       ]);
     });
 
+    // LEGACY(notes-v1): drop with the legacy readers.
     it("reads a password note from before v3 through the legacy reader", async () => {
       const result = await viewWith("password", JSON.stringify([{ label: "", value: "old-pw" }]));
       expect(result.current.blocks).toEqual([{ type: "password", entries: [{ label: "", value: "old-pw" }] }]);

@@ -19,7 +19,7 @@ export interface StoredNote {
   id: string;
   ownerToken: string;
   secret: string;
-  /** "blocks", or the content type of a note created before v3. */
+  /** "blocks". LEGACY(notes-v1): or the content type of a note created before v3. */
   contentType: typeof NOTE_KIND | LegacyNoteKind;
   /** The kinds of blocks a note made of blocks holds, for "My Uploads". Never leaves this browser. */
   kinds?: NoteKindKey[];

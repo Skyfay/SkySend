@@ -95,6 +95,7 @@ describe("notes encrypted before this version", () => {
     expect(opened.blocks).toEqual(fixture.blocks);
   });
 
+  // LEGACY(notes-v1): once the legacy fixtures are gone, this checks the blocks notes only.
   it("covers every legacy kind, both password paths and both salt lengths", () => {
     const kinds = new Set(fixtures.notes.map((note) => note.kind));
     expect([...kinds].sort()).toEqual(["blocks", "code", "markdown", "password", "sshkey", "text"]);
