@@ -1,9 +1,5 @@
 import type { Command } from "commander";
-import {
-  encryptNoteContent,
-  toBase64url,
-  type NoteContentType,
-} from "@skysend/crypto";
+import { encryptNoteContent, toBase64url } from "@skysend/crypto";
 import { fetchConfig, createNote } from "../lib/api.js";
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
@@ -17,6 +13,7 @@ import {
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
+import { CLI_NOTE_TYPES, isCliNoteType, prepareNote, textToBlock } from "../lib/note.js";
 
 interface NoteOptions {
   server?: string;
@@ -26,8 +23,6 @@ interface NoteOptions {
   password?: boolean | string;
   json?: boolean;
 }
-
-const VALID_TYPES: NoteContentType[] = ["text", "password", "code", "markdown", "sshkey"];
 
 export function registerNoteCommand(program: Command): void {
   program
@@ -53,13 +48,16 @@ export function registerNoteCommand(program: Command): void {
         }
 
         // Validate content type
-        const contentType = (options.type ?? "text") as NoteContentType;
-        if (!VALID_TYPES.includes(contentType)) {
-          throw new Error(`Invalid content type: ${contentType}. Options: ${VALID_TYPES.join(", ")}`);
+        const contentType = options.type ?? "text";
+        if (!isCliNoteType(contentType)) {
+          throw new Error(`Invalid content type: ${contentType}. Options: ${CLI_NOTE_TYPES.join(", ")}`);
         }
 
+        // The note is one block. A server from before v3 gets it in the legacy format.
+        const note = prepareNote(textToBlock(contentType, text), config.noteBlocks);
+
         // Validate size
-        const contentBytes = new TextEncoder().encode(text);
+        const contentBytes = new TextEncoder().encode(note.plaintext);
         if (contentBytes.byteLength > config.noteMaxSize) {
           throw new Error(`Note too large (${contentBytes.byteLength} bytes). Max: ${config.noteMaxSize}`);
         }
@@ -102,7 +100,7 @@ export function registerNoteCommand(program: Command): void {
         const creds = await prepareUpload(password);
 
         // Encrypt note content
-        const encrypted = await encryptNoteContent(text, creds.keys.metaKey);
+        const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
 
         // Create note
         const result = await createNote(server, {
@@ -111,7 +109,7 @@ export function registerNoteCommand(program: Command): void {
           salt: toBase64url(creds.salt),
           ownerToken: creds.ownerTokenB64,
           authToken: creds.authTokenB64,
-          contentType,
+          contentType: note.contentType,
           maxViews,
           expireSec,
           hasPassword: creds.hasPassword,

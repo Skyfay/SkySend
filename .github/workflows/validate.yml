@@ -70,7 +70,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @skysend/crypto build
+      - run: pnpm --filter @skysend/crypto --filter @skysend/note-format build
       - run: pnpm test:coverage
       - name: Upload coverage - crypto
         uses: codecov/codecov-action@v5
@@ -78,6 +78,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: packages/crypto/coverage/lcov.info
           flags: crypto
+      - name: Upload coverage - note-format
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/note-format/coverage/lcov.info
+          flags: note-format
       - name: Upload coverage - server
         uses: codecov/codecov-action@v5
         with:

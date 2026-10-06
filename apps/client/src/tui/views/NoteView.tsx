@@ -3,8 +3,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
 import { decryptNoteContent } from "@skysend/crypto";
+import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { fetchNoteInfo, viewNote, verifyNotePassword } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
+import { forTerminal, noteFileName, readReceivedNote } from "../../lib/note.js";
 import { parseShareUrl } from "../../lib/url.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import type { AppState } from "../types.js";
@@ -12,48 +14,91 @@ import { useAccent } from "../theme.js";
 
 type Phase = "url-input" | "password" | "loading" | "display" | "save-path" | "error";
 
-interface PasswordEntry {
-  label: string;
-  value: string;
+function Frame({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
+      <Text bold color={accent}>{title}</Text>
+      {children}
+    </Box>
+  );
 }
 
-interface SSHKeyParts {
-  publicKey?: string;
-  privateKey?: string;
-  passphrase?: string;
-}
+/**
+ * The blocks of a note, one frame each. Passwords are numbered across the whole note, so
+ * the number keys reveal them wherever they are.
+ */
+function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number>, accent: string): React.ReactElement {
+  const firstEntry: number[] = [];
+  let entries = 0;
+  for (const block of blocks) {
+    firstEntry.push(entries);
+    if (block.type === "password") entries += block.entries.length;
+  }
 
-function parsePasswordContent(raw: string): PasswordEntry[] | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].value === "string") {
-      return parsed as PasswordEntry[];
-    }
-  } catch { /* not JSON */ }
-  // Legacy: split by double newline
-  const blocks = raw.split("\n\n").filter(Boolean);
-  if (blocks.length > 0) {
-    return blocks.map((b) => ({ label: "", value: b }));
-  }
-  return null;
-}
-
-function parseSSHKeyContent(raw: string): SSHKeyParts {
-  const parts: SSHKeyParts = {};
-  const passphraseMatch = raw.match(/^Passphrase: (.+)$/m);
-  if (passphraseMatch) {
-    parts.passphrase = passphraseMatch[1];
-  }
-  const privateKeyMatch = raw.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
-  if (privateKeyMatch) {
-    parts.privateKey = privateKeyMatch[1];
-  }
-  let pubKey = raw;
-  if (parts.passphrase) pubKey = pubKey.replace(`Passphrase: ${parts.passphrase}`, "");
-  if (parts.privateKey) pubKey = pubKey.replace(parts.privateKey, "");
-  pubKey = pubKey.trim();
-  if (pubKey) parts.publicKey = pubKey;
-  return parts;
+  return (
+    <Box flexDirection="column" gap={1}>
+      {blocks.map((block, i) => {
+        switch (block.type) {
+          case "text":
+            return (
+              <Frame key={i} title={block.format === "markdown" ? "Markdown" : "Text"} accent={accent}>
+                <Text>{forTerminal(block.text)}</Text>
+              </Frame>
+            );
+          case "password":
+            return (
+              <Box key={i} flexDirection="column" gap={1}>
+                {block.entries.map((entry, j) => {
+                  const number = firstEntry[i]! + j + 1;
+                  const shown = revealed.has(number);
+                  return (
+                    <Box key={j} borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
+                      <Box justifyContent="space-between">
+                        <Text bold color={accent}>{entry.label ? forTerminal(entry.label) : `Password ${number}`}</Text>
+                        <Text dimColor>[{number}] {shown ? "visible" : "hidden"}</Text>
+                      </Box>
+                      <Text>{shown ? forTerminal(entry.value) : "•".repeat(Math.min(entry.value.length, 32))}</Text>
+                    </Box>
+                  );
+                })}
+              </Box>
+            );
+          case "code":
+            return (
+              <Frame key={i} title={forTerminal(`${block.title || "Code"}${block.language === "auto" ? "" : ` (${block.language})`}`)} accent={accent}>
+                <Text>{forTerminal(block.code)}</Text>
+              </Frame>
+            );
+          case "sshkey":
+            return (
+              <Box key={i} flexDirection="column" gap={1}>
+                {block.publicKey && (
+                  <Frame title="Public Key" accent={accent}>
+                    <Text wrap="wrap">{forTerminal(block.publicKey)}</Text>
+                  </Frame>
+                )}
+                {block.privateKey && (
+                  <Frame title="Private Key" accent={accent}>
+                    <Text>{forTerminal(block.privateKey)}</Text>
+                  </Frame>
+                )}
+                {block.passphrase && (
+                  <Frame title="Passphrase" accent={accent}>
+                    <Text>{forTerminal(block.passphrase)}</Text>
+                  </Frame>
+                )}
+              </Box>
+            );
+          case "unsupported":
+            return (
+              <Text key={i} dimColor>
+                This part of the note needs a newer version of SkySend.
+              </Text>
+            );
+        }
+      })}
+    </Box>
+  );
 }
 
 interface NoteViewViewProps {
@@ -66,8 +111,8 @@ interface NoteViewViewProps {
 export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.ReactElement {
   const accent = useAccent();
   const [phase, setPhase] = useState<Phase>(initialUrl ? "loading" : "url-input");
-  const [content, setContent] = useState("");
-  const [contentType, setContentType] = useState("");
+  const [blocks, setBlocks] = useState<ReadBlock[]>([]);
+  const [unreadable, setUnreadable] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [maxViews, setMaxViews] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
@@ -93,7 +138,10 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     const nonce = new Uint8Array(Buffer.from(response.nonce, "base64")) as Uint8Array<ArrayBuffer>;
     const decrypted = await decryptNoteContent(ct, nonce, creds.keys.metaKey);
 
-    setContent(decrypted);
+    // Notes from before v3 are read in their legacy format.
+    const read = readReceivedNote(info.contentType, decrypted);
+    setBlocks(read.blocks);
+    setUnreadable(read.unreadable);
     setViewCount(response.viewCount);
     setMaxViews(response.maxViews);
     setPhase("display");
@@ -111,7 +159,6 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
 
       const info = await fetchNoteInfo(parsed.server, parsed.id);
       setNoteInfo(info);
-      setContentType(info.contentType);
 
       if (info.hasPassword) {
         setPhase("password");
@@ -158,20 +205,24 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     try {
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(filePath, content, "utf-8");
+      // Only the owner may read it: the note can hold passwords and private keys.
+      fs.writeFileSync(filePath, noteToText(blocks), { encoding: "utf-8", mode: 0o600 });
       setErrorMsg("");
       onBack();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, [content, onBack]);
+  }, [blocks, onBack]);
+
+  const passwordCount = blocks.reduce((sum, block) => sum + (block.type === "password" ? block.entries.length : 0), 0);
+  const hasPasswords = passwordCount > 0;
 
   // Toggle password reveal
-  const toggleReveal = useCallback((idx: number) => {
+  const toggleReveal = useCallback((number: number) => {
     setRevealedPasswords((prev) => {
       const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      if (next.has(number)) next.delete(number); else next.add(number);
       return next;
     });
   }, []);
@@ -180,11 +231,18 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     if (phase === "display") {
       if (key.escape) { onBack(); return; }
       if (input === "s") { setPhase("save-path"); return; }
+      // A note made of blocks can hold more than nine passwords, so a reveals or hides all.
+      if (hasPasswords && input === "a") {
+        setRevealedPasswords((prev) =>
+          prev.size === passwordCount ? new Set() : new Set(Array.from({ length: passwordCount }, (_, i) => i + 1)),
+        );
+        return;
+      }
       // Toggle password with number keys
-      if (contentType === "password") {
-        const idx = parseInt(input, 10);
-        if (!isNaN(idx) && idx >= 1 && idx <= 9) {
-          toggleReveal(idx - 1);
+      if (hasPasswords) {
+        const number = parseInt(input, 10);
+        if (!isNaN(number) && number >= 1 && number <= 9) {
+          toggleReveal(number);
         }
       }
     }
@@ -229,12 +287,10 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   }
 
   if (phase === "save-path") {
-    const ext = contentType === "sshkey" ? "key" : "txt";
-    const defaultName = `note-${contentType}.${ext}`;
     return (
       <TextPrompt
         label="Save to"
-        defaultValue={path.join(process.cwd(), defaultName)}
+        defaultValue={path.join(process.cwd(), noteFileName(blocks))}
         onSubmit={handleSave}
         onCancel={() => setPhase("display")}
       />
@@ -245,21 +301,21 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1} justifyContent="space-between">
-          <Text bold color={accent}>Note ({contentType})</Text>
-          <Text dimColor>View {viewCount} / {maxViews}</Text>
+          <Text bold color={accent}>Note ({blocks.length === 1 ? "1 block" : `${blocks.length} blocks`})</Text>
+          <Text dimColor>{maxViews === 0 ? `View ${viewCount} (unlimited)` : `View ${viewCount} / ${maxViews}`}</Text>
         </Box>
 
-        {contentType === "password" && renderPasswordContent(content, revealedPasswords, accent)}
-        {contentType === "sshkey" && renderSSHKeyContent(content, accent)}
-        {contentType !== "password" && contentType !== "sshkey" && (
-          <Box borderStyle="round" borderColor="gray" paddingX={1} paddingY={0} flexDirection="column">
-            <Text>{content}</Text>
+        {unreadable && (
+          <Box marginBottom={1}>
+            <Text color="yellow">This note could not be read as usual, so it is shown exactly as it arrived.</Text>
           </Box>
         )}
 
+        {renderBlocks(blocks, revealedPasswords, accent)}
+
         <Box marginTop={1}>
           <Text dimColor>s save to file  Esc back</Text>
-          {contentType === "password" && <Text dimColor>  1-9 toggle reveal</Text>}
+          {hasPasswords && <Text dimColor>  1-9 toggle reveal  a all</Text>}
         </Box>
       </Box>
     );
@@ -276,64 +332,4 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   }
 
   return <Box />;
-}
-
-function renderPasswordContent(
-  raw: string,
-  revealed: Set<number>,
-  accent: string,
-): React.ReactElement {
-  const entries = parsePasswordContent(raw);
-  if (!entries) {
-    return (
-      <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
-        <Text>{raw}</Text>
-      </Box>
-    );
-  }
-
-  return (
-    <Box flexDirection="column" gap={1}>
-      {entries.map((entry, i) => {
-        const isRevealed = revealed.has(i);
-        const label = entry.label || `Password ${i + 1}`;
-        return (
-          <Box key={i} borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
-            <Box justifyContent="space-between">
-              <Text bold color={accent}>{label}</Text>
-              <Text dimColor>[{i + 1}] {isRevealed ? "visible" : "hidden"}</Text>
-            </Box>
-            <Text>{isRevealed ? entry.value : "\u2022".repeat(Math.min(entry.value.length, 32))}</Text>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-}
-
-function renderSSHKeyContent(raw: string, accent: string): React.ReactElement {
-  const parts = parseSSHKeyContent(raw);
-
-  return (
-    <Box flexDirection="column" gap={1}>
-      {parts.publicKey && (
-        <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
-          <Text bold color={accent}>Public Key</Text>
-          <Text wrap="wrap">{parts.publicKey}</Text>
-        </Box>
-      )}
-      {parts.privateKey && (
-        <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
-          <Text bold color={accent}>Private Key</Text>
-          <Text>{parts.privateKey}</Text>
-        </Box>
-      )}
-      {parts.passphrase && (
-        <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
-          <Text bold color={accent}>Passphrase</Text>
-          <Text>{parts.passphrase}</Text>
-        </Box>
-      )}
-    </Box>
-  );
 }

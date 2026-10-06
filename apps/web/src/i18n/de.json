@@ -30,15 +30,14 @@
     "password": "Passwort",
     "code": "Code",
     "sshkey": "SSH Key",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Notiz"
   },
   "note": {
-    "content": "Inhalt",
     "expiry": "Läuft ab nach",
     "maxViews": "Max. Aufrufe",
     "burnAfterReading": "1 (nach dem Lesen löschen)",
     "unlimited": "Unbegrenzt",
-    "create": "Notiz erstellen",
     "creating": "Verschlüsseln...",
     "tooLarge": "Notiz überschreitet maximale Größe von {{size}}",
     "plainText": "Klartext",
@@ -48,10 +47,17 @@
     "expand": "Editor vergrössern",
     "placeholder": {
       "text": "Geben Sie Ihren geheimen Text ein...",
-      "password": "Geben Sie das Passwort zum Teilen ein...",
-      "code": "Fügen Sie Ihren Code hier ein...",
       "markdown": "Schreiben Sie Ihr Markdown hier..."
-    }
+    },
+    "startHint": "Wählen Sie, womit Sie anfangen. Weitere Blöcke können Sie danach hinzufügen.",
+    "cardText": "Freier Text, auf Wunsch mit Markdown",
+    "cardPassword": "Ein oder mehrere Passwörter, mit Generator",
+    "cardCode": "Hervorhebung für über 40 Sprachen",
+    "cardSshKey": "Schlüsselpaar erzeugen oder einfügen",
+    "addBlock": "Block hinzufügen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "removeBlock": "Block entfernen"
   },
   "upload": {
     "title": "Dateien hochladen",
@@ -162,7 +168,14 @@
     "destroyed": "Diese Notiz wurde unwiderruflich gelöscht. Sichern Sie den Inhalt jetzt - er kann nicht erneut abgerufen werden.",
     "reveal": "Anzeigen",
     "hide": "Verbergen",
-    "verifying": "Überprüfen..."
+    "verifying": "Überprüfen...",
+    "blockCount_one": "Notiz mit {{count}} Block",
+    "blockCount_other": "Notiz mit {{count}} Blöcken",
+    "copyAll": "Alles kopieren",
+    "unsupported": "Dieser Teil der Notiz braucht eine neuere Version von SkySend.",
+    "unreadable": "Diese Notiz ließ sich nicht wie gewohnt lesen und wird genau so angezeigt, wie sie angekommen ist.",
+    "showCode": "Code anzeigen",
+    "hideCode": "Code ausblenden"
   },
   "notFound": {
     "title": "Seite nicht gefunden",
@@ -206,23 +219,18 @@
     "bits": "Bits Entropie"
   },
   "password": {
-    "passwords": "Passwörter",
     "enterPassword": "Passwort eingeben...",
     "addAnother": "Weiteres Passwort hinzufügen",
     "passwordNumber": "Passwort {{number}}",
     "labelPlaceholder": "Bezeichnung für Passwort {{number}} (optional)"
   },
   "code": {
-    "blocks": "Code-Blöcke",
     "titlePlaceholder": "Dateiname (z.B. docker-compose.yaml, optional)",
     "placeholder": "Code hier einfügen...",
     "auto": "Automatisch erkennen",
     "language": "Sprache",
-    "addBlock": "Code-Block hinzufügen",
     "noTitle": "Code-Block {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Alle ausklappen",
-    "collapseAll": "Alle einklappen"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algorithmus",
@@ -235,14 +243,15 @@
     "generating": "Generieren...",
     "modeGenerate": "Generieren",
     "modePaste": "Einfügen",
-    "pasteLabel": "SSH Key",
     "pastePlaceholderPublic": "Öffentlichen Schlüssel hier einfügen (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Privaten Schlüssel hier einfügen (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Schlüsselgröße",
     "publicKey": "Öffentlicher Schlüssel",
     "privateKey": "Privater Schlüssel",
     "shareAs": "Als verschlüsselte Notiz teilen",
-    "createNote": "Als Notiz teilen"
+    "extrasDropped": "Dieser Browser kann Ed25519-Schlüsseln keinen Kommentar und keine Passphrase hinzufügen. Der Schlüssel wurde ohne sie erzeugt.",
+    "ed25519Unsupported": "Dieser Browser kann keine Ed25519-Schlüssel erzeugen. Wähle RSA oder nutze eine aktuelle Version von Chrome, Firefox oder Safari.",
+    "generateFailed": "Das Schlüsselpaar konnte nicht erzeugt werden."
   },
   "auth": {
     "loginRequired": "Anmeldung erforderlich zum Hochladen",
@@ -335,7 +344,9 @@
     "receiveText": "Sie wurde auf dem Gerät des Absenders verschlüsselt und wird nur hier in Ihrem Browser entschlüsselt.",
     "decryptHint": "Auf diesem Gerät entschlüsselt. Der Schlüssel erreicht nie den Server.",
     "goneText": "Freigaben löschen sich selbst, wenn ihre Zeit oder ihr Limit abläuft. Bitten Sie den Absender um einen neuen Link.",
-    "goneAction": "Datei oder Notiz teilen"
+    "goneAction": "Datei oder Notiz teilen",
+    "fileTabHint": "Bis {{size}}, jeder Dateityp",
+    "noteTabHint": "Text, Passwörter, Code und Schlüssel"
   },
   "how": {
     "eyebrow": "Zero Knowledge von Grund auf",

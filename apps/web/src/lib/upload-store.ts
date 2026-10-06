@@ -1,5 +1,6 @@
 import { get, set, del, keys } from "idb-keyval";
-import type { NoteContentType } from "@skysend/crypto";
+import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
+import type { NoteKindKey } from "@/lib/note-editor";
 
 export interface StoredUpload {
   id: string;
@@ -18,7 +19,10 @@ export interface StoredNote {
   id: string;
   ownerToken: string;
   secret: string;
-  contentType: NoteContentType;
+  /** "blocks". LEGACY(notes-v1): or the content type of a note created before v3. */
+  contentType: typeof NOTE_KIND | LegacyNoteKind;
+  /** The kinds of blocks a note made of blocks holds, for "My Uploads". Never leaves this browser. */
+  kinds?: NoteKindKey[];
   createdAt: string;
 }
 

@@ -138,7 +138,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm --filter @skysend/crypto build && pnpm --filter @skysend/client build
+        run: pnpm --filter @skysend/crypto --filter @skysend/note-format build && pnpm --filter @skysend/client build
 
       - name: Compile binary
         run: pnpm --filter @skysend/client build:${{ matrix.target }}

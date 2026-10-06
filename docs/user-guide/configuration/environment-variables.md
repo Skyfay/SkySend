@@ -111,7 +111,7 @@ Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext
 | `CUSTOM_REPORT_URL` | ❌ | _(none)_ | URL to a report/abuse page. When set, a "Report" link is shown in the footer. |
 | `DEFAULT_THEME` | ❌ | `graphite` | Visual theme of the web app. One of `graphite`, `aurora`, or `midnight`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
 | `DEFAULT_COLOR_SCHEME` | ❌ | `system` | Color scheme for visitors who have not picked one. One of `dark`, `light`, or `system`. Visitors can still switch in the UI. |
-| `DEFAULT_TAB` | ❌ | `file` | Default upload tab shown when opening the app. One of `file`, `text`, `password`, `code`, or `sshkey`. Falls back to the first available tab if the configured tab is not enabled via `ENABLED_SERVICES`. |
+| `DEFAULT_TAB` | ❌ | `file` | Tab shown when opening the app. `file` or `note`. `text`, `password`, `code` or `sshkey` open the note tab with that block already added. Falls back to the first available tab if the configured one is not enabled via `ENABLED_SERVICES`. |
 | `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
 | `FORCE_NOTE_PASSWORD` | ❌ | `false` | When `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both frontend and server. |
 

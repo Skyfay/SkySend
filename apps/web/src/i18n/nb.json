@@ -35,15 +35,14 @@
     "password": "Passord",
     "code": "Kode",
     "sshkey": "SSH-nøkkel",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Notat"
   },
   "note": {
-    "content": "Innhold",
     "expiry": "Utløper etter",
     "maxViews": "Maks visninger",
     "burnAfterReading": "1 (slett etter lesing)",
     "unlimited": "Ubegrenset",
-    "create": "Opprett notat",
     "creating": "Krypterer...",
     "tooLarge": "Notatet overskrider maksimalstørrelsen på {{size}}",
     "plainText": "Ren tekst",
@@ -53,10 +52,17 @@
     "expand": "Utvid redigeringsverktøy",
     "placeholder": {
       "text": "Skriv inn din hemmelige tekst...",
-      "password": "Skriv inn passordet som skal deles...",
-      "code": "Lim inn koden din her...",
       "markdown": "Skriv din markdown her..."
-    }
+    },
+    "startHint": "Velg hva du vil begynne med. Du kan legge til flere blokker etterpå.",
+    "cardText": "Fritekst, med Markdown om du vil",
+    "cardPassword": "Ett eller flere passord, med generator",
+    "cardCode": "Fremheving for over 40 språk",
+    "cardSshKey": "Lag et nøkkelpar eller lim inn et",
+    "addBlock": "Legg til blokk",
+    "moveUp": "Flytt opp",
+    "moveDown": "Flytt ned",
+    "removeBlock": "Fjern blokk"
   },
   "upload": {
     "title": "Last opp filer",
@@ -167,7 +173,14 @@
     "destroyed": "Dette notatet er permanent slettet. Lagre innholdet nå - det kan ikke åpnes igjen.",
     "reveal": "Vis",
     "hide": "Skjul",
-    "verifying": "Verifiserer..."
+    "verifying": "Verifiserer...",
+    "blockCount_one": "Notat med {{count}} blokk",
+    "blockCount_other": "Notat med {{count}} blokker",
+    "copyAll": "Kopier alt",
+    "unsupported": "Denne delen av notatet krever en nyere versjon av SkySend.",
+    "unreadable": "Notatet kunne ikke leses som vanlig, så det vises nøyaktig slik det kom.",
+    "showCode": "Vis kode",
+    "hideCode": "Skjul kode"
   },
   "notFound": {
     "title": "Siden ble ikke funnet",
@@ -211,23 +224,18 @@
     "bits": "bits med entropi"
   },
   "password": {
-    "passwords": "Passord",
     "enterPassword": "Skriv inn passord...",
     "addAnother": "Legg til et nytt passord",
     "passwordNumber": "Passord {{number}}",
     "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)"
   },
   "code": {
-    "blocks": "Kodeblokker",
     "titlePlaceholder": "Filnavn (f.eks. docker-compose.yaml, valgfritt)",
     "placeholder": "Lim inn koden din her...",
     "auto": "Automatisk gjenkjenning",
     "language": "Språk",
-    "addBlock": "Legg til kodeblokk",
     "noTitle": "Kodeblokk {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Utvid alle",
-    "collapseAll": "Skjul alle"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritme",
@@ -240,14 +248,15 @@
     "generating": "Genererer...",
     "modeGenerate": "Generer",
     "modePaste": "Lim inn",
-    "pasteLabel": "SSH-nøkkel",
     "pastePlaceholderPublic": "Lim inn den offentlige nøkkelen her (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Lim inn den private nøkkelen her (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Nøkkelstørrelse",
     "publicKey": "Offentlig nøkkel",
     "privateKey": "Privat nøkkel",
     "shareAs": "Del som kryptert notat",
-    "createNote": "Del som notat"
+    "extrasDropped": "Denne nettleseren kan ikke legge til en kommentar eller passfrase i Ed25519-nøkler. Nøkkelen ble generert uten dem.",
+    "ed25519Unsupported": "Denne nettleseren kan ikke generere Ed25519-nøkler. Velg RSA eller bruk en oppdatert versjon av Chrome, Firefox eller Safari.",
+    "generateFailed": "Nøkkelparet kunne ikke genereres."
   },
   "auth": {
     "loginRequired": "Pålogging kreves for å laste opp",
@@ -340,7 +349,9 @@
     "receiveText": "Den ble kryptert på avsenderens enhet og dekrypteres bare her, i nettleseren din.",
     "decryptHint": "Dekryptert på denne enheten. Nøkkelen når aldri serveren.",
     "goneText": "Delinger sletter seg selv når tiden eller grensen går ut. Be avsenderen om en ny lenke.",
-    "goneAction": "Del en fil eller et notat"
+    "goneAction": "Del en fil eller et notat",
+    "fileTabHint": "Opptil {{size}}, alle typer",
+    "noteTabHint": "Tekst, passord, kode og nøkler"
   },
   "how": {
     "eyebrow": "Zero knowledge fra grunnen av",

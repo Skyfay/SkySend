@@ -35,15 +35,14 @@
     "password": "Contraseña",
     "code": "Código",
     "sshkey": "Clave SSH",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Nota"
   },
   "note": {
-    "content": "Contenido",
     "expiry": "Expira después de",
     "maxViews": "Máximo de vistas",
     "burnAfterReading": "1 (destruir tras leer)",
     "unlimited": "Ilimitado",
-    "create": "Crear nota",
     "creating": "Cifrando...",
     "tooLarge": "La nota supera el tamaño máximo de {{size}}",
     "plainText": "Texto plano",
@@ -53,10 +52,17 @@
     "expand": "Ampliar editor",
     "placeholder": {
       "text": "Escriba su texto secreto...",
-      "password": "Escriba la contraseña a compartir...",
-      "code": "Pegue su código aquí...",
       "markdown": "Escriba su markdown aquí..."
-    }
+    },
+    "startHint": "Elija con qué empezar. Después puede añadir más bloques.",
+    "cardText": "Texto libre, con Markdown si lo desea",
+    "cardPassword": "Una o varias contraseñas, con generador",
+    "cardCode": "Resaltado para más de 40 lenguajes",
+    "cardSshKey": "Genere un par de claves o pegue uno",
+    "addBlock": "Añadir un bloque",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "removeBlock": "Quitar bloque"
   },
   "upload": {
     "title": "Subir archivos",
@@ -167,7 +173,14 @@
     "destroyed": "Esta nota ha sido eliminada permanentemente. Guarde el contenido ahora - no podrá acceder de nuevo.",
     "reveal": "Mostrar",
     "hide": "Ocultar",
-    "verifying": "Verificando..."
+    "verifying": "Verificando...",
+    "blockCount_one": "Nota con {{count}} bloque",
+    "blockCount_other": "Nota con {{count}} bloques",
+    "copyAll": "Copiar todo",
+    "unsupported": "Esta parte de la nota requiere una versión más reciente de SkySend.",
+    "unreadable": "Esta nota no se pudo leer como de costumbre, por lo que se muestra tal como llegó.",
+    "showCode": "Mostrar código",
+    "hideCode": "Ocultar código"
   },
   "notFound": {
     "title": "Página no encontrada",
@@ -211,23 +224,18 @@
     "bits": "bits de entropía"
   },
   "password": {
-    "passwords": "Contraseñas",
     "enterPassword": "Ingrese la contraseña...",
     "addAnother": "Agregar otra contraseña",
     "passwordNumber": "Contraseña {{number}}",
     "labelPlaceholder": "Etiqueta para contraseña {{number}} (opcional)"
   },
   "code": {
-    "blocks": "Bloques de código",
     "titlePlaceholder": "Nombre de archivo (ej. docker-compose.yaml, opcional)",
     "placeholder": "Pega tu código aquí...",
     "auto": "Detección automática",
     "language": "Lenguaje",
-    "addBlock": "Añadir bloque de código",
     "noTitle": "Bloque de código {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Expandir todo",
-    "collapseAll": "Colapsar todo"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritmo",
@@ -240,14 +248,15 @@
     "generating": "Generando...",
     "modeGenerate": "Generar",
     "modePaste": "Pegar",
-    "pasteLabel": "Clave SSH",
     "pastePlaceholderPublic": "Pegue su clave pública aquí (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Pegue su clave privada aquí (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Tamaño de clave",
     "publicKey": "Clave pública",
     "privateKey": "Clave privada",
     "shareAs": "Compartir como nota cifrada",
-    "createNote": "Compartir como nota"
+    "extrasDropped": "Este navegador no puede añadir un comentario ni una frase de paso a las claves Ed25519. La clave se generó sin ellos.",
+    "ed25519Unsupported": "Este navegador no puede generar claves Ed25519. Elige RSA o usa una versión actual de Chrome, Firefox o Safari.",
+    "generateFailed": "No se pudo generar el par de claves."
   },
   "auth": {
     "loginRequired": "Se requiere iniciar sesión para subir",
@@ -340,7 +349,9 @@
     "receiveText": "El contenido se cifró en el dispositivo del remitente y solo se descifra aquí, en su navegador.",
     "decryptHint": "Descifrado en este dispositivo. La clave nunca llega al servidor.",
     "goneText": "Los elementos compartidos se eliminan solos cuando se agota su tiempo o su límite. Pida al remitente un enlace nuevo.",
-    "goneAction": "Compartir un archivo o una nota"
+    "goneAction": "Compartir un archivo o una nota",
+    "fileTabHint": "Hasta {{size}}, cualquier tipo",
+    "noteTabHint": "Texto, contraseñas, código y claves"
   },
   "how": {
     "eyebrow": "Zero knowledge por diseño",

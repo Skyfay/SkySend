@@ -11,7 +11,7 @@ import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import type { NoteContentType } from "@skysend/crypto";
+import { storedNoteKinds, type NoteKindKey } from "@/lib/note-editor";
 import { toast } from "sonner";
 
 type Filter = "all" | "files" | "notes-text" | "notes-password" | "notes-code" | "notes-markdown" | "notes-sshkey";
@@ -71,8 +71,8 @@ export function MyUploadsPage() {
 
   // Build combined list sorted by createdAt
   const isNoteFilter = filter.startsWith("notes-");
-  const noteContentFilter: NoteContentType | null =
-    filter.startsWith("notes-") ? (filter.replace("notes-", "") as NoteContentType) : null;
+  const noteContentFilter: NoteKindKey | null =
+    filter.startsWith("notes-") ? (filter.replace("notes-", "") as NoteKindKey) : null;
 
   const items: Array<
     | { type: "upload"; data: (typeof uploads)[number] }
@@ -84,7 +84,7 @@ export function MyUploadsPage() {
   }
   if (filter === "all" || isNoteFilter) {
     for (const n of notes) {
-      if (noteContentFilter && n.contentType !== noteContentFilter) continue;
+      if (noteContentFilter && !storedNoteKinds(n).includes(noteContentFilter)) continue;
       items.push({ type: "note", data: n });
     }
   }
@@ -96,10 +96,10 @@ export function MyUploadsPage() {
 
   const isEmpty = items.length === 0 && !loading;
 
-  // Build content type counts for note sub-filters
+  // How many notes hold each kind. A note made of several kinds counts for each of them.
   const noteTypeCounts: Record<string, number> = {};
   for (const n of notes) {
-    noteTypeCounts[n.contentType] = (noteTypeCounts[n.contentType] ?? 0) + 1;
+    for (const kind of storedNoteKinds(n)) noteTypeCounts[kind] = (noteTypeCounts[kind] ?? 0) + 1;
   }
 
   const noteSubFilters: Filter[] = (

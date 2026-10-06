@@ -159,6 +159,7 @@ export default defineConfig({
             { text: 'Key Derivation', link: '/developer-guide/crypto/key-derivation' },
             { text: 'Streaming Encryption', link: '/developer-guide/crypto/streaming-encryption' },
             { text: 'Metadata Encryption', link: '/developer-guide/crypto/metadata-encryption' },
+            { text: 'Note Format', link: '/developer-guide/crypto/note-format' },
             { text: 'Password Protection', link: '/developer-guide/crypto/password-protection' }
           ]
         },

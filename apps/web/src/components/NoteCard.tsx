@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileText, KeyRound, Code, Loader2, Clock, Eye, Heading, Terminal } from "lucide-react";
+import { FileText, KeyRound, Code, Loader2, Clock, Eye, Heading, Layers, Terminal } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HistoryRow, HistoryStat } from "@/components/HistoryRow";
+import { storedNoteKinds } from "@/lib/note-editor";
 import { formatTimeRemaining } from "@/lib/utils";
 import type { NoteWithStatus } from "@/hooks/useNoteHistory";
 
@@ -35,7 +36,10 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
   const [deleting, setDeleting] = useState(false);
 
   const shareLink = `${window.location.origin}/note/${note.id}#${note.secret}`;
-  const Icon = CONTENT_TYPE_ICONS[note.contentType] ?? FileText;
+  // One kind shows its name, several show the note with its kinds below.
+  const kinds = storedNoteKinds(note);
+  const single = kinds.length === 1 ? kinds[0] : undefined;
+  const Icon = single ? CONTENT_TYPE_ICONS[single] : Layers;
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -59,7 +63,8 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
             <Icon className="h-4 w-4" />
           </span>
         }
-        title={`${t(`tab.${note.contentType}`)} ${t("myUploads.note")}`}
+        title={single ? `${t(`tab.${single}`)} ${t("myUploads.note")}` : t("myUploads.note")}
+        detail={single ? undefined : kinds.map((kind) => t(`tab.${kind}`)).join(", ") || undefined}
         meta={
           note.loading ? (
             <span className="inline-flex items-center gap-1">

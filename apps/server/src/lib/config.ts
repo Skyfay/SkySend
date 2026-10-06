@@ -277,8 +277,10 @@ const configSchema = z.object({
     .enum(["dark", "light", "system"])
     .default("system"),
 
+  // "note" opens the note tab on its block cards. A block type opens it with that block
+  // already added, which also keeps the values from before v3 working.
   DEFAULT_TAB: z
-    .enum(["file", "text", "password", "code", "sshkey"])
+    .enum(["file", "note", "text", "password", "code", "sshkey"])
     .default("file"),
 
   FORCE_FILE_PASSWORD: z

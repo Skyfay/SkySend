@@ -1,6 +1,6 @@
 # Notes API
 
-Encrypted notes (text, passwords, code snippets, Markdown, SSH keys) are stored in the database - not on the filesystem. Each note has a view counter instead of a download counter, and content is returned inline (not streamed).
+Encrypted notes (text, passwords, code snippets, Markdown, SSH keys, or several of them in one note) are stored in the database - not on the filesystem. Each note has a view counter instead of a download counter, and content is returned inline (not streamed).
 
 ## POST /api/note
 
@@ -14,10 +14,10 @@ Create a new encrypted note.
 {
   "encryptedContent": "<base64 encoded ciphertext>",
   "nonce": "<base64 encoded 12-byte IV>",
-  "salt": "<base64url encoded 16-byte salt>",
+  "salt": "<base64url encoded 32-byte salt>",
   "ownerToken": "<base64url encoded owner token>",
   "authToken": "<base64url encoded auth token>",
-  "contentType": "text",
+  "contentType": "blocks",
   "maxViews": 1,
   "expireSec": 3600,
   "hasPassword": false
@@ -28,10 +28,10 @@ Create a new encrypted note.
 | --- | --- | --- |
 | `encryptedContent` | base64 | AES-256-GCM ciphertext of the note content |
 | `nonce` | base64 | 12-byte IV for AES-GCM |
-| `salt` | base64url | 16-byte HKDF salt |
+| `salt` | base64url | 32-byte HKDF salt. 16 bytes are still accepted from older clients. |
 | `ownerToken` | base64url | Ownership token (HKDF-derived) |
 | `authToken` | base64url | Authentication token (HMAC-derived) |
-| `contentType` | string | `"text"`, `"password"`, `"code"`, `"markdown"`, or `"sshkey"` |
+| `contentType` | string | `"blocks"`. The types from before v3 are still accepted, see below. |
 | `maxViews` | integer | Maximum number of views (must be a valid option) |
 | `expireSec` | integer | Expiry time in seconds (must be a valid option) |
 | `hasPassword` | boolean | Whether the note is password-protected |
@@ -40,12 +40,18 @@ Create a new encrypted note.
 
 ### Validation
 
-- `salt` must decode to exactly 16 bytes
+- `salt` must decode to exactly 32 or 16 bytes
 - `nonce` must decode to exactly 12 bytes
 - Decoded `encryptedContent` must not exceed `NOTE_MAX_SIZE` + 256 bytes (GCM overhead)
 - `expireSec` must be one of the configured `NOTE_EXPIRE_OPTIONS_SEC`
 - `maxViews` must be one of the configured `NOTE_VIEW_OPTIONS`
 - If `hasPassword` is true, `passwordSalt` (16 bytes) and `passwordAlgo` are required
+
+### Content types
+
+Since v3 every note is created with `contentType: "blocks"`. Which blocks a note holds, like text, passwords, code or SSH keys, is part of the encrypted content, so the server cannot tell them apart. The content type is the only hint about a note's content the server keeps.
+
+The values from before v3, `"text"`, `"password"`, `"code"`, `"markdown"` and `"sshkey"`, are still accepted so CLI clients from before v3 keep working, and notes created with them return them on `GET`. They will be removed in a later version.
 
 ### Response
 
@@ -88,7 +94,7 @@ Get note info (without the encrypted content).
 ```json
 {
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "contentType": "text",
+  "contentType": "blocks",
   "hasPassword": false,
   "salt": "<base64url>",
   "maxViews": 1,

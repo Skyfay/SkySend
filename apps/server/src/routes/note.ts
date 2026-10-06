@@ -14,13 +14,30 @@ const noteRoute = new Hono();
 
 // ── Validation Schemas ─────────────────────────────────
 
+/**
+ * The content type the server stores and returns for a note. It is only a label for the
+ * client: the server never reads the encrypted content. Since v3 every new note is "blocks",
+ * and which blocks it holds stays inside the ciphertext.
+ */
+const NOTE_CONTENT_TYPES = [
+  "blocks",
+  // LEGACY(notes-v1): the content types from before v3. Still accepted so CLI clients from
+  // before v3 can create notes. Remove once they are no longer supported, see the removal
+  // checklist in the developer docs. Reading stored legacy notes does not depend on this list.
+  "text",
+  "password",
+  "code",
+  "markdown",
+  "sshkey",
+] as const;
+
 const createNoteSchema = z.object({
   encryptedContent: z.string().min(1),
   nonce: z.string().min(1),
   salt: z.string().min(1),
   ownerToken: z.string().min(1),
   authToken: z.string().min(1),
-  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  contentType: z.enum(NOTE_CONTENT_TYPES),
   maxViews: z.number().int().nonnegative(),
   expireSec: z.number().int().positive(),
   hasPassword: z.boolean().default(false),

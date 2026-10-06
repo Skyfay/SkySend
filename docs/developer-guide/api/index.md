@@ -90,23 +90,50 @@ X-RateLimit-Reset: 1704067260000
 
 ### GET /api/config
 
-Returns server limits and options for the client UI.
+Returns server limits and options for the client UI. Each field comes from the [environment variable](/user-guide/configuration/environment-variables) of the same name.
 
 **Response:**
 
 ```json
 {
-  "maxFileSize": 2147483648,
-  "maxFilesPerUpload": 32,
-  "expireOptions": [300, 3600, 86400, 604800],
-  "defaultExpire": 86400,
-  "downloadOptions": [1, 2, 3, 4, 5, 10, 20, 50, 100],
-  "defaultDownload": 1,
+  "enabledServices": ["file", "note"],
+  "fileMaxSize": 2147483648,
+  "fileMaxFilesPerUpload": 32,
+  "fileExpireOptions": [300, 3600, 86400, 604800],
+  "fileDefaultExpire": 86400,
+  "fileDownloadOptions": [1, 2, 3, 4, 5, 10, 20, 50, 100],
+  "fileDefaultDownload": 1,
+  "fileUploadQuotaBytes": 0,
+  "fileUploadQuotaWindow": 86400,
+  "fileUploadConcurrentChunks": 3,
+  "fileUploadSpeedLimit": 0,
+  "fileUploadWs": true,
+  "noteMaxSize": 1048576,
+  "noteExpireOptions": [300, 3600, 86400, 604800],
+  "noteDefaultExpire": 86400,
+  "noteViewOptions": [0, 1, 2, 3, 5, 10, 20, 50, 100],
+  "noteDefaultViews": 0,
+  "noteBlocks": true,
   "customTitle": "SkySend",
   "customColor": null,
-  "customLogo": null
+  "customLogo": null,
+  "customPrivacy": null,
+  "customLegal": null,
+  "customLinkUrl": null,
+  "customLinkName": null,
+  "customReportUrl": null,
+  "defaultTheme": "graphite",
+  "defaultColorScheme": "system",
+  "defaultTab": "file",
+  "forceFilePassword": false,
+  "forceNotePassword": false,
+  "oidcEnabled": false,
+  "oidcProtectFiles": false,
+  "oidcProtectNotes": false
 }
 ```
+
+`noteBlocks` is `true` on servers that accept notes made of blocks, which is every server since v3. A client checks it before it creates such a note and falls back to a legacy content type on an older server, where the field is missing.
 
 ## Health Check
 

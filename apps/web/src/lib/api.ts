@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { NoteContentType } from "@skysend/crypto";
+import type { NOTE_KIND } from "@skysend/note-format";
 
 const configResponseSchema = z.object({
   // Service toggles
@@ -35,7 +35,7 @@ const configResponseSchema = z.object({
   // A server from before v3 sends a color scheme as defaultTheme, catch() keeps the default.
   defaultTheme: z.enum(["aurora", "midnight", "graphite"]).catch("graphite"),
   defaultColorScheme: z.enum(["dark", "light", "system"]).catch("system"),
-  defaultTab: z.enum(["file", "text", "password", "code", "sshkey"]).optional().default("file"),
+  defaultTab: z.enum(["file", "note", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
   // OIDC auth
@@ -273,7 +273,8 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  contentType: NoteContentType;
+  /** Every note this app creates is made of blocks. */
+  contentType: typeof NOTE_KIND;
   maxViews: number;
   expireSec: number;
   hasPassword: boolean;
@@ -308,7 +309,8 @@ export async function createNote(
 
 const noteInfoResponseSchema = z.object({
   id: z.string(),
-  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  // "blocks" since v3. LEGACY(notes-v1): the other values are notes from before v3.
+  contentType: z.enum(["blocks", "text", "password", "code", "markdown", "sshkey"]),
   hasPassword: z.boolean(),
   passwordAlgo: z.enum(["argon2id-v2"]).optional(),
   passwordSalt: z.string().optional(),

@@ -9,7 +9,7 @@ The CLI client (`skysend`) lets you:
 - **Upload** single or multiple files with E2E encryption
 - **Download** and decrypt files from a share URL
 - **Create** encrypted notes (text, password, code, markdown, SSH keys)
-- **View** encrypted notes from the terminal
+- **View** encrypted notes from the terminal, including notes made of several blocks
 - **Delete** uploads and notes using the owner token
 - **Authenticate** with OIDC/SSO when required by the server (`auth login`, `auth logout`, `auth status`)
 - **Self-update** to the latest version from GitHub Releases

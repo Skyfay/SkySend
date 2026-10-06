@@ -103,7 +103,7 @@ export function insertTestNote(
     salt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
     encryptedContent: Buffer.from("encrypted-test-content"),
     nonce: Buffer.from(crypto.getRandomValues(new Uint8Array(12))),
-    contentType: "text",
+    contentType: "blocks",
     hasPassword: false,
     maxViews: 10,
     viewCount: 0,

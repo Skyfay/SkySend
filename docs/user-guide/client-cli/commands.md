@@ -140,7 +140,7 @@ skysend note <text> [options]
 | Option | Default | Description |
 | --- | --- | --- |
 | `-s, --server <url>` | | Server URL (overrides config) |
-| `-t, --type <type>` | `text` | Content type: `text`, `password`, `code`, `markdown`, `sshkey` |
+| `-t, --type <type>` | `text` | Note type: `text`, `password`, `code`, `markdown`, `sshkey` |
 | `-e, --expires <duration>` | | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-v, --views <count>` | | Maximum view count (`0` = unlimited) |
 | `-p, --password [password]` | | Password protect. Prompts interactively if no value is given. |
@@ -168,26 +168,28 @@ skysend note "admin:s3cret" --type password
 skysend note "secret data" --password --expires 24h --views 5
 ```
 
-### Content Types
+### Note Types
+
+The CLI creates a note of one block. Notes that combine several blocks can be created in the web app.
 
 | Type | Description |
 | --- | --- |
 | `text` | Plain text (default) |
-| `password` | Password(s) displayed with masked fields and copy buttons in the web UI |
+| `password` | The whole text as one password, shown masked with a copy button |
 | `code` | Code with syntax highlighting and line numbers in the web UI |
-| `markdown` | Rendered GitHub Flavored Markdown in the web UI |
-| `sshkey` | SSH key pairs with structured display in the web UI |
+| `markdown` | Text rendered as GitHub Flavored Markdown in the web UI |
+| `sshkey` | SSH key material. A public key, a private key and a `Passphrase:` line in the text are shown as separate parts. |
 
-::: tip
-Note content types affect how the note is rendered in the **web UI**. In the terminal, `note:view` always displays the raw content.
+::: tip Older servers
+A server before v3 does not know notes made of blocks. The CLI client detects this and creates the note in the format that server knows, so the note opens in its web UI as before.
 :::
 
 ## note:view
 
-View and decrypt an encrypted note.
+View and decrypt an encrypted note in the interactive TUI.
 
 ```bash
-skysend note:view <url> [options]
+skysend note:view <url>
 ```
 
 ### Arguments
@@ -196,25 +198,16 @@ skysend note:view <url> [options]
 | --- | --- |
 | `<url>` | SkySend note share URL (e.g. `https://instance.com/note/abc123#secret`) |
 
-### Options
-
-| Option | Description |
-| --- | --- |
-| `-p, --password [password]` | Password for protected notes. Prompts interactively if no value is given. |
-| `--json` | Output result as JSON |
-
 ### Examples
 
 ```bash
 # View an encrypted note
 skysend note:view https://instance.com/note/abc123#secret
-
-# View a password-protected note
-skysend note:view https://instance.com/note/abc123#secret --password
-
-# View with JSON output
-skysend note:view https://instance.com/note/abc123#secret --json
 ```
+
+If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords are hidden until revealed with their number key or all at once with `a`, and `s` saves the whole note to a file. The file is created so that only you can read it. Control characters in a note, which could hide text or change the terminal, are shown as `�`.
+
+Notes made of blocks need a CLI client from v3 on. Notes created before v3 open in every version.
 
 ::: warning Burn After Reading
 If the note has a view limit of 1 (burn-after-reading), viewing it will permanently destroy it. There is no way to view it again.

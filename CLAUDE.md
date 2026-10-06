@@ -21,6 +21,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 | API routes, middleware, storage, database, OIDC | [apps/server/CLAUDE.md](apps/server/CLAUDE.md) |
 | React SPA, UI components, hooks, i18n, toasts | [apps/web/CLAUDE.md](apps/web/CLAUDE.md) |
 | Encryption, key derivation, ECE streams | [packages/crypto/CLAUDE.md](packages/crypto/CLAUDE.md) |
+| Note content format, legacy notes | [packages/note-format/CLAUDE.md](packages/note-format/CLAUDE.md) |
 | End-user CLI and the Ink TUI | [apps/client/CLAUDE.md](apps/client/CLAUDE.md) |
 | Admin CLI (runs on the server, direct DB access) | [apps/cli/CLAUDE.md](apps/cli/CLAUDE.md) |
 | Docs site and the changelog | [docs/CLAUDE.md](docs/CLAUDE.md) |
@@ -46,6 +47,7 @@ apps/web/        React 19 SPA. Owns all encryption and decryption in the browser
 apps/client/     End-user CLI + Ink TUI. Talks to the API the same way a browser does.
 apps/cli/        Admin CLI. Runs beside the server, reads the DB directly.
 packages/crypto/ Shared Web Crypto library. Imported by web, client, and server.
+packages/note-format/ What a note holds before encryption. Imported by web and client.
 docs/            VitePress docs site (docs.skysend.app).
 website/         Next.js marketing site (skysend.app).
 workers/         Cloudflare Workers: instance registry and abuse reports.
@@ -133,7 +135,7 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 
 - **Naming**: `kebab-case` for server, CLI, crypto, and website files (`upload-validation.ts`, `report-form.tsx`). `PascalCase` for React components in `apps/web/src/components/` and `apps/client/src/tui/`, `camelCase` for web hooks (`useDownload.ts`).
 - **Imports**: server, client, cli, and crypto are ESM and need the `.js` extension on relative imports (`./lib/config.js`). The web app and website use the `@/` alias with no extension.
-- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts`, which is that package's public API.
+- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts` and `packages/note-format/src/index.ts`, the public APIs of those packages.
 - **Prettier**: double quotes, semicolons, 2-space indent, trailing commas, 100 columns. Run `pnpm format` instead of hand-aligning.
 - **Keep functions short.** If something is used once, inline it - no abstractions for their own sake.
 

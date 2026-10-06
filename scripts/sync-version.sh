@@ -21,6 +21,7 @@ PACKAGE_FILES=(
   "$ROOT_DIR/apps/cli/package.json"
   "$ROOT_DIR/apps/client/package.json"
   "$ROOT_DIR/packages/crypto/package.json"
+  "$ROOT_DIR/packages/note-format/package.json"
   "$ROOT_DIR/docs/package.json"
 )
 

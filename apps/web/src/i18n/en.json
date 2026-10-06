@@ -30,15 +30,14 @@
     "password": "Password",
     "code": "Code",
     "sshkey": "SSH Key",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Note"
   },
   "note": {
-    "content": "Content",
     "expiry": "Expires after",
     "maxViews": "Max views",
     "burnAfterReading": "1 (burn after reading)",
     "unlimited": "Unlimited",
-    "create": "Create note",
     "creating": "Encrypting...",
     "tooLarge": "Note exceeds maximum size of {{size}}",
     "plainText": "Plain Text",
@@ -48,10 +47,17 @@
     "expand": "Expand editor",
     "placeholder": {
       "text": "Enter your secret text...",
-      "password": "Enter the password to share...",
-      "code": "Paste your code here...",
       "markdown": "Write your markdown here..."
-    }
+    },
+    "startHint": "Pick what to start with. You can add more blocks afterwards.",
+    "cardText": "Free text, with Markdown if you like",
+    "cardPassword": "One or more passwords, with a generator",
+    "cardCode": "Highlighting for over 40 languages",
+    "cardSshKey": "Generate a key pair or paste one",
+    "addBlock": "Add a block",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeBlock": "Remove block"
   },
   "upload": {
     "title": "Upload Files",
@@ -162,7 +168,14 @@
     "destroyed": "This note has been permanently deleted. Save the content now - it cannot be accessed again.",
     "reveal": "Reveal",
     "hide": "Hide",
-    "verifying": "Verifying..."
+    "verifying": "Verifying...",
+    "blockCount_one": "Note with {{count}} block",
+    "blockCount_other": "Note with {{count}} blocks",
+    "copyAll": "Copy all",
+    "unsupported": "This part of the note needs a newer version of SkySend.",
+    "unreadable": "This note could not be read as usual, so it is shown exactly as it arrived.",
+    "showCode": "Show code",
+    "hideCode": "Hide code"
   },
   "notFound": {
     "title": "Page not found",
@@ -206,23 +219,18 @@
     "bits": "bits of entropy"
   },
   "password": {
-    "passwords": "Passwords",
     "enterPassword": "Enter password...",
     "addAnother": "Add another password",
     "passwordNumber": "Password {{number}}",
     "labelPlaceholder": "Label for password {{number}} (optional)"
   },
   "code": {
-    "blocks": "Code Blocks",
     "titlePlaceholder": "Filename (e.g. docker-compose.yaml, optional)",
     "placeholder": "Paste your code here...",
     "auto": "Auto Detect",
     "language": "Language",
-    "addBlock": "Add code block",
     "noTitle": "Code Block {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algorithm",
@@ -235,14 +243,15 @@
     "generating": "Generating...",
     "modeGenerate": "Generate",
     "modePaste": "Paste",
-    "pasteLabel": "SSH Key",
     "pastePlaceholderPublic": "Paste your public key here (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Paste your private key here (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Key size",
     "publicKey": "Public Key",
     "privateKey": "Private Key",
     "shareAs": "Share as encrypted note",
-    "createNote": "Share as note"
+    "extrasDropped": "This browser cannot add a comment or passphrase to Ed25519 keys. The key was generated without them.",
+    "ed25519Unsupported": "This browser cannot generate Ed25519 keys. Choose RSA or use a current version of Chrome, Firefox or Safari.",
+    "generateFailed": "The key pair could not be generated."
   },
   "auth": {
     "loginRequired": "Login required to upload",
@@ -335,7 +344,9 @@
     "receiveText": "It was encrypted on the sender's device and is decrypted only here, in your browser.",
     "decryptHint": "Decrypted on this device. The key never reaches the server.",
     "goneText": "Shares delete themselves when their time or limit runs out. Ask the sender for a new link.",
-    "goneAction": "Share a file or note"
+    "goneAction": "Share a file or note",
+    "fileTabHint": "Up to {{size}}, any type",
+    "noteTabHint": "Text, passwords, code and keys"
   },
   "how": {
     "eyebrow": "Zero knowledge by design",

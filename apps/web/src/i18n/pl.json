@@ -35,15 +35,14 @@
     "password": "Hasło",
     "code": "Kod",
     "sshkey": "Klucz SSH",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Notatka"
   },
   "note": {
-    "content": "Treść",
     "expiry": "Wygasa po",
     "maxViews": "Maks. wyświetleń",
     "burnAfterReading": "1 (zniszcz po odczytaniu)",
     "unlimited": "Bez limitu",
-    "create": "Utwórz notatkę",
     "creating": "Szyfrowanie...",
     "tooLarge": "Notatka przekracza maksymalny rozmiar {{size}}",
     "plainText": "Zwykły tekst",
@@ -53,10 +52,17 @@
     "expand": "Rozwiń edytor",
     "placeholder": {
       "text": "Wpisz swój tajny tekst...",
-      "password": "Wpisz hasło do udostępnienia...",
-      "code": "Wklej swój kod tutaj...",
       "markdown": "Napisz swój markdown tutaj..."
-    }
+    },
+    "startHint": "Wybierz, od czego zacząć. Potem możesz dodać kolejne bloki.",
+    "cardText": "Dowolny tekst, opcjonalnie w Markdown",
+    "cardPassword": "Jedno lub więcej haseł, z generatorem",
+    "cardCode": "Podświetlanie dla ponad 40 języków",
+    "cardSshKey": "Wygeneruj parę kluczy lub wklej istniejącą",
+    "addBlock": "Dodaj blok",
+    "moveUp": "Przenieś wyżej",
+    "moveDown": "Przenieś niżej",
+    "removeBlock": "Usuń blok"
   },
   "upload": {
     "title": "Prześlij pliki",
@@ -167,7 +173,14 @@
     "destroyed": "Ta notatka została trwale usunięta. Zapisz treść teraz - nie będzie już dostępna.",
     "reveal": "Pokaż",
     "hide": "Ukryj",
-    "verifying": "Weryfikacja..."
+    "verifying": "Weryfikacja...",
+    "blockCount_one": "Notatka z {{count}} blokiem",
+    "blockCount_other": "Notatka, liczba bloków: {{count}}",
+    "copyAll": "Kopiuj wszystko",
+    "unsupported": "Ta część notatki wymaga nowszej wersji SkySend.",
+    "unreadable": "Nie udało się odczytać tej notatki w zwykły sposób, dlatego jest wyświetlana dokładnie tak, jak dotarła.",
+    "showCode": "Pokaż kod",
+    "hideCode": "Ukryj kod"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
@@ -211,23 +224,18 @@
     "bits": "bitów entropii"
   },
   "password": {
-    "passwords": "Hasła",
     "enterPassword": "Wpisz hasło...",
     "addAnother": "Dodaj kolejne hasło",
     "passwordNumber": "Hasło {{number}}",
     "labelPlaceholder": "Etykieta hasła {{number}} (opcjonalnie)"
   },
   "code": {
-    "blocks": "Bloki kodu",
     "titlePlaceholder": "Nazwa pliku (np. docker-compose.yaml, opcjonalnie)",
     "placeholder": "Wklej tutaj swój kod...",
     "auto": "Automatyczne wykrywanie",
     "language": "Język",
-    "addBlock": "Dodaj blok kodu",
     "noTitle": "Blok kodu {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Rozwiń wszystkie",
-    "collapseAll": "Zwiń wszystkie"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algorytm",
@@ -240,14 +248,15 @@
     "generating": "Generowanie...",
     "modeGenerate": "Generuj",
     "modePaste": "Wklej",
-    "pasteLabel": "Klucz SSH",
     "pastePlaceholderPublic": "Wklej swój klucz publiczny tutaj (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Wklej swój klucz prywatny tutaj (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Rozmiar klucza",
     "publicKey": "Klucz publiczny",
     "privateKey": "Klucz prywatny",
     "shareAs": "Udostępnij jako zaszyfrowaną notatkę",
-    "createNote": "Udostępnij jako notatkę"
+    "extrasDropped": "Ta przeglądarka nie może dodać komentarza ani frazy hasłowej do kluczy Ed25519. Klucz został wygenerowany bez nich.",
+    "ed25519Unsupported": "Ta przeglądarka nie może generować kluczy Ed25519. Wybierz RSA lub użyj aktualnej wersji Chrome, Firefox albo Safari.",
+    "generateFailed": "Nie udało się wygenerować pary kluczy."
   },
   "auth": {
     "loginRequired": "Wymagane logowanie do przesyłania",
@@ -338,7 +347,9 @@
     "receiveText": "Treść została zaszyfrowana na urządzeniu nadawcy i jest odszyfrowywana tylko tutaj, w Twojej przeglądarce.",
     "decryptHint": "Odszyfrowano na tym urządzeniu. Klucz nigdy nie trafia na serwer.",
     "goneText": "Udostępnienia usuwają się same, gdy skończy się czas lub limit. Poproś nadawcę o nowy link.",
-    "goneAction": "Udostępnij plik lub notatkę"
+    "goneAction": "Udostępnij plik lub notatkę",
+    "fileTabHint": "Do {{size}}, dowolny typ",
+    "noteTabHint": "Tekst, hasła, kod i klucze"
   },
   "how": {
     "eyebrow": "Zero knowledge od podstaw",

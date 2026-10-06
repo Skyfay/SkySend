@@ -119,6 +119,8 @@ describe("routes", () => {
       expect(body.customTitle).toBe("SkySend");
       expect(body.noteMaxSize).toBe(1024 ** 2);
       expect(body.noteViewOptions).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
+      // CLI clients check this before they create a note made of blocks.
+      expect(body.noteBlocks).toBe(true);
     });
 
     it("should include oidcProtectFiles=true when OIDC is enabled with file protection", async () => {
@@ -1549,7 +1551,7 @@ describe("routes", () => {
       const res = await app.request("/api/note", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: "text" }),
+        body: JSON.stringify({ contentType: "blocks" }),
       });
       expect(res.status).toBe(403);
       const json = await res.json();

@@ -52,7 +52,7 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `salt` | BLOB NOT NULL | - | HKDF salt (16 bytes) |
 | `encryptedContent` | BLOB NOT NULL | - | AES-256-GCM encrypted note content |
 | `nonce` | BLOB NOT NULL | - | AES-GCM IV (12 bytes) |
-| `contentType` | TEXT NOT NULL | - | `"text"`, `"password"`, `"code"`, `"markdown"`, or `"sshkey"` |
+| `contentType` | TEXT NOT NULL | - | `"blocks"`, or for a note from before v3 `"text"`, `"password"`, `"code"`, `"markdown"` or `"sshkey"` |
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether password protection is active |
 | `passwordSalt` | BLOB | NULL | Password KDF salt (16 bytes) |
 | `passwordAlgo` | TEXT | NULL | `"argon2id-v2"` |

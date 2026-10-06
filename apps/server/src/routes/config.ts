@@ -31,6 +31,9 @@ configRoute.get("/", (c) => {
     noteDefaultExpire: config.NOTE_DEFAULT_EXPIRE_SEC,
     noteViewOptions: config.NOTE_VIEW_OPTIONS,
     noteDefaultViews: config.NOTE_DEFAULT_VIEWS,
+    // Since v3 the server accepts notes made of blocks. CLI clients check this before they
+    // create one, so they can fall back to a legacy note on an older server.
+    noteBlocks: true,
     // General
     customTitle: config.CUSTOM_TITLE,
     customColor: config.CUSTOM_COLOR ?? null,

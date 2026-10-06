@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@skysend/crypto": "workspace:*",
+    "@skysend/note-format": "workspace:*",
     "commander": "^15.0.0",
     "fflate": "^0.8.3",
     "hash-wasm": "^4.12.0",

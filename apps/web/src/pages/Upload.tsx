@@ -10,10 +10,7 @@ import {
   X,
   FileIcon,
   FolderArchive,
-  FileText,
-  KeyRound,
-  Code,
-  Terminal,
+  Layers,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,10 +25,7 @@ import { ShareFooter } from "@/components/ShareFooter";
 import { SignInRequired } from "@/components/SignInRequired";
 import { DebugPanel } from "@/components/DebugPanel";
 import { QuotaBar } from "@/components/QuotaBar";
-import { NoteForm } from "@/components/NoteForm";
-import { CodeForm } from "@/components/CodeForm";
-import { PasswordForm } from "@/components/PasswordForm";
-import { SSHKeyForm } from "@/components/SSHKeyForm";
+import { NoteComposer } from "@/components/NoteComposer";
 import { useUpload } from "@/hooks/useUpload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
@@ -39,15 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
 import { formatBytes } from "@/lib/utils";
 
-type Tab = "file" | "text" | "password" | "code" | "sshkey";
-
-const TAB_ICONS = {
-  file: FileIcon,
-  text: FileText,
-  password: KeyRound,
-  code: Code,
-  sshkey: Terminal,
-} as const;
+type Tab = "file" | "note";
 
 function Hero() {
   const { t } = useTranslation();
@@ -120,10 +106,10 @@ export function UploadPage() {
   // Determine available tabs based on enabled services
   const fileEnabled = config?.enabledServices.includes("file") ?? true;
   const noteEnabled = config?.enabledServices.includes("note") ?? true;
-  const availableTabs: Tab[] = [
-    ...(fileEnabled ? ["file" as const] : []),
-    ...(noteEnabled ? (["text", "password", "code", "sshkey"] as const) : []),
-  ];
+  const availableTabs: Tab[] = [...(fileEnabled ? ["file" as const] : []), ...(noteEnabled ? ["note" as const] : [])];
+  // DEFAULT_TAB names a block type to open the note tab with that block already added.
+  const defaultTab = config?.defaultTab ?? "file";
+  const noteStart = defaultTab === "file" || defaultTab === "note" ? null : defaultTab;
 
   useEffect(() => {
     if (!quotaEnabled) return;
@@ -144,7 +130,7 @@ export function UploadPage() {
     setExpireSec(config.fileDefaultExpire);
     setMaxDownloads(config.fileDefaultDownload);
     // Set initial tab: use server default if available, else first available tab
-    const preferredTab = config.defaultTab;
+    const preferredTab: Tab = defaultTab === "file" ? "file" : "note";
     const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;
     setActiveTab(targetTab);
     // Apply force-password for file uploads
@@ -236,16 +222,23 @@ export function UploadPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
         {availableTabs.length > 1 && (
           // A finished note shows its link in place of the form. The tabs hide with it.
-          <TabsList aria-label={t("share.what")} className="group-has-[[data-share-done]]/composer:hidden">
-            {availableTabs.map((tab) => {
-              const Icon = TAB_ICONS[tab];
-              return (
-                <TabsTrigger key={tab} value={tab} aria-label={t(`tab.${tab}`)}>
-                  <Icon />
-                  <span className="hidden sm:inline">{t(`tab.${tab}`)}</span>
-                </TabsTrigger>
-              );
-            })}
+          <TabsList variant="cards" aria-label={t("share.what")} className="group-has-[[data-share-done]]/composer:hidden">
+            <TabsTrigger value="file">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <FileIcon />
+                {t("tab.file")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {t("share.fileTabHint", { size: formatBytes(config.fileMaxSize) })}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="note">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Layers />
+                {t("tab.note")}
+              </span>
+              <span className="text-xs text-muted-foreground">{t("share.noteTabHint")}</span>
+            </TabsTrigger>
           </TabsList>
         )}
 
@@ -306,21 +299,9 @@ export function UploadPage() {
           )}
         </TabsContent>
 
-        {(["text", "password", "code", "sshkey"] as const).map((tab) => (
-          <TabsContent key={tab} value={tab} className="px-1 pb-1 pt-3 sm:px-2">
-            {noteSignIn ? (
-              <SignInRequired />
-            ) : tab === "text" ? (
-              <NoteForm contentType="text" forcePassword={config.forceNotePassword} />
-            ) : tab === "password" ? (
-              <PasswordForm forcePassword={config.forceNotePassword} />
-            ) : tab === "code" ? (
-              <CodeForm forcePassword={config.forceNotePassword} />
-            ) : (
-              <SSHKeyForm forcePassword={config.forceNotePassword} />
-            )}
-          </TabsContent>
-        ))}
+        <TabsContent value="note" className="px-1 pb-1 pt-3 sm:px-2">
+          {noteSignIn ? <SignInRequired /> : <NoteComposer config={config} startWith={noteStart} />}
+        </TabsContent>
       </Tabs>
     );
   }

@@ -11,7 +11,7 @@ SkySend lets you share files and encrypted notes securely. Files are encrypted i
 - **No dependencies** - Single Docker container, SQLite database
 - **No trust required** - Server is cryptographically blind to your data
 
-SkySend supports sharing encrypted notes in five content types: plain text, Markdown, passwords, code snippets, and SSH keys. All notes use the same end-to-end encryption as file uploads.
+SkySend also shares encrypted notes. A note is made of blocks, so plain text, Markdown, passwords, code snippets and SSH keys can be combined in one note. All notes use the same end-to-end encryption as file uploads.
 
 ## How It Works
 

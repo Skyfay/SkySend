@@ -56,12 +56,14 @@
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-card), #ffffff 3%), var(--color-card));
 }
 
+/* The gradient uses the action color, the one its text color is chosen for. A light top
+   of 8% keeps white text above 4.5:1 across the middle of the button. */
 [data-theme="graphite"] [data-slot="button"][data-variant="default"] {
-  background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-primary), #ffffff 20%), var(--color-primary));
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-action), #ffffff 8%), var(--color-action));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
     0 1px 2px rgba(0, 0, 0, 0.4),
-    0 10px 22px -10px var(--color-primary);
+    0 10px 22px -10px var(--color-action);
 }
 
 [data-theme="graphite"] [data-slot="button"][data-variant="default"]:hover {

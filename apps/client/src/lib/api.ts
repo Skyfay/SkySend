@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { NoteContentType } from "@skysend/crypto";
+import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
 import { ApiError } from "./errors.js";
 
 // ── Response Schemas ───────────────────────────────────
@@ -22,6 +22,8 @@ const configResponseSchema = z.object({
   noteDefaultExpire: z.number(),
   noteViewOptions: z.array(z.number()),
   noteDefaultViews: z.number(),
+  // Since v3. Missing on an older server, which only takes the legacy content types.
+  noteBlocks: z.boolean().optional().default(false),
   customTitle: z.string(),
   customColor: z.string().nullable(),
   customLogo: z.string().nullable(),
@@ -59,7 +61,8 @@ export type UploadInfo = z.infer<typeof infoResponseSchema>;
 
 const noteInfoResponseSchema = z.object({
   id: z.string(),
-  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  // "blocks" since v3. LEGACY(notes-v1): the other values are notes from before v3.
+  contentType: z.enum(["blocks", "text", "password", "code", "markdown", "sshkey"]),
   hasPassword: z.boolean(),
   passwordAlgo: z.enum(["argon2id-v2"]).optional(),
   passwordSalt: z.string().optional(),
@@ -300,7 +303,8 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  contentType: NoteContentType;
+  /** "blocks". LEGACY(notes-v1): or a legacy type for a server that does not report noteBlocks. */
+  contentType: typeof NOTE_KIND | LegacyNoteKind;
   maxViews: number;
   expireSec: number;
   hasPassword: boolean;

@@ -392,6 +392,27 @@ describe("config", () => {
     });
   });
 
+  describe("DEFAULT_TAB", () => {
+    it("should default to the file tab", async () => {
+      const config = await loadFreshConfig();
+      expect(config.DEFAULT_TAB).toBe("file");
+    });
+
+    it("should accept the note tab and each block type, including the values from before v3", async () => {
+      for (const tab of ["note", "text", "password", "code", "sshkey"]) {
+        vi.resetModules();
+        process.env.DEFAULT_TAB = tab;
+        const config = await loadFreshConfig();
+        expect(config.DEFAULT_TAB).toBe(tab);
+      }
+    });
+
+    it("should reject a tab that does not exist", async () => {
+      process.env.DEFAULT_TAB = "markdown";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+  });
+
   describe("CUSTOM_COLOR", () => {
     it("should keep the value unchanged when # prefix is already present", async () => {
       process.env.CUSTOM_COLOR = "#46c89d";
