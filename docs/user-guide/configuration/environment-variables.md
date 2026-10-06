@@ -132,6 +132,32 @@ environment:
 The `#` prefix is optional for `CUSTOM_COLOR`. Both `ff6b35` and `#ff6b35` are valid. Omitting the `#` avoids quoting issues in `.env` files.
 :::
 
+### Themes and accent color
+
+`DEFAULT_THEME` picks one of three looks for the whole web app. Each one has a light and a dark color scheme.
+
+| Theme | Look |
+| :--- | :--- |
+| `aurora` | The default. Frosted glass cards over a soft light that is mixed from the accent color. |
+| `midnight` | Plain black or white surfaces, a beam of the accent from the top, and a glowing outline around the main card. |
+| `graphite` | Neutral gray surfaces lit from above and buttons with a light top edge, close to a native desktop app. |
+
+The theme is the same for every visitor. The color scheme is not: `DEFAULT_COLOR_SCHEME` only sets it for visitors who have not picked one. Anyone can switch between light, dark and system in the header, and that choice is stored in their browser.
+
+`CUSTOM_COLOR` replaces the SkySend green in every theme: buttons, the active tab, selected options, links, the share link's key and the glow behind the main card. Any color works. Text on the accent turns white or black on its own, and where the accent is used as text it is darkened or lightened until it stays readable in both color schemes.
+
+```yaml
+# docker-compose.yml
+environment:
+  DEFAULT_THEME: midnight
+  DEFAULT_COLOR_SCHEME: dark
+  CUSTOM_COLOR: 6366f1
+```
+
+::: warning Upgrading from v2
+Before v3, `DEFAULT_THEME` held the color scheme. An instance that still sets it to `dark`, `light` or `system` refuses to start and prints the line to use instead. Move the value to `DEFAULT_COLOR_SCHEME` and either remove `DEFAULT_THEME` or set it to a theme.
+:::
+
 ### Custom logo
 
 Copy the image into the branding directory of your data volume, then reference it by path:
