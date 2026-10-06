@@ -23,7 +23,7 @@
 
 - **web**: The interface uses the Geist font, served by the instance itself without a request to a font service.
 - **web**: A redesigned interface with a floating navigation bar, a new share form and new pages for receiving files and notes.
-- **web**: Expiry times are picked with one click, and a sentence next to the share button says when the share will be deleted.
+- **web**: Expiry times are picked with one click, or from a dropdown when there are too many for one line. A sentence next to the share button says when the share will be deleted.
 - **web**: Expired, used up and unknown links show one page with an explanation and a way back to sharing.
 - **web**: My Uploads keeps the copy button at hand and moves opening, renaming, the QR code and deleting into a menu.
 - **web**: Icon buttons show tooltips and have labels for screen readers, and the code blocks of a note open and close with the keyboard.

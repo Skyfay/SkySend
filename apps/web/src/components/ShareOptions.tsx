@@ -1,10 +1,11 @@
-import { useId, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Stepper } from "@/components/ui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { formatDuration } from "@/lib/utils";
 
@@ -49,9 +50,84 @@ function Row({ label, labelId, children }: { label: ReactNode; labelId: string; 
   );
 }
 
+interface ExpiryPickerProps {
+  options: number[];
+  value: number;
+  onChange: (value: number) => void;
+  labelId: string;
+  disabled: boolean;
+}
+
 /**
- * Expiry, download or view limit and password for a share. Expiry options are chips
- * because there are few of them, limits use a stepper because there can be nine.
+ * The expiry times as chips while they fit on one line, as a dropdown once they would wrap.
+ * An invisible copy of the chips measures that line, so the switch follows the width of the
+ * row, on a phone as on a wide screen.
+ */
+function ExpiryPicker({ options, value, onChange, labelId, disabled }: ExpiryPickerProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [fits, setFits] = useState(true);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const measure = measureRef.current;
+    if (!row || !measure) return;
+    const check = () => setFits(measure.scrollWidth <= row.clientWidth);
+    check();
+    // The copy changes width when the web font arrives, the row when the window resizes.
+    const observer = new ResizeObserver(check);
+    observer.observe(row);
+    observer.observe(measure);
+    return () => observer.disconnect();
+  }, [options]);
+
+  return (
+    <div ref={rowRef} className="relative min-w-0 sm:flex-1">
+      <div ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 w-max">
+        <ToggleGroup type="single" className="flex-nowrap">
+          {options.map((sec) => (
+            <ToggleGroupItem key={sec} value={String(sec)}>
+              {formatDuration(sec)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+      {fits ? (
+        <ToggleGroup
+          type="single"
+          value={String(value)}
+          // Radix lets a single toggle be switched off. An expiry is always required.
+          onValueChange={(v) => v && onChange(parseInt(v, 10))}
+          aria-labelledby={labelId}
+          disabled={disabled}
+        >
+          {options.map((sec) => (
+            <ToggleGroupItem key={sec} value={String(sec)}>
+              {formatDuration(sec)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      ) : (
+        <Select value={String(value)} onValueChange={(v) => onChange(parseInt(v, 10))} disabled={disabled}>
+          <SelectTrigger className="w-44" aria-labelledby={labelId}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((sec) => (
+              <SelectItem key={sec} value={String(sec)}>
+                {formatDuration(sec)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Expiry, download or view limit and password for a share. Expiry times are chips, or a
+ * dropdown when an operator lists too many for one line. Limits use a stepper.
  */
 export function ShareOptions({
   kind,
@@ -75,20 +151,13 @@ export function ShareOptions({
   return (
     <div className="space-y-4">
       <Row label={t("share.expires")} labelId={`${id}-expiry`}>
-        <ToggleGroup
-          type="single"
-          value={String(expireSec)}
-          // Radix lets a single toggle be switched off. An expiry is always required.
-          onValueChange={(v) => v && onExpireChange(parseInt(v, 10))}
-          aria-labelledby={`${id}-expiry`}
+        <ExpiryPicker
+          options={expireOptions}
+          value={expireSec}
+          onChange={onExpireChange}
+          labelId={`${id}-expiry`}
           disabled={disabled}
-        >
-          {expireOptions.map((sec) => (
-            <ToggleGroupItem key={sec} value={String(sec)}>
-              {formatDuration(sec)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        />
       </Row>
 
       <Row label={t(kind === "file" ? "upload.downloads" : "note.maxViews")} labelId={`${id}-limit`}>
