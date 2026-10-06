@@ -5,11 +5,18 @@ interface ConfigOptions {
   json?: boolean;
 }
 
+/** Settings that are credentials. JSON output often lands in tickets and logs, so they never show. */
+const SECRET_KEYS = ["S3_ACCESS_KEY", "S3_SECRET_KEY", "OIDC_CLIENT_SECRET", "OIDC_SESSION_SECRET"];
+
 export async function showConfig(ctx: CliContext, options: ConfigOptions): Promise<void> {
   const config = ctx.config;
 
   if (options.json) {
-    console.log(JSON.stringify(config, null, 2));
+    const masked: Record<string, unknown> = { ...config };
+    for (const key of SECRET_KEYS) {
+      if (masked[key]) masked[key] = "********";
+    }
+    console.log(JSON.stringify(masked, null, 2));
     return;
   }
 

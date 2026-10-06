@@ -82,7 +82,7 @@ File requests are on by default. Leave `request` out of [`ENABLED_SERVICES`](/us
 - [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. The count lives in memory and resets on a restart.
 - An abuse report for a file request takes its upload link. The report form refuses inbox links, since their key would open every file sent to the request.
 - A wrong inbox password counts toward the same lockout as a wrong file password, [`PASSWORD_MAX_ATTEMPTS`](/user-guide/configuration/environment-variables#password-lockout) per IP.
-- Uploads into a request use chunked HTTP, never the WebSocket transport.
+- Uploads into a request take the same transports as normal uploads: WebSocket when [`FILE_UPLOAD_WS`](/user-guide/configuration/environment-variables#file) is on, chunked HTTP otherwise and whenever the WebSocket cannot connect.
 - The [admin CLI](/user-guide/admin-cli/commands) lists, counts and deletes requests like uploads and notes.
 
 ::: info Things to keep in mind

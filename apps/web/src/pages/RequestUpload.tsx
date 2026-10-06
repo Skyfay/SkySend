@@ -215,7 +215,7 @@ export function RequestUploadPage() {
         </header>
 
         {sender.title && (
-          <figure className="rounded-2xl border border-border bg-card px-4 py-3 shadow-chip">
+          <figure className="overflow-hidden rounded-2xl border border-border bg-card px-4 py-3 shadow-chip">
             <figcaption className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MessageSquareQuote className="h-3.5 w-3.5" />
               {t("requestUpload.titleFrom")}

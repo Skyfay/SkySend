@@ -39,9 +39,12 @@ The upload token and the title key take the public key as well, so an upload lin
 ## The Vault
 
 ```
-vault = AES-256-GCM(vaultKey, nonce 12 B, aad "skysend-inbox-privkey-v1",
+aad   = "skysend-inbox-privkey-v1" || SHA-256(titleNonce || titleCiphertext)
+vault = AES-256-GCM(vaultKey, nonce 12 B, aad,
                     0x01 || publicKey 65 B || linkSecret 32 B || privateScalar 32 B)
 ```
+
+The hash of the title is part of the AAD only when the request has a title. Without one, the AAD is the label alone. A server that swaps, adds or drops the title therefore opens no vault, and the inbox shows an error instead of a title the requester never wrote. Senders do not see the vault, so the server can still hide the title from them, but it cannot forge one without the link.
 
 It is always 146 bytes. Opening it with the inbox link gives back the private key and everything the upload link holds, so the inbox can show the upload link again. The private key is the one key in the package that is generated extractable, because its scalar has to go into the vault once. After that it is imported for `deriveBits` only.
 
@@ -83,6 +86,12 @@ With a password the inbox link carries the secret after [password protection](/d
 - A server that knew it could put uploads of its own into the inbox, because base-mode HPKE does not authenticate senders.
 
 So the public key only ever travels in the fragment of the upload link and inside the vault.
+
+## What the Server Can Still Do
+
+- **Withhold uploads.** It can drop an upload, or list fewer than arrived. No client can tell.
+- **Pick the upload ID.** The sender wraps to the ID the server returns, after checking it is a UUID. The binding stops the server from moving a finished wrap, not from refusing to store one.
+- **Read a rewritten link.** A mail gateway that turns `#` into `%23` sends the fragment to the server as part of the path. For an inbox link, that is the key to the vault. See the [threat model](/user-guide/security/threat-model).
 
 ## Versions
 

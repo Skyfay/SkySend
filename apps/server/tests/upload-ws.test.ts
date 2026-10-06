@@ -1,9 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
-import type { WSContext, WSEvents, WSMessageReceive } from "hono/ws";
-import type { UpgradeWebSocket } from "hono/ws";
 import { createTestDb, createTestStorage } from "./helpers.js";
+import { createFakeWs, createMockUpgrade, msgEvent } from "./ws-helpers.js";
 import { uploads } from "../src/db/schema.js";
 import type { FileStorage } from "../src/storage/filesystem.js";
 
@@ -57,93 +56,6 @@ const DEFAULT_CONFIG = {
   S3_PART_SIZE: 25 * 1024 * 1024,
   S3_CONCURRENCY: 4,
 };
-
-/**
- * Create a fake WSContext pair (ws + captured messages) compatible
- * enough with the route's code path.
- */
-function createFakeWs() {
-  const sent: Array<string | Uint8Array> = [];
-  let closeInfo: { code?: number; reason?: string } | null = null;
-
-  const ws = {
-    send: (data: string | ArrayBuffer | Uint8Array) => {
-      if (typeof data === "string") {
-        sent.push(data);
-      } else if (data instanceof ArrayBuffer) {
-        sent.push(new Uint8Array(data));
-      } else {
-        sent.push(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
-      }
-    },
-    close: (code?: number, reason?: string) => {
-      if (closeInfo) return;
-      closeInfo = { code, reason };
-    },
-    readyState: 1,
-    binaryType: "arraybuffer" as BinaryType,
-    url: null,
-    protocol: null,
-    raw: undefined,
-  } as unknown as WSContext;
-
-  return {
-    ws,
-    sent,
-    get closed() { return closeInfo; },
-    lastJson(): Record<string, unknown> | null {
-      for (let i = sent.length - 1; i >= 0; i--) {
-        const item = sent[i];
-        if (typeof item === "string") {
-          try { return JSON.parse(item); } catch { /* keep looking */ }
-        }
-      }
-      return null;
-    },
-    allJson(): Array<Record<string, unknown>> {
-      const out: Array<Record<string, unknown>> = [];
-      for (const item of sent) {
-        if (typeof item === "string") {
-          try { out.push(JSON.parse(item)); } catch { /* skip */ }
-        }
-      }
-      return out;
-    },
-  };
-}
-
-/**
- * Build a message event compatible with the Hono WS helper.
- */
-function msgEvent(data: WSMessageReceive): MessageEvent<WSMessageReceive> {
-  return { data } as unknown as MessageEvent<WSMessageReceive>;
-}
-
-/**
- * Install a mock upgradeWebSocket that captures the event handlers and
- * returns a no-op middleware.  The returned handlers are invoked manually
- * by the tests to exercise the protocol logic.
- */
-function createMockUpgrade(): {
-  upgrade: UpgradeWebSocket;
-  getEvents: () => WSEvents;
-} {
-  let events: WSEvents | null = null;
-  const upgrade = ((createEvents: (c: unknown) => WSEvents | Promise<WSEvents>) => {
-    return async (c: unknown, next: () => Promise<void>) => {
-      const res = await createEvents(c);
-      events = res;
-      await next();
-    };
-  }) as unknown as UpgradeWebSocket;
-  return {
-    upgrade,
-    getEvents: () => {
-      if (!events) throw new Error("events not installed yet");
-      return events;
-    },
-  };
-}
 
 /** Build a valid upload-init payload. */
 function buildHeaders(overrides: Record<string, unknown> = {}) {
@@ -245,6 +157,49 @@ describe("upload-ws route", () => {
     // File content matches
     const written = await readFile(storageCtx.tempDir + "/" + uploadId + ".bin");
     expect(new Uint8Array(written)).toEqual(payload);
+  });
+
+  it("answers a frame that is JSON but not an object instead of crashing", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    await events.onMessage!(msgEvent("null"), fake.ws);
+    expect(fake.lastJson()).toMatchObject({
+      type: "error",
+      message: "First message must be of type 'init'",
+    });
+  });
+
+  it("leaves no file behind when the socket closes while the init is checked", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    const opening = events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders() })),
+      fake.ws,
+    );
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+    await opening;
+    const { readdirSync } = await import("node:fs");
+    expect(readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"))).toHaveLength(0);
+  });
+
+  it("stores nothing when the socket closes during finalize", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "64" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(64).buffer), fake.ws);
+    // The close lands while finalize writes the last bytes to storage.
+    const append = storage.appendChunk.bind(storage);
+    vi.spyOn(storage, "appendChunk").mockImplementationOnce(async (id, stream) => {
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      return append(id, stream);
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+    expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+    const { readdirSync } = await import("node:fs");
+    expect(readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"))).toHaveLength(0);
   });
 
   it("rejects invalid init payload", async () => {

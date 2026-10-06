@@ -189,7 +189,7 @@ Notes created before v3 have a single content type instead of blocks (`text`, `m
 
 ## File Request Flow
 
-A file request reverses the direction of an upload. The requester's browser makes a key pair, keeps the private key sealed in a vault on the server and puts the public key into the upload link. A sender uploads with the [HTTP chunked transport](#http-chunked-transport-fallback) into `/api/request/:id/upload/*` and, at finalize, sends the file secret sealed to that public key. The requester opens the inbox with the inbox link, unseals each file secret and downloads through the same [download tiers](/developer-guide/download-modes) as a normal download.
+A file request reverses the direction of an upload. The requester's browser makes a key pair, keeps the private key sealed in a vault on the server and puts the public key into the upload link. A sender uploads with the same transports as a normal upload, the [WebSocket](#websocket-transport-primary) first and the [HTTP chunked transport](#http-chunked-transport-fallback) as the fallback, into `/api/request/:id/upload/*`. At finalize the sender sends the file secret sealed to that public key. The requester opens the inbox with the inbox link, unseals each file secret and downloads through the same [download tiers](/developer-guide/download-modes) as a normal download.
 
 ```
 Requester                     Server                         Sender

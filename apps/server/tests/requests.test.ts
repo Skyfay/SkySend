@@ -1,7 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Hono, type MiddlewareHandler } from "hono";
+import type { UpgradeWebSocket, WSEvents } from "hono/ws";
 import { eq } from "drizzle-orm";
 import {
   createFileRequest,
@@ -15,6 +16,7 @@ import {
   type NewFileRequest,
 } from "@skysend/crypto";
 import { createTestDb, createTestStorage, fakeBase64urlToken } from "./helpers.js";
+import { createFakeWs, createMockUpgrade, msgEvent } from "./ws-helpers.js";
 import { fileRequests, requestUploads } from "../src/db/schema.js";
 import type { FileStorage } from "../src/storage/filesystem.js";
 
@@ -38,6 +40,7 @@ import { existsRoute } from "../src/routes/exists.js";
 import { createRequestLimiter, type RequestLimiter } from "../src/lib/request-limit.js";
 import { createPasswordLockout, type PasswordLockout } from "../src/lib/password-lockout.js";
 import { runCleanup } from "../src/lib/cleanup.js";
+import { hashToken } from "../src/lib/request-validation.js";
 
 const DEFAULT_CONFIG = {
   FILE_MAX_SIZE: 1024 * 1024,
@@ -54,6 +57,9 @@ const DEFAULT_CONFIG = {
   FORCE_FILE_PASSWORD: false,
   TRUST_PROXY: false,
   ENABLED_SERVICES: ["file", "note", "request"],
+  BASE_URL: "http://localhost:3000",
+  CORS_ORIGINS: [],
+  FILE_UPLOAD_WS_MAX_BUFFER: 16 * 1024 * 1024,
 } as unknown as Config;
 
 const json = (body: unknown) => ({
@@ -90,7 +96,14 @@ describe("file requests", () => {
   let recorded: Array<[string, number]>;
 
   /** The two request routes the way src/index.ts mounts them, plus the routes of normal uploads. */
-  function createApp(options: { createGuard?: MiddlewareHandler; quota?: boolean } = {}) {
+  function createApp(
+    options: {
+      createGuard?: MiddlewareHandler;
+      quota?: boolean;
+      upgradeWebSocket?: UpgradeWebSocket;
+      quotaRefusal?: string;
+    } = {},
+  ) {
     const app = new Hono();
     app.route(
       "/api/request",
@@ -106,8 +119,13 @@ describe("file requests", () => {
                 await next();
               },
               recordUsage: (ip, bytes) => recorded.push([ip, bytes]),
+              check: () =>
+                options.quotaRefusal
+                  ? { ok: false as const, reason: options.quotaRefusal }
+                  : { ok: true as const, hashedIp: "hashed-ip" },
             }
           : undefined,
+        upgradeWebSocket: options.upgradeWebSocket,
       }),
     );
     app.route("/api/inbox", createInboxRoute({ storage, lockout }));
@@ -210,10 +228,16 @@ describe("file requests", () => {
       expect(row.maxUploads).toBe(3);
       expect(row.maxSize).toBe(4096);
       expect(row.reservedUploads).toBe(0);
-      expect(row.uploadToken).toBe(toBase64url(request.server.uploadToken));
+      // The database keeps the hashes of the tokens, never the tokens themselves.
+      expect(row.uploadToken).toBe(hashToken(request.server.uploadToken));
       const stored = JSON.stringify(row);
-      for (const secret of Object.values(request.local)) {
-        expect(stored).not.toContain(toBase64url(secret));
+      for (const value of [
+        ...Object.values(request.local),
+        request.server.uploadToken,
+        request.server.inboxAuthToken,
+        request.server.inboxOwnerToken,
+      ]) {
+        expect(stored).not.toContain(toBase64url(value));
       }
     });
 
@@ -447,6 +471,7 @@ describe("file requests", () => {
         fromBase64url(inbox.vault),
         fromBase64url(inbox.vaultNonce),
         inboxKey,
+        created.request.server.title,
       );
       const unwrapped = await unwrapFileSecret(key, created.id, uid, {
         enc: fromBase64url(entry.wrapEnc as string),
@@ -686,10 +711,12 @@ describe("file requests", () => {
           chunkDir: join(storageCtx.tempDir, "request-chunks"),
           quota: {
             middleware: async (c, next) => {
-              if (quotaUsedUp) return c.json({ error: "Upload quota exceeded. Try again later." }, 429);
+              if (quotaUsedUp)
+                return c.json({ error: "Upload quota exceeded. Try again later." }, 429);
               await next();
             },
             recordUsage: () => {},
+            check: () => ({ ok: true, hashedIp: null }),
           },
         }),
       );
@@ -697,7 +724,9 @@ describe("file requests", () => {
       const opened = await init(quotaApp, id, headers.upload, 10);
       const { id: uid } = (await opened.json()) as { id: string };
       quotaUsedUp = true;
-      expect((await quotaApp.request(`/api/request/${id}/upload/${uid}`, { method: "DELETE" })).status).toBe(200);
+      expect(
+        (await quotaApp.request(`/api/request/${id}/upload/${uid}`, { method: "DELETE" })).status,
+      ).toBe(200);
       expect(requestRow(id).reservedUploads).toBe(0);
     });
 
@@ -784,6 +813,18 @@ describe("file requests", () => {
         (await app.request(`/api/inbox/${id}`, { method: "DELETE", headers: headers.owner }))
           .status,
       ).toBe(429);
+    });
+
+    it("does not count a request without a well-formed token, which a foreign page can send", async () => {
+      const app = createApp();
+      const { id, headers } = await createRequest(app);
+      for (let i = 0; i < 5; i++) {
+        expect((await app.request(`/api/inbox/${id}`)).status).toBe(404);
+        expect(
+          (await app.request(`/api/inbox/${id}`, { headers: { "X-Inbox-Token": "junk" } })).status,
+        ).toBe(404);
+      }
+      expect((await app.request(`/api/inbox/${id}`, { headers: headers.inbox })).status).toBe(200);
     });
 
     it("locks a request ID that does not exist the same way", async () => {
@@ -947,6 +988,312 @@ describe("file requests", () => {
         .map((r) => r.id)
         .sort();
       expect(left).toEqual([kept.id, recent.id].sort());
+    });
+  });
+
+  // ── WebSocket uploads into a request ───────────────
+
+  describe("websocket uploads", () => {
+    /** Opens the WebSocket of a request the way a browser would and returns its handlers. */
+    async function connect(app: Hono, id: string, mock: ReturnType<typeof createMockUpgrade>) {
+      await app.request(`/api/request/${id}/upload/ws`);
+      return mock.getEvents() as WSEvents;
+    }
+
+    function wsInit(token: string, size: number) {
+      return JSON.stringify({
+        type: "init",
+        request: {
+          uploadToken: token,
+          salt: toBase64url(generateSalt()),
+          contentLength: size,
+          fileCount: 1,
+        },
+      });
+    }
+
+    async function wsFinalize(
+      publicKey: Uint8Array,
+      requestId: string,
+      uploadId: string,
+      secret: Uint8Array,
+    ) {
+      return JSON.stringify({
+        type: "finalize",
+        ...(await finalizeBody(publicKey, requestId, uploadId, secret)),
+      });
+    }
+
+    it("uploads into a request the same way as a normal upload and the requester unwraps it", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      const data = crypto.getRandomValues(new Uint8Array(64));
+      const secret = generateSecret();
+
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 64)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      expect(ready.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(requestRow(created.id).reservedUploads).toBe(1);
+
+      await events.onMessage!(msgEvent(data.buffer), fake.ws);
+      await events.onMessage!(
+        msgEvent(await wsFinalize(created.request.local.publicKey, created.id, ready.id, secret)),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({ type: "done", id: ready.id });
+      expect(fake.closed).toMatchObject({ code: 1000 });
+      expect(requestRow(created.id)).toMatchObject({
+        reservedUploads: 1,
+        finishedUploads: 1,
+        finishedBytes: 64,
+      });
+      expect(recorded).toEqual([["hashed-ip", 64]]);
+
+      const row = dbCtx.db
+        .select()
+        .from(requestUploads)
+        .where(eq(requestUploads.id, ready.id))
+        .get()!;
+      const { inboxKey } = await deriveInboxKeys(created.request.local.inboxSecret);
+      const key = await openRequestKey(
+        created.request.server.vault,
+        created.request.server.vaultNonce,
+        inboxKey,
+        created.request.server.title,
+      );
+      const unwrapped = await unwrapFileSecret(key, created.id, ready.id, {
+        enc: new Uint8Array(row.wrapEnc),
+        ciphertext: new Uint8Array(row.wrapCiphertext),
+      });
+      expect(unwrapped).toEqual(secret);
+
+      const file = await app.request(`/api/inbox/${created.id}/file/${ready.id}`, {
+        headers: created.headers.inbox,
+      });
+      expect(new Uint8Array(await file.arrayBuffer())).toEqual(data);
+    });
+
+    it("refuses a wrong upload token like the HTTP init and reserves nothing", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(msgEvent(wsInit(fakeBase64urlToken(), 10)), fake.ws);
+      expect(fake.lastJson()).toMatchObject({ type: "error", status: 404 });
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+    });
+
+    it("names a full request with the status of the HTTP init", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app, { maxUploads: 1 });
+      expect((await init(app, created.id, created.headers.upload, 10)).status).toBe(201);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({
+        type: "error",
+        message: "File request is full",
+        status: 409,
+      });
+    });
+
+    it("checks the sender's quota before it reserves", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({
+        upgradeWebSocket: mock.upgrade,
+        quota: true,
+        quotaRefusal: "Upload quota exceeded. Try again later.",
+      });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({ type: "error", status: 429 });
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+    });
+
+    it("gives the slot back when the socket closes before finalize", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      expect(requestRow(created.id).reservedUploads).toBe(1);
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+    });
+
+    it("refuses a broken finalize, drops the blob and gives the slot back", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      await events.onMessage!(
+        msgEvent(JSON.stringify({ type: "finalize", wrapEnc: "x" })),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({ type: "error", status: 400 });
+      expect(await storage.exists(ready.id)).toBe(false);
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+      expect(dbCtx.db.select().from(requestUploads).all()).toHaveLength(0);
+    });
+
+    it("refuses a finalize after the request was deleted and drops the blob", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      await app.request(`/api/inbox/${created.id}`, {
+        method: "DELETE",
+        headers: created.headers.owner,
+      });
+      await events.onMessage!(
+        msgEvent(
+          await wsFinalize(created.request.local.publicKey, created.id, ready.id, generateSecret()),
+        ),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({ type: "error", status: 404 });
+      expect(await storage.exists(ready.id)).toBe(false);
+    });
+
+    /** Blobs in storage, finished or not. */
+    function blobs() {
+      return readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+    }
+
+    it("never stores an upload whose slot it gave back when the socket closes during finalize", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app, { maxUploads: 1 });
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      const finalize = await wsFinalize(
+        created.request.local.publicKey,
+        created.id,
+        ready.id,
+        generateSecret(),
+      );
+
+      // The close lands while finalize writes the last bytes to storage.
+      const append = storage.appendChunk.bind(storage);
+      vi.spyOn(storage, "appendChunk").mockImplementationOnce(async (id, stream) => {
+        await events.onClose!(new CloseEvent("close"), fake.ws);
+        return append(id, stream);
+      });
+      await events.onMessage!(msgEvent(finalize), fake.ws);
+
+      expect(dbCtx.db.select().from(requestUploads).all()).toHaveLength(0);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, finishedUploads: 0 });
+      expect(blobs()).toHaveLength(0);
+    });
+
+    it("gives the claim back when the socket closes while the init is checked", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      const opening = events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 4000)),
+        fake.ws,
+      );
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      await opening;
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(blobs()).toHaveLength(0);
+    });
+
+    it("refuses a second init on the same socket and leaves nothing behind", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      const token = created.headers.upload["X-Upload-Token"];
+      const first = events.onMessage!(msgEvent(wsInit(token, 10)), fake.ws);
+      const second = events.onMessage!(msgEvent(wsInit(token, 10)), fake.ws);
+      await Promise.all([first, second]);
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      expect(fake.allJson()).toContainEqual({
+        type: "error",
+        message: "Unexpected message before ready",
+      });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(blobs()).toHaveLength(0);
+    });
+
+    it("ends a session that sends nothing for ten minutes and gives its slot back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const mock = createMockUpgrade();
+        const app = createApp({ upgradeWebSocket: mock.upgrade });
+        const created = await createRequest(app);
+        const events = await connect(app, created.id, mock);
+        const fake = createFakeWs();
+        await events.onMessage!(
+          msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+          fake.ws,
+        );
+        expect(requestRow(created.id).reservedUploads).toBe(1);
+        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        expect(fake.lastJson()).toMatchObject({ type: "error", message: "Upload timed out" });
+        expect(requestRow(created.id).reservedUploads).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("is off with the service, and absent without FILE_UPLOAD_WS", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      vi.mocked(getConfig).mockReturnValue({
+        ...DEFAULT_CONFIG,
+        ENABLED_SERVICES: ["file", "note"],
+      });
+      expect((await app.request(`/api/request/${created.id}/upload/ws`)).status).toBe(403);
+      vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
+      const withoutWs = createApp();
+      expect((await withoutWs.request(`/api/request/${created.id}/upload/ws`)).status).toBe(404);
     });
   });
 

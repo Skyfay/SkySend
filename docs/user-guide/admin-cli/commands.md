@@ -204,7 +204,7 @@ skysend-cli config [options]
 
 | Flag | Description |
 | --- | --- |
-| `--json` | Output as JSON |
+| `--json` | Output as JSON, with `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `OIDC_CLIENT_SECRET` and `OIDC_SESSION_SECRET` masked |
 
 ### Output
 

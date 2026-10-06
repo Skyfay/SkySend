@@ -72,7 +72,25 @@ What a sender sees. Needs `X-Upload-Token`.
 
 ## Uploading Into a Request
 
-Uploads use chunked HTTP only, with the same chunk rules as [normal chunked uploads](/developer-guide/api/upload): at most 16 MiB per chunk, every index once, at most `FILE_UPLOAD_CONCURRENT_CHUNKS` chunks in flight, no empty chunk. Chunk requests skip the global rate limiter. The sender's upload quota applies.
+Uploads take the same two transports as [normal uploads](/developer-guide/api/upload): the WebSocket when `FILE_UPLOAD_WS` is on, and chunked HTTP otherwise or when the WebSocket cannot connect. Both share the session layer of normal uploads and its limits. The sender's upload quota applies, and the slot and the bytes are reserved at init on either transport.
+
+### GET /api/request/:id/upload/ws
+
+The WebSocket transport of normal uploads, with the same frames, buffering, backpressure and keepalive. Only the init and the finalize frame differ:
+
+```json
+{ "type": "init", "request": { "uploadToken": "<32 bytes>", "salt": "<32 bytes>", "contentLength": 1048624, "fileCount": 1 } }
+```
+
+```json
+{ "type": "finalize", "wrapEnc": "<65 bytes>", "wrapCiphertext": "<48 bytes>", "encryptedMeta": "<17 to 75000 bytes>", "metaNonce": "<12 bytes>" }
+```
+
+The server answers `{ "type": "ready", "id": "<upload uuid>" }`, then `{ "type": "done", "id" }` once the upload is stored. A refusal is `{ "type": "error", "message", "status" }`, where `status` is the one the same refusal has over HTTP, for example `404` for a wrong upload token or `409` for a full request. A socket that closes before `done` gives its slot back at once.
+
+### Chunked HTTP
+
+The same chunk rules as [normal chunked uploads](/developer-guide/api/upload): at most 16 MiB per chunk, every index once, at most `FILE_UPLOAD_CONCURRENT_CHUNKS` chunks in flight, no empty chunk. Chunk requests skip the global rate limiter.
 
 ### POST /api/request/:id/upload/init
 

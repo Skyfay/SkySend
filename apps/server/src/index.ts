@@ -319,8 +319,12 @@ api.route(
     limiter: createRequestLimiter(config.FILE_REQUEST_DAILY_LIMIT),
     chunkDir: join(config.DATA_DIR, "tmp", "request-chunks"),
     createGuard:
-      config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter ? createOidcGuard(config) : undefined,
+      config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter
+        ? createOidcGuard(config)
+        : undefined,
     quota,
+    // The same WebSocket transport as normal uploads, with chunked HTTP as the fallback.
+    upgradeWebSocket: config.FILE_UPLOAD_WS ? upgradeWebSocket : undefined,
   }),
 );
 api.route("/inbox", createInboxRoute({ storage, lockout: passwordLockout }));
@@ -471,8 +475,12 @@ nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;
 nodeServer.keepAliveTimeout = 120_000;
 
-// Attach the WebSocket adapter so /api/upload/ws can accept upgrade requests.
-if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+// Attach the WebSocket adapter so /api/upload/ws and /api/request/:id/upload/ws can accept
+// upgrade requests.
+if (
+  config.FILE_UPLOAD_WS &&
+  (config.ENABLED_SERVICES.includes("file") || config.ENABLED_SERVICES.includes("request"))
+) {
   injectWebSocket(nodeServer);
 }
 nodeServer.timeout = 0;

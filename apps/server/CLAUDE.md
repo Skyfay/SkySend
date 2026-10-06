@@ -26,6 +26,7 @@ src/lib/cleanup.ts    Periodic expiry sweep, also exported for the admin CLI
 src/lib/password-lockout.ts   Failed-attempt tracking, shared by the password, note and inbox routes
 src/lib/upload-validation.ts  Zod schema + limit checks shared by the HTTP and WS upload paths
 src/lib/chunked-upload.ts     Session layer of chunked HTTP uploads, shared by uploads and file requests
+src/lib/ws-upload.ts          Session layer of WebSocket uploads, shared by uploads and file requests
 src/lib/request-validation.ts Strict base64url fields and token headers of the file request routes
 src/lib/request-limit.ts      In-memory daily limit for creating file requests
 src/db/               Drizzle schema, connection, generated migrations
@@ -56,7 +57,8 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
 | `POST /api/request` | OIDC when `OIDC_PROTECT_FILES` | Create a file request, daily limit per user or IP |
 | `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, space left |
-| `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, no WebSocket |
+| `GET /api/request/:id/upload/ws` | upload token in the init frame | WebSocket upload into a request, primary path when `FILE_UPLOAD_WS=true` |
+| `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, the fallback |
 | `DELETE /api/request/:id/upload/:uid` | upload session | A cancelled upload gives its slot back at once |
 | `GET /api/inbox/:id`, `GET /api/inbox/:id/file/:uid` | `X-Inbox-Token` | Vault and uploads, download one file |
 | `DELETE /api/inbox/:id/file/:uid`, `POST /api/inbox/:id/close`, `DELETE /api/inbox/:id` | `X-Inbox-Owner-Token` | Manage a request |
@@ -130,7 +132,7 @@ Three transports, one validation path. All of them parse through `uploadHeadersS
 
 **Single-request HTTP** (`POST /api/upload`): streams one body straight to storage. Legacy, still kept as a simple fallback.
 
-**WebSocket** (`src/routes/upload-ws.ts`): the primary path when `FILE_UPLOAD_WS=true`. Registered only when the flag and the `file` service are both on, and it validates the `Origin` header itself as defence in depth. An empty origin is allowed on purpose so the CLI and curl still work - the comment at that check explains it.
+**WebSocket** (`src/routes/upload-ws.ts` on top of `src/lib/ws-upload.ts`, which uploads into a file request share): the primary path when `FILE_UPLOAD_WS=true`. Registered only when the flag and the `file` service are both on, and it validates the `Origin` header itself as defence in depth. The request route registers its own handler at `/api/request/:id/upload/ws` when the flag and the `request` service are on. A target adds only its init check, its commit and what to give back when a session ends without a commit, so the framing, buffering, backpressure and keepalive stay one piece of code. An empty origin is allowed on purpose so the CLI and curl still work - the comment at that check explains it.
 
 Chunk requests are intentionally exempt from the global rate limiter - the reasoning is written out at the exemption in `src/index.ts`. Read it before changing that condition. The limits in `src/routes/upload.ts` are what bound chunk traffic. The quota does not, it only counts finished uploads.
 

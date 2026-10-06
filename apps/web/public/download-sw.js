@@ -198,6 +198,8 @@ async function handleDownload(config, downloadId, streamDone) {
   // download was already counted, instead of failing the whole tier.
   const headers = new Headers({
     "Content-Type": /^[\w.+-]+\/[\w.+-]+$/.test(mimeType || "") ? mimeType : "application/octet-stream",
+    // The type is the uploader's word, so the browser must not guess a more dangerous one.
+    "X-Content-Type-Options": "nosniff",
   });
 
   // Content-Length of the DECRYPTED output. Critical for Safari:

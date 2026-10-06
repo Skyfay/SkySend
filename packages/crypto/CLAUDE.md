@@ -60,7 +60,7 @@ The public key must only ever come from the fragment, and the server must never 
 | Title key | `skysend-request-title` followed by the public key |
 | HPKE info | `skysend-request-v1` followed by the 16 bytes of the request ID |
 | HPKE aad | the 16 bytes of the upload ID |
-| Vault AAD | `skysend-inbox-privkey-v1` |
+| Vault AAD | `skysend-inbox-privkey-v1` followed by SHA-256 of the title nonce and ciphertext, if there is a title |
 | Title AAD | `skysend-request-title-v1` |
 
 The suite byte `REQUEST_SUITE` (`0x01`) opens the upload fragment and the vault, and a version byte opens the inbox fragment, so a later suite (X25519, or a hybrid with ML-KEM) can be added without breaking existing links. With a password, the inbox fragment carries the protected secret plus the 16-byte password salt. The vault holds only the 32-byte private scalar, so its length is fixed (`REQUEST_VAULT_LENGTH`). The server checks every length against the exported `REQUEST_*` and `WRAP_*` constants. `tests/fixtures/file-request.json` freezes the whole format and `tests/fixtures/hpke-p256-sha256-aes256gcm.json` holds the CFRG test vector. **From the first release on, never regenerate or edit either file.**

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
   constantTimeEqual,
@@ -47,10 +48,22 @@ export function tokenHeader(value: string | undefined): Buffer | null {
   return parsed.success ? parsed.data : null;
 }
 
-/** Whether a token header matches a stored token, compared in constant time. */
-export function tokenMatches(value: string | undefined, stored: string): boolean {
+/**
+ * What the database keeps of a request token: its SHA-256, so a copy of the database grants
+ * none of the rights the token does. The tokens are 32 uniform bytes, so no slow hash is
+ * needed.
+ */
+export function hashToken(token: Uint8Array): string {
+  return toBase64url(new Uint8Array(createHash("sha256").update(token).digest()));
+}
+
+/** Whether a token header matches a stored token hash, compared in constant time. */
+export function tokenMatches(value: string | undefined, storedHash: string): boolean {
   const provided = tokenHeader(value);
-  return provided !== null && constantTimeEqual(provided, fromBase64url(stored));
+  return (
+    provided !== null &&
+    constantTimeEqual(fromBase64url(hashToken(provided)), fromBase64url(storedHash))
+  );
 }
 
 /** Encodes a stored binary column for a response. */

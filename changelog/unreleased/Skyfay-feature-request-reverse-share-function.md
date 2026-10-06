@@ -15,7 +15,12 @@
 ### 🔒 Security
 
 - **server**: Chunked uploads refuse empty chunks and keep at most 64 chunks waiting for an earlier one.
+- **server**: A WebSocket upload whose first frame is `null` no longer crashes the server.
+- **server**: WebSocket uploads closed during setup or finalize leave no orphaned file behind, and uploads that stay silent for 10 minutes are closed.
+- **server**: WebSocket uploads no longer send storage error details to the client.
+- **web**: Downloads through the service worker tell the browser not to guess the file type.
 - **cli**: `list --json` no longer prints the auth and owner tokens of uploads.
+- **cli**: `config --json` masks the S3 keys and the OIDC secrets.
 
 ### 🎨 Improvements
 
@@ -37,4 +42,5 @@
 
 - **crypto**: Tests for file requests against the official HPKE test vectors, a frozen fixture of the request format and every way to tamper with a wrapped key.
 - **server**: Tests for file requests covering the tokens, the login for creating, parallel uploads into one request and the cleanup.
+- **server**: Tests for WebSocket uploads that send a `null` frame, close during setup or finalize, or go silent.
 - **web**: Tests for creating file requests, opening their inbox with and without a password, downloading from it and uploading into a request.

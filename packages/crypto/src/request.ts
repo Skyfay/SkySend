@@ -26,7 +26,8 @@
  *   upload fragment  base64url(suite 1 B || publicKey 65 B || linkSecret 32 B)
  *   inbox fragment   base64url(version 1 B || secret 32 B || passwordSalt 16 B, if protected)
  *   vault plaintext  suite 1 B || publicKey 65 B || linkSecret 32 B || private scalar d 32 B
- *   vault            AES-256-GCM(inboxKey, nonce 12 B, aad "skysend-inbox-privkey-v1"), 146 B
+ *   vault            AES-256-GCM(inboxKey, nonce 12 B, aad "skysend-inbox-privkey-v1"
+ *                    || SHA-256(title nonce || title ciphertext), if there is a title), 146 B
  *   wrap             HPKE base, info "skysend-request-v1" || requestId 16 B, aad uploadId 16 B,
  *                    plaintext the 32-byte file secret, stored as enc 65 B and ciphertext 48 B
  *   title            AES-256-GCM(titleKey, nonce 12 B, aad "skysend-request-title-v1")
@@ -195,13 +196,13 @@ async function aesGcm(
   mode: "encrypt" | "decrypt",
   key: CryptoKey,
   nonce: Uint8Array,
-  aad: string,
+  aad: string | Uint8Array,
   data: Uint8Array,
 ): Promise<Uint8Array> {
   const params = {
     name: "AES-GCM",
     iv: asBytes(nonce),
-    additionalData: asBytes(encodeUtf8(aad)),
+    additionalData: asBytes(typeof aad === "string" ? encodeUtf8(aad) : aad),
     tagLength: 128,
   };
   const out =
@@ -209,6 +210,21 @@ async function aesGcm(
       ? await crypto.subtle.encrypt(params, key, asBytes(data))
       : await crypto.subtle.decrypt(params, key, asBytes(data));
   return new Uint8Array(out);
+}
+
+/**
+ * The AAD of the vault. It binds the title the server stores, so a server that swaps or
+ * drops the title breaks the vault instead of showing the requester a title they never
+ * wrote. Without a title it is the label alone, which no title digest can produce.
+ */
+async function vaultAad(title: EncryptedRequestTitle | null): Promise<Uint8Array> {
+  const label = encodeUtf8(VAULT_AAD);
+  if (!title) return label;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    asBytes(concatBytes(title.nonce, title.ciphertext)),
+  );
+  return concatBytes(label, new Uint8Array(digest));
 }
 
 /** The keys of the inbox link: the vault key and the tokens the server checks. */
@@ -286,12 +302,18 @@ export async function createFileRequest(options: { title?: string } = {}): Promi
     deriveInboxKeys(inboxSecret),
     deriveLinkKeys(linkSecret, publicKey),
   ]);
+  const title = options.title ? await encryptRequestTitle(options.title, link.titleKey) : null;
   const plaintext = concatBytes(new Uint8Array([REQUEST_SUITE]), publicKey, linkSecret, scalar);
   scalar.fill(0);
   const vaultNonce = randomBytes(REQUEST_NONCE_LENGTH);
-  const vault = await aesGcm("encrypt", inbox.inboxKey, vaultNonce, VAULT_AAD, plaintext);
+  const vault = await aesGcm(
+    "encrypt",
+    inbox.inboxKey,
+    vaultNonce,
+    await vaultAad(title),
+    plaintext,
+  );
   plaintext.fill(0);
-  const title = options.title ? await encryptRequestTitle(options.title, link.titleKey) : null;
 
   return {
     local: { inboxSecret, linkSecret, publicKey },
@@ -306,15 +328,19 @@ export async function createFileRequest(options: { title?: string } = {}): Promi
   };
 }
 
-/** Opens the vault with the key of the inbox link. Throws if it was changed or the key is wrong. */
+/**
+ * Opens the vault with the key of the inbox link and the title as the server stores it.
+ * Throws if either was changed or the key is wrong.
+ */
 export async function openRequestKey(
   vault: Uint8Array,
   vaultNonce: Uint8Array,
   inboxKey: CryptoKey,
+  title: EncryptedRequestTitle | null,
 ): Promise<RequestKey> {
   checkLength(vaultNonce, REQUEST_NONCE_LENGTH, "Vault nonce");
   checkLength(vault, REQUEST_VAULT_LENGTH, "Vault");
-  const plaintext = await aesGcm("decrypt", inboxKey, vaultNonce, VAULT_AAD, vault);
+  const plaintext = await aesGcm("decrypt", inboxKey, vaultNonce, await vaultAad(title), vault);
   try {
     if (plaintext.length !== VAULT_PLAINTEXT_LENGTH || plaintext[0] !== REQUEST_SUITE) {
       throw new Error("Unsupported request vault");

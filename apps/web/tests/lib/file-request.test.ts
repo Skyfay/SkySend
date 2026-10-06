@@ -196,6 +196,20 @@ describe("sanitizeFilename", () => {
     expect(sanitizeFilename("invoice.pdf          .exe")).toBe("invoice.pdf .exe");
   });
 
+  it("treats blank fillers as spaces, so they cannot hide the extension either", () => {
+    expect(sanitizeFilename("invoice.pdf\u3164\u2800\uFFA0\u115F\u1160.exe")).toBe(
+      "invoice.pdf .exe",
+    );
+    expect(sanitizeFilename("\u3164\u3164")).toBe("file");
+  });
+
+  it("cuts a tower of combining marks down to three", () => {
+    expect(sanitizeFilename(`a${"\u0301".repeat(40)}.pdf`)).toBe("a\u0301\u0301\u0301.pdf");
+    expect(sanitizeFilename("Vi\u1EC7t.txt".normalize("NFD"))).toBe(
+      "Vi\u1EC7t.txt".normalize("NFD"),
+    );
+  });
+
   it("cuts a long name without splitting a character", () => {
     const name = sanitizeFilename("😀".repeat(300));
     expect(Array.from(name)).toHaveLength(255);
@@ -229,6 +243,15 @@ describe("sanitizeTitle", () => {
 
   it("drops control and reordering characters", () => {
     expect(sanitizeTitle("a\u202Eb\u0007c\u200Bd")).toBe("abcd");
+  });
+
+  it("keeps a tab between words as a space", () => {
+    expect(sanitizeTitle("a\tb  \u3164\u2800 c")).toBe("a b c");
+  });
+
+  it("cuts a tower of combining marks, even one split by invisible characters", () => {
+    const tower = `${"\u0301".repeat(3)}\u200B`.repeat(10);
+    expect(sanitizeTitle(`Z${tower}`)).toBe("Z\u0301\u0301\u0301");
   });
 
   it("keeps an ordinary title as it is", () => {

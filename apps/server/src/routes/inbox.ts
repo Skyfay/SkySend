@@ -5,7 +5,7 @@ import { getDb } from "../db/index.js";
 import { fileRequests, requestUploads, type FileRequest } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
 import { deleteFileRequest } from "../lib/cleanup.js";
-import { encodeBytes, tokenMatches, UUID_PATTERN } from "../lib/request-validation.js";
+import { encodeBytes, tokenHeader, tokenMatches, UUID_PATTERN } from "../lib/request-validation.js";
 import type { PasswordLockout } from "../lib/password-lockout.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
@@ -50,6 +50,9 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
   ): Promise<{ request: FileRequest } | { response: Response }> {
     const id = c.req.param("id") ?? "";
     if (!UUID_PATTERN.test(id)) return { response: notFound(c) };
+    // A request without a well-formed token is no guess at one. Counting it would let any
+    // page lock the requester out with a few image tags, which send no custom header.
+    if (!tokenHeader(c.req.header(header))) return { response: notFound(c) };
 
     const ip = getClientIp(c, getConfig().TRUST_PROXY);
     const resourceKey = `request:${id}`;

@@ -1,9 +1,9 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
+import type { UpgradeWebSocket } from "hono/ws";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { and, eq, gt, sql } from "drizzle-orm";
 import {
-  toBase64url,
   REQUEST_NONCE_LENGTH,
   REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH,
   REQUEST_TOKEN_LENGTH,
@@ -20,6 +20,7 @@ import { createChunkedUploads } from "../lib/chunked-upload.js";
 import {
   base64urlBytes,
   encodeBytes,
+  hashToken,
   tokenMatches,
   UUID_PATTERN,
 } from "../lib/request-validation.js";
@@ -29,6 +30,7 @@ import { getClientIp } from "../middleware/rate-limit.js";
 import type { OidcGuardVariables } from "../middleware/oidc-guard.js";
 import type { createUploadQuota } from "../middleware/quota.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
+import { createWsUploadHandler, type WsUploadRefusal } from "../lib/ws-upload.js";
 import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
 
@@ -125,6 +127,102 @@ function isForeignKeyError(err: unknown): boolean {
   );
 }
 
+/**
+ * Reserves a slot and the declared bytes of a request. One statement, so two senders can
+ * never both take the last slot or the last bytes. Returns why it refused, or null.
+ */
+async function reserveSlot(
+  id: string,
+  contentLength: number,
+): Promise<{ status: 409 | 410 | 413; error: string } | null> {
+  const db = getDb();
+  const reserved = db
+    .update(fileRequests)
+    .set({
+      reservedUploads: sql`${fileRequests.reservedUploads} + 1`,
+      reservedBytes: sql`${fileRequests.reservedBytes} + ${contentLength}`,
+    })
+    .where(
+      and(
+        eq(fileRequests.id, id),
+        eq(fileRequests.closed, false),
+        gt(fileRequests.closesAt, new Date()),
+        sql`${fileRequests.reservedUploads} < ${fileRequests.maxUploads}`,
+        sql`${fileRequests.reservedBytes} + ${contentLength} <= ${fileRequests.maxSize}`,
+      ),
+    )
+    .run();
+  if (reserved.changes > 0) return null;
+  const current = await db.query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
+  if (!current || !isOpen(current)) return { status: 410, error: "File request is closed" };
+  if (current.reservedUploads >= current.maxUploads) {
+    return { status: 409, error: "File request is full" };
+  }
+  return { status: 413, error: "Upload exceeds the space left in this file request" };
+}
+
+/**
+ * Stores a finished upload with its wrapped file secret and encrypted metadata, and counts
+ * it as finished. The row and the counters change in one step, so a restart can never count
+ * an upload that is not there, or miss one that is. False when the request is gone.
+ */
+function storeRequestUpload(
+  upload: { requestId: string; uploadId: string; size: number; session: RequestUploadSession },
+  body: z.infer<typeof finalizeSchema>,
+): boolean {
+  const config = getConfig();
+  const now = new Date();
+  try {
+    getDb().transaction((tx) => {
+      tx.insert(requestUploads)
+        .values({
+          id: upload.uploadId,
+          requestId: upload.requestId,
+          size: upload.size,
+          fileCount: upload.session.fileCount,
+          salt: upload.session.salt,
+          wrapEnc: body.wrapEnc,
+          wrapCiphertext: body.wrapCiphertext,
+          encryptedMeta: body.encryptedMeta,
+          metaNonce: body.metaNonce,
+          maxDownloads: config.FILE_REQUEST_DOWNLOADS,
+          downloadCount: 0,
+          expiresAt: new Date(now.getTime() + config.FILE_REQUEST_RETENTION_SEC * 1000),
+          createdAt: now,
+          storagePath: `${upload.uploadId}.bin`,
+        })
+        .run();
+      tx.update(fileRequests)
+        .set({
+          finishedUploads: sql`${fileRequests.finishedUploads} + 1`,
+          finishedBytes: sql`${fileRequests.finishedBytes} + ${upload.size}`,
+        })
+        .where(eq(fileRequests.id, upload.requestId))
+        .run();
+    });
+  } catch (err) {
+    // The request was deleted while the upload ran.
+    if (isForeignKeyError(err)) return false;
+    throw err;
+  }
+  return true;
+}
+
+/** The init frame of a WebSocket upload into a request, the same fields as the HTTP init. */
+const wsInitSchema = z
+  .object({
+    type: z.literal("init"),
+    request: z
+      .object({
+        uploadToken: z.string().max(64),
+        salt: base64urlBytes(SALT_LENGTH),
+        contentLength: z.number().int().positive(),
+        fileCount: z.number().int().positive().default(1),
+      })
+      .strict(),
+  })
+  .strict();
+
 export interface RequestRouteOptions {
   storage: StorageBackend;
   limiter: RequestLimiter;
@@ -135,15 +233,19 @@ export interface RequestRouteOptions {
   /** The OIDC guard, when OIDC_PROTECT_FILES puts creating a request behind the login. */
   createGuard?: MiddlewareHandler;
   /** The upload quota of the sender, the same one normal uploads count against. */
-  quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware" | "recordUsage">;
+  quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware" | "recordUsage" | "check">;
+  /** Turns on the WebSocket transport, the same as for normal uploads (FILE_UPLOAD_WS). */
+  upgradeWebSocket?: UpgradeWebSocket;
 }
 
 /**
  * /api/request: creating a request, what a sender sees, and uploading into a request.
  *
- * Uploads use chunked HTTP only. They share the session layer and its limits with normal
- * uploads (lib/chunked-upload.ts), and the slot and the bytes are reserved at init, so
- * parallel senders can never overfill a request.
+ * Uploads take the same two transports as normal uploads: WebSocket first when
+ * FILE_UPLOAD_WS is on (lib/ws-upload.ts), chunked HTTP otherwise and as the fallback
+ * (lib/chunked-upload.ts). Both share the session layer and its limits with normal uploads,
+ * and the slot and the bytes are reserved at init, so parallel senders can never overfill
+ * a request.
  */
 export function createRequestRoute({
   storage,
@@ -152,13 +254,19 @@ export function createRequestRoute({
   maxChunkSize,
   createGuard,
   quota,
+  upgradeWebSocket,
 }: RequestRouteOptions) {
   const route = new Hono<{ Variables: QuotaVariables & Partial<OidcGuardVariables> }>();
   route.use("*", requestServiceGuard);
-  // Not on a cancel, which only gives a slot back and must work with the quota used up.
+  // Not on a cancel, which only gives a slot back and must work with the quota used up,
+  // and not on the WebSocket, which checks the quota in its init like for normal uploads.
   if (quota) {
     const quotaMiddleware = quota.middleware;
-    route.use("/:id/upload/*", (c, next) => (c.req.method === "DELETE" ? next() : quotaMiddleware(c, next)));
+    route.use("/:id/upload/*", (c, next) =>
+      c.req.method === "DELETE" || c.req.path.endsWith("/upload/ws")
+        ? next()
+        : quotaMiddleware(c, next),
+    );
   }
 
   // No session survives a restart, so whatever was reserved beyond the finished uploads
@@ -242,9 +350,10 @@ export function createRequestRoute({
           id,
           vault: data.vault,
           vaultNonce: data.vaultNonce,
-          inboxAuthToken: toBase64url(data.inboxAuthToken),
-          inboxOwnerToken: toBase64url(data.inboxOwnerToken),
-          uploadToken: toBase64url(data.uploadToken),
+          // Only the hashes, see hashToken.
+          inboxAuthToken: hashToken(data.inboxAuthToken),
+          inboxOwnerToken: hashToken(data.inboxOwnerToken),
+          uploadToken: hashToken(data.uploadToken),
           titleCiphertext: data.title?.ciphertext ?? null,
           titleNonce: data.title?.nonce ?? null,
           hasPassword: data.hasPassword,
@@ -311,31 +420,8 @@ export function createRequestRoute({
     const sizeError = validateUploadSize(contentLength, fileCount, config);
     if (sizeError) return c.json({ error: sizeError.message }, sizeError.status);
 
-    // One statement, so two senders can never both take the last slot or the last bytes.
-    const db = getDb();
-    const reserved = db
-      .update(fileRequests)
-      .set({
-        reservedUploads: sql`${fileRequests.reservedUploads} + 1`,
-        reservedBytes: sql`${fileRequests.reservedBytes} + ${contentLength}`,
-      })
-      .where(
-        and(
-          eq(fileRequests.id, id),
-          eq(fileRequests.closed, false),
-          gt(fileRequests.closesAt, new Date()),
-          sql`${fileRequests.reservedUploads} < ${fileRequests.maxUploads}`,
-          sql`${fileRequests.reservedBytes} + ${contentLength} <= ${fileRequests.maxSize}`,
-        ),
-      )
-      .run();
-    if (reserved.changes === 0) {
-      const current = await db.query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
-      if (!current || !isOpen(current)) return c.json({ error: "File request is closed" }, 410);
-      if (current.reservedUploads >= current.maxUploads)
-        return c.json({ error: "File request is full" }, 409);
-      return c.json({ error: "Upload exceeds the space left in this file request" }, 413);
-    }
+    const refused = await reserveSlot(id, contentLength);
+    if (refused) return c.json({ error: refused.error }, refused.status);
 
     try {
       const uploadId = await chunked.open(contentLength, {
@@ -428,45 +514,20 @@ export function createRequestRoute({
         throw err;
       }
 
-      const config = getConfig();
-      const now = new Date();
-      const db = getDb();
+      let stored: boolean;
       try {
-        // The row and the finished counters in one step, so a restart can never count an
-        // upload that is not there, or miss one that is.
-        db.transaction((tx) => {
-          tx.insert(requestUploads)
-            .values({
-              id: uid,
-              requestId: id,
-              size: session.bytesWritten,
-              fileCount: meta.fileCount,
-              salt: meta.salt,
-              wrapEnc: parsed.data.wrapEnc,
-              wrapCiphertext: parsed.data.wrapCiphertext,
-              encryptedMeta: parsed.data.encryptedMeta,
-              metaNonce: parsed.data.metaNonce,
-              maxDownloads: config.FILE_REQUEST_DOWNLOADS,
-              downloadCount: 0,
-              expiresAt: new Date(now.getTime() + config.FILE_REQUEST_RETENTION_SEC * 1000),
-              createdAt: now,
-              storagePath: `${uid}.bin`,
-            })
-            .run();
-          tx.update(fileRequests)
-            .set({
-              finishedUploads: sql`${fileRequests.finishedUploads} + 1`,
-              finishedBytes: sql`${fileRequests.finishedBytes} + ${session.bytesWritten}`,
-            })
-            .where(eq(fileRequests.id, id))
-            .run();
-        });
+        stored = storeRequestUpload(
+          { requestId: id, uploadId: uid, size: session.bytesWritten, session: meta },
+          parsed.data,
+        );
       } catch (err) {
         await storage.delete(uid).catch(() => {});
-        // The request was deleted while the upload ran.
-        if (isForeignKeyError(err)) return notFound(c);
         release(id, meta.contentLength);
         throw err;
+      }
+      if (!stored) {
+        await storage.delete(uid).catch(() => {});
+        return notFound(c);
       }
 
       const quotaHashedIp = c.get("quotaHashedIp");
@@ -475,6 +536,76 @@ export function createRequestRoute({
       return c.json({ id: uid }, 200);
     },
   );
+
+  /**
+   * GET /api/request/:id/upload/ws
+   * The WebSocket transport of normal uploads, into a request: the init frame carries
+   * { request: { uploadToken, salt, contentLength, fileCount } }, the finalize frame the same
+   * fields as the HTTP finalize. Registered when FILE_UPLOAD_WS is on.
+   */
+  if (upgradeWebSocket) {
+    const refuse = (status: number, error: string): WsUploadRefusal => ({
+      error,
+      code: 1008,
+      status,
+    });
+    route.get(
+      "/:id/upload/ws",
+      createWsUploadHandler<RequestUploadSession>(
+        {
+          storage,
+          upgradeWebSocket,
+          quota: quota
+            ? { check: quota.check, record: quota.recordUsage }
+            : { check: () => ({ ok: true, hashedIp: null }), record: () => {} },
+        },
+        {
+          async open(init, { c, ip }) {
+            const id = c.req.param("id") ?? "";
+            const parsed = wsInitSchema.safeParse(init);
+            if (!parsed.success) return refuse(400, "Invalid upload headers");
+            const { uploadToken, salt, contentLength, fileCount } = parsed.data.request;
+            const request = UUID_PATTERN.test(id)
+              ? await getDb().query.fileRequests.findFirst({ where: eq(fileRequests.id, id) })
+              : undefined;
+            if (!request || !tokenMatches(uploadToken, request.uploadToken)) {
+              return refuse(404, "File request not found");
+            }
+            const sizeError = validateUploadSize(contentLength, fileCount, getConfig());
+            if (sizeError) return refuse(sizeError.status, sizeError.message);
+            const quotaResult = quota
+              ? quota.check(ip, contentLength)
+              : ({ ok: true, hashedIp: null } as const);
+            if (!quotaResult.ok) return refuse(429, quotaResult.reason);
+            const refused = await reserveSlot(id, contentLength);
+            if (refused) return refuse(refused.status, refused.error);
+            return {
+              contentLength,
+              meta: { requestId: id, salt, fileCount, contentLength },
+              quotaHashedIp: quotaResult.hashedIp,
+            };
+          },
+
+          async commit({ id: uploadId, bytesReceived, meta }, finalize) {
+            const { type: _type, ...body } = finalize;
+            const parsed = finalizeSchema.safeParse(body);
+            if (!parsed.success) return refuse(400, "Invalid request body");
+            try {
+              const stored = storeRequestUpload(
+                { requestId: meta.requestId, uploadId, size: bytesReceived, session: meta },
+                parsed.data,
+              );
+              if (!stored) return refuse(404, "File request not found");
+            } catch {
+              return { error: "Upload could not be stored", code: 1011 };
+            }
+          },
+
+          abandon: (meta) => release(meta.requestId, meta.contentLength),
+        },
+      ),
+    );
+  }
 
   return route;
 }

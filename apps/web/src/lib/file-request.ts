@@ -50,9 +50,12 @@ export async function prepareRequest(options: {
       applyPasswordProtection(local.inboxSecret, key),
       passwordSalt,
     );
+    key.fill(0);
   } else {
     inboxFragment = encodeInboxFragment(local.inboxSecret);
   }
+  // The link holds the secret from here on. No copy stays in memory.
+  local.inboxSecret.fill(0);
 
   return {
     body: {
@@ -117,6 +120,7 @@ export async function openInboxLink(
     if (!password || !argon2id) throw new Error("This inbox needs its password");
     const { key } = await deriveKeyFromPassword(password, passwordSalt, argon2id);
     inboxSecret = applyPasswordProtection(secret, key);
+    key.fill(0);
   }
   const keys = await deriveInboxKeys(inboxSecret);
   inboxSecret.fill(0);
@@ -151,23 +155,22 @@ export async function openInbox(
   inbox: Inbox,
   keys: InboxKeys,
 ): Promise<OpenedInbox> {
+  // The vault binds the title as stored, so a title the server swapped opens nothing.
+  const storedTitle = inbox.title
+    ? { ciphertext: fromBase64url(inbox.title.ciphertext), nonce: fromBase64url(inbox.title.nonce) }
+    : null;
   const requestKey = await openRequestKey(
     fromBase64url(inbox.vault),
     fromBase64url(inbox.vaultNonce),
     keys.inboxKey,
+    storedTitle,
   );
   const { titleKey } = await deriveLinkKeys(requestKey.linkSecret, requestKey.publicKey);
 
   let title: string | null = null;
-  if (inbox.title) {
+  if (storedTitle) {
     try {
-      title = await decryptRequestTitle(
-        {
-          ciphertext: fromBase64url(inbox.title.ciphertext),
-          nonce: fromBase64url(inbox.title.nonce),
-        },
-        titleKey,
-      );
+      title = await decryptRequestTitle(storedTitle, titleKey);
     } catch {
       title = null;
     }
@@ -206,16 +209,24 @@ export async function openInbox(
   };
 }
 
+/** Characters that draw as blank space but are no whitespace: the Braille blank, Hangul fillers. */
+const BLANK_FILLERS = /[\u2800\u3164\u115F\u1160\uFFA0]/g;
+/** Combining marks stacked past what any script needs, which spill over the lines around them. */
+const MARK_STACKS = /(\p{M}{3})\p{M}+/gu;
+
 /**
  * A name from a sender, made safe to show and to save under: no control or format
  * characters (bidirectional overrides that make an "exe" read as "pdf", zero-width ones),
- * no lone surrogates, no path separators, no runs of spaces that push the real extension
- * out of sight, at most 255 characters, and never empty.
+ * no lone surrogates, no path separators, no runs of spaces or blank fillers that push the
+ * real extension out of sight, no towers of combining marks, at most 255 characters, and
+ * never empty.
  */
 export function sanitizeFilename(name: string): string {
   const cleaned = Array.from(
     name
       .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, "")
+      .replace(BLANK_FILLERS, " ")
+      .replace(MARK_STACKS, "$1")
       .replace(/[/\\]/g, "_")
       .replace(/\s+/g, " ")
       .trim(),
@@ -227,18 +238,24 @@ export function sanitizeFilename(name: string): string {
 
 /**
  * The title a requester wrote, made safe to show to a sender: no control or format
- * characters except line breaks, and no run of empty lines that could push the note
- * "not checked" out of sight above a claim further down.
+ * characters except line breaks, no blank fillers or towers of combining marks, and no run
+ * of empty lines that could push the note "not checked" out of sight above a claim further
+ * down.
  */
 export function sanitizeTitle(title: string): string {
-  return title
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\p{Zl}\p{Zp}]/gu, "\n")
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/(?![\n])[\p{Cc}\p{Cf}\p{Cs}]/gu, "")
-    .replace(/ *\n */g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    title
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\p{Zl}\p{Zp}]/gu, "\n")
+      // Whitespace stays for now and becomes a single space below, so a tab still parts words.
+      .replace(/(?!\s)[\p{Cc}\p{Cf}\p{Cs}]/gu, "")
+      .replace(BLANK_FILLERS, " ")
+      .replace(MARK_STACKS, "$1")
+      .replace(/[^\S\n]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 /** A MIME type from a sender, if it is a plain type/subtype. Anything else saves as bytes. */

@@ -50,7 +50,7 @@ applyPasswordProtection(secret, passwordKey): Uint8Array
 createFileRequest({ title? }): Promise<{ local, server }>
 deriveInboxKeys(inboxSecret): Promise<{ inboxKey, inboxAuthToken, inboxOwnerToken }>
 deriveLinkKeys(linkSecret, publicKey): Promise<{ uploadToken, titleKey }>
-openRequestKey(vault, vaultNonce, inboxKey): Promise<{ publicKey, linkSecret, privateKey }>
+openRequestKey(vault, vaultNonce, inboxKey, title): Promise<{ publicKey, linkSecret, privateKey }>
 wrapFileSecret(publicKey, requestId, uploadId, fileSecret): Promise<{ enc, ciphertext }>
 unwrapFileSecret(requestKey, requestId, uploadId, wrapped): Promise<Uint8Array>
 encodeUploadFragment(publicKey, linkSecret): string

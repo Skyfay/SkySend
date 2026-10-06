@@ -46,6 +46,7 @@ Active when `request` is in `ENABLED_SERVICES`. See [File Requests](/developer-g
 | --- | --- | --- | --- |
 | `POST` | `/api/request` | Create a file request | OIDC when `OIDC_PROTECT_FILES` |
 | `GET` | `/api/request/:id` | What a sender sees | Upload Token |
+| `GET` | `/api/request/:id/upload/ws` | WebSocket upload into the request | Upload Token in the init frame |
 | `POST` | `/api/request/:id/upload/init` | Open an upload into the request | Upload Token |
 | `POST` | `/api/request/:id/upload/:uid/chunk` | Append chunk (with `?index=N`) | Upload session |
 | `POST` | `/api/request/:id/upload/:uid/finalize` | Store the upload with its wrapped key | Upload session |

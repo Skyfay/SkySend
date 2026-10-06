@@ -42,7 +42,12 @@ async function freshRequest(title?: string): Promise<{ request: NewFileRequest; 
   const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
   return {
     request,
-    key: await openRequestKey(request.server.vault, request.server.vaultNonce, inboxKey),
+    key: await openRequestKey(
+      request.server.vault,
+      request.server.vaultNonce,
+      inboxKey,
+      request.server.title,
+    ),
   };
 }
 
@@ -83,7 +88,13 @@ describe("the frozen file request fixture", () => {
 
   it("should open the frozen vault and unwrap the frozen file secret", async () => {
     const { inboxKey } = await deriveInboxKeys(fromHex(input.inboxSecret));
-    const key = await openRequestKey(fromHex(output.vault), fromHex(input.vaultNonce), inboxKey);
+    const title = { ciphertext: fromHex(output.titleCiphertext), nonce: fromHex(input.titleNonce) };
+    const key = await openRequestKey(
+      fromHex(output.vault),
+      fromHex(input.vaultNonce),
+      inboxKey,
+      title,
+    );
     expect(toHex(key.publicKey)).toBe(input.publicKey);
     expect(toHex(key.linkSecret)).toBe(input.linkSecret);
     const wrapped = { enc: fromHex(output.wrapEnc), ciphertext: fromHex(output.wrapCiphertext) };
@@ -167,7 +178,30 @@ describe("openRequestKey", () => {
     const { request } = await freshRequest();
     const { inboxKey } = await deriveInboxKeys(randomBytes(32));
     await expect(
-      openRequestKey(request.server.vault, request.server.vaultNonce, inboxKey),
+      openRequestKey(request.server.vault, request.server.vaultNonce, inboxKey, null),
+    ).rejects.toThrow();
+  });
+
+  it("should reject a title the server swapped, added or dropped", async () => {
+    const { request } = await freshRequest("Tax documents");
+    const other = await createFileRequest({ title: "Upload your ID here" });
+    const { vault, vaultNonce, title } = request.server;
+    const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, title)).resolves.toBeTruthy();
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, null)).rejects.toThrow();
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, other.server.title)).rejects.toThrow();
+    const flippedTitle = { ciphertext: flipped(title!.ciphertext), nonce: title!.nonce };
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, flippedTitle)).rejects.toThrow();
+
+    const untitled = await freshRequest();
+    const untitledKey = (await deriveInboxKeys(untitled.request.local.inboxSecret)).inboxKey;
+    await expect(
+      openRequestKey(
+        untitled.request.server.vault,
+        untitled.request.server.vaultNonce,
+        untitledKey,
+        title,
+      ),
     ).rejects.toThrow();
   });
 
@@ -175,15 +209,15 @@ describe("openRequestKey", () => {
     const { request } = await freshRequest();
     const { vault, vaultNonce } = request.server;
     const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
-    await expect(openRequestKey(flipped(vault), vaultNonce, inboxKey)).rejects.toThrow();
+    await expect(openRequestKey(flipped(vault), vaultNonce, inboxKey, null)).rejects.toThrow();
     await expect(
-      openRequestKey(flipped(vault, vault.length - 1), vaultNonce, inboxKey),
+      openRequestKey(flipped(vault, vault.length - 1), vaultNonce, inboxKey, null),
     ).rejects.toThrow();
-    await expect(openRequestKey(vault, flipped(vaultNonce), inboxKey)).rejects.toThrow();
-    await expect(openRequestKey(vault, vaultNonce.slice(0, 11), inboxKey)).rejects.toThrow(
+    await expect(openRequestKey(vault, flipped(vaultNonce), inboxKey, null)).rejects.toThrow();
+    await expect(openRequestKey(vault, vaultNonce.slice(0, 11), inboxKey, null)).rejects.toThrow(
       "Vault nonce must be exactly 12 bytes",
     );
-    await expect(openRequestKey(vault.slice(1), vaultNonce, inboxKey)).rejects.toThrow(
+    await expect(openRequestKey(vault.slice(1), vaultNonce, inboxKey, null)).rejects.toThrow(
       "Vault must be exactly 146 bytes",
     );
   });
@@ -200,7 +234,7 @@ describe("openRequestKey", () => {
         inboxKey,
         plaintext,
       );
-      return openRequestKey(new Uint8Array(sealed), nonce, inboxKey);
+      return openRequestKey(new Uint8Array(sealed), nonce, inboxKey, null);
     };
     const body = [...request.local.publicKey, ...request.local.linkSecret, ...randomBytes(32)];
     await expect(seal(new Uint8Array([0x02, ...body]))).rejects.toThrow(
