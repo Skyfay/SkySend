@@ -308,7 +308,8 @@ export async function createNote(
 
 const noteInfoResponseSchema = z.object({
   id: z.string(),
-  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  // "blocks" since v3. LEGACY(notes-v1): the other values are notes from before v3.
+  contentType: z.enum(["blocks", "text", "password", "code", "markdown", "sshkey"]),
   hasPassword: z.boolean(),
   passwordAlgo: z.enum(["argon2id-v2"]).optional(),
   passwordSalt: z.string().optional(),

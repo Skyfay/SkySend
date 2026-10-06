@@ -167,7 +167,14 @@
     "destroyed": "Cette note a été définitivement supprimée. Sauvegardez le contenu maintenant - il ne sera plus accessible.",
     "reveal": "Révéler",
     "hide": "Masquer",
-    "verifying": "Vérification..."
+    "verifying": "Vérification...",
+    "blockCount_one": "Note avec {{count}} bloc",
+    "blockCount_other": "Note avec {{count}} blocs",
+    "copyAll": "Tout copier",
+    "unsupported": "Cette partie de la note nécessite une version plus récente de SkySend.",
+    "unreadable": "Cette note n'a pas pu être lue normalement, elle est donc affichée telle qu'elle est arrivée.",
+    "showCode": "Afficher le code",
+    "hideCode": "Masquer le code"
   },
   "notFound": {
     "title": "Page introuvable",

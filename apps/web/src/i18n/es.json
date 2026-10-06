@@ -167,7 +167,14 @@
     "destroyed": "Esta nota ha sido eliminada permanentemente. Guarde el contenido ahora - no podrá acceder de nuevo.",
     "reveal": "Mostrar",
     "hide": "Ocultar",
-    "verifying": "Verificando..."
+    "verifying": "Verificando...",
+    "blockCount_one": "Nota con {{count}} bloque",
+    "blockCount_other": "Nota con {{count}} bloques",
+    "copyAll": "Copiar todo",
+    "unsupported": "Esta parte de la nota requiere una versión más reciente de SkySend.",
+    "unreadable": "Esta nota no se pudo leer como de costumbre, por lo que se muestra tal como llegó.",
+    "showCode": "Mostrar código",
+    "hideCode": "Ocultar código"
   },
   "notFound": {
     "title": "Página no encontrada",

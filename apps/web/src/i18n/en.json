@@ -162,7 +162,14 @@
     "destroyed": "This note has been permanently deleted. Save the content now - it cannot be accessed again.",
     "reveal": "Reveal",
     "hide": "Hide",
-    "verifying": "Verifying..."
+    "verifying": "Verifying...",
+    "blockCount_one": "Note with {{count}} block",
+    "blockCount_other": "Note with {{count}} blocks",
+    "copyAll": "Copy all",
+    "unsupported": "This part of the note needs a newer version of SkySend.",
+    "unreadable": "This note could not be read as usual, so it is shown exactly as it arrived.",
+    "showCode": "Show code",
+    "hideCode": "Hide code"
   },
   "notFound": {
     "title": "Page not found",

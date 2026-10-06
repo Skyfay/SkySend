@@ -167,7 +167,14 @@
     "destroyed": "Deze notitie is permanent verwijderd. Sla de inhoud nu op - deze is niet opnieuw toegankelijk.",
     "reveal": "Tonen",
     "hide": "Verbergen",
-    "verifying": "Verifiëren..."
+    "verifying": "Verifiëren...",
+    "blockCount_one": "Notitie met {{count}} blok",
+    "blockCount_other": "Notitie met {{count}} blokken",
+    "copyAll": "Alles kopiëren",
+    "unsupported": "Voor dit deel van de notitie is een nieuwere versie van SkySend nodig.",
+    "unreadable": "Deze notitie kon niet zoals gewoonlijk worden gelezen en wordt daarom precies zo getoond als ze is aangekomen.",
+    "showCode": "Code tonen",
+    "hideCode": "Code verbergen"
   },
   "notFound": {
     "title": "Pagina niet gevonden",

@@ -162,7 +162,14 @@
     "destroyed": "Diese Notiz wurde unwiderruflich gelöscht. Sichern Sie den Inhalt jetzt - er kann nicht erneut abgerufen werden.",
     "reveal": "Anzeigen",
     "hide": "Verbergen",
-    "verifying": "Überprüfen..."
+    "verifying": "Überprüfen...",
+    "blockCount_one": "Notiz mit {{count}} Block",
+    "blockCount_other": "Notiz mit {{count}} Blöcken",
+    "copyAll": "Alles kopieren",
+    "unsupported": "Dieser Teil der Notiz braucht eine neuere Version von SkySend.",
+    "unreadable": "Diese Notiz ließ sich nicht wie gewohnt lesen und wird genau so angezeigt, wie sie angekommen ist.",
+    "showCode": "Code anzeigen",
+    "hideCode": "Code ausblenden"
   },
   "notFound": {
     "title": "Seite nicht gefunden",

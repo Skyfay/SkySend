@@ -192,7 +192,14 @@
       "how.faq4A",
       "how.ctaTitle",
       "how.ctaText",
-      "how.ctaButton"
+      "how.ctaButton",
+      "noteView.blockCount_one",
+      "noteView.blockCount_other",
+      "noteView.copyAll",
+      "noteView.unsupported",
+      "noteView.unreadable",
+      "noteView.showCode",
+      "noteView.hideCode"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -359,7 +366,14 @@
     "destroyed": "このメモは完全に削除されました。内容を今すぐ保存してください。再度アクセスすることはできません。",
     "reveal": "表示",
     "hide": "非表示",
-    "verifying": "確認中..."
+    "verifying": "確認中...",
+    "blockCount_one": "{{count}} 個のブロックを含むメモ",
+    "blockCount_other": "{{count}} 個のブロックを含むメモ",
+    "copyAll": "すべてコピー",
+    "unsupported": "メモのこの部分を表示するには、新しいバージョンの SkySend が必要です。",
+    "unreadable": "このメモは通常どおりに読み込めなかったため、届いたままの状態で表示しています。",
+    "showCode": "コードを表示",
+    "hideCode": "コードを隠す"
   },
   "notFound": {
     "title": "ページが見つかりません",

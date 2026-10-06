@@ -167,7 +167,14 @@
     "destroyed": "Ta notatka została trwale usunięta. Zapisz treść teraz - nie będzie już dostępna.",
     "reveal": "Pokaż",
     "hide": "Ukryj",
-    "verifying": "Weryfikacja..."
+    "verifying": "Weryfikacja...",
+    "blockCount_one": "Notatka z {{count}} blokiem",
+    "blockCount_other": "Notatka, liczba bloków: {{count}}",
+    "copyAll": "Kopiuj wszystko",
+    "unsupported": "Ta część notatki wymaga nowszej wersji SkySend.",
+    "unreadable": "Nie udało się odczytać tej notatki w zwykły sposób, dlatego jest wyświetlana dokładnie tak, jak dotarła.",
+    "showCode": "Pokaż kod",
+    "hideCode": "Ukryj kod"
   },
   "notFound": {
     "title": "Nie znaleziono strony",

@@ -227,7 +227,14 @@
     "destroyed": "此笔记已被永久删除。请立即保存内容——之后将无法再次访问。",
     "reveal": "显示",
     "hide": "隐藏",
-    "verifying": "验证中..."
+    "verifying": "验证中...",
+    "blockCount_one": "包含 {{count}} 个块的笔记",
+    "blockCount_other": "包含 {{count}} 个块的笔记",
+    "copyAll": "全部复制",
+    "unsupported": "笔记的这一部分需要更新版本的 SkySend。",
+    "unreadable": "无法按常规方式读取此笔记，因此按收到时的原样显示。",
+    "showCode": "显示代码",
+    "hideCode": "隐藏代码"
   },
   "notFound": {
     "title": "页面未找到",

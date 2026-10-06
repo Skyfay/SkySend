@@ -167,7 +167,14 @@
     "destroyed": "Dette notatet er permanent slettet. Lagre innholdet nå - det kan ikke åpnes igjen.",
     "reveal": "Vis",
     "hide": "Skjul",
-    "verifying": "Verifiserer..."
+    "verifying": "Verifiserer...",
+    "blockCount_one": "Notat med {{count}} blokk",
+    "blockCount_other": "Notat med {{count}} blokker",
+    "copyAll": "Kopier alt",
+    "unsupported": "Denne delen av notatet krever en nyere versjon av SkySend.",
+    "unreadable": "Notatet kunne ikke leses som vanlig, så det vises nøyaktig slik det kom.",
+    "showCode": "Vis kode",
+    "hideCode": "Skjul kode"
   },
   "notFound": {
     "title": "Siden ble ikke funnet",

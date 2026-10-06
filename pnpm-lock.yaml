@@ -219,6 +219,9 @@ importers:
       '@skysend/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@skysend/note-format':
+        specifier: workspace:*
+        version: link:../../packages/note-format
       '@tailwindcss/typography':
         specifier: ^0.5.20
         version: 0.5.20(tailwindcss@4.3.1)

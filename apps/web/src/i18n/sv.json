@@ -165,7 +165,14 @@
     "destroyed": "Denna anteckning har raderats permanent. Spara innehållet nu - det kan inte nås igen.",
     "reveal": "Visa",
     "hide": "Dölj",
-    "verifying": "Verifierar..."
+    "verifying": "Verifierar...",
+    "blockCount_one": "Anteckning med {{count}} block",
+    "blockCount_other": "Anteckning med {{count}} block",
+    "copyAll": "Kopiera allt",
+    "unsupported": "Den här delen av anteckningen kräver en nyare version av SkySend.",
+    "unreadable": "Anteckningen kunde inte läsas som vanligt och visas därför exakt som den kom fram.",
+    "showCode": "Visa kod",
+    "hideCode": "Dölj kod"
   },
   "notFound": {
     "title": "Sidan hittades inte",

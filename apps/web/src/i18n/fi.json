@@ -167,7 +167,14 @@
     "destroyed": "Tämä muistiinpano on poistettu pysyvästi. Tallenna sisältö nyt - sitä ei voi enää käyttää.",
     "reveal": "Näytä",
     "hide": "Piilota",
-    "verifying": "Tarkistetaan..."
+    "verifying": "Tarkistetaan...",
+    "blockCount_one": "Muistiinpano, jossa {{count}} lohko",
+    "blockCount_other": "Muistiinpano, jossa {{count}} lohkoa",
+    "copyAll": "Kopioi kaikki",
+    "unsupported": "Tämä muistiinpanon osa vaatii SkySendin uudemman version.",
+    "unreadable": "Muistiinpanoa ei voitu lukea tavalliseen tapaan, joten se näytetään täsmälleen sellaisena kuin se saapui.",
+    "showCode": "Näytä koodi",
+    "hideCode": "Piilota koodi"
   },
   "notFound": {
     "title": "Sivua ei löytynyt",

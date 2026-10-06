@@ -14,20 +14,27 @@ import {
   FileQuestion,
   Flame,
   Eye,
+  Layers,
   Loader2,
   Lock,
+  Copy,
+  Check,
+  TriangleAlert,
 } from "lucide-react";
+import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ReceiveShell } from "@/components/ReceiveShell";
 import { LinkGone } from "@/components/LinkGone";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
-import { NoteContent } from "@/components/NoteContent";
+import { NoteBlocks } from "@/components/NoteBlocks";
+import { copyText } from "@/lib/clipboard";
 import { useNoteView } from "@/hooks/useNoteView";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { formatTimeRemaining } from "@/lib/utils";
 
 const CONTENT_TYPE_ICONS = {
+  blocks: Layers,
   text: FileText,
   markdown: FileText,
   password: KeyRound,
@@ -41,20 +48,69 @@ function isKnownType(type: string | null | undefined): type is KnownType {
   return !!type && type in CONTENT_TYPE_ICONS;
 }
 
-/** The icon tile and type name above a note, like "Code" or "SSH Key". */
-function NoteType({ contentType, children }: { contentType?: string | null; children?: React.ReactNode }) {
+/** The tab label key of a block, which doubles as its type name. */
+function blockKey(block: ReadBlock): KnownType | null {
+  if (block.type === "unsupported") return null;
+  if (block.type === "text") return block.format === "markdown" ? "markdown" : "text";
+  return block.type;
+}
+
+/**
+ * The icon tile and name above a note. Before it is opened only the content type the server
+ * keeps is known, which for a note made of blocks says nothing about them. Once it is open,
+ * a single block shows its type and several show their count and types.
+ */
+/** Copies every block of the note as one text. */
+function CopyAll({ blocks }: { blocks: readonly ReadBlock[] }) {
   const { t } = useTranslation();
-  const Icon = isKnownType(contentType) ? CONTENT_TYPE_ICONS[contentType] : FileText;
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex justify-end">
+      <Button
+        variant="outline"
+        onClick={() => {
+          void copyText(noteToText(blocks)).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        }}
+      >
+        {copied ? <Check className="text-primary-text" /> : <Copy />}
+        {copied ? t("common.copied") : t("noteView.copyAll")}
+      </Button>
+    </div>
+  );
+}
+
+function NoteType({
+  contentType,
+  blocks,
+  children,
+}: {
+  contentType?: string | null;
+  blocks?: readonly ReadBlock[];
+  children?: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const keys = (blocks ?? []).map(blockKey).filter((key): key is KnownType => key !== null);
+  const single = blocks?.length === 1 ? keys[0] : undefined;
+  const type = blocks ? (single ?? "blocks") : isKnownType(contentType) ? contentType : null;
+  const Icon = type ? CONTENT_TYPE_ICONS[type] : FileText;
+  const name =
+    blocks && !single
+      ? t("noteView.blockCount", { count: blocks.length })
+      : type && type !== "blocks"
+        ? t(`tab.${type}`)
+        : t("myUploads.note");
+  const detail = blocks && !single ? [...new Set(keys)].map((key) => t(`tab.${key}`)).join(", ") : t("noteView.title");
   return (
     <div className="flex items-center gap-3">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold tracking-tight">
-          {isKnownType(contentType) ? t(`tab.${contentType}`) : t("noteView.title")}
-        </p>
-        <p className="text-xs text-muted-foreground">{t("noteView.title")}</p>
+        <p className="text-[15px] font-semibold tracking-tight">{name}</p>
+        <p className="truncate text-xs text-muted-foreground">{detail}</p>
       </div>
       {children}
     </div>
@@ -218,15 +274,12 @@ export function NoteViewPage() {
   }
 
   // Content display (viewing or destroyed)
-  if (
-    (noteHook.phase === "viewing" || noteHook.phase === "destroyed") &&
-    noteHook.content !== null &&
-    noteHook.contentType !== null
-  ) {
+  if ((noteHook.phase === "viewing" || noteHook.phase === "destroyed") && noteHook.blocks !== null) {
+    const blocks = noteHook.blocks;
     return (
       <ReceiveShell title={title} wide>
         <div className="space-y-4">
-          <NoteType contentType={noteHook.contentType}>
+          <NoteType blocks={blocks}>
             <span className="shrink-0 rounded-full bg-well px-3 py-1 text-xs text-muted-foreground">
               {noteHook.maxViews === 0
                 ? t("noteView.viewCountUnlimited", { current: noteHook.viewCount })
@@ -244,7 +297,16 @@ export function NoteViewPage() {
             </div>
           )}
 
-          <NoteContent content={noteHook.content} contentType={noteHook.contentType} />
+          {noteHook.unreadable && (
+            <div role="alert" className="flex items-start gap-2.5 rounded-2xl bg-warning-soft p-3.5 text-sm text-warning">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t("noteView.unreadable")}</span>
+            </div>
+          )}
+
+          <NoteBlocks blocks={blocks} />
+
+          {blocks.length > 1 && <CopyAll blocks={blocks} />}
         </div>
       </ReceiveShell>
     );
