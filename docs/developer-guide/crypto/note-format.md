@@ -93,6 +93,8 @@ When reading throws, the web app and the CLI client show the decrypted plaintext
 
 - **The server learns less.** Before v3 the server stored whether a note held text, a password, code or an SSH key. Since v3 it stores `blocks` for every note.
 - **Every decrypted document is untrusted.** Anyone can create a note with a crafted document. `parseNote()` validates the whole shape with Zod and caps the number of blocks, the number of password entries and the length of the language name.
+- **Legacy notes are capped too.** A note from before v3 with more than 50 code blocks or 100 passwords is shown as plain text, like a document that cannot be read. The private key in an SSH key note is found in linear time with `findPrivateKey()`, which returns exactly what the regex of v2 matched. That regex backtracked catastrophically on crafted notes.
+- **Rendering is bounded.** The web app highlights code up to 16KB per block and 32KB per note, because highlight.js takes quadratic time on crafted code. Markdown images are never loaded. The CLI client shows control characters and bidirectional overrides as a replacement character instead of passing them to the terminal.
 - **The content type is untrusted.** A server that reports the wrong content type only picks the wrong reader. Every reader returns plain data, and the web app renders text as text, Markdown through `rehype-sanitize` and highlighted code through DOMPurify, which only lets `span` elements with a `class` through.
 - **The encryption is unchanged.** Notes made of blocks use the same `encryptNoteContent()`, keys, nonce and password protection as the notes before v3.
 

@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import type { ReadBlock } from "@skysend/note-format";
 import hljs from "highlight.js/lib/core";
 
 // Register languages
@@ -95,8 +96,21 @@ hljs.registerLanguage("plaintext", plaintext);
 // dangerouslySetInnerHTML can only ever hold span elements with a class.
 const SAFE_HTML = { ALLOWED_TAGS: ["span"], ALLOWED_ATTR: ["class"] };
 
+/**
+ * highlight.js takes quadratic time on crafted input: 64KB of quotes keeps it busy for 15
+ * seconds, on the recipient's main thread. Code above this length is shown without
+ * highlighting, and a note gets HIGHLIGHT_BUDGET characters in total.
+ */
+export const MAX_HIGHLIGHT_LENGTH = 16 * 1024;
+export const HIGHLIGHT_BUDGET = 32 * 1024;
+
+function escapeHtml(code: string): string {
+  return code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /** Highlights code as a known language. Returns null if highlight.js does not know it. */
 export function highlightAs(code: string, language: string): string | null {
+  if (code.length > MAX_HIGHLIGHT_LENGTH) return null;
   try {
     return DOMPurify.sanitize(hljs.highlight(code, { language }).value, SAFE_HTML);
   } catch {
@@ -106,9 +120,17 @@ export function highlightAs(code: string, language: string): string | null {
 
 /**
  * Highlights the code of a code block. "auto", or a language highlight.js does not know,
- * detects the language instead. Returns the language the block is shown as.
+ * detects the language instead. Returns the language the block is shown as. Without
+ * `highlight`, or above MAX_HIGHLIGHT_LENGTH, the code comes back escaped and plain.
  */
-export function highlightCode(code: string, language: string): { html: string; language: string } {
+export function highlightCode(
+  code: string,
+  language: string,
+  highlight = true,
+): { html: string; language: string } {
+  if (!highlight || code.length > MAX_HIGHLIGHT_LENGTH) {
+    return { html: escapeHtml(code), language: language === "auto" ? "plaintext" : language };
+  }
   const known = language === "auto" ? null : highlightAs(code, language);
   if (known !== null) return { html: known, language };
   const detected = hljs.highlightAuto(code);
@@ -116,4 +138,19 @@ export function highlightCode(code: string, language: string): { html: string; l
     html: DOMPurify.sanitize(detected.value, SAFE_HTML),
     language: language === "auto" ? (detected.language ?? "plaintext") : language,
   };
+}
+
+/**
+ * Which blocks of a note get syntax highlighting. Each block above MAX_HIGHLIGHT_LENGTH goes
+ * without, and so does every block once the note has used up HIGHLIGHT_BUDGET.
+ */
+export function highlightedBlocks(blocks: readonly ReadBlock[]): boolean[] {
+  let budget = HIGHLIGHT_BUDGET;
+  return blocks.map((block) => {
+    const size =
+      block.type === "code" ? block.code.length : block.type === "text" && block.format === "markdown" ? block.text.length : 0;
+    if (size === 0 || size > MAX_HIGHLIGHT_LENGTH || size > budget) return false;
+    budget -= size;
+    return true;
+  });
 }

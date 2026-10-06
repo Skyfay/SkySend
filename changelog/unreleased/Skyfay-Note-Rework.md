@@ -10,10 +10,21 @@
 ### 🐛 Bug Fixes
 
 - **web**: Messages about generating an SSH key are translated instead of always shown in English.
+- **web**: A code note whose language name is crafted no longer breaks the note view.
+- **client**: A note with unlimited views shows its view count correctly in the terminal.
+
+### 🔒 Security
+
+- **web**: A crafted SSH key or code note can no longer freeze the browser that opens it.
+- **web**: Markdown notes no longer load images, so a note cannot make its reader's browser send requests to the instance.
+- **client**: A crafted SSH key note can no longer freeze the terminal that opens it.
+- **client**: Escape sequences and other control characters in a note are shown as placeholders in the terminal instead of being run.
+- **client**: A note saved from the terminal can only be read by its owner.
 
 ### 🎨 Improvements
 
 - **web**: Notifications match the design of the app and appear below the header instead of covering it.
+- **client**: The terminal reveals all passwords of a note at once with `a`.
 - **web**: Every part of a received note is shown in a frame of its own with a copy button, and code blocks can be folded one by one.
 - **web**: A note that cannot be read in its format is shown as it arrived instead of failing, so a note that deleted itself on opening is not lost.
 

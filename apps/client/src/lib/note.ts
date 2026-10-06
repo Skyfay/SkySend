@@ -1,5 +1,6 @@
 import {
   NOTE_KIND,
+  findPrivateKey,
   readNote,
   serializeNote,
   type LegacyNoteKind,
@@ -16,7 +17,6 @@ export function isCliNoteType(value: string): value is CliNoteType {
   return (CLI_NOTE_TYPES as readonly string[]).includes(value);
 }
 
-const PRIVATE_KEY = /(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/;
 const PASSPHRASE_LINE = /^Passphrase: (.+)$/m;
 
 /**
@@ -24,7 +24,7 @@ const PASSPHRASE_LINE = /^Passphrase: (.+)$/m;
  * "Passphrase:" line, and whatever is left as the public key.
  */
 export function sshKeyFromText(text: string): SshKeyBlock {
-  const privateKey = text.match(PRIVATE_KEY)?.[1] ?? "";
+  const privateKey = findPrivateKey(text) ?? "";
   const passphraseLine = text.match(PASSPHRASE_LINE);
   let publicKey = text;
   if (privateKey) publicKey = publicKey.replace(privateKey, "");
@@ -62,9 +62,14 @@ export function toLegacyNote(block: NoteBlock): { contentType: LegacyNoteKind; p
         plaintext: JSON.stringify(block.entries.map((entry) => ({ label: entry.label, value: entry.value }))),
       };
     case "code":
+      // Without a title or language the code goes as it is, the way CLI clients before v3
+      // sent it. Servers before v2.9 only read that form, not the JSON list.
       return {
         contentType: "code",
-        plaintext: JSON.stringify([{ title: block.title, language: block.language, code: block.code }]),
+        plaintext:
+          block.title || block.language !== "auto"
+            ? JSON.stringify([{ title: block.title, language: block.language, code: block.code }])
+            : block.code,
       };
     case "sshkey":
       return {
@@ -99,6 +104,16 @@ export function readReceivedNote(kind: string, plaintext: string): { blocks: Rea
   } catch {
     return { blocks: [{ type: "text", format: "plain", text: plaintext }], unreadable: true };
   }
+}
+
+/**
+ * Note text as the terminal may show it. A crafted note can carry escape sequences that hide
+ * text, fake a link or move the cursor, and bidirectional overrides that reorder what is
+ * shown. Each of them becomes a visible replacement character. Saving keeps the text as it is.
+ */
+export function forTerminal(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\r\n/g, "\n").replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F\u202A-\u202E\u2066-\u2069]/g, "\uFFFD");
 }
 
 /** The file name the TUI suggests when a note is saved. A lone SSH key keeps its own. */

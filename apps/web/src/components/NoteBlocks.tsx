@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
-import { highlightAs, highlightCode } from "@/lib/highlight";
+import { highlightAs, highlightCode, highlightedBlocks } from "@/lib/highlight";
 import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +40,17 @@ const sanitizeSchema = {
   tagNames: [...(defaultSchema.tagNames ?? []), "input"],
 };
 
-const markdownComponents: Components = {
+const plainMarkdownComponents: Components = {
   ...taskListComponents,
+  // Images never load. Remote ones are blocked by the CSP anyway, and a same-origin path
+  // would let a note make the recipient's browser send a request, like a logout.
+  img({ alt }) {
+    return alt ? <span>{alt}</span> : null;
+  },
+};
+
+const markdownComponents: Components = {
+  ...plainMarkdownComponents,
   code({ className, children }) {
     const language = /language-(\w+)/.exec(className ?? "")?.[1];
     const html = language ? highlightAs(String(children).replace(/\n$/, ""), language) : null;
@@ -99,17 +108,21 @@ function BlockFrame({ icon: Icon, title, actions, children }: { icon: LucideIcon
 }
 
 /** Markdown as the recipient sees it. The text editor uses it for its preview too. */
-export function MarkdownView({ text, className }: { text: string; className?: string }) {
+export function MarkdownView({ text, className, highlight = true }: { text: string; className?: string; highlight?: boolean }) {
   return (
     <div className={cn("prose prose-sm max-w-none overflow-auto scrollbar-thin dark:prose-invert", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, sanitizeSchema]]} components={markdownComponents}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+        components={highlight ? markdownComponents : plainMarkdownComponents}
+      >
         {text}
       </ReactMarkdown>
     </div>
   );
 }
 
-function TextBlockView({ block }: { block: TextBlock }) {
+function TextBlockView({ block, highlight }: { block: TextBlock; highlight: boolean }) {
   const { t } = useTranslation();
   const { copied, copy } = useCopied();
   return (
@@ -119,7 +132,7 @@ function TextBlockView({ block }: { block: TextBlock }) {
       actions={<CopyAction copied={copied === "text"} onClick={() => void copy("text", block.text)} />}
     >
       {block.format === "markdown" ? (
-        <MarkdownView text={block.text} className="p-4" />
+        <MarkdownView text={block.text} className="p-4" highlight={highlight} />
       ) : (
         <p className="whitespace-pre-wrap wrap-break-word p-4 text-[15px] leading-relaxed">{block.text}</p>
       )}
@@ -166,11 +179,14 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
   );
 }
 
-function CodeBlockView({ block, number }: { block: CodeBlock; number: number }) {
+function CodeBlockView({ block, number, highlight }: { block: CodeBlock; number: number; highlight: boolean }) {
   const { t } = useTranslation();
   const { copied, copy } = useCopied();
   const [open, setOpen] = useState(true);
-  const highlighted = useMemo(() => highlightCode(block.code, block.language), [block.code, block.language]);
+  const highlighted = useMemo(
+    () => highlightCode(block.code, block.language, highlight),
+    [block.code, block.language, highlight],
+  );
   const label = languageLabel(highlighted.language);
   const lines = highlighted.html.split("\n");
   const numberWidth = String(lines.length).length;
@@ -253,20 +269,23 @@ function SshKeyBlockView({ block }: { block: SshKeyBlock }) {
 /** A note's blocks, in the order the sender put them. */
 export function NoteBlocks({ blocks }: { blocks: readonly ReadBlock[] }) {
   const { t } = useTranslation();
+  const highlight = useMemo(() => highlightedBlocks(blocks), [blocks]);
+  // Untitled code blocks are numbered among the code blocks only.
+  const codeNumbers = useMemo(() => {
+    let count = 0;
+    return blocks.map((block) => (block.type === "code" ? ++count : 0));
+  }, [blocks]);
   return (
     <div className="space-y-3">
       {blocks.map((block, index) => {
         switch (block.type) {
           case "text":
-            return <TextBlockView key={index} block={block} />;
+            return <TextBlockView key={index} block={block} highlight={highlight[index]!} />;
           case "password":
             // A legacy note could hold an empty list, which v2 showed as nothing at all.
             return block.entries.length > 0 ? <PasswordBlockView key={index} block={block} /> : null;
-          case "code": {
-            // Untitled code blocks are numbered among the code blocks only.
-            const number = blocks.slice(0, index + 1).filter((b) => b.type === "code").length;
-            return <CodeBlockView key={index} block={block} number={number} />;
-          }
+          case "code":
+            return <CodeBlockView key={index} block={block} number={codeNumbers[index]!} highlight={highlight[index]!} />;
           case "sshkey":
             return <SshKeyBlockView key={index} block={block} />;
           case "unsupported":

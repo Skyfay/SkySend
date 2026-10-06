@@ -55,9 +55,10 @@ export const CODE_LANGUAGES = [
   { value: "plaintext", label: "Plain Text" },
 ] as const;
 
-const LABELS: Record<string, string> = Object.fromEntries(CODE_LANGUAGES.map((l) => [l.value, l.label]));
+// A Map, so a language name from a note like "__proto__" cannot reach Object.prototype.
+const LABELS = new Map<string, string>(CODE_LANGUAGES.map((l) => [l.value, l.label]));
 
 /** The display name of a highlight.js language, or the name itself if it is not in the list. */
 export function languageLabel(language: string): string {
-  return LABELS[language] ?? language;
+  return LABELS.get(language) ?? language;
 }

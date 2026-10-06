@@ -11,7 +11,16 @@
  */
 
 import { z } from "zod";
-import type { CodeBlock, NoteBlock, PasswordEntry } from "./document.js";
+import {
+  MAX_BLOCKS,
+  MAX_LANGUAGE_LENGTH,
+  MAX_PASSWORD_ENTRIES,
+  NoteFormatError,
+  type CodeBlock,
+  type NoteBlock,
+  type PasswordEntry,
+} from "./document.js";
+import { findPrivateKey } from "./private-key.js";
 
 /**
  * The content types a note had before v3.
@@ -52,28 +61,34 @@ function parseJson(content: string): unknown {
   }
 }
 
+// v2 had no limits here. A note above the caps of parseNote() throws, and the reader shows
+// it as plain text instead of building tens of thousands of blocks from a crafted note.
+function capped<T>(items: T[], max: number): T[] {
+  if (items.length > max) throw new NoteFormatError("The note holds more than this version shows");
+  return items;
+}
+
 function readPasswords(content: string): PasswordEntry[] {
   const parsed = legacyPasswordsSchema.safeParse(parseJson(content));
   if (parsed.success) {
-    return parsed.data.map((entry) => ({
+    return capped(parsed.data, MAX_PASSWORD_ENTRIES).map((entry) => ({
       label: typeof entry.label === "string" ? entry.label : "",
       value: String(entry.value),
     }));
   }
   // The oldest format: one password per paragraph, without labels.
-  return content
-    .split("\n\n")
-    .filter((value) => value.length > 0)
-    .map((value) => ({ label: "", value }));
+  const values = content.split("\n\n").filter((value) => value.length > 0);
+  return capped(values, MAX_PASSWORD_ENTRIES).map((value) => ({ label: "", value }));
 }
 
 function readCode(content: string): CodeBlock[] {
   const parsed = legacyCodeSchema.safeParse(parseJson(content));
   if (parsed.success) {
-    return parsed.data.map((block) => ({
+    return capped(parsed.data, MAX_BLOCKS).map((block) => ({
       type: "code",
       title: typeof block.title === "string" ? block.title : "",
-      language: typeof block.language === "string" ? block.language : "auto",
+      language:
+        typeof block.language === "string" && block.language.length <= MAX_LANGUAGE_LENGTH ? block.language : "auto",
       code: block.code,
     }));
   }
@@ -85,10 +100,7 @@ function readSshKey(content: string): NoteBlock {
   const passphraseMatch = content.match(/^Passphrase: (.+)$/m);
   const passphrase = passphraseMatch?.[1] ?? "";
   const withoutPassphrase = passphraseMatch ? content.replace(passphraseMatch[0], "").trim() : content;
-  const privateKeyMatch = withoutPassphrase.match(
-    /(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/,
-  );
-  const privateKey = privateKeyMatch?.[1]?.trim() ?? "";
+  const privateKey = findPrivateKey(withoutPassphrase)?.trim() ?? "";
   const publicKey = (privateKey ? withoutPassphrase.replace(privateKey, "") : withoutPassphrase).trim();
   return { type: "sshkey", publicKey, privateKey, passphrase };
 }

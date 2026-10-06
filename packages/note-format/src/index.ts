@@ -24,6 +24,7 @@ export type {
 
 export { readNote } from "./read.js";
 export { noteToText } from "./text.js";
+export { findPrivateKey } from "./private-key.js";
 
 // LEGACY(notes-v1): readers for notes written before v3.
 export { LEGACY_NOTE_KINDS, isLegacyKind, legacyToBlocks } from "./legacy.js";

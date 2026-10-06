@@ -205,7 +205,7 @@ skysend note:view <url>
 skysend note:view https://instance.com/note/abc123#secret
 ```
 
-If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords are hidden until revealed with their number key, and `s` saves the whole note to a file.
+If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords are hidden until revealed with their number key or all at once with `a`, and `s` saves the whole note to a file. The file is created so that only you can read it. Control characters in a note, which could hide text or change the terminal, are shown as `�`.
 
 Notes made of blocks need a CLI client from v3 on. Notes created before v3 open in every version.
 

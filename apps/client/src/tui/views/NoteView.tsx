@@ -6,7 +6,7 @@ import { decryptNoteContent } from "@skysend/crypto";
 import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { fetchNoteInfo, viewNote, verifyNotePassword } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
-import { noteFileName, readReceivedNote } from "../../lib/note.js";
+import { forTerminal, noteFileName, readReceivedNote } from "../../lib/note.js";
 import { parseShareUrl } from "../../lib/url.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import type { AppState } from "../types.js";
@@ -42,7 +42,7 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
           case "text":
             return (
               <Frame key={i} title={block.format === "markdown" ? "Markdown" : "Text"} accent={accent}>
-                <Text>{block.text}</Text>
+                <Text>{forTerminal(block.text)}</Text>
               </Frame>
             );
           case "password":
@@ -54,10 +54,10 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
                   return (
                     <Box key={j} borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
                       <Box justifyContent="space-between">
-                        <Text bold color={accent}>{entry.label || `Password ${number}`}</Text>
+                        <Text bold color={accent}>{entry.label ? forTerminal(entry.label) : `Password ${number}`}</Text>
                         <Text dimColor>[{number}] {shown ? "visible" : "hidden"}</Text>
                       </Box>
-                      <Text>{shown ? entry.value : "•".repeat(Math.min(entry.value.length, 32))}</Text>
+                      <Text>{shown ? forTerminal(entry.value) : "•".repeat(Math.min(entry.value.length, 32))}</Text>
                     </Box>
                   );
                 })}
@@ -65,8 +65,8 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
             );
           case "code":
             return (
-              <Frame key={i} title={`${block.title || "Code"}${block.language === "auto" ? "" : ` (${block.language})`}`} accent={accent}>
-                <Text>{block.code}</Text>
+              <Frame key={i} title={forTerminal(`${block.title || "Code"}${block.language === "auto" ? "" : ` (${block.language})`}`)} accent={accent}>
+                <Text>{forTerminal(block.code)}</Text>
               </Frame>
             );
           case "sshkey":
@@ -74,17 +74,17 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
               <Box key={i} flexDirection="column" gap={1}>
                 {block.publicKey && (
                   <Frame title="Public Key" accent={accent}>
-                    <Text wrap="wrap">{block.publicKey}</Text>
+                    <Text wrap="wrap">{forTerminal(block.publicKey)}</Text>
                   </Frame>
                 )}
                 {block.privateKey && (
                   <Frame title="Private Key" accent={accent}>
-                    <Text>{block.privateKey}</Text>
+                    <Text>{forTerminal(block.privateKey)}</Text>
                   </Frame>
                 )}
                 {block.passphrase && (
                   <Frame title="Passphrase" accent={accent}>
-                    <Text>{block.passphrase}</Text>
+                    <Text>{forTerminal(block.passphrase)}</Text>
                   </Frame>
                 )}
               </Box>
@@ -205,7 +205,8 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     try {
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(filePath, noteToText(blocks), "utf-8");
+      // Only the owner may read it: the note can hold passwords and private keys.
+      fs.writeFileSync(filePath, noteToText(blocks), { encoding: "utf-8", mode: 0o600 });
       setErrorMsg("");
       onBack();
     } catch (err) {
@@ -214,7 +215,8 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     }
   }, [blocks, onBack]);
 
-  const hasPasswords = blocks.some((block) => block.type === "password" && block.entries.length > 0);
+  const passwordCount = blocks.reduce((sum, block) => sum + (block.type === "password" ? block.entries.length : 0), 0);
+  const hasPasswords = passwordCount > 0;
 
   // Toggle password reveal
   const toggleReveal = useCallback((number: number) => {
@@ -229,6 +231,13 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     if (phase === "display") {
       if (key.escape) { onBack(); return; }
       if (input === "s") { setPhase("save-path"); return; }
+      // A note made of blocks can hold more than nine passwords, so a reveals or hides all.
+      if (hasPasswords && input === "a") {
+        setRevealedPasswords((prev) =>
+          prev.size === passwordCount ? new Set() : new Set(Array.from({ length: passwordCount }, (_, i) => i + 1)),
+        );
+        return;
+      }
       // Toggle password with number keys
       if (hasPasswords) {
         const number = parseInt(input, 10);
@@ -293,7 +302,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1} justifyContent="space-between">
           <Text bold color={accent}>Note ({blocks.length === 1 ? "1 block" : `${blocks.length} blocks`})</Text>
-          <Text dimColor>View {viewCount} / {maxViews}</Text>
+          <Text dimColor>{maxViews === 0 ? `View ${viewCount} (unlimited)` : `View ${viewCount} / ${maxViews}`}</Text>
         </Box>
 
         {unreadable && (
@@ -306,7 +315,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
 
         <Box marginTop={1}>
           <Text dimColor>s save to file  Esc back</Text>
-          {hasPasswords && <Text dimColor>  1-9 toggle reveal</Text>}
+          {hasPasswords && <Text dimColor>  1-9 toggle reveal  a all</Text>}
         </Box>
       </Box>
     );

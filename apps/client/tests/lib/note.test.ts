@@ -9,6 +9,7 @@ import {
 import { NOTE_KIND, legacyToBlocks, parseNote, type NoteBlock } from "@skysend/note-format";
 import {
   CLI_NOTE_TYPES,
+  forTerminal,
   isCliNoteType,
   noteFileName,
   prepareNote,
@@ -77,6 +78,12 @@ describe("toLegacyNote", () => {
     },
   );
 
+  it("sends code from the command line as it is, which every server before v3 reads", () => {
+    const block = textToBlock("code", "make deploy");
+    expect(toLegacyNote(block)).toEqual({ contentType: "code", plaintext: "make deploy" });
+    expect(legacyToBlocks("code", "make deploy")).toEqual([block]);
+  });
+
   it("uses the content types a server before v3 knows", () => {
     expect(BLOCKS.map((block) => toLegacyNote(block).contentType)).toEqual([
       "text",
@@ -136,5 +143,19 @@ describe("noteFileName", () => {
     expect(noteFileName([BLOCKS[0]!])).toBe("note.txt");
     expect(noteFileName([BLOCKS[0]!, BLOCKS[5]!])).toBe("note.txt");
     expect(noteFileName([])).toBe("note.txt");
+  });
+});
+
+describe("forTerminal", () => {
+  it("keeps text, tabs and line breaks", () => {
+    expect(forTerminal("line one\n\tline two")).toBe("line one\n\tline two");
+    expect(forTerminal("windows\r\nline")).toBe("windows\nline");
+  });
+
+  it("makes escape sequences and bidirectional overrides visible instead of running them", () => {
+    expect(forTerminal("safe\x1b[8mhidden\x1b[0m")).toBe("safe\uFFFD[8mhidden\uFFFD[0m");
+    expect(forTerminal("\x1b]8;;https://evil.example\x07link")).toBe("\uFFFD]8;;https://evil.example\uFFFDlink");
+    expect(forTerminal("a\rb\bc\x7fd\x9be")).toBe("a\uFFFDb\uFFFDc\uFFFDd\uFFFDe");
+    expect(forTerminal("rm -rf /\u202Etxt.exe")).toBe("rm -rf /\uFFFDtxt.exe");
   });
 });

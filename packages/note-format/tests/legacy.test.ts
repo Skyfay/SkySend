@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { LEGACY_NOTE_KINDS, isLegacyKind, legacyToBlocks } from "../src/index.js";
+import {
+  LEGACY_NOTE_KINDS,
+  MAX_BLOCKS,
+  MAX_PASSWORD_ENTRIES,
+  NoteFormatError,
+  isLegacyKind,
+  legacyToBlocks,
+} from "../src/index.js";
 
 // LEGACY(notes-v1): this file goes with src/legacy.ts.
 //
@@ -168,5 +175,35 @@ describe("legacyToBlocks for SSH keys", () => {
     expect(legacyToBlocks("sshkey", content)).toEqual([
       { type: "sshkey", publicKey: PUBLIC_KEY, privateKey: "", passphrase: "first" },
     ]);
+  });
+});
+
+describe("legacyToBlocks against crafted notes", () => {
+  it("refuses more password entries than a note made of blocks may hold", () => {
+    const entries = (count: number) => JSON.stringify(Array.from({ length: count }, () => ({ value: "x" })));
+    expect(legacyToBlocks("password", entries(MAX_PASSWORD_ENTRIES))[0]).toMatchObject({ type: "password" });
+    expect(() => legacyToBlocks("password", entries(MAX_PASSWORD_ENTRIES + 1))).toThrow(NoteFormatError);
+    expect(() => legacyToBlocks("password", "x\n\n".repeat(MAX_PASSWORD_ENTRIES + 1))).toThrow(NoteFormatError);
+  });
+
+  it("refuses more code blocks than a note made of blocks may hold", () => {
+    const blocks = (count: number) => JSON.stringify(Array.from({ length: count }, () => ({ code: "" })));
+    expect(legacyToBlocks("code", blocks(MAX_BLOCKS))).toHaveLength(MAX_BLOCKS);
+    expect(() => legacyToBlocks("code", blocks(MAX_BLOCKS + 1))).toThrow(NoteFormatError);
+  });
+
+  it("detects the language of a code block whose language is too long to be one", () => {
+    const content = JSON.stringify([{ code: "x", language: "a".repeat(41) }, { code: "y", language: "__proto__" }]);
+    expect(legacyToBlocks("code", content)).toEqual([
+      { type: "code", title: "", language: "auto", code: "x" },
+      { type: "code", title: "", language: "__proto__", code: "y" },
+    ]);
+  });
+
+  it("reads a crafted SSH key note of a megabyte in well under a second", () => {
+    const started = performance.now();
+    const [block] = legacyToBlocks("sshkey", "-----BEGIN PRIVATE KEY-----".repeat(40000));
+    expect(block).toMatchObject({ type: "sshkey", privateKey: "" });
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });
