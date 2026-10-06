@@ -9,16 +9,12 @@
       "nav.menu",
       "upload.passwordPlaceholderRequired",
       "language.search",
-      "code.blocks",
       "code.titlePlaceholder",
       "code.placeholder",
       "code.auto",
       "code.language",
-      "code.addBlock",
       "code.noTitle",
       "code.detectedAs",
-      "code.expandAll",
-      "code.collapseAll",
       "footer.report",
       "download.firefoxDevToolsWarning",
       "download.firefoxDevToolsWarningDesc",
@@ -95,15 +91,14 @@
     "password": "密码",
     "code": "代码",
     "sshkey": "SSH 密钥",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "笔记"
   },
   "note": {
-    "content": "内容",
     "expiry": "过期时间",
     "maxViews": "最大查看次数",
     "burnAfterReading": "1 次 (阅后即焚)",
     "unlimited": "无限制",
-    "create": "创建笔记",
     "creating": "加密中...",
     "tooLarge": "笔记大小超过限制 {{size}}",
     "plainText": "纯文本",
@@ -113,10 +108,17 @@
     "expand": "展开编辑器",
     "placeholder": {
       "text": "输入你的秘密文本...",
-      "password": "输入要分享的密码...",
-      "code": "在此粘贴代码...",
       "markdown": "在此编写 Markdown..."
-    }
+    },
+    "startHint": "选择从哪一项开始。之后可以添加更多块。",
+    "cardText": "自由文本，可选 Markdown",
+    "cardPassword": "一个或多个密码，附带生成器",
+    "cardCode": "支持 40 多种语言的高亮",
+    "cardSshKey": "生成密钥对或粘贴已有密钥",
+    "addBlock": "添加块",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "removeBlock": "移除块"
   },
   "upload": {
     "title": "上传文件",
@@ -278,23 +280,18 @@
     "bits": "位熵 (bits of entropy)"
   },
   "password": {
-    "passwords": "密码列表",
     "enterPassword": "输入密码...",
     "addAnother": "添加另一个密码",
     "passwordNumber": "密码 {{number}}",
     "labelPlaceholder": "密码 {{number}} 的标签（可选）"
   },
   "code": {
-    "blocks": "代码块",
     "titlePlaceholder": "文件名（如 docker-compose.yaml，可选）",
     "placeholder": "在此粘贴您的代码...",
     "auto": "自动检测",
     "language": "语言",
-    "addBlock": "添加代码块",
     "noTitle": "代码块 {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "展开全部",
-    "collapseAll": "折叠全部"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "算法",
@@ -307,14 +304,12 @@
     "generating": "正在生成...",
     "modeGenerate": "生成",
     "modePaste": "粘贴",
-    "pasteLabel": "SSH 密钥",
     "pastePlaceholderPublic": "在此粘贴公钥 (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "在此粘贴私钥 (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "密钥大小",
     "publicKey": "公钥",
     "privateKey": "私钥",
-    "shareAs": "以加密笔记形式分享",
-    "createNote": "作为笔记分享"
+    "shareAs": "以加密笔记形式分享"
   },
   "auth": {
     "loginRequired": "上传需要登录",
@@ -407,7 +402,9 @@
     "receiveText": "它在发送者的设备上完成加密，仅会在此处，即你的浏览器中解密。",
     "decryptHint": "已在此设备上解密。密钥永远不会到达服务器。",
     "goneText": "分享在到期或达到上限后会自动删除。请向发送者索取新的链接。",
-    "goneAction": "分享文件或笔记"
+    "goneAction": "分享文件或笔记",
+    "fileTabHint": "最大 {{size}}，任意类型",
+    "noteTabHint": "文本、密码、代码和密钥"
   },
   "how": {
     "eyebrow": "从设计上做到零知识",

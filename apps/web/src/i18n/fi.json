@@ -35,15 +35,14 @@
     "password": "Salasana",
     "code": "Koodi",
     "sshkey": "SSH-avain",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Muistiinpano"
   },
   "note": {
-    "content": "Sisältö",
     "expiry": "Vanhenee",
     "maxViews": "Katselukerrat",
     "burnAfterReading": "1 (tuhoa lukemisen jälkeen)",
     "unlimited": "Rajaton",
-    "create": "Luo muistiinpano",
     "creating": "Salataan...",
     "tooLarge": "Muistiinpano ylittää enimmäiskoon {{size}}",
     "plainText": "Pelkkä teksti",
@@ -53,10 +52,17 @@
     "expand": "Laajenna editoria",
     "placeholder": {
       "text": "Kirjoita salainen tekstisi...",
-      "password": "Kirjoita jaettava salasana...",
-      "code": "Liitä koodisi tähän...",
       "markdown": "Kirjoita markdown-tekstisi tähän..."
-    }
+    },
+    "startHint": "Valitse, millä aloitat. Voit lisätä lohkoja myöhemmin.",
+    "cardText": "Vapaata tekstiä, halutessasi Markdownina",
+    "cardPassword": "Yksi tai useampi salasana, generaattorilla",
+    "cardCode": "Korostus yli 40 kielelle",
+    "cardSshKey": "Luo avainpari tai liitä olemassa oleva",
+    "addBlock": "Lisää lohko",
+    "moveUp": "Siirrä ylös",
+    "moveDown": "Siirrä alas",
+    "removeBlock": "Poista lohko"
   },
   "upload": {
     "title": "Lähetä tiedostoja",
@@ -218,23 +224,18 @@
     "bits": "bittiä entropiaa"
   },
   "password": {
-    "passwords": "Salasanat",
     "enterPassword": "Syötä salasana...",
     "addAnother": "Lisää toinen salasana",
     "passwordNumber": "Salasana {{number}}",
     "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)"
   },
   "code": {
-    "blocks": "Koodilohkot",
     "titlePlaceholder": "Tiedostonimi (esim. docker-compose.yaml, valinnainen)",
     "placeholder": "Liitä koodisi tähän...",
     "auto": "Automaattinen tunnistus",
     "language": "Kieli",
-    "addBlock": "Lisää koodilohko",
     "noTitle": "Koodilohko {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Laajenna kaikki",
-    "collapseAll": "Tiivistä kaikki"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritmi",
@@ -247,14 +248,12 @@
     "generating": "Luodaan...",
     "modeGenerate": "Luo",
     "modePaste": "Liitä",
-    "pasteLabel": "SSH-avain",
     "pastePlaceholderPublic": "Liitä julkinen avaimesi tähän (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Liitä yksityinen avaimesi tähän (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Avaimen koko",
     "publicKey": "Julkinen avain",
     "privateKey": "Yksityinen avain",
-    "shareAs": "Jaa salattuna muistiinpanona",
-    "createNote": "Jaa muistiinpanona"
+    "shareAs": "Jaa salattuna muistiinpanona"
   },
   "auth": {
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
@@ -345,7 +344,9 @@
     "receiveText": "Se salattiin lähettäjän laitteella ja puretaan vain täällä, selaimessasi.",
     "decryptHint": "Purettu tällä laitteella. Avain ei koskaan saavuta palvelinta.",
     "goneText": "Jaot poistuvat itsestään, kun niiden aika tai raja täyttyy. Pyydä lähettäjältä uusi linkki.",
-    "goneAction": "Jaa tiedosto tai muistiinpano"
+    "goneAction": "Jaa tiedosto tai muistiinpano",
+    "fileTabHint": "Enintään {{size}}, mikä tahansa tyyppi",
+    "noteTabHint": "Tekstiä, salasanoja, koodia ja avaimia"
   },
   "how": {
     "eyebrow": "Zero knowledge jo suunnittelussa",

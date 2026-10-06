@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { NoteContentType } from "@skysend/crypto";
+import type { NOTE_KIND } from "@skysend/note-format";
 
 const configResponseSchema = z.object({
   // Service toggles
@@ -273,7 +273,8 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  contentType: NoteContentType;
+  /** Every note this app creates is made of blocks. */
+  contentType: typeof NOTE_KIND;
   maxViews: number;
   expireSec: number;
   hasPassword: boolean;

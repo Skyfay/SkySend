@@ -35,15 +35,14 @@
     "password": "Lösenord",
     "code": "Kod",
     "sshkey": "SSH-nyckel",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Anteckning"
   },
   "note": {
-    "content": "Innehåll",
     "expiry": "Upphör efter",
     "maxViews": "Max visningar",
     "burnAfterReading": "1 (förstör efter läsning)",
     "unlimited": "Obegränsat",
-    "create": "Skapa anteckning",
     "creating": "Krypterar...",
     "tooLarge": "Anteckningen överskrider maxstorleken på {{size}}",
     "plainText": "Oformaterad text",
@@ -53,10 +52,17 @@
     "expand": "Expandera redigeraren",
     "placeholder": {
       "text": "Skriv din hemliga text...",
-      "password": "Skriv lösenordet att dela...",
-      "code": "Klistra in din kod här...",
       "markdown": "Skriv din markdown här..."
-    }
+    },
+    "startHint": "Välj vad du vill börja med. Du kan lägga till fler block efteråt.",
+    "cardText": "Fri text, med Markdown om du vill",
+    "cardPassword": "Ett eller flera lösenord, med generator",
+    "cardCode": "Färgmarkering för över 40 språk",
+    "cardSshKey": "Skapa ett nyckelpar eller klistra in ett",
+    "addBlock": "Lägg till block",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "removeBlock": "Ta bort block"
   },
   "upload": {
     "title": "Ladda upp filer",
@@ -216,23 +222,18 @@
     "bits": "bitar av entropi"
   },
   "password": {
-    "passwords": "Lösenord",
     "enterPassword": "Ange lösenord...",
     "addAnother": "Lägg till ytterligare lösenord",
     "passwordNumber": "Lösenord {{number}}",
     "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)"
   },
   "code": {
-    "blocks": "Kodblock",
     "titlePlaceholder": "Filnamn (t.ex. docker-compose.yaml, valfritt)",
     "placeholder": "Klistra in din kod här...",
     "auto": "Automatisk igenkänning",
     "language": "Språk",
-    "addBlock": "Lägg till kodblock",
     "noTitle": "Kodblock {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Expandera alla",
-    "collapseAll": "Komprimera alla"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritm",
@@ -245,14 +246,12 @@
     "generating": "Genererar...",
     "modeGenerate": "Generera",
     "modePaste": "Klistra in",
-    "pasteLabel": "SSH-nyckel",
     "pastePlaceholderPublic": "Klistra in din publika nyckel här (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Klistra in din privata nyckel här (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Nyckelstorlek",
     "publicKey": "Offentlig nyckel",
     "privateKey": "Privat nyckel",
-    "shareAs": "Dela som krypterad anteckning",
-    "createNote": "Dela som anteckning"
+    "shareAs": "Dela som krypterad anteckning"
   },
   "auth": {
     "loginRequired": "Inloggning krävs för att ladda upp",
@@ -345,7 +344,9 @@
     "receiveText": "Den krypterades på avsändarens enhet och dekrypteras bara här, i din webbläsare.",
     "decryptHint": "Dekrypterad på den här enheten. Nyckeln når aldrig servern.",
     "goneText": "Delningar raderar sig själva när deras tid eller gräns löper ut. Be avsändaren om en ny länk.",
-    "goneAction": "Dela en fil eller anteckning"
+    "goneAction": "Dela en fil eller anteckning",
+    "fileTabHint": "Upp till {{size}}, alla typer",
+    "noteTabHint": "Text, lösenord, kod och nycklar"
   },
   "how": {
     "eyebrow": "Zero knowledge från grunden",

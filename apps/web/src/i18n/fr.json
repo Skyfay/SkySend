@@ -35,15 +35,14 @@
     "password": "Mot de passe",
     "code": "Code",
     "sshkey": "Clé SSH",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Note"
   },
   "note": {
-    "content": "Contenu",
     "expiry": "Expire après",
     "maxViews": "Vues max.",
     "burnAfterReading": "1 (détruire après lecture)",
     "unlimited": "Illimité",
-    "create": "Créer une note",
     "creating": "Chiffrement...",
     "tooLarge": "La note dépasse la taille maximale de {{size}}",
     "plainText": "Texte brut",
@@ -53,10 +52,17 @@
     "expand": "Agrandir l'éditeur",
     "placeholder": {
       "text": "Saisissez votre texte secret...",
-      "password": "Saisissez le mot de passe à partager...",
-      "code": "Collez votre code ici...",
       "markdown": "Écrivez votre markdown ici..."
-    }
+    },
+    "startHint": "Choisissez par quoi commencer. Vous pourrez ajouter d'autres blocs ensuite.",
+    "cardText": "Texte libre, avec Markdown si vous le souhaitez",
+    "cardPassword": "Un ou plusieurs mots de passe, avec générateur",
+    "cardCode": "Coloration pour plus de 40 langages",
+    "cardSshKey": "Générez une paire de clés ou collez-en une",
+    "addBlock": "Ajouter un bloc",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "removeBlock": "Retirer le bloc"
   },
   "upload": {
     "title": "Téléverser des fichiers",
@@ -218,23 +224,18 @@
     "bits": "bits d'entropie"
   },
   "password": {
-    "passwords": "Mots de passe",
     "enterPassword": "Saisir le mot de passe...",
     "addAnother": "Ajouter un autre mot de passe",
     "passwordNumber": "Mot de passe {{number}}",
     "labelPlaceholder": "Libellé du mot de passe {{number}} (facultatif)"
   },
   "code": {
-    "blocks": "Blocs de code",
     "titlePlaceholder": "Nom de fichier (ex. docker-compose.yaml, optionnel)",
     "placeholder": "Collez votre code ici...",
     "auto": "Détection automatique",
     "language": "Langage",
-    "addBlock": "Ajouter un bloc de code",
     "noTitle": "Bloc de code {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Tout développer",
-    "collapseAll": "Tout réduire"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algorithme",
@@ -247,14 +248,12 @@
     "generating": "Génération...",
     "modeGenerate": "Générer",
     "modePaste": "Coller",
-    "pasteLabel": "Clé SSH",
     "pastePlaceholderPublic": "Collez votre clé publique ici (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Collez votre clé privée ici (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Taille de clé",
     "publicKey": "Clé publique",
     "privateKey": "Clé privée",
-    "shareAs": "Partager comme note chiffrée",
-    "createNote": "Partager comme note"
+    "shareAs": "Partager comme note chiffrée"
   },
   "auth": {
     "loginRequired": "Connexion requise pour téléverser",
@@ -345,7 +344,9 @@
     "receiveText": "Le contenu a été chiffré sur l'appareil de l'expéditeur et n'est déchiffré qu'ici, dans votre navigateur.",
     "decryptHint": "Déchiffré sur cet appareil. La clé n'atteint jamais le serveur.",
     "goneText": "Les partages se suppriment d'eux-mêmes lorsque leur délai ou leur limite est atteint. Demandez un nouveau lien à l'expéditeur.",
-    "goneAction": "Partager un fichier ou une note"
+    "goneAction": "Partager un fichier ou une note",
+    "fileTabHint": "Jusqu'à {{size}}, tout type",
+    "noteTabHint": "Texte, mots de passe, code et clés"
   },
   "how": {
     "eyebrow": "Zero knowledge par conception",

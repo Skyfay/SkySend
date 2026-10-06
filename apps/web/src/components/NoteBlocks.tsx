@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
 import { highlightAs, highlightCode } from "@/lib/highlight";
+import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
 import { cn } from "@/lib/utils";
 
 // Every block comes from a decrypted note, which anyone with a link can craft. Text is only
@@ -40,6 +41,7 @@ const sanitizeSchema = {
 };
 
 const markdownComponents: Components = {
+  ...taskListComponents,
   code({ className, children }) {
     const language = /language-(\w+)/.exec(className ?? "")?.[1];
     const html = language ? highlightAs(String(children).replace(/\n$/, ""), language) : null;
@@ -96,6 +98,17 @@ function BlockFrame({ icon: Icon, title, actions, children }: { icon: LucideIcon
   );
 }
 
+/** Markdown as the recipient sees it. The text editor uses it for its preview too. */
+export function MarkdownView({ text, className }: { text: string; className?: string }) {
+  return (
+    <div className={cn("prose prose-sm max-w-none overflow-auto scrollbar-thin dark:prose-invert", className)}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, sanitizeSchema]]} components={markdownComponents}>
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 function TextBlockView({ block }: { block: TextBlock }) {
   const { t } = useTranslation();
   const { copied, copy } = useCopied();
@@ -106,11 +119,7 @@ function TextBlockView({ block }: { block: TextBlock }) {
       actions={<CopyAction copied={copied === "text"} onClick={() => void copy("text", block.text)} />}
     >
       {block.format === "markdown" ? (
-        <div className="prose prose-sm max-w-none overflow-auto p-4 scrollbar-thin dark:prose-invert">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, sanitizeSchema]]} components={markdownComponents}>
-            {block.text}
-          </ReactMarkdown>
-        </div>
+        <MarkdownView text={block.text} className="p-4" />
       ) : (
         <p className="whitespace-pre-wrap wrap-break-word p-4 text-[15px] leading-relaxed">{block.text}</p>
       )}

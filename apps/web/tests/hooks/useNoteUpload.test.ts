@@ -68,8 +68,7 @@ describe("useNoteUpload", () => {
 
     act(() => {
       result.current.upload({
-        content: "hello",
-        contentType: "text",
+        blocks: [{ type: "text", format: "plain", text: "hello" }],
         maxViews: 1,
         expireSec: 3600,
         password: "",
@@ -91,8 +90,7 @@ describe("useNoteUpload", () => {
 
     act(() => {
       result.current.upload({
-        content: "oops",
-        contentType: "text",
+        blocks: [{ type: "text", format: "plain", text: "oops" }],
         maxViews: 1,
         expireSec: 3600,
         password: "",
@@ -112,8 +110,7 @@ describe("useNoteUpload", () => {
 
     act(() => {
       result.current.upload({
-        content: "x",
-        contentType: "text",
+        blocks: [{ type: "text", format: "plain", text: "x" }],
         maxViews: 1,
         expireSec: 3600,
         password: "",
@@ -141,8 +138,7 @@ describe("useNoteUpload", () => {
 
     act(() => {
       result.current.upload({
-        content: "secret",
-        contentType: "password",
+        blocks: [{ type: "text", format: "plain", text: "secret" }],
         maxViews: 1,
         expireSec: 3600,
         password: "hunter2",
@@ -162,8 +158,7 @@ describe("useNoteUpload", () => {
 
     act(() => {
       result.current.upload({
-        content: "hello",
-        contentType: "text",
+        blocks: [{ type: "text", format: "plain", text: "hello" }],
         maxViews: 1,
         expireSec: 3600,
         password: "",
@@ -172,5 +167,38 @@ describe("useNoteUpload", () => {
 
     await waitFor(() => expect(result.current.phase).toBe("error"));
     expect(result.current.error).toBe("Note creation failed");
+  });
+
+  it("encrypts the blocks as one document and tells the server only that it is made of blocks", async () => {
+    const createNote = await getCreateNote();
+    createNote.mockResolvedValueOnce({ id: "note-blocks", expiresAt: "2099-01-01" });
+    const crypto = await import("@skysend/crypto");
+    const store = await import("../../src/lib/upload-store.js");
+
+    const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
+    const { result } = renderHook(() => useNoteUpload());
+    const blocks = [
+      { type: "text" as const, format: "markdown" as const, text: "# Access" },
+      { type: "password" as const, entries: [{ label: "root", value: "pw" }] },
+    ];
+
+    act(() => {
+      result.current.upload({ blocks, maxViews: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(result.current.phase).toBe("done"));
+
+    expect(vi.mocked(crypto.encryptNoteContent)).toHaveBeenCalledWith(
+      JSON.stringify({ v: 1, blocks }),
+      expect.anything(),
+    );
+    const request = createNote.mock.calls[0]![0];
+    expect(request.contentType).toBe("blocks");
+    // Nothing about the blocks goes into the request in plaintext.
+    expect(JSON.stringify(request)).not.toMatch(/markdown|password|Access|root/);
+
+    // The kinds are kept for "My Uploads", in this browser only.
+    expect(vi.mocked(store.saveNote)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "note-blocks", contentType: "blocks", kinds: ["markdown", "password"] }),
+    );
   });
 });

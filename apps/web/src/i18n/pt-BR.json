@@ -9,16 +9,12 @@
       "nav.menu",
       "upload.passwordPlaceholderRequired",
       "language.search",
-      "code.blocks",
       "code.titlePlaceholder",
       "code.placeholder",
       "code.auto",
       "code.language",
-      "code.addBlock",
       "code.noTitle",
       "code.detectedAs",
-      "code.expandAll",
-      "code.collapseAll",
       "footer.report",
       "download.firefoxDevToolsWarning",
       "download.firefoxDevToolsWarningDesc",
@@ -95,15 +91,14 @@
     "password": "Senha",
     "code": "Código",
     "sshkey": "Chave SSH",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Nota"
   },
   "note": {
-    "content": "Conteúdo",
     "expiry": "Expira após",
     "maxViews": "Máximo de visualizações",
     "burnAfterReading": "1 (autodestruir após leitura)",
     "unlimited": "Ilimitado",
-    "create": "Criar nota",
     "creating": "Criptografando...",
     "tooLarge": "A nota excede o tamanho máximo de {{size}}",
     "plainText": "Texto simples",
@@ -113,10 +108,17 @@
     "expand": "Expandir editor",
     "placeholder": {
       "text": "Digite seu texto secreto...",
-      "password": "Digite a senha para compartilhar...",
-      "code": "Cole seu código aqui...",
       "markdown": "Escreva seu Markdown aqui..."
-    }
+    },
+    "startHint": "Escolha por onde começar. Depois você pode adicionar mais blocos.",
+    "cardText": "Texto livre, com Markdown se quiser",
+    "cardPassword": "Uma ou mais senhas, com gerador",
+    "cardCode": "Destaque para mais de 40 linguagens",
+    "cardSshKey": "Gere um par de chaves ou cole um",
+    "addBlock": "Adicionar um bloco",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "removeBlock": "Remover bloco"
   },
   "upload": {
     "title": "Enviar Arquivos",
@@ -278,23 +280,18 @@
     "bits": "bits de entropia"
   },
   "password": {
-    "passwords": "Senhas",
     "enterPassword": "Digite a senha...",
     "addAnother": "Adicionar outra senha",
     "passwordNumber": "Senha {{number}}",
     "labelPlaceholder": "Rótulo para senha {{number}} (opcional)"
   },
   "code": {
-    "blocks": "Blocos de código",
     "titlePlaceholder": "Nome do arquivo (ex. docker-compose.yaml, opcional)",
     "placeholder": "Cole seu código aqui...",
     "auto": "Detecção automática",
     "language": "Linguagem",
-    "addBlock": "Adicionar bloco de código",
     "noTitle": "Bloco de código {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Expandir tudo",
-    "collapseAll": "Recolher tudo"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritmo",
@@ -307,14 +304,12 @@
     "generating": "Gerando...",
     "modeGenerate": "Gerar",
     "modePaste": "Colar",
-    "pasteLabel": "Chave SSH",
     "pastePlaceholderPublic": "Cole sua chave pública aqui (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Cole sua chave privada aqui (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Tamanho da chave",
     "publicKey": "Chave Pública",
     "privateKey": "Chave Privada",
-    "shareAs": "Compartilhar como nota criptografada",
-    "createNote": "Compartilhar como nota"
+    "shareAs": "Compartilhar como nota criptografada"
   },
   "auth": {
     "loginRequired": "Login necessário para enviar",
@@ -407,7 +402,9 @@
     "receiveText": "O conteúdo foi criptografado no dispositivo do remetente e só é descriptografado aqui, no seu navegador.",
     "decryptHint": "Descriptografado neste dispositivo. A chave nunca chega ao servidor.",
     "goneText": "Os compartilhamentos se excluem sozinhos quando o prazo ou o limite acaba. Peça um novo link ao remetente.",
-    "goneAction": "Compartilhar um arquivo ou nota"
+    "goneAction": "Compartilhar um arquivo ou nota",
+    "fileTabHint": "Até {{size}}, qualquer tipo",
+    "noteTabHint": "Texto, senhas, código e chaves"
   },
   "how": {
     "eyebrow": "Zero knowledge por design",

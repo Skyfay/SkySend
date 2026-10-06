@@ -67,6 +67,8 @@ Safari is excluded from tier 1 deliberately - it terminates Service Workers earl
 
 `docs/developer-guide/download-modes.md` is the long-form version and has to be updated whenever the tier logic changes.
 
+**Notes** (`components/NoteComposer.tsx` + `hooks/useNoteUpload.ts`, `hooks/useNoteView.ts`): a note is a list of blocks. The composer edits them, `useNoteUpload` turns them into one document with `serializeNote` from `@skysend/note-format` and encrypts that with `encryptNoteContent`. The server only ever gets `contentType: "blocks"`, so never send a block type, a block count or anything else about the content alongside it. Reading goes through `readNote`, which also opens notes from before v3. Every block comes from someone else's note, so the renderers in `components/NoteBlocks.tsx` show text as text, Markdown through `rehype-sanitize` and code through the sanitized highlighter in `lib/highlight.ts`. The kinds of a note are kept in IndexedDB for "My Uploads" only.
+
 **Passwords**: Argon2id via `hash-wasm`, wired up in `lib/argon2.ts` and passed into the crypto package as an `Argon2idHashFn`. This is why the CSP allows `wasm-unsafe-eval`.
 
 Workers are plain modules under `src/lib/` loaded with Vite's worker syntax. They cannot touch the DOM and they must not import from `src/components/`.
@@ -133,7 +135,7 @@ The 20 available primitives:
 
 `badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toast` · `toggle-group` · `tooltip`
 
-`toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons.
+`toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
 
 Never hand-roll what already exists:
 

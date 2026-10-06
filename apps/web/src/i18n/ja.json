@@ -8,16 +8,12 @@
       "nav.menu",
       "upload.passwordPlaceholderRequired",
       "language.search",
-      "code.blocks",
       "code.titlePlaceholder",
       "code.placeholder",
       "code.auto",
       "code.language",
-      "code.addBlock",
       "code.noTitle",
       "code.detectedAs",
-      "code.expandAll",
-      "code.collapseAll",
       "footer.report",
       "download.firefoxDevToolsWarning",
       "download.firefoxDevToolsWarningDesc",
@@ -199,7 +195,19 @@
       "noteView.unsupported",
       "noteView.unreadable",
       "noteView.showCode",
-      "noteView.hideCode"
+      "noteView.hideCode",
+      "tab.note",
+      "share.fileTabHint",
+      "share.noteTabHint",
+      "note.startHint",
+      "note.cardText",
+      "note.cardPassword",
+      "note.cardCode",
+      "note.cardSshKey",
+      "note.addBlock",
+      "note.moveUp",
+      "note.moveDown",
+      "note.removeBlock"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -234,15 +242,14 @@
     "password": "パスワード",
     "code": "コード",
     "sshkey": "SSH Key",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "メモ"
   },
   "note": {
-    "content": "内容",
     "expiry": "有効期限",
     "maxViews": "最大閲覧回数",
     "burnAfterReading": "1回（閲覧後に自動削除）",
     "unlimited": "無制限",
-    "create": "メモを作成",
     "creating": "暗号化中...",
     "tooLarge": "メモのサイズが上限（{{size}}）を超えています",
     "plainText": "プレーンテキスト",
@@ -252,10 +259,17 @@
     "expand": "エディタを拡大",
     "placeholder": {
       "text": "秘密のテキストを入力...",
-      "password": "共有するパスワードを入力...",
-      "code": "コードをここに貼り付け...",
       "markdown": "Markdownをここに記述..."
-    }
+    },
+    "startHint": "最初に追加するものを選んでください。あとからブロックを追加できます。",
+    "cardText": "自由なテキスト、Markdown も使用可能",
+    "cardPassword": "1 つ以上のパスワード、生成機能付き",
+    "cardCode": "40 以上の言語のハイライト",
+    "cardSshKey": "鍵ペアを生成、または貼り付け",
+    "addBlock": "ブロックを追加",
+    "moveUp": "上へ移動",
+    "moveDown": "下へ移動",
+    "removeBlock": "ブロックを削除"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -417,23 +431,18 @@
     "bits": "ビットのエントロピー"
   },
   "password": {
-    "passwords": "パスワード一覧",
     "enterPassword": "パスワードを入力...",
     "addAnother": "パスワードを追加",
     "passwordNumber": "パスワード {{number}}",
     "labelPlaceholder": "パスワード {{number}} のラベル（任意）"
   },
   "code": {
-    "blocks": "コードブロック",
     "titlePlaceholder": "ファイル名（例: docker-compose.yaml、任意）",
     "placeholder": "コードをここに貼り付けてください...",
     "auto": "自動検出",
     "language": "言語",
-    "addBlock": "コードブロックを追加",
     "noTitle": "コードブロック {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "すべて展開",
-    "collapseAll": "すべて折りたたむ"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "アルゴリズム",
@@ -446,14 +455,12 @@
     "generating": "生成中...",
     "modeGenerate": "生成",
     "modePaste": "貼り付け",
-    "pasteLabel": "SSH Key",
     "pastePlaceholderPublic": "公開鍵をここに貼り付け（ssh-ed25519 AAAA...）...",
     "pastePlaceholderPrivate": "秘密鍵をここに貼り付け（-----BEGIN OPENSSH PRIVATE KEY-----）...",
     "keySize": "鍵サイズ",
     "publicKey": "公開鍵",
     "privateKey": "秘密鍵",
-    "shareAs": "暗号化メモとして共有",
-    "createNote": "メモとして共有"
+    "shareAs": "暗号化メモとして共有"
   },
   "auth": {
     "loginRequired": "アップロードにはログインが必要です",
@@ -546,7 +553,9 @@
     "receiveText": "送信者のデバイスで暗号化され、復号されるのはここ、あなたのブラウザの中だけです。",
     "decryptHint": "このデバイスで復号されました。鍵がサーバーに届くことはありません。",
     "goneText": "共有した内容は、有効期限または上限に達すると自動的に削除されます。送信者に新しいリンクを依頼してください。",
-    "goneAction": "ファイルまたはメモを共有"
+    "goneAction": "ファイルまたはメモを共有",
+    "fileTabHint": "{{size}} まで、形式は自由",
+    "noteTabHint": "テキスト、パスワード、コード、鍵"
   },
   "how": {
     "eyebrow": "設計段階からのゼロ知識",

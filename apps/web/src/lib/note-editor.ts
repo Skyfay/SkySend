@@ -1,0 +1,68 @@
+import { NOTE_KIND, type LegacyNoteKind, type NoteBlock, type NoteBlockType } from "@skysend/note-format";
+
+/** What a block is called in the interface and in "My Uploads". Markdown counts on its own. */
+export type NoteKindKey = "text" | "markdown" | "password" | "code" | "sshkey";
+
+/** A block while the note is being written, with an id the editor keys it by. */
+export type DraftBlock = NoteBlock & { id: number };
+
+/** A new block of a type, as the composer adds it. */
+export function emptyBlock(type: NoteBlockType): NoteBlock {
+  switch (type) {
+    case "text":
+      return { type, format: "plain", text: "" };
+    case "password":
+      return { type, entries: [{ label: "", value: "" }] };
+    case "code":
+      return { type, title: "", language: "auto", code: "" };
+    case "sshkey":
+      return { type, publicKey: "", privateKey: "", passphrase: "" };
+  }
+}
+
+/**
+ * The blocks that go into the note. A block without content is left out, and so is a
+ * password entry without a value, the way the forms before v3 did it. Pasted SSH keys lose
+ * the blank lines around them.
+ */
+export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
+  return drafts.flatMap((block): NoteBlock[] => {
+    switch (block.type) {
+      case "text":
+        return block.text.length > 0 ? [{ type: "text", format: block.format, text: block.text }] : [];
+      case "password": {
+        const entries = block.entries
+          .filter((entry) => entry.value.length > 0)
+          .map((entry) => ({ label: entry.label, value: entry.value }));
+        return entries.length > 0 ? [{ type: "password", entries }] : [];
+      }
+      case "code":
+        return block.code.length > 0
+          ? [{ type: "code", title: block.title, language: block.language, code: block.code }]
+          : [];
+      case "sshkey": {
+        const publicKey = block.publicKey.trim();
+        const privateKey = block.privateKey.trim();
+        return publicKey || privateKey || block.passphrase
+          ? [{ type: "sshkey", publicKey, privateKey, passphrase: block.passphrase }]
+          : [];
+      }
+    }
+  });
+}
+
+/** Which kinds of blocks a note holds, each once, in the order they first appear. */
+export function noteKinds(blocks: readonly NoteBlock[]): NoteKindKey[] {
+  const kinds = blocks.map((block): NoteKindKey => (block.type === "text" && block.format === "markdown" ? "markdown" : block.type));
+  return [...new Set(kinds)];
+}
+
+/**
+ * The kinds of a note in "My Uploads". A note made of blocks keeps them in this browser, the
+ * server never learns them.
+ */
+export function storedNoteKinds(note: { contentType: typeof NOTE_KIND | LegacyNoteKind; kinds?: NoteKindKey[] }): NoteKindKey[] {
+  if (note.contentType === NOTE_KIND) return note.kinds ?? [];
+  // LEGACY(notes-v1): a note from before v3 has exactly one kind, its content type.
+  return [note.contentType];
+}

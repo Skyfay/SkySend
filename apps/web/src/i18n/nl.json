@@ -35,15 +35,14 @@
     "password": "Wachtwoord",
     "code": "Code",
     "sshkey": "SSH-sleutel",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "note": "Notitie"
   },
   "note": {
-    "content": "Inhoud",
     "expiry": "Verloopt na",
     "maxViews": "Max weergaven",
     "burnAfterReading": "1 (vernietig na lezen)",
     "unlimited": "Onbeperkt",
-    "create": "Notitie aanmaken",
     "creating": "Versleutelen...",
     "tooLarge": "Notitie overschrijdt de maximale grootte van {{size}}",
     "plainText": "Platte tekst",
@@ -53,10 +52,17 @@
     "expand": "Editor vergroten",
     "placeholder": {
       "text": "Voer uw geheime tekst in...",
-      "password": "Voer het te delen wachtwoord in...",
-      "code": "Plak uw code hier...",
       "markdown": "Schrijf uw markdown hier..."
-    }
+    },
+    "startHint": "Kies waarmee u begint. Daarna kunt u meer blokken toevoegen.",
+    "cardText": "Vrije tekst, desgewenst met Markdown",
+    "cardPassword": "Een of meer wachtwoorden, met generator",
+    "cardCode": "Markering voor meer dan 40 talen",
+    "cardSshKey": "Genereer een sleutelpaar of plak er een",
+    "addBlock": "Blok toevoegen",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "removeBlock": "Blok verwijderen"
   },
   "upload": {
     "title": "Bestanden uploaden",
@@ -218,23 +224,18 @@
     "bits": "bits entropie"
   },
   "password": {
-    "passwords": "Wachtwoorden",
     "enterPassword": "Wachtwoord invoeren...",
     "addAnother": "Nog een wachtwoord toevoegen",
     "passwordNumber": "Wachtwoord {{number}}",
     "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)"
   },
   "code": {
-    "blocks": "Codeblokken",
     "titlePlaceholder": "Bestandsnaam (bijv. docker-compose.yaml, optioneel)",
     "placeholder": "Plak uw code hier...",
     "auto": "Automatisch detecteren",
     "language": "Taal",
-    "addBlock": "Codeblok toevoegen",
     "noTitle": "Codeblok {{number}}",
-    "detectedAs": "{{lang}}",
-    "expandAll": "Alles uitvouwen",
-    "collapseAll": "Alles invouwen"
+    "detectedAs": "{{lang}}"
   },
   "sshKey": {
     "algorithm": "Algoritme",
@@ -247,14 +248,12 @@
     "generating": "Genereren...",
     "modeGenerate": "Genereren",
     "modePaste": "Plakken",
-    "pasteLabel": "SSH-sleutel",
     "pastePlaceholderPublic": "Plak uw publieke sleutel hier (ssh-ed25519 AAAA...)...",
     "pastePlaceholderPrivate": "Plak uw privésleutel hier (-----BEGIN OPENSSH PRIVATE KEY-----)...",
     "keySize": "Sleutelgrootte",
     "publicKey": "Publieke sleutel",
     "privateKey": "Privésleutel",
-    "shareAs": "Delen als versleutelde notitie",
-    "createNote": "Delen als notitie"
+    "shareAs": "Delen als versleutelde notitie"
   },
   "auth": {
     "loginRequired": "Inloggen vereist om te uploaden",
@@ -347,7 +346,9 @@
     "receiveText": "De inhoud is versleuteld op het apparaat van de afzender en wordt alleen hier in uw browser ontsleuteld.",
     "decryptHint": "Op dit apparaat ontsleuteld. De sleutel bereikt de server nooit.",
     "goneText": "Gedeelde items verwijderen zichzelf wanneer hun tijd of limiet verstrijkt. Vraag de afzender om een nieuwe link.",
-    "goneAction": "Een bestand of notitie delen"
+    "goneAction": "Een bestand of notitie delen",
+    "fileTabHint": "Tot {{size}}, elk type",
+    "noteTabHint": "Tekst, wachtwoorden, code en sleutels"
   },
   "how": {
     "eyebrow": "Zero knowledge door ontwerp",
