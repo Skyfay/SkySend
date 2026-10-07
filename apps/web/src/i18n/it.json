@@ -65,7 +65,8 @@
     "addBlock": "Aggiungi un blocco",
     "moveUp": "Sposta su",
     "moveDown": "Sposta giù",
-    "removeBlock": "Rimuovi blocco"
+    "removeBlock": "Rimuovi blocco",
+    "blockTitle": "Titolo (facoltativo)"
   },
   "upload": {
     "title": "Carica file",
@@ -508,7 +509,8 @@
     "textLabel": "Di cosa tratta il testo, per esempio Note",
     "textHint": "Il testo lo scrive il mittente.",
     "codeHint": "Il codice lo incolla il mittente.",
-    "sshKeyHint": "La chiave SSH la aggiunge il mittente."
+    "sshKeyHint": "La chiave SSH la aggiunge il mittente.",
+    "blockTitle": "Titolo del blocco, per esempio Accesso al server"
   },
   "requests": {
     "title": "Richieste di file",

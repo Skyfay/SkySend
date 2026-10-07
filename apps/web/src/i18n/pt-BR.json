@@ -341,7 +341,9 @@
       "password.makeSecret",
       "password.enterValue",
       "password.fieldNumber",
-      "tab.fields"
+      "tab.fields",
+      "template.blockTitle",
+      "note.blockTitle"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -406,7 +408,8 @@
     "addBlock": "Adicionar um bloco",
     "moveUp": "Mover para cima",
     "moveDown": "Mover para baixo",
-    "removeBlock": "Remover bloco"
+    "removeBlock": "Remover bloco",
+    "blockTitle": "Título (opcional)"
   },
   "upload": {
     "title": "Enviar Arquivos",
@@ -849,7 +852,8 @@
     "textLabel": "Sobre o que é o texto, por exemplo Observações",
     "textHint": "O remetente escreve o texto.",
     "codeHint": "O remetente cola o código.",
-    "sshKeyHint": "O remetente adiciona uma chave SSH."
+    "sshKeyHint": "O remetente adiciona uma chave SSH.",
+    "blockTitle": "Título do bloco, por exemplo Acesso ao servidor"
   },
   "requests": {
     "title": "Solicitações de arquivos",

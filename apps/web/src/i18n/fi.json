@@ -65,7 +65,8 @@
     "addBlock": "Lisää lohko",
     "moveUp": "Siirrä ylös",
     "moveDown": "Siirrä alas",
-    "removeBlock": "Poista lohko"
+    "removeBlock": "Poista lohko",
+    "blockTitle": "Otsikko (valinnainen)"
   },
   "upload": {
     "title": "Lähetä tiedostoja",
@@ -508,7 +509,8 @@
     "textLabel": "Mistä tekstissä on kyse, esimerkiksi Huomiot",
     "textHint": "Lähettäjä kirjoittaa tekstin.",
     "codeHint": "Lähettäjä liittää koodin.",
-    "sshKeyHint": "Lähettäjä lisää SSH-avaimen."
+    "sshKeyHint": "Lähettäjä lisää SSH-avaimen.",
+    "blockTitle": "Lohkon otsikko, esimerkiksi Palvelimen tunnukset"
   },
   "requests": {
     "title": "Tiedostopyynnöt",

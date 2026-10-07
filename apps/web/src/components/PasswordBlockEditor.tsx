@@ -4,7 +4,7 @@ import { Check, Copy, Eye, EyeOff, KeyRound, Lock, LockOpen, Plus, Wand2, X } fr
 import { MAX_LABEL_LENGTH, MAX_PASSWORD_ENTRIES, type PasswordBlock, type PasswordEntry } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
+import { BlockEditorFrame, BlockTitleRow, IconButton } from "@/components/BlockEditorFrame";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
 import { copyText } from "@/lib/clipboard";
 import { entryFallback, passwordBlockTitle, type EditorMode } from "@/lib/note-editor";
@@ -80,7 +80,20 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
   };
 
   return (
-    <BlockEditorFrame icon={KeyRound} title={t(passwordBlockTitle(block))} controls={controls}>
+    <BlockEditorFrame
+      icon={KeyRound}
+      // A title the requester gave heads the block a sender fills in.
+      title={mode === "fill" && block.label ? block.label : t(passwordBlockTitle(block))}
+      controls={controls}
+    >
+      {mode !== "fill" && (
+        <BlockTitleRow
+          value={block.label}
+          onChange={(label) => onChange({ ...block, label })}
+          placeholder={t(mode === "template" ? "template.blockTitle" : "note.blockTitle")}
+          disabled={disabled}
+        />
+      )}
       <div className="space-y-3 p-3">
         {entries.map((entry, index) => {
           const plain = entry.secret === false;

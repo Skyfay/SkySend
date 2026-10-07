@@ -43,6 +43,7 @@ interface TextBlock {
 interface PasswordBlock {
   type: "password"
   entries: Array<{ label: string; value: string; secret?: false }> // at most 100, label may be empty
+  label?: string // the title of the block, like "Server access", optional like the text label
 }
 
 interface CodeBlock {
@@ -57,10 +58,11 @@ interface SshKeyBlock {
   publicKey: string  // either key may be empty
   privateKey: string
   passphrase: string // the passphrase of the private key, may be empty
+  label?: string     // the title of the block, like "Deploy key", optional like the text label
 }
 ```
 
-Every field but `label` and `secret` is required. A writer that has nothing for a field writes an empty string. `secret: false` marks a password entry whose value is no secret, like a username or an address. Readers show it in clear, and an entry without it is a secret, as every entry was before the field existed.
+Every field but the labels of the blocks and `secret` is required. A code block has a `title` for its file name instead, so it needs no label. A writer that has nothing for a field writes an empty string. `secret: false` marks a password entry whose value is no secret, like a username or an address. Readers show it in clear, and an entry without it is a secret, as every entry was before the field existed.
 
 ## Writing
 

@@ -65,7 +65,8 @@
     "addBlock": "Lägg till block",
     "moveUp": "Flytta upp",
     "moveDown": "Flytta ned",
-    "removeBlock": "Ta bort block"
+    "removeBlock": "Ta bort block",
+    "blockTitle": "Rubrik (valfritt)"
   },
   "upload": {
     "title": "Ladda upp filer",
@@ -508,7 +509,8 @@
     "textLabel": "Vad texten handlar om, till exempel Anmärkningar",
     "textHint": "Avsändaren skriver texten.",
     "codeHint": "Avsändaren klistrar in koden.",
-    "sshKeyHint": "Avsändaren lägger till en SSH-nyckel."
+    "sshKeyHint": "Avsändaren lägger till en SSH-nyckel.",
+    "blockTitle": "Blockets rubrik, till exempel Serveråtkomst"
   },
   "requests": {
     "title": "Filförfrågningar",

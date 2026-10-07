@@ -494,7 +494,9 @@
       "password.makeSecret",
       "password.enterValue",
       "password.fieldNumber",
-      "tab.fields"
+      "tab.fields",
+      "template.blockTitle",
+      "note.blockTitle"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -559,7 +561,8 @@
     "addBlock": "ブロックを追加",
     "moveUp": "上へ移動",
     "moveDown": "下へ移動",
-    "removeBlock": "ブロックを削除"
+    "removeBlock": "ブロックを削除",
+    "blockTitle": "タイトル（任意）"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -1002,7 +1005,8 @@
     "textLabel": "テキストの内容（例：メモ）",
     "textHint": "テキストは送信者が書きます。",
     "codeHint": "コードは送信者が貼り付けます。",
-    "sshKeyHint": "SSH 鍵は送信者が追加します。"
+    "sshKeyHint": "SSH 鍵は送信者が追加します。",
+    "blockTitle": "ブロックのタイトル（例：サーバーへのアクセス）"
   },
   "requests": {
     "title": "ファイルリクエスト",

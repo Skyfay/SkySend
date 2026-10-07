@@ -41,13 +41,14 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
         switch (block.type) {
           case "text":
             return (
-              <Frame key={i} title={block.format === "markdown" ? "Markdown" : "Text"} accent={accent}>
+              <Frame key={i} title={block.label ? forTerminal(block.label) : block.format === "markdown" ? "Markdown" : "Text"} accent={accent}>
                 <Text>{forTerminal(block.text)}</Text>
               </Frame>
             );
           case "password":
             return (
               <Box key={i} flexDirection="column" gap={1}>
+                {block.label && <Text bold color={accent}>{forTerminal(block.label)}</Text>}
                 {block.entries.map((entry, j) => {
                   const number = firstEntry[i]! + j + 1;
                   // An entry that is no secret, like a username, is shown without a reveal.
@@ -74,6 +75,7 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
           case "sshkey":
             return (
               <Box key={i} flexDirection="column" gap={1}>
+                {block.label && <Text bold color={accent}>{forTerminal(block.label)}</Text>}
                 {block.publicKey && (
                   <Frame title="Public Key" accent={accent}>
                     <Text wrap="wrap">{forTerminal(block.publicKey)}</Text>

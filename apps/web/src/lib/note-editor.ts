@@ -62,7 +62,9 @@ export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
             value: entry.value,
             ...(entry.secret === false ? { secret: false } : {}),
           }));
-        return entries.length > 0 ? [{ type: "password", entries }] : [];
+        return entries.length > 0
+          ? [{ type: "password", entries, ...(block.label ? { label: block.label } : {}) }]
+          : [];
       }
       case "code":
         return block.code.length > 0
@@ -72,7 +74,15 @@ export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
         const publicKey = block.publicKey.trim();
         const privateKey = block.privateKey.trim();
         return publicKey || privateKey || block.passphrase
-          ? [{ type: "sshkey", publicKey, privateKey, passphrase: block.passphrase }]
+          ? [
+              {
+                type: "sshkey",
+                publicKey,
+                privateKey,
+                passphrase: block.passphrase,
+                ...(block.label ? { label: block.label } : {}),
+              },
+            ]
           : [];
       }
     }

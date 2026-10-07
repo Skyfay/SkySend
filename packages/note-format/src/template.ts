@@ -60,21 +60,32 @@ function blank(block: NoteBlock): NoteBlock {
       const label = block.label === undefined ? "" : cleanLabel(block.label);
       return { type: "text", format: block.format, text: "", ...(label ? { label } : {}) };
     }
-    case "password":
+    case "password": {
+      const label = block.label === undefined ? "" : cleanLabel(block.label);
       return {
         type: "password",
+        ...(label ? { label } : {}),
         entries: block.entries.map((entry) => ({
           label: cleanLabel(entry.label),
           value: "",
           ...(entry.secret === false ? { secret: false } : {}),
         })),
       };
+    }
     case "code": {
       const language = LANGUAGE.test(block.language) ? block.language : "auto";
       return { type: "code", title: cleanLabel(block.title), language, code: "" };
     }
-    case "sshkey":
-      return { type: "sshkey", publicKey: "", privateKey: "", passphrase: "" };
+    case "sshkey": {
+      const label = block.label === undefined ? "" : cleanLabel(block.label);
+      return {
+        type: "sshkey",
+        publicKey: "",
+        privateKey: "",
+        passphrase: "",
+        ...(label ? { label } : {}),
+      };
+    }
   }
 }
 

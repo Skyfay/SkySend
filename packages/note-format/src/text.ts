@@ -4,14 +4,18 @@ function blockToText(block: NoteBlock): string {
   switch (block.type) {
     case "text":
       return block.label && block.text ? `${block.label}\n${block.text}` : block.text;
-    case "password":
-      return block.entries.map((entry) => (entry.label ? `${entry.label}: ${entry.value}` : entry.value)).join("\n");
+    case "password": {
+      const entries = block.entries.map((entry) => (entry.label ? `${entry.label}: ${entry.value}` : entry.value)).join("\n");
+      return block.label && entries ? `${block.label}\n${entries}` : entries;
+    }
     case "code":
       return block.title ? `${block.title}\n${block.code}` : block.code;
-    case "sshkey":
-      return [block.publicKey, block.privateKey, block.passphrase ? `Passphrase: ${block.passphrase}` : ""]
+    case "sshkey": {
+      const key = [block.publicKey, block.privateKey, block.passphrase ? `Passphrase: ${block.passphrase}` : ""]
         .filter((part) => part.length > 0)
         .join("\n\n");
+      return block.label && key ? `${block.label}\n${key}` : key;
+    }
   }
 }
 

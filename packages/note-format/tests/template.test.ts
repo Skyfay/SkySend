@@ -94,6 +94,37 @@ describe("entries that are no secret", () => {
     expect(parseTemplate({ v: 1, blocks: [block] })).toEqual(expected);
   });
 
+  it("keeps the title of a password block, cleaned, and drops an empty one", () => {
+    const titled = { ...block, label: "  Server\u202E access " };
+    expect(parseTemplate({ v: 1, blocks: [titled] })[0]).toMatchObject({ label: "Server access" });
+    expect(parseTemplate({ v: 1, blocks: [{ ...block, label: "\u200B" }] })[0]).not.toHaveProperty(
+      "label",
+    );
+  });
+
+  it("keeps the title of an SSH key block and puts it above the key in the text", () => {
+    const key: NoteBlock = {
+      type: "sshkey",
+      publicKey: "ssh-ed25519 AAAA",
+      privateKey: "secret",
+      passphrase: "",
+      label: "Deploy\u202E key",
+    };
+    expect(parseTemplate({ v: 1, blocks: [key] })).toEqual([
+      { type: "sshkey", publicKey: "", privateKey: "", passphrase: "", label: "Deploy key" },
+    ]);
+    expect(noteToText([{ ...key, label: "Deploy key" }])).toBe(
+      "Deploy key\nssh-ed25519 AAAA\n\nsecret",
+    );
+  });
+
+  it("puts the title of a password block above its entries in the text of a note", () => {
+    const text = noteToText([
+      { type: "password", label: "Wi-Fi", entries: [{ label: "SSID", value: "home" }] },
+    ]);
+    expect(text).toBe("Wi-Fi\nSSID: home");
+  });
+
   it("round-trips a note with an entry that is no secret", () => {
     expect(parseNote(serializeNote([block]))).toEqual([block]);
   });

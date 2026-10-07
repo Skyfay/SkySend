@@ -155,7 +155,7 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
     });
 
   return (
-    <BlockFrame icon={KeyRound} title={t(passwordBlockTitle(block))}>
+    <BlockFrame icon={KeyRound} title={block.label || t(passwordBlockTitle(block))}>
       <div className="space-y-3 p-3">
         {block.entries.map((entry, index) => {
           // An entry that is no secret, like a username, needs no reveal.
@@ -249,7 +249,7 @@ function SshKeyBlockView({ block }: { block: SshKeyBlock }) {
   ].filter((part) => part.value.length > 0);
 
   return (
-    <BlockFrame icon={Terminal} title={t("tab.sshkey")}>
+    <BlockFrame icon={Terminal} title={block.label || t("tab.sshkey")}>
       <div className="space-y-3 p-3">
         {parts.map((part) => (
           <div key={part.key} className="space-y-1.5">

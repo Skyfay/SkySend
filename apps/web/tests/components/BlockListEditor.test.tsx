@@ -126,6 +126,47 @@ describe("entries that are no secret", () => {
     expect((latest[0] as { entries: object[] }).entries[0]).not.toHaveProperty("secret");
   });
 
+  it("gives a password block a title in a template, which heads it when filled in", () => {
+    render(
+      createElement(Harness, {
+        mode: "template",
+        start: [{ id: 1, type: "password", entries: [{ label: "SSID", value: "" }] }],
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("template.blockTitle"), { target: { value: "Wi-Fi" } });
+    expect(latest[0]).toMatchObject({ label: "Wi-Fi" });
+    cleanup();
+    render(createElement(Harness, { mode: "fill", start: [latest[0]!] }));
+    expect(screen.getByRole("heading", { name: "Wi-Fi" })).toBeTruthy();
+    expect(screen.queryByLabelText("template.blockTitle")).toBeNull();
+  });
+
+  it("gives every block but code a title when a note is written, code keeps its file name", () => {
+    render(
+      createElement(Harness, {
+        mode: "compose",
+        start: [
+          { id: 1, type: "text", format: "plain", text: "" },
+          { id: 2, type: "password", entries: [{ label: "", value: "" }] },
+          { id: 3, type: "sshkey", publicKey: "", privateKey: "", passphrase: "" },
+        ],
+      }),
+    );
+    const titles = screen.getAllByLabelText("note.blockTitle");
+    expect(titles).toHaveLength(3);
+    fireEvent.change(titles[0]!, { target: { value: "Notes" } });
+    fireEvent.change(titles[1]!, { target: { value: "Wi-Fi" } });
+    fireEvent.change(titles[2]!, { target: { value: "Deploy key" } });
+    expect(latest.map((block) => (block as { label?: string }).label)).toEqual([
+      "Notes",
+      "Wi-Fi",
+      "Deploy key",
+    ]);
+    // A new way to get a key keeps the title of its block.
+    fireEvent.click(screen.getByText("sshKey.modePaste"));
+    expect(latest[2]).toMatchObject({ type: "sshkey", publicKey: "", label: "Deploy key" });
+  });
+
   it("fills in an entry that is no secret in clear, without a generator or a toggle", () => {
     render(
       createElement(Harness, {
@@ -171,6 +212,27 @@ describe("entries that are no secret", () => {
     expect(screen.queryByText("hunter2")).toBeNull();
     expect(screen.getByRole("heading", { name: "tab.fields" })).toBeTruthy();
     expect(screen.getAllByLabelText("noteView.reveal")).toHaveLength(1);
+    cleanup();
+    render(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(NoteBlocks, {
+          blocks: [{ ...blocks[0]!, label: "Server access" } as ReadBlock],
+        }),
+      ),
+    );
+    expect(screen.getByRole("heading", { name: "Server access" })).toBeTruthy();
+    cleanup();
+    const key: ReadBlock = {
+      type: "sshkey",
+      publicKey: "ssh-ed25519 AAAA",
+      privateKey: "",
+      passphrase: "",
+      label: "Deploy key",
+    };
+    render(createElement(TooltipProvider, null, createElement(NoteBlocks, { blocks: [key] })));
+    expect(screen.getByRole("heading", { name: "Deploy key" })).toBeTruthy();
   });
 });
 

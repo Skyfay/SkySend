@@ -184,6 +184,7 @@ describe("built-in templates", () => {
     const [credentials] = templateBlocks(builtInTemplate("credentials", (k) => k));
     expect(credentials).toEqual({
       type: "password",
+      label: "templates.builtIn.credentials.name",
       entries: [
         { label: "templates.builtIn.credentials.address", value: "", secret: false },
         { label: "templates.builtIn.credentials.username", value: "", secret: false },

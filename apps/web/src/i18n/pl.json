@@ -65,7 +65,8 @@
     "addBlock": "Dodaj blok",
     "moveUp": "Przenieś wyżej",
     "moveDown": "Przenieś niżej",
-    "removeBlock": "Usuń blok"
+    "removeBlock": "Usuń blok",
+    "blockTitle": "Tytuł (opcjonalnie)"
   },
   "upload": {
     "title": "Prześlij pliki",
@@ -508,7 +509,8 @@
     "textLabel": "Czego dotyczy tekst, na przykład Uwagi",
     "textHint": "Tekst pisze nadawca.",
     "codeHint": "Kod wkleja nadawca.",
-    "sshKeyHint": "Klucz SSH dodaje nadawca."
+    "sshKeyHint": "Klucz SSH dodaje nadawca.",
+    "blockTitle": "Tytuł bloku, na przykład Dostęp do serwera"
   },
   "requests": {
     "title": "Prośby o pliki",

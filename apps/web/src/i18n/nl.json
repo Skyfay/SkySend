@@ -65,7 +65,8 @@
     "addBlock": "Blok toevoegen",
     "moveUp": "Omhoog",
     "moveDown": "Omlaag",
-    "removeBlock": "Blok verwijderen"
+    "removeBlock": "Blok verwijderen",
+    "blockTitle": "Titel (optioneel)"
   },
   "upload": {
     "title": "Bestanden uploaden",
@@ -508,7 +509,8 @@
     "textLabel": "Waar de tekst over gaat, bijvoorbeeld Opmerkingen",
     "textHint": "De afzender schrijft de tekst.",
     "codeHint": "De afzender plakt de code.",
-    "sshKeyHint": "De afzender voegt een SSH-sleutel toe."
+    "sshKeyHint": "De afzender voegt een SSH-sleutel toe.",
+    "blockTitle": "Titel van het blok, bijvoorbeeld Servertoegang"
   },
   "requests": {
     "title": "Bestandsverzoeken",

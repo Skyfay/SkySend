@@ -1,12 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { FileText, Heading, Maximize2, Type } from "lucide-react";
-import { MAX_LABEL_LENGTH, type TextBlock } from "@skysend/note-format";
-import { Input } from "@/components/ui/input";
+import type { TextBlock } from "@skysend/note-format";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
+import { BlockEditorFrame, BlockTitleRow, IconButton } from "@/components/BlockEditorFrame";
 import { MarkdownView } from "@/components/NoteBlocks";
 import type { EditorMode } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
@@ -81,19 +80,13 @@ export function TextBlockEditor({ block, onChange, controls, disabled, mode = "c
   if (mode === "template") {
     return (
       <BlockEditorFrame icon={FileText} title={t("tab.text")} controls={controls} toolbar={formatToggle}>
-        <div className="space-y-2 p-3">
-          <Input
-            type="text"
-            value={block.label ?? ""}
-            onChange={(e) => onChange({ ...block, label: e.target.value })}
-            placeholder={t("template.textLabel")}
-            aria-label={t("template.textLabel")}
-            maxLength={MAX_LABEL_LENGTH}
-            disabled={disabled}
-            autoComplete="off"
-          />
-          <p className="text-xs text-muted-foreground">{t("template.textHint")}</p>
-        </div>
+        <BlockTitleRow
+          value={block.label}
+          onChange={(label) => onChange({ ...block, label })}
+          placeholder={t("template.textLabel")}
+          disabled={disabled}
+        />
+        <p className="p-3 text-xs text-muted-foreground">{t("template.textHint")}</p>
       </BlockEditorFrame>
     );
   }
@@ -113,6 +106,14 @@ export function TextBlockEditor({ block, onChange, controls, disabled, mode = "c
         </>
       }
     >
+      {mode === "compose" && (
+        <BlockTitleRow
+          value={block.label}
+          onChange={(label) => onChange({ ...block, label })}
+          placeholder={t("note.blockTitle")}
+          disabled={disabled}
+        />
+      )}
       <div className="p-1.5">
         {showPreview ? (
           previewView("min-h-40")
@@ -131,8 +132,8 @@ export function TextBlockEditor({ block, onChange, controls, disabled, mode = "c
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent className="flex h-[90vh] max-w-4xl flex-col gap-0 p-0">
           <DialogHeader className="flex-row flex-wrap items-center gap-3 space-y-0 border-b px-6 py-4 pr-14">
-            <DialogTitle className="mr-auto flex items-center gap-2">
-              {t("tab.text")}
+            <DialogTitle className="mr-auto flex min-w-0 items-center gap-2 wrap-anywhere">
+              {block.label || t("tab.text")}
               {markdown && <span className="text-sm font-normal text-muted-foreground">· {t("tab.markdown")}</span>}
             </DialogTitle>
             {modeToggle}

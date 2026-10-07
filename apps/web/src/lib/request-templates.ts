@@ -175,7 +175,7 @@ export function fieldNames(blocks: readonly NoteBlock[], translate: Translate): 
       case "code":
         return [block.title || translate("templates.field.code")];
       case "sshkey":
-        return [translate("templates.field.sshKey")];
+        return [block.label || translate("templates.field.sshKey")];
     }
   });
 }
@@ -242,10 +242,12 @@ export type BuiltInKey = "credentials" | "sshKey" | "wifi" | "apiKey";
 /** A field of a built-in: its label, and whether its value is a secret shown masked. */
 type Field = [label: string, secret: boolean];
 
-const password = (fields: Field[]): NoteBlock => ({
+/** A block of fields under a title, the name of the built-in. */
+const password = (label: string, fields: Field[]): NoteBlock => ({
   type: "password",
-  entries: fields.map(([label, secret]) => ({
-    label,
+  label,
+  entries: fields.map(([field, secret]) => ({
+    label: field,
     value: "",
     ...(secret ? {} : { secret: false }),
   })),
@@ -253,7 +255,7 @@ const password = (fields: Field[]): NoteBlock => ({
 
 const BUILT_INS: Record<BuiltInKey, (label: (field: string) => string) => NoteBlock[]> = {
   credentials: (label) => [
-    password([
+    password(label("name"), [
       [label("address"), false],
       [label("username"), false],
       [label("password"), true],
@@ -261,13 +263,13 @@ const BUILT_INS: Record<BuiltInKey, (label: (field: string) => string) => NoteBl
   ],
   sshKey: () => [{ type: "sshkey", publicKey: "", privateKey: "", passphrase: "" }],
   wifi: (label) => [
-    password([
+    password(label("name"), [
       [label("network"), false],
       [label("password"), true],
     ]),
   ],
   apiKey: (label) => [
-    password([
+    password(label("name"), [
       [label("service"), false],
       [label("key"), true],
       [label("expires"), false],

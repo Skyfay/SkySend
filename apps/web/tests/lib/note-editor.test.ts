@@ -129,11 +129,23 @@ describe("passwordBlockTitle and entryFallback", () => {
   });
 });
 
+describe("blocksToSend and titles", () => {
+  it("keeps the title of an SSH key block", () => {
+    const sent = blocksToSend([
+      { type: "sshkey", publicKey: " ssh-ed25519 AAAA ", privateKey: "", passphrase: "", label: "Deploy key" },
+    ]);
+    expect(sent).toEqual([
+      { type: "sshkey", publicKey: "ssh-ed25519 AAAA", privateKey: "", passphrase: "", label: "Deploy key" },
+    ]);
+  });
+});
+
 describe("blocksToSend and entries that are no secret", () => {
   it("keeps which entries are no secret", () => {
     const sent = blocksToSend([
       {
         type: "password",
+        label: "Server access",
         entries: [
           { label: "User", value: "alice", secret: false },
           { label: "Password", value: "pw", secret: true },
@@ -143,6 +155,7 @@ describe("blocksToSend and entries that are no secret", () => {
     expect(sent).toEqual([
       {
         type: "password",
+        label: "Server access",
         entries: [
           { label: "User", value: "alice", secret: false },
           { label: "Password", value: "pw" },

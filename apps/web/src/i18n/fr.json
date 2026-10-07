@@ -65,7 +65,8 @@
     "addBlock": "Ajouter un bloc",
     "moveUp": "Monter",
     "moveDown": "Descendre",
-    "removeBlock": "Retirer le bloc"
+    "removeBlock": "Retirer le bloc",
+    "blockTitle": "Titre (facultatif)"
   },
   "upload": {
     "title": "Téléverser des fichiers",
@@ -508,7 +509,8 @@
     "textLabel": "De quoi parle le texte, par exemple Remarques",
     "textHint": "L'expéditeur écrit le texte.",
     "codeHint": "L'expéditeur colle le code.",
-    "sshKeyHint": "L'expéditeur ajoute une clé SSH."
+    "sshKeyHint": "L'expéditeur ajoute une clé SSH.",
+    "blockTitle": "Titre du bloc, par exemple Accès au serveur"
   },
   "requests": {
     "title": "Demandes de fichiers",

@@ -65,7 +65,8 @@
     "addBlock": "Legg til blokk",
     "moveUp": "Flytt opp",
     "moveDown": "Flytt ned",
-    "removeBlock": "Fjern blokk"
+    "removeBlock": "Fjern blokk",
+    "blockTitle": "Tittel (valgfritt)"
   },
   "upload": {
     "title": "Last opp filer",
@@ -508,7 +509,8 @@
     "textLabel": "Hva teksten handler om, for eksempel Merknader",
     "textHint": "Avsenderen skriver teksten.",
     "codeHint": "Avsenderen limer inn koden.",
-    "sshKeyHint": "Avsenderen legger til en SSH-nøkkel."
+    "sshKeyHint": "Avsenderen legger til en SSH-nøkkel.",
+    "blockTitle": "Tittel på blokken, for eksempel Servertilgang"
   },
   "requests": {
     "title": "Filforespørsler",

@@ -9,7 +9,8 @@
 - **web**: Templates keep the setup of a request for the next one, with built-in ones for credentials, an SSH key, Wi-Fi and an API key. They live in this browser and move to another one as a file or a link, sealed with a password if wanted.
 - **crypto**: `sealWithPassword` and `openWithPassword` encrypt an export with a key Argon2id derives from a password.
 - **web**: A field of a password block can be marked as no secret, like a username or an address, and is then shown in clear without a generator. A block with such a field is called Fields instead of Password.
-- **client**: Fields of a password block that are no secret show in clear in the terminal view of a note.
+- **web**: Text, password and SSH key blocks take a title of their own, like Server access, in a shared note and in a request template. It heads the block for whoever fills it in or reads it.
+- **client**: Fields of a password block that are no secret show in clear in the terminal view of a note, under the title of their block.
 - **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.
 - **website**: The report form accepts links to file requests.
 - **infra**: The report worker accepts links to file requests.

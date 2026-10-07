@@ -60,7 +60,8 @@
     "addBlock": "Add a block",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "removeBlock": "Remove block"
+    "removeBlock": "Remove block",
+    "blockTitle": "Title (optional)"
   },
   "upload": {
     "title": "Upload Files",
@@ -503,7 +504,8 @@
     "textLabel": "What the text is about, for example Notes",
     "textHint": "The sender writes the text.",
     "codeHint": "The sender pastes the code.",
-    "sshKeyHint": "The sender adds an SSH key."
+    "sshKeyHint": "The sender adds an SSH key.",
+    "blockTitle": "Title of the block, for example Server access"
   },
   "requests": {
     "title": "File requests",

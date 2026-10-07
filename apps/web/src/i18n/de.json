@@ -60,7 +60,8 @@
     "addBlock": "Block hinzufügen",
     "moveUp": "Nach oben",
     "moveDown": "Nach unten",
-    "removeBlock": "Block entfernen"
+    "removeBlock": "Block entfernen",
+    "blockTitle": "Titel (optional)"
   },
   "upload": {
     "title": "Dateien hochladen",
@@ -503,7 +504,8 @@
     "textLabel": "Worum es im Text geht, zum Beispiel Hinweise",
     "textHint": "Den Text schreibt der Sender.",
     "codeHint": "Den Code fügt der Sender ein.",
-    "sshKeyHint": "Den SSH-Schlüssel fügt der Sender hinzu."
+    "sshKeyHint": "Den SSH-Schlüssel fügt der Sender hinzu.",
+    "blockTitle": "Titel des Blocks, zum Beispiel Server-Zugang"
   },
   "requests": {
     "title": "Datei-Anfragen",
