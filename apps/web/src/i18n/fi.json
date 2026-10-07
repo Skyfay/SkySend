@@ -338,8 +338,6 @@
     "downloads_other": "{{count}} latausta",
     "views_one": "{{count}} katselukerta",
     "views_other": "{{count}} katselukertaa",
-    "fewer": "Vähemmän",
-    "more": "Enemmän",
     "password": "Salasana",
     "passwordHint": "Vastaanottaja tarvitsee sen jaon avaamiseen.",
     "summary": "Poistetaan <b>{{expiry}}</b> kuluttua.",

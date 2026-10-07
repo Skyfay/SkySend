@@ -333,8 +333,6 @@
     "downloads_other": "{{count}} Downloads",
     "views_one": "{{count}} Aufruf",
     "views_other": "{{count}} Aufrufe",
-    "fewer": "Weniger",
-    "more": "Mehr",
     "password": "Passwort",
     "passwordHint": "Der Empfänger braucht es zum Öffnen.",
     "summary": "Wird nach <b>{{expiry}}</b> gelöscht.",

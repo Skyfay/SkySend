@@ -338,8 +338,6 @@
     "downloads_other": "{{count}} nedladdningar",
     "views_one": "{{count}} visning",
     "views_other": "{{count}} visningar",
-    "fewer": "Färre",
-    "more": "Fler",
     "password": "Lösenord",
     "passwordHint": "Mottagaren behöver det för att öppna delningen.",
     "summary": "Raderas efter <b>{{expiry}}</b>.",

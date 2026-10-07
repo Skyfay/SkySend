@@ -724,8 +724,6 @@
     "downloads_other": "{{count}} downloads",
     "views_one": "{{count}} visualização",
     "views_other": "{{count}} visualizações",
-    "fewer": "Menos",
-    "more": "Mais",
     "password": "Senha",
     "passwordHint": "O destinatário precisa dela para abrir o compartilhamento.",
     "summary": "Excluído após <b>{{expiry}}</b>.",

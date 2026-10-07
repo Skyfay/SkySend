@@ -29,6 +29,8 @@ interface OptionPillProps {
   format: (value: number) => string;
   /** The name of an option for a screen reader, where its chip shows a symbol. */
   optionLabel?: (value: number) => string | undefined;
+  /** The id of a name shown beside the pill, read before its value. */
+  labelledBy?: string;
   columns: 3 | 4;
   disabled?: boolean;
 }
@@ -47,6 +49,7 @@ export function OptionPill({
   onChange,
   format,
   optionLabel,
+  labelledBy,
   columns,
   disabled,
 }: OptionPillProps) {
@@ -56,9 +59,16 @@ export function OptionPill({
   const wide = useMediaQuery("(min-width: 640px)");
 
   const trigger = (
-    <Button type="button" variant="outline" size="sm" className={pillClass} disabled={disabled}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className={pillClass}
+      aria-labelledby={labelledBy && `${labelledBy} ${id}-value`}
+      disabled={disabled}
+    >
       <Icon className="text-muted-foreground" />
-      <span>{label}</span>
+      <span id={`${id}-value`}>{label}</span>
     </Button>
   );
   const chips = (

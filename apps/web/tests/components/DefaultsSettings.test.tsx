@@ -59,6 +59,12 @@ beforeEach(() => {
       disconnect() {}
     },
   );
+  vi.stubGlobal("matchMedia", (media: string) => ({
+    matches: true,
+    media,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
   writeDefaults({ file: {}, note: {}, request: {} });
 });
 
@@ -88,6 +94,21 @@ describe("DefaultsSettings", () => {
     fireEvent.click(screen.getByText("settings.reset"));
     expect(readDefaults().file).toEqual({});
     expect(screen.queryByText("settings.reset")).toBeNull();
+  });
+
+  it("picks a value in the popover of its pill, like the forms do", () => {
+    show();
+    fireEvent.click(screen.getByRole("button", { name: "request.maxSize 1.0 GB" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2.0 MB" }));
+    expect(readDefaults().request).toEqual({ maxSize: 2 * 1024 ** 2 });
+    expect(screen.getByRole("button", { name: "request.maxSize 2.0 MB" })).toBeTruthy();
+  });
+
+  it("names unlimited views for a screen reader and explains 1 and unlimited", () => {
+    show();
+    fireEvent.click(screen.getByRole("button", { name: "note.maxViews note.burnAfterReading" }));
+    expect(screen.getByRole("radio", { name: "note.unlimited" }).textContent).toBe("∞");
+    expect(screen.getByText("share.pick.viewsHint")).toBeTruthy();
   });
 
   it("offers no switch for a password the server asks for", () => {

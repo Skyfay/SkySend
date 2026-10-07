@@ -31,7 +31,7 @@ src/main.tsx        Entry, imports i18n before rendering
 src/App.tsx         Router + provider stack (ErrorBoundary > Theme > Tooltip > ServerConfig)
 src/pages/          Upload, Download, NoteView, MyUploads, Requests, Inbox, RequestUpload, TemplatesLink, Settings, HowItWorks, NotFound
 src/components/     Feature components (PascalCase)
-src/components/ui/  Radix + cva primitives, 22 of them
+src/components/ui/  Radix + cva primitives, 21 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
 src/lib/            api client, crypto glue, workers, toast helpers, utils
 src/i18n/           i18next setup + 13 locale JSON files
@@ -143,11 +143,11 @@ No user-facing string is hardcoded in a component. Errors that surface as toasts
 
 `src/components/ui/` holds the Shadcn UI components. **Use them instead of the browser-native element, and instead of a hand-rolled div.** This is the single most important rule in this section - a native control looks fine on your machine and wrong on Windows, in dark mode, or against the operator's `CUSTOM_COLOR`.
 
-The 22 available primitives:
+The 21 available primitives:
 
-`badge` · `button` · `card` · `checkbox` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `popover` · `progress` · `scroll-area` · `select` · `sheet` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
+`badge` · `button` · `card` · `checkbox` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `popover` · `progress` · `scroll-area` · `select` · `sheet` · `skeleton` · `sonner` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
 
-`popover` holds a choice at its trigger, `sheet` is a dialog that slides up from the bottom on a phone. `OptionPill` combines them: a setting that shows its value and opens its options in a popover, or in a sheet below the `sm` breakpoint, the way the settings of `ShareOptions` and `RequestForm` work. `useMediaQuery` decides which.
+`popover` holds a choice at its trigger, `sheet` is a dialog that slides up from the bottom on a phone. `OptionPill` combines them: a setting that shows its value and opens its options in a popover, or in a sheet below the `sm` breakpoint, the way the settings of `ShareOptions`, `RequestForm` and `DefaultsSettings` work. `useMediaQuery` decides which.
 
 `toggle-group` has three variants: `chips` for a short list of options like the expiry times, `segmented` for a switch between two or three modes like Plain and Markdown, and `cards` for two or three choices with a line of explanation each that open no panel, like the format of a template export. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
 

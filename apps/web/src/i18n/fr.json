@@ -338,8 +338,6 @@
     "downloads_other": "{{count}} téléchargements",
     "views_one": "{{count}} vue",
     "views_other": "{{count}} vues",
-    "fewer": "Moins",
-    "more": "Plus",
     "password": "Mot de passe",
     "passwordHint": "Le destinataire en a besoin pour l'ouvrir.",
     "summary": "Supprimé après <b>{{expiry}}</b>.",

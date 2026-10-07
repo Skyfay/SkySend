@@ -338,8 +338,6 @@
     "downloads_other": "{{count}} nedlastinger",
     "views_one": "{{count}} visning",
     "views_other": "{{count}} visninger",
-    "fewer": "Færre",
-    "more": "Flere",
     "password": "Passord",
     "passwordHint": "Mottakeren trenger det for å åpne delingen.",
     "summary": "Slettes etter <b>{{expiry}}</b>.",

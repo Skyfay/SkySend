@@ -1,8 +1,6 @@
-import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useId } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Clock, Download, Eye, Lock } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OptionPill, SwitchPill } from "@/components/OptionPill";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { formatDuration } from "@/lib/utils";
@@ -26,7 +24,7 @@ interface ShareOptionsProps {
   disabled?: boolean;
 }
 
-/** How a limit reads, for the steppers of the defaults and the summary of a share. */
+/** How a limit reads, for the defaults and the summary of a share. */
 export function useLimitLabel(kind: ShareKind) {
   const { t } = useTranslation();
   return (value: number, short = false) => {
@@ -37,90 +35,26 @@ export function useLimitLabel(kind: ShareKind) {
   };
 }
 
-export function Row({ label, labelId, children }: { label: ReactNode; labelId: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-      <span id={labelId} className="flex items-center gap-2 text-[13px] font-medium sm:w-36 sm:shrink-0">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-interface ExpiryPickerProps {
-  options: number[];
-  value: number;
-  onChange: (value: number) => void;
-  labelId: string;
-  disabled: boolean;
-}
-
 /**
- * The expiry times as chips while they fit on one line, as a dropdown once they would wrap.
- * An invisible copy of the chips measures that line, so the switch follows the width of the
- * row, on a phone as on a wide screen.
+ * How the chips of a view limit read: unlimited as ∞ with its name for a screen reader, and a
+ * hint for what 1 and ∞ do, as far as the server offers them.
  */
-export function ExpiryPicker({ options, value, onChange, labelId, disabled }: ExpiryPickerProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [fits, setFits] = useState(true);
-
-  useLayoutEffect(() => {
-    const row = rowRef.current;
-    const measure = measureRef.current;
-    if (!row || !measure) return;
-    const check = () => setFits(measure.scrollWidth <= row.clientWidth);
-    check();
-    // The copy changes width when the web font arrives, the row when the window resizes.
-    const observer = new ResizeObserver(check);
-    observer.observe(row);
-    observer.observe(measure);
-    return () => observer.disconnect();
-  }, [options]);
-
-  return (
-    <div ref={rowRef} className="relative min-w-0 sm:flex-1">
-      <div ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 w-max">
-        <ToggleGroup type="single" className="flex-nowrap">
-          {options.map((sec) => (
-            <ToggleGroupItem key={sec} value={String(sec)}>
-              {formatDuration(sec)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
-      {fits ? (
-        <ToggleGroup
-          type="single"
-          value={String(value)}
-          // Radix lets a single toggle be switched off. An expiry is always required.
-          onValueChange={(v) => v && onChange(parseInt(v, 10))}
-          aria-labelledby={labelId}
-          disabled={disabled}
-        >
-          {options.map((sec) => (
-            <ToggleGroupItem key={sec} value={String(sec)}>
-              {formatDuration(sec)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      ) : (
-        <Select value={String(value)} onValueChange={(v) => onChange(parseInt(v, 10))} disabled={disabled}>
-          <SelectTrigger className="w-44" aria-labelledby={labelId}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((sec) => (
-              <SelectItem key={sec} value={String(sec)}>
-                {formatDuration(sec)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-    </div>
-  );
+export function useViewChips(options: readonly number[]) {
+  const { t } = useTranslation();
+  const burns = options.includes(1);
+  const unlimited = options.includes(0);
+  return {
+    format: (count: number) => (count === 0 ? "∞" : String(count)),
+    optionLabel: (count: number) => (count === 0 ? t("note.unlimited") : undefined),
+    hint:
+      burns && unlimited
+        ? t("share.pick.viewsHint")
+        : burns
+          ? t("share.pick.burnHint")
+          : unlimited
+            ? t("share.pick.unlimitedHint")
+            : undefined,
+  };
 }
 
 /**
@@ -158,16 +92,7 @@ export function ShareOptions({
       : limit === 1
         ? pill("share.pill.burnAfterReading")
         : pill("share.pill.views", { count: limit });
-  const burns = limitOptions.includes(1);
-  const unlimited = limitOptions.includes(0);
-  const viewsHint =
-    burns && unlimited
-      ? t("share.pick.viewsHint")
-      : burns
-        ? t("share.pick.burnHint")
-        : unlimited
-          ? t("share.pick.unlimitedHint")
-          : undefined;
+  const chips = useViewChips(limitOptions);
 
   return (
     <section className="space-y-3" aria-labelledby={`${id}-settings`}>
@@ -190,12 +115,12 @@ export function ShareOptions({
           icon={file ? Download : Eye}
           label={limitLabel}
           title={file ? t("share.pick.downloads") : t("share.pick.views")}
-          hint={file ? undefined : viewsHint}
+          hint={file ? undefined : chips.hint}
           options={limitOptions}
           value={limit}
           onChange={onLimitChange}
-          format={(count) => (count === 0 ? "\u221e" : String(count))}
-          optionLabel={(count) => (count === 0 ? t("note.unlimited") : undefined)}
+          format={file ? String : chips.format}
+          optionLabel={file ? undefined : chips.optionLabel}
           columns={4}
           disabled={disabled}
         />

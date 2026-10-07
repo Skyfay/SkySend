@@ -338,8 +338,6 @@
     "downloads_other": "{{count}} downloads",
     "views_one": "{{count}} weergave",
     "views_other": "{{count}} weergaven",
-    "fewer": "Minder",
-    "more": "Meer",
     "password": "Wachtwoord",
     "passwordHint": "De ontvanger heeft het nodig om het te openen.",
     "summary": "Verwijderd na <b>{{expiry}}</b>.",

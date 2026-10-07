@@ -724,8 +724,6 @@
     "downloads_other": "{{count}} 次下载",
     "views_one": "{{count}} 次查看",
     "views_other": "{{count}} 次查看",
-    "fewer": "减少",
-    "more": "增加",
     "password": "密码",
     "passwordHint": "接收者打开时需要输入。",
     "summary": "将在 <b>{{expiry}}</b> 后删除。",

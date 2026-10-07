@@ -1,12 +1,24 @@
 import { useId, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { File, Inbox, Lock, NotebookPen, RotateCcw, type LucideIcon } from "lucide-react";
+import {
+  Clock,
+  Download,
+  Eye,
+  File,
+  HardDrive,
+  Inbox,
+  Lock,
+  NotebookPen,
+  RotateCcw,
+  Upload,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Stepper } from "@/components/ui/stepper";
 import { Switch } from "@/components/ui/switch";
-import { ExpiryPicker, Row, useLimitLabel } from "@/components/ShareOptions";
+import { OptionPill } from "@/components/OptionPill";
+import { useLimitLabel, useViewChips } from "@/components/ShareOptions";
 import { useBrowserDefaults } from "@/hooks/useBrowserDefaults";
 import type { ServerConfig } from "@/lib/api";
 import {
@@ -16,7 +28,30 @@ import {
   requestStart,
   type BrowserDefaults,
 } from "@/lib/defaults";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, formatDuration } from "@/lib/utils";
+
+/** A setting with its name beside it, or above it on a phone. */
+function Row({
+  label,
+  labelId,
+  children,
+}: {
+  label: ReactNode;
+  labelId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+      <span
+        id={labelId}
+        className="flex items-center gap-2 text-[13px] font-medium sm:w-36 sm:shrink-0"
+      >
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
 
 function Section({
   icon: Icon,
@@ -85,10 +120,18 @@ function PasswordRow({
     <Row
       labelId={`${id}-label`}
       label={
-        <Label htmlFor={id} className="flex items-center gap-2 text-[13px]">
-          <Lock className="h-3.5 w-3.5" />
-          {t("share.password")}
-        </Label>
+        // A forced password has no switch for the label to point at.
+        forced ? (
+          <span className="flex items-center gap-2 text-[13px]">
+            <Lock className="h-3.5 w-3.5" />
+            {t("share.password")}
+          </span>
+        ) : (
+          <Label htmlFor={id} className="flex items-center gap-2 text-[13px]">
+            <Lock className="h-3.5 w-3.5" />
+            {t("share.password")}
+          </Label>
+        )
       }
     >
       <div className="flex items-center gap-3">
@@ -115,6 +158,7 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
   const { defaults, update, reset } = useBrowserDefaults();
   const fileLimit = useLimitLabel("file");
   const noteLimit = useLimitLabel("note");
+  const viewChips = useViewChips(config.noteViewOptions);
   const changed = (section: keyof BrowserDefaults) =>
     Object.values(defaults[section]).some((value) => value !== undefined);
 
@@ -132,23 +176,32 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
           onReset={() => reset("file")}
         >
           <Row label={t("share.expires")} labelId={`${id}-file-expiry`}>
-            <ExpiryPicker
-              options={config.fileExpireOptions}
-              value={file.expireSec}
-              onChange={(expireSec) => update("file", { expireSec })}
-              labelId={`${id}-file-expiry`}
-              disabled={false}
-            />
+            <div role="group" aria-labelledby={`${id}-file-expiry`}>
+              <OptionPill
+                labelledBy={`${id}-file-expiry`}
+                icon={Clock}
+                label={formatDuration(file.expireSec)}
+                title={t("share.pick.expiry")}
+                options={config.fileExpireOptions}
+                value={file.expireSec}
+                onChange={(expireSec) => update("file", { expireSec })}
+                format={formatDuration}
+                columns={3}
+              />
+            </div>
           </Row>
           <Row label={t("upload.downloads")} labelId={`${id}-file-limit`}>
             <div role="group" aria-labelledby={`${id}-file-limit`}>
-              <Stepper
+              <OptionPill
+                labelledBy={`${id}-file-limit`}
+                icon={Download}
+                label={fileLimit(file.limit)}
+                title={t("share.pick.downloads")}
                 options={config.fileDownloadOptions}
                 value={file.limit}
                 onChange={(limit) => update("file", { limit })}
-                format={fileLimit}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
+                format={String}
+                columns={4}
               />
             </div>
           </Row>
@@ -168,23 +221,34 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
           onReset={() => reset("note")}
         >
           <Row label={t("share.expires")} labelId={`${id}-note-expiry`}>
-            <ExpiryPicker
-              options={config.noteExpireOptions}
-              value={note.expireSec}
-              onChange={(expireSec) => update("note", { expireSec })}
-              labelId={`${id}-note-expiry`}
-              disabled={false}
-            />
+            <div role="group" aria-labelledby={`${id}-note-expiry`}>
+              <OptionPill
+                labelledBy={`${id}-note-expiry`}
+                icon={Clock}
+                label={formatDuration(note.expireSec)}
+                title={t("share.pick.expiry")}
+                options={config.noteExpireOptions}
+                value={note.expireSec}
+                onChange={(expireSec) => update("note", { expireSec })}
+                format={formatDuration}
+                columns={3}
+              />
+            </div>
           </Row>
           <Row label={t("note.maxViews")} labelId={`${id}-note-limit`}>
             <div role="group" aria-labelledby={`${id}-note-limit`}>
-              <Stepper
+              <OptionPill
+                labelledBy={`${id}-note-limit`}
+                icon={Eye}
+                label={noteLimit(note.limit)}
+                title={t("share.pick.views")}
+                hint={viewChips.hint}
                 options={config.noteViewOptions}
                 value={note.limit}
                 onChange={(limit) => update("note", { limit })}
-                format={noteLimit}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
+                format={viewChips.format}
+                optionLabel={viewChips.optionLabel}
+                columns={4}
               />
             </div>
           </Row>
@@ -204,48 +268,63 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
           onReset={() => reset("request")}
         >
           <Row label={t("request.openFor")} labelId={`${id}-request-expiry`}>
-            <ExpiryPicker
-              options={config.fileRequestExpireOptions}
-              value={request.expireSec}
-              onChange={(expireSec) => update("request", { expireSec })}
-              labelId={`${id}-request-expiry`}
-              disabled={false}
-            />
+            <div role="group" aria-labelledby={`${id}-request-expiry`}>
+              <OptionPill
+                labelledBy={`${id}-request-expiry`}
+                icon={Clock}
+                label={formatDuration(request.expireSec)}
+                title={t("request.pick.expiry")}
+                options={config.fileRequestExpireOptions}
+                value={request.expireSec}
+                onChange={(expireSec) => update("request", { expireSec })}
+                format={formatDuration}
+                columns={3}
+              />
+            </div>
           </Row>
           <Row label={t("request.maxUploads")} labelId={`${id}-request-sends`}>
             <div role="group" aria-labelledby={`${id}-request-sends`} className="space-y-1.5">
-              <Stepper
+              <OptionPill
+                labelledBy={`${id}-request-sends`}
+                icon={Upload}
+                label={t("request.uploads", { count: request.sends })}
+                title={t("request.pick.uploads")}
                 options={config.fileRequestUploadOptions}
                 value={request.sends}
                 onChange={(sends) => update("request", { sends })}
-                format={(count) => t("request.uploads", { count })}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
+                format={String}
+                columns={4}
               />
               <p className="text-xs text-muted-foreground">{t("settings.sendsHint")}</p>
             </div>
           </Row>
           <Row label={t("request.maxSize")} labelId={`${id}-request-size`}>
             <div role="group" aria-labelledby={`${id}-request-size`}>
-              <Stepper
+              <OptionPill
+                labelledBy={`${id}-request-size`}
+                icon={HardDrive}
+                label={formatBytes(request.maxSize)}
+                title={t("request.pick.size")}
                 options={requestSizeOptions(config.fileRequestMaxSize)}
                 value={request.maxSize}
                 onChange={(maxSize) => update("request", { maxSize })}
                 format={formatBytes}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
+                columns={3}
               />
             </div>
           </Row>
           <Row label={t("request.downloads")} labelId={`${id}-request-downloads`}>
             <div role="group" aria-labelledby={`${id}-request-downloads`}>
-              <Stepper
+              <OptionPill
+                labelledBy={`${id}-request-downloads`}
+                icon={Download}
+                label={fileLimit(request.downloads)}
+                title={t("request.pick.downloads")}
                 options={config.fileRequestDownloadOptions}
                 value={request.downloads}
                 onChange={(downloads) => update("request", { downloads })}
-                format={fileLimit}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
+                format={String}
+                columns={4}
               />
             </div>
           </Row>

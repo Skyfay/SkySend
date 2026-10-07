@@ -333,8 +333,6 @@
     "downloads_other": "{{count}} downloads",
     "views_one": "{{count}} view",
     "views_other": "{{count}} views",
-    "fewer": "Fewer",
-    "more": "More",
     "password": "Password",
     "passwordHint": "The recipient needs it to open the share.",
     "summary": "Deleted after <b>{{expiry}}</b>.",
