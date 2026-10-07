@@ -61,9 +61,10 @@ export function Layout() {
   // Not on the page of a share link, see useUnseenUploads.
   const onShareLink = /^\/(file|note|request|d)\//.test(location.pathname);
   const unseen = useUnseenUploads(Boolean(config?.fileRequestsEnabled) && !onShareLink);
-  // A dot beside "Requests" while uploads wait that no inbox here has shown yet.
+  // A dot beside My Links, which lists the requests, while uploads wait that no inbox here
+  // has shown yet.
   const unseenDot = (to: string) =>
-    to === "/requests" &&
+    to === "/uploads" &&
     unseen > 0 && (
       <>
         <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
@@ -77,7 +78,9 @@ export function Layout() {
     ...(sharing ? [{ to: "/", label: t("header.share"), icon: Upload }] : []),
     ...(config?.fileRequestsEnabled ? [{ to: "/requests", label: t("nav.requests"), icon: Inbox }] : []),
     { to: "/how", label: t("header.howItWorks"), icon: Sparkles },
-    ...(sharing ? [{ to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen }] : []),
+    ...(sharing || config?.fileRequestsEnabled
+      ? [{ to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen }]
+      : []),
   ];
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);

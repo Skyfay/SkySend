@@ -55,7 +55,7 @@ Inspired by [timvisee/send](https://github.com/timvisee/send), the community for
 - **Shares that delete themselves** - expiry times, download and view limits, and burn after reading
 - **Password protection** - an optional password on top of the link, derived with Argon2id
 - **A CLI for the terminal** - upload, download and notes with the same encryption, plus an interactive TUI
-- **No accounts** - My Uploads lives in the browser, and optional OIDC sign-in limits who may share
+- **No accounts** - My Links lives in the browser, and optional OIDC sign-in limits who may share
 - **Runs anywhere** - local storage or any S3-compatible bucket, 13 languages and three themes
 
 ## 🔒 Security Design

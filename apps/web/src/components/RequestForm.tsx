@@ -1,16 +1,20 @@
 import { useId, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Inbox, Loader2, Lock } from "lucide-react";
-import { REQUEST_TITLE_MAX_BYTES } from "@skysend/crypto";
+import { File, Inbox, Layers, Loader2, Lock, NotebookPen } from "lucide-react";
+import { REQUEST_BRIEF_MAX_BYTES, REQUEST_TITLE_MAX_BYTES, type RequestAsk } from "@skysend/crypto";
+import { serializeTemplate } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Stepper } from "@/components/ui/stepper";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BlockListEditor } from "@/components/BlockListEditor";
 import { ExpiryPicker, Row } from "@/components/ShareOptions";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import type { NewRequestOptions } from "@/hooks/useFileRequests";
 import type { ServerConfig } from "@/lib/api";
+import type { DraftBlock } from "@/lib/note-editor";
 import { formatBytes, formatDuration } from "@/lib/utils";
 
 const GIB = 1024 ** 3;
@@ -36,19 +40,49 @@ function requestSizeOptions(max: number): number[] {
   return [...SIZE_STEPS.filter((size) => size < max), max];
 }
 
+type Mode = "files" | "note" | "both";
+const ASKS: Record<Mode, RequestAsk[]> = {
+  files: ["files"],
+  note: ["note"],
+  both: ["files", "note"],
+};
+
+/**
+ * Whether the brief would fit: the title, what is asked for and the template, as the brief
+ * carries them. A template the format refuses does not fit either.
+ */
+function briefFits(title: string, asks: RequestAsk[], template: DraftBlock[]): boolean {
+  try {
+    const blocks =
+      asks.includes("note") && template.length > 0 ? serializeTemplate(template) : null;
+    const json = JSON.stringify({ v: 1, title: title || null, asks, template: blocks });
+    return new TextEncoder().encode(json).length <= REQUEST_BRIEF_MAX_BYTES;
+  } catch {
+    return false;
+  }
+}
+
 interface RequestFormProps {
   config: ServerConfig;
   creating: boolean;
   onSubmit: (options: NewRequestOptions) => void;
 }
 
-/** What a requester sets for a new request: a title for the sender and the limits. */
+/**
+ * What a requester sets for a new request: files, a note or both, a title for the sender, a
+ * template for the note, and the limits.
+ */
 export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
   const { t } = useTranslation();
   const id = useId();
   const uploadOptions = Array.from({ length: config.fileRequestMaxUploads }, (_, i) => i + 1);
   const sizeOptions = requestSizeOptions(config.fileRequestMaxSize);
+  // A request for notes alone takes a common size, so the limit does not tell what it is for.
+  const noteOnlySize =
+    sizeOptions.find((size) => size >= 2 * config.noteMaxSize) ?? config.fileRequestMaxSize;
 
+  const [mode, setMode] = useState<Mode>("files");
+  const [template, setTemplate] = useState<DraftBlock[]>([]);
   const [title, setTitle] = useState("");
   const [expireSec, setExpireSec] = useState(config.fileRequestDefaultExpire);
   const [maxUploads, setMaxUploads] = useState(Math.min(10, config.fileRequestMaxUploads));
@@ -56,12 +90,25 @@ export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
   const [passwordEnabled, setPasswordEnabled] = useState(config.forceFilePassword);
   const [password, setPassword] = useState("");
 
+  const asks = ASKS[mode];
+  const files = asks.includes("files");
+  const note = asks.includes("note");
   const titleTooLong = new TextEncoder().encode(title).length > REQUEST_TITLE_MAX_BYTES;
-  const canSubmit = !creating && !titleTooLong && (!passwordEnabled || password.length > 0);
+  const templateTooLarge = !titleTooLong && !briefFits(title, asks, template);
+  const canSubmit =
+    !creating && !titleTooLong && !templateTooLarge && (!passwordEnabled || password.length > 0);
   const strong = <strong className="font-semibold text-foreground" />;
 
   const submit = () =>
-    onSubmit({ title, expireSec, maxUploads, maxSize, password: passwordEnabled ? password : "" });
+    onSubmit({
+      title,
+      asks,
+      template: note && template.length > 0 ? template : null,
+      expireSec,
+      maxUploads,
+      maxSize: files ? maxSize : noteOnlySize,
+      password: passwordEnabled ? password : "",
+    });
 
   return (
     <form
@@ -71,6 +118,30 @@ export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
         if (canSubmit) submit();
       }}
     >
+      <Row label={t("request.asks")} labelId={`${id}-asks`}>
+        <ToggleGroup
+          variant="segmented"
+          type="single"
+          value={mode}
+          onValueChange={(v) => v && setMode(v as Mode)}
+          aria-labelledby={`${id}-asks`}
+          disabled={creating}
+        >
+          <ToggleGroupItem value="files">
+            <File />
+            {t("request.asksFiles")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="note">
+            <NotebookPen />
+            {t("request.asksNote")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="both">
+            <Layers />
+            {t("request.asksBoth")}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </Row>
+
       <div className="space-y-2">
         <Label htmlFor={`${id}-title`} className="text-[13px]">
           {t("request.titleLabel")}
@@ -92,6 +163,30 @@ export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
           {titleTooLong ? t("request.titleTooLong") : t("request.titleHint")}
         </p>
       </div>
+
+      {note && (
+        <section className="space-y-3" aria-labelledby={`${id}-template`}>
+          <div>
+            <h3 id={`${id}-template`} className="text-[13px] font-medium">
+              {t("template.title")}
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {t("template.hint")}
+            </p>
+          </div>
+          <BlockListEditor
+            drafts={template}
+            onChange={setTemplate}
+            mode="template"
+            disabled={creating}
+          />
+          {templateTooLarge && (
+            <p className="text-xs text-destructive-text" role="alert">
+              {t("template.tooLarge")}
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="space-y-4">
         <Row label={t("request.openFor")} labelId={`${id}-expiry`}>
@@ -118,19 +213,21 @@ export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
           </div>
         </Row>
 
-        <Row label={t("request.maxSize")} labelId={`${id}-size`}>
-          <div role="group" aria-labelledby={`${id}-size`}>
-            <Stepper
-              options={sizeOptions}
-              value={maxSize}
-              onChange={setMaxSize}
-              format={formatBytes}
-              decreaseLabel={t("share.fewer")}
-              increaseLabel={t("share.more")}
-              disabled={creating}
-            />
-          </div>
-        </Row>
+        {files && (
+          <Row label={t("request.maxSize")} labelId={`${id}-size`}>
+            <div role="group" aria-labelledby={`${id}-size`}>
+              <Stepper
+                options={sizeOptions}
+                value={maxSize}
+                onChange={setMaxSize}
+                format={formatBytes}
+                decreaseLabel={t("share.fewer")}
+                increaseLabel={t("share.more")}
+                disabled={creating}
+              />
+            </div>
+          </Row>
+        )}
 
         <Row
           labelId={`${id}-password`}
@@ -185,7 +282,7 @@ export function RequestForm({ config, creating, onSubmit }: RequestFormProps) {
       <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
         <p className="flex-1 text-[13px] leading-snug text-muted-foreground">
           <Trans
-            i18nKey="request.summary"
+            i18nKey={files ? "request.summary" : "request.summaryNote"}
             values={{
               expiry: formatDuration(expireSec),
               uploads: t("request.uploads", { count: maxUploads }),

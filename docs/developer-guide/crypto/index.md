@@ -35,7 +35,7 @@ calculatePlaintextSize(encryptedSize): number
 
 // Metadata
 encryptMetadata(metadata, metaKey): Promise<{ ciphertext, iv }>
-decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>
+decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>, never a note
 expectedPlaintextSize(metadata): number | undefined
 
 // Note Content (the content is a note document, see Note Format)
@@ -47,17 +47,18 @@ deriveKeyFromPassword(password, salt, argon2id?): Promise<{ key, algorithm }>
 applyPasswordProtection(secret, passwordKey): Uint8Array
 
 // File Requests
-createFileRequest({ title? }): Promise<{ local, server }>
+createFileRequest({ title?, asks?, template? }): Promise<{ local, server }>
 deriveInboxKeys(inboxSecret): Promise<{ inboxKey, inboxAuthToken, inboxOwnerToken }>
-deriveLinkKeys(linkSecret, publicKey): Promise<{ uploadToken, titleKey }>
-openRequestKey(vault, vaultNonce, inboxKey, title): Promise<{ publicKey, linkSecret, privateKey }>
+deriveLinkKeys(linkSecret, publicKey): Promise<{ uploadToken, briefKey }>
+openRequestKey(vault, vaultNonce, inboxKey, brief): Promise<{ publicKey, linkSecret, privateKey }>
 wrapFileSecret(publicKey, requestId, uploadId, fileSecret): Promise<{ enc, ciphertext }>
 unwrapFileSecret(requestKey, requestId, uploadId, wrapped): Promise<Uint8Array>
 encodeUploadFragment(publicKey, linkSecret): string
 decodeUploadFragment(fragment): Promise<{ publicKey, linkSecret }>
 encodeInboxFragment(secret, passwordSalt?): string
 decodeInboxFragment(fragment): { secret, passwordSalt }
-encryptRequestTitle(title, titleKey) / decryptRequestTitle(title, titleKey)
+encryptRequestBrief(brief, briefKey) / decryptRequestBrief(brief, briefKey): { title, asks, template }
+decryptRequestMetadata(ciphertext, iv, metaKey): file, archive or { type: "note", size }
 
 // Utilities
 toBase64url(data): string

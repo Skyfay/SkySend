@@ -43,7 +43,7 @@ The recipient downloads a `.zip` file containing all original files with their n
 
 ## Request Files
 
-To get files from someone instead, open **Requests**, set how long the request stays open and how much it takes, and send them the upload link. What they upload is encrypted in their browser for you alone, and you open it with your inbox link. See [File Requests](/user-guide/file-requests).
+To get files from someone instead, open **Request**, set how long the request stays open and how much it takes, and send them the upload link. What they upload is encrypted in their browser for you alone, and you open it with your inbox link. See [File Requests](/user-guide/file-requests).
 
 ## Download a File
 
@@ -91,7 +91,7 @@ When burn after reading is enabled, the note content is deleted from the server 
 
 SkySend stores your upload and note history locally in your browser (IndexedDB). No account is needed.
 
-Navigate to **My Uploads** to:
+Navigate to **My Links** to:
 
 - Filter by **All**, **Files**, or a note type
 - View all uploads and notes you created from this browser
@@ -99,6 +99,7 @@ Navigate to **My Uploads** to:
 - See expiry countdown
 - Re-copy the share link
 - Open, rename or delete an upload, or show its QR code, from the **⋯** menu. Notes cannot be renamed.
+- Switch to the **Requests** tab for the file requests made in this browser
 
 ::: info Browser-Local Data
 Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire.

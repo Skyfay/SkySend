@@ -6,6 +6,18 @@ export type NoteKindKey = "text" | "markdown" | "password" | "code" | "sshkey";
 /** A block while the note is being written, with an id the editor keys it by. */
 export type DraftBlock = NoteBlock & { id: number };
 
+/**
+ * What a block editor is for. `compose` writes a note, `template` lays out the fields a
+ * sender of a file request fills in, without values, and `fill` fills in those fields, with
+ * their labels fixed.
+ */
+export type EditorMode = "compose" | "template" | "fill";
+
+/** Blocks with the ids an editor keys them by, counting from 1. */
+export function toDrafts(blocks: readonly NoteBlock[]): DraftBlock[] {
+  return blocks.map((block, index) => ({ ...block, id: index + 1 }));
+}
+
 /** A new block of a type, as the composer adds it. */
 export function emptyBlock(type: NoteBlockType): NoteBlock {
   switch (type) {
@@ -29,7 +41,9 @@ export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
   return drafts.flatMap((block): NoteBlock[] => {
     switch (block.type) {
       case "text":
-        return block.text.length > 0 ? [{ type: "text", format: block.format, text: block.text }] : [];
+        return block.text.length > 0
+          ? [{ type: "text", format: block.format, text: block.text, ...(block.label ? { label: block.label } : {}) }]
+          : [];
       case "password": {
         const entries = block.entries
           .filter((entry) => entry.value.length > 0)

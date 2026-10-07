@@ -77,9 +77,7 @@ function createBody(request: NewFileRequest, overrides: Record<string, unknown> 
     inboxAuthToken: toBase64url(server.inboxAuthToken),
     inboxOwnerToken: toBase64url(server.inboxOwnerToken),
     uploadToken: toBase64url(server.uploadToken),
-    title: server.title
-      ? { ciphertext: toBase64url(server.title.ciphertext), nonce: toBase64url(server.title.nonce) }
-      : null,
+    brief: { ciphertext: toBase64url(server.brief.ciphertext), nonce: toBase64url(server.brief.nonce) },
     expireSec: 86400,
     maxUploads: 3,
     maxSize: 4096,
@@ -241,6 +239,28 @@ describe("file requests", () => {
       }
     });
 
+    it("requires a brief of a sound length", async () => {
+      const app = createApp();
+      const request = await createFileRequest();
+      const nonce = toBase64url(request.server.brief.nonce);
+      for (const brief of [
+        undefined,
+        null,
+        { ciphertext: toBase64url(new Uint8Array(1024 + 15)), nonce },
+        { ciphertext: toBase64url(new Uint8Array(1024 + 17)), nonce },
+        { ciphertext: toBase64url(new Uint8Array(8 * 1024 + 17)), nonce },
+        { ciphertext: toBase64url(request.server.brief.ciphertext), nonce: "x" },
+        { ciphertext: toBase64url(request.server.brief.ciphertext), nonce, extra: 1 },
+      ]) {
+        const res = await app.request("/api/request", json(createBody(request, { brief })));
+        expect(res.status).toBe(400);
+      }
+      const largest = { ciphertext: toBase64url(new Uint8Array(8 * 1024 + 16)), nonce };
+      expect(
+        (await app.request("/api/request", json(createBody(request, { brief: largest })))).status,
+      ).toBe(201);
+    });
+
     it("rejects a vault of the wrong length", async () => {
       const app = createApp();
       const request = await createFileRequest();
@@ -358,7 +378,7 @@ describe("file requests", () => {
   // ── What a sender sees ──────────────────────────────
 
   describe("GET /api/request/:id", () => {
-    it("returns the title and the limits of an upload", async () => {
+    it("returns the brief and the limits of an upload", async () => {
       const app = createApp();
       const { id, request, headers } = await createRequest(app);
       const res = await app.request(`/api/request/${id}`, { headers: headers.upload });
@@ -370,9 +390,9 @@ describe("file requests", () => {
         maxUploadSize: 4096,
         maxFilesPerUpload: 32,
       });
-      expect(body.title).toEqual({
-        ciphertext: toBase64url(request.server.title!.ciphertext),
-        nonce: toBase64url(request.server.title!.nonce),
+      expect(body.brief).toEqual({
+        ciphertext: toBase64url(request.server.brief.ciphertext),
+        nonce: toBase64url(request.server.brief.nonce),
       });
       expect(JSON.stringify(body)).not.toContain(toBase64url(request.server.vault));
     });
@@ -401,15 +421,16 @@ describe("file requests", () => {
       ).toBe(404);
     });
 
-    it("returns no title when the requester gave none", async () => {
+    it("answers no brief for a row a development build wrote before briefs", async () => {
       const app = createApp();
-      const request = await createFileRequest();
-      const res = await app.request("/api/request", json(createBody(request)));
-      const { id } = (await res.json()) as { id: string };
-      const view = await app.request(`/api/request/${id}`, {
-        headers: { "X-Upload-Token": toBase64url(request.server.uploadToken) },
-      });
-      expect(((await view.json()) as { title: unknown }).title).toBeNull();
+      const { id, headers } = await createRequest(app);
+      dbCtx.db
+        .update(fileRequests)
+        .set({ briefCiphertext: null, briefNonce: null })
+        .where(eq(fileRequests.id, id))
+        .run();
+      const view = await app.request(`/api/request/${id}`, { headers: headers.upload });
+      expect(((await view.json()) as { brief: unknown }).brief).toBeNull();
     });
 
     it("looks like a missing request once it was deleted", async () => {
@@ -471,7 +492,7 @@ describe("file requests", () => {
         fromBase64url(inbox.vault),
         fromBase64url(inbox.vaultNonce),
         inboxKey,
-        created.request.server.title,
+        created.request.server.brief,
       );
       const unwrapped = await unwrapFileSecret(key, created.id, uid, {
         enc: fromBase64url(entry.wrapEnc as string),
@@ -1069,7 +1090,7 @@ describe("file requests", () => {
         created.request.server.vault,
         created.request.server.vaultNonce,
         inboxKey,
-        created.request.server.title,
+        created.request.server.brief,
       );
       const unwrapped = await unwrapFileSecret(key, created.id, ready.id, {
         enc: new Uint8Array(row.wrapEnc),

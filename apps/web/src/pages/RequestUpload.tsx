@@ -6,10 +6,12 @@ import {
   Ban,
   CheckCircle2,
   Clock,
+  File as FileIcon,
   FileQuestion,
   Flag,
   Lock,
   MessageSquareQuote,
+  NotebookPen,
   Server,
   Upload,
   X,
@@ -17,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RequestNoteForm } from "@/components/RequestNoteForm";
 import { Glow } from "@/components/Glow";
 import { LinkGone } from "@/components/LinkGone";
 import { UploadZone } from "@/components/UploadZone";
@@ -29,9 +33,10 @@ import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import { formatBytes, formatTimeRemaining } from "@/lib/utils";
 
 /**
- * What a sender sees: who runs the instance, what the requester wrote, and an upload zone.
- * Everything is encrypted to the requester's key in this browser, and the sender gets no
- * link back, because only the requester is meant to open what arrives.
+ * What a sender sees: who runs the instance, what the requester wrote, and an upload zone,
+ * a note to fill in, or both. Everything is encrypted to the requester's key in this
+ * browser, and the sender gets no link back, because only the requester is meant to open
+ * what arrives.
  */
 export function RequestUploadPage() {
   const { t } = useTranslation();
@@ -66,6 +71,15 @@ export function RequestUploadPage() {
       />
     );
   }
+  if (sender.phase === "broken") {
+    return (
+      <LinkGone
+        icon={AlertCircle}
+        title={t("requestUpload.broken")}
+        text={t("requestUpload.brokenText")}
+      />
+    );
+  }
   if (sender.phase === "gone") {
     return (
       <LinkGone
@@ -80,7 +94,7 @@ export function RequestUploadPage() {
       <LinkGone icon={AlertCircle} title={t("common.error")} text={t("requestUpload.errorText")} />
     );
   }
-  if (sender.phase === "loading" || !sender.status) {
+  if (sender.phase === "loading" || !sender.status || !sender.brief) {
     return (
       <div className="mx-auto max-w-xl space-y-4" aria-busy="true">
         <Skeleton className="mx-auto h-10 w-3/4 rounded-xl" />
@@ -89,7 +103,7 @@ export function RequestUploadPage() {
     );
   }
 
-  const { status } = sender;
+  const { status, brief } = sender;
   // A delivered upload stays delivered, even when the request closed meanwhile.
   const delivered = sender.phase === "delivered";
   const room = status.open && status.uploadsLeft > 0 && status.maxUploadSize > 0;
@@ -155,7 +169,7 @@ export function RequestUploadPage() {
       </div>
     );
   } else {
-    body = (
+    const filesBody = (
       <div className="space-y-4">
         <UploadZone
           files={files}
@@ -184,7 +198,7 @@ export function RequestUploadPage() {
           <Button
             size="lg"
             disabled={!canSend}
-            onClick={() => void sender.send(files)}
+            onClick={() => void sender.send({ files })}
             className="w-full sm:w-auto"
           >
             <Lock />
@@ -193,6 +207,51 @@ export function RequestUploadPage() {
         </div>
       </div>
     );
+    const noteBody = (
+      <RequestNoteForm
+        template={brief.template}
+        maxSize={config?.noteMaxSize ?? 0}
+        limits={t("requestUpload.limitsNote", {
+          count: status.uploadsLeft,
+          time: formatTimeRemaining(status.closesAt),
+        })}
+        disabled={sender.phase !== "ready"}
+        onSend={(note) => void sender.send({ note })}
+      />
+    );
+    const asksFiles = brief.asks.includes("files");
+    const asksNote = brief.asks.includes("note");
+    body =
+      asksFiles && asksNote ? (
+        <Tabs defaultValue="file" className="space-y-4">
+          <TabsList variant="cards" aria-label={t("share.what")}>
+            <TabsTrigger value="file">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <FileIcon />
+                {t("tab.file")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {t("requestUpload.fileTabHint", { size: formatBytes(status.maxUploadSize) })}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="note">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <NotebookPen />
+                {t("tab.note")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {t("requestUpload.noteTabHint")}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="file">{filesBody}</TabsContent>
+          <TabsContent value="note">{noteBody}</TabsContent>
+        </Tabs>
+      ) : asksNote ? (
+        noteBody
+      ) : (
+        filesBody
+      );
   }
 
   return (
@@ -214,14 +273,14 @@ export function RequestUploadPage() {
           </p>
         </header>
 
-        {sender.title && (
+        {brief.title && (
           <figure className="overflow-hidden rounded-2xl border border-border bg-card px-4 py-3 shadow-chip">
             <figcaption className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MessageSquareQuote className="h-3.5 w-3.5" />
               {t("requestUpload.titleFrom")}
             </figcaption>
             <blockquote className="whitespace-pre-wrap text-[15px] font-medium wrap-anywhere">
-              {sender.title}
+              {brief.title}
             </blockquote>
           </figure>
         )}

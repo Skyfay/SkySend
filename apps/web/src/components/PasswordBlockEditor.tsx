@@ -7,16 +7,21 @@ import { Input } from "@/components/ui/input";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
 import { copyText } from "@/lib/clipboard";
+import type { EditorMode } from "@/lib/note-editor";
 
 interface PasswordBlockEditorProps {
   block: PasswordBlock;
   onChange: (block: PasswordBlock) => void;
   controls: ReactNode;
   disabled: boolean;
+  mode?: EditorMode;
 }
 
-/** One or more passwords with an optional label each, and a generator per entry. */
-export function PasswordBlockEditor({ block, onChange, controls, disabled }: PasswordBlockEditorProps) {
+/**
+ * One or more passwords with an optional label each, and a generator per entry. A template
+ * lays out only the labels, and filling it in keeps them as they are.
+ */
+export function PasswordBlockEditor({ block, onChange, controls, disabled, mode = "compose" }: PasswordBlockEditorProps) {
   const { t } = useTranslation();
   const [shown, setShown] = useState<ReadonlySet<number>>(new Set());
   const [generatorIndex, setGeneratorIndex] = useState<number | null>(null);
@@ -55,16 +60,29 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled }: Pas
         {entries.map((entry, index) => (
           <div key={index} className="space-y-2.5">
             <div className="flex flex-wrap gap-2">
-              <Input
-                type="text"
-                value={entry.label}
-                onChange={(e) => update(index, { label: e.target.value })}
-                placeholder={t("password.labelPlaceholder", { number: index + 1 })}
-                aria-label={t("password.labelPlaceholder", { number: index + 1 })}
-                className="min-w-40 flex-1 basis-44"
-                disabled={disabled}
-                autoComplete="off"
-              />
+              {mode === "fill" ? (
+                <span className="flex min-w-40 flex-1 basis-44 items-center text-sm font-medium wrap-anywhere">
+                  {entry.label || t("password.passwordNumber", { number: index + 1 })}
+                </span>
+              ) : (
+                <Input
+                  type="text"
+                  value={entry.label}
+                  onChange={(e) => update(index, { label: e.target.value })}
+                  placeholder={t(mode === "template" ? "template.fieldLabel" : "password.labelPlaceholder", { number: index + 1 })}
+                  aria-label={t(mode === "template" ? "template.fieldLabel" : "password.labelPlaceholder", { number: index + 1 })}
+                  className="min-w-40 flex-1 basis-44"
+                  disabled={disabled}
+                  autoComplete="off"
+                />
+              )}
+              {mode === "template" ? (
+                entries.length > 1 && (
+                  <IconButton label={t("common.delete")} onClick={() => remove(index)} disabled={disabled} className="hover:text-destructive-text">
+                    <X />
+                  </IconButton>
+                )
+              ) : (
               <div className="flex min-w-0 flex-[2] basis-60 items-center gap-2">
                 <div className="relative min-w-0 flex-1">
                   <Input
@@ -101,12 +119,13 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled }: Pas
                 >
                   <Wand2 />
                 </IconButton>
-                {entries.length > 1 && (
+                {mode === "compose" && entries.length > 1 && (
                   <IconButton label={t("common.delete")} onClick={() => remove(index)} disabled={disabled} className="hover:text-destructive-text">
                     <X />
                   </IconButton>
                 )}
               </div>
+              )}
             </div>
             {generatorIndex === index && (
               <PasswordGenerator
@@ -120,17 +139,19 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled }: Pas
           </div>
         ))}
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange({ ...block, entries: [...entries, { label: "", value: "" }] })}
-          disabled={disabled || entries.length >= MAX_PASSWORD_ENTRIES}
-          className="text-primary-text"
-        >
-          <Plus />
-          {t("password.addAnother")}
-        </Button>
+        {mode !== "fill" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange({ ...block, entries: [...entries, { label: "", value: "" }] })}
+            disabled={disabled || entries.length >= MAX_PASSWORD_ENTRIES}
+            className="text-primary-text"
+          >
+            <Plus />
+            {t(mode === "template" ? "template.addField" : "password.addAnother")}
+          </Button>
+        )}
       </div>
     </BlockEditorFrame>
   );

@@ -1,6 +1,6 @@
 # File Requests
 
-A file request reverses the usual direction: a requester publishes a link, senders upload into it, and only the requester can decrypt what arrives. The building blocks are the ones a normal upload uses, plus one public-key step, so the sender needs nothing the requester has to keep secret.
+A file request reverses the usual direction: a requester publishes a link, senders upload files or a note into it, and only the requester can decrypt what arrives. The building blocks are the ones a normal upload uses, plus one public-key step, so the sender needs nothing the requester has to keep secret.
 
 The code is in `packages/crypto/src/request.ts`, on top of `hpke.ts`.
 
@@ -20,7 +20,7 @@ Sender (browser)
   wrap                      HPKE seal of fileSecret to the public key
 ```
 
-The server stores the vault, three derived tokens, the encrypted title and, for each upload, the ciphertext, the encrypted metadata and the wrap. It never learns either secret or the public key, unless a link reaches it, see [What the Server Can Still Do](#what-the-server-can-still-do).
+The server stores the vault, three derived tokens, the encrypted brief and, for each upload, the ciphertext, the encrypted metadata and the wrap. It never learns either secret or the public key, unless a link reaches it, see [What the Server Can Still Do](#what-the-server-can-still-do).
 
 ## Keys From the Links
 
@@ -32,19 +32,19 @@ Both secrets are 32 uniform random bytes, so their keys come from HKDF-SHA256 wi
 | Inbox auth token (32 B) | `inboxSecret` | `skysend-inbox-auth` |
 | Inbox owner token (32 B) | `inboxSecret` | `skysend-inbox-owner-token` |
 | Upload token (32 B) | `linkSecret` | `skysend-request-upload-token` followed by the public key |
-| Title key (AES-256-GCM) | `linkSecret` | `skysend-request-title` followed by the public key |
+| Brief key (AES-256-GCM) | `linkSecret` | `skysend-request-brief` followed by the public key |
 
-The upload token and the title key take the public key as well, so an upload link rewritten with another key is refused by the server. The info strings differ from those of [normal uploads](/developer-guide/crypto/key-derivation), so a token of a request never matches a token of a file.
+The upload token and the brief key take the public key as well, so an upload link rewritten with another key is refused by the server. The info strings differ from those of [normal uploads](/developer-guide/crypto/key-derivation), so a token of a request never matches a token of a file.
 
 ## The Vault
 
 ```
-aad   = "skysend-inbox-privkey-v1" || SHA-256(titleNonce || titleCiphertext)
+aad   = "skysend-inbox-privkey-v1" || SHA-256(briefNonce || briefCiphertext)
 vault = AES-256-GCM(vaultKey, nonce 12 B, aad,
                     0x01 || publicKey 65 B || linkSecret 32 B || privateScalar 32 B)
 ```
 
-The hash of the title is part of the AAD only when the request has a title. Without one, the AAD is the label alone. A server that swaps, adds or drops the title therefore opens no vault, and the inbox shows an error instead of a title the requester never wrote. Senders do not see the vault, so the server can still hide the title from them, but it cannot forge one without the link.
+Every request has a brief, so the AAD always binds one. Before hashing, the reader checks that the nonce is 12 bytes and the ciphertext has a padded length, so the same bytes cannot be split another way. A server that swaps, changes or drops the brief therefore opens no vault, and the inbox shows an error instead of a brief the requester never wrote.
 
 It is always 146 bytes. Opening it with the inbox link gives back the private key and everything the upload link holds, so the inbox can show the upload link again. The private key is the one key in the package that is generated extractable, because its scalar has to go into the vault once. After that it is imported for `deriveBits` only.
 
@@ -68,13 +68,38 @@ The info and the aad bind a wrap to one request and one upload, so a server cann
 
 The implementation is checked against the CFRG test vectors for this suite, and a frozen fixture holds the exact bytes of every format above.
 
-## The Title
+## The Brief
+
+What the requester asks for travels in the brief:
 
 ```
-title = AES-256-GCM(titleKey, nonce 12 B, aad "skysend-request-title-v1", UTF-8 text, at most 256 bytes)
+plaintext = UTF-8 JSON {"v":1,"title":string|null,"asks":["files"|"note",...],"template":object|null}
+            padded with spaces to a multiple of 1024 bytes, at most 8192 bytes
+brief     = AES-256-GCM(briefKey, nonce 12 B, aad "skysend-request-brief-v1", plaintext)
 ```
 
-It comes from the link, so only someone with the upload link or the inbox can read it. Senders see it marked as written by the requester and not checked.
+| Field | Meaning |
+| --- | --- |
+| `title` | Free text from the requester, at most 256 bytes |
+| `asks` | What senders may send: files, a note, or both |
+| `template` | Only with a note: the fields a sender fills in, a note document without values from [the note format](/developer-guide/crypto/note-format#templates) |
+
+It comes from the link, so only someone with the upload link or the inbox can read it. The padding hides how long the title is, and whether a small template is part of it. Senders see the title and the template marked as written by the requester and not checked.
+
+- **Mandatory.** A sender whose brief does not open sees a broken request, never a quiet request for files. Without that rule a server could drop the brief of a request that asks for a note.
+- **Later versions.** `v` only goes up for a change a reader of version 1 has to refuse. A field or an ask added later is left out by an older reader, as long as one ask it knows is left.
+- **Who can write one.** Anyone with the upload link derives the brief key. The vault protects the brief toward the requester, while a sender trusts it only as far as the people who hold the upload link.
+
+## Notes in a Request
+
+A note a sender sends is an upload like a file, with the same transports, slot, wrap and download count:
+
+```
+blob     = ECE(fileKey, note document padded with spaces to a multiple of 1024 bytes)
+metadata = AES-256-GCM(metaKey, {"type":"note","size":<padded bytes>})
+```
+
+`decryptRequestMetadata` reads it, `decryptMetadata` refuses it, so a crafted normal upload never sends a download page down the path of a note. Before the inbox fetches a note, it checks that the size is padded, that the stored bytes are exactly the encrypted size, and that it is no larger than `NOTE_MAX_SIZE` plus one block. The server learns that an upload is a note from its short metadata and its padded size, never what it holds.
 
 ## Password
 

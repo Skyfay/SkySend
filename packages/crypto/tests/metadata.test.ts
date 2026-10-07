@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   encryptMetadata,
   decryptMetadata,
+  decryptRequestMetadata,
   expectedPlaintextSize,
   META_IV_LENGTH,
 } from "../src/metadata.js";
@@ -379,6 +380,63 @@ describe("expectedPlaintextSize", () => {
     expect(
       expectedPlaintextSize({ type: "archive", files: [{ name: "a.txt", size: 10 }], totalSize: 10 }),
     ).toBeUndefined();
+  });
+
+  it("should be the padded size of a note", () => {
+    expect(expectedPlaintextSize({ type: "note", size: 2048 })).toBe(2048);
+  });
+});
+
+describe("metadata of uploads into a file request", () => {
+  it("should round-trip the metadata of a note, and of a file as before", async () => {
+    const metaKey = await getMetaKey();
+    const note = await encryptMetadata({ type: "note", size: 1024 }, metaKey);
+    expect(await decryptRequestMetadata(note.ciphertext, note.iv, metaKey)).toEqual({
+      type: "note",
+      size: 1024,
+    });
+    const file = { type: "single", name: "a.pdf", size: 3, mimeType: "application/pdf" } as const;
+    const encrypted = await encryptMetadata(file, metaKey);
+    expect(await decryptRequestMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(file);
+  });
+
+  it("should keep a note away from the reader of normal uploads", async () => {
+    const metaKey = await getMetaKey();
+    const note = await encryptMetadata({ type: "note", size: 1024 }, metaKey);
+    await expect(decryptMetadata(note.ciphertext, note.iv, metaKey)).rejects.toThrow(
+      "unknown type",
+    );
+  });
+
+  it("should reject a note without a sound size, and keep extra fields out", async () => {
+    const metaKey = await getMetaKey();
+    for (const size of [undefined, -1, 1.5, "1024", Number.MAX_SAFE_INTEGER + 1]) {
+      const raw = await encryptRawJson({ type: "note", size }, metaKey);
+      await expect(decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey)).rejects.toThrow(
+        "invalid note size",
+      );
+    }
+    const extra = await encryptRawJson({ type: "note", size: 1, name: "<b>" }, metaKey);
+    expect(await decryptRequestMetadata(extra.ciphertext, extra.iv, metaKey)).toEqual({
+      type: "note",
+      size: 1,
+    });
+  });
+
+  it("should fail like decryptMetadata on a wrong key or broken JSON", async () => {
+    const metaKey = await getMetaKey();
+    const raw = await encryptRawBytes(new TextEncoder().encode("{"), metaKey);
+    await expect(decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey)).rejects.toThrow(
+      "invalid JSON",
+    );
+    const nul = await encryptRawJson(null, metaKey);
+    await expect(decryptRequestMetadata(nul.ciphertext, nul.iv, metaKey)).rejects.toThrow(
+      "not an object",
+    );
+    const note = await encryptMetadata({ type: "note", size: 1 }, metaKey);
+    await expect(
+      decryptRequestMetadata(note.ciphertext, note.iv, await getMetaKey()),
+    ).rejects.toThrow("decryption failed");
   });
 });
 

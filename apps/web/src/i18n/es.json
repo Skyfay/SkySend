@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Subir",
-    "myUploads": "Mis subidas",
+    "myUploads": "Mis enlaces",
     "menu": "Menú",
-    "requests": "Solicitudes",
+    "requests": "Solicitar",
     "requestsUnseen": "Nuevas subidas en solicitudes"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Descargar de todos modos"
   },
   "myUploads": {
-    "title": "Mis subidas",
+    "title": "Mis enlaces",
     "empty": "Aún no hay subidas",
     "emptyHint": "Las subidas que realice en este dispositivo aparecerán aquí.",
+    "intro": "Todo lo que comparta o solicite en este dispositivo aparecerá aquí.",
+    "tabShared": "Compartido",
+    "tabRequests": "Solicitudes",
     "copyLink": "Copiar enlace",
     "deleteConfirm": "¿Está seguro de que desea eliminar esta subida?",
     "deleteNoteConfirm": "¿Está seguro de que desea eliminar esta nota?",
@@ -439,7 +442,7 @@
     "faq3Q": "¿Qué aporta una contraseña?",
     "faq3A": "Quien consiga el enlace aún necesita la contraseña. Envíela por un canal distinto al del enlace.",
     "faq4Q": "¿Cuándo se eliminan mis datos?",
-    "faq4A": "Cuando se agota el tiempo o se alcanza el límite de descargas o de vistas, lo que ocurra primero. También puede eliminarlo antes en Mis subidas.",
+    "faq4A": "Cuando se agota el tiempo o se alcanza el límite de descargas o de vistas, lo que ocurra primero. También puede eliminarlo antes en Mis enlaces.",
     "ctaTitle": "¿Listo para compartir algo?",
     "ctaText": "Solo lleva unos segundos, y nadie salvo el destinatario puede leerlo.",
     "ctaButton": "Empezar a compartir"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "No compartas el enlace de la bandeja. Es la llave de todos los archivos de esta solicitud y la única forma de entrar. Guárdalo antes de salir de esta página.",
     "openInbox": "Abrir bandeja",
     "newRequest": "Nueva solicitud",
+    "toList": "Ir a mis solicitudes",
     "error": {
       "signInRequired": "Inicia sesión para crear una solicitud.",
       "dailyLimit": "Has creado tantas solicitudes como este servidor permite al día. Inténtalo mañana.",
       "failed": "No se pudo crear la solicitud."
     },
     "retentionHint_one": "Cada archivo se conserva {{time}} tras llegar y se puede descargar {{count}} vez.",
-    "retentionHint_other": "Cada archivo se conserva {{time}} tras llegar y se puede descargar {{count}} veces."
+    "retentionHint_other": "Cada archivo se conserva {{time}} tras llegar y se puede descargar {{count}} veces.",
+    "asks": "Solicitar",
+    "asksFiles": "Archivos",
+    "asksNote": "Nota",
+    "asksBoth": "Ambos",
+    "summaryNote": "Abierta durante <b>{{expiry}}</b>, hasta <b>{{uploads}}</b>, cada una con una nota."
+  },
+  "template": {
+    "title": "Plantilla de la nota",
+    "hint": "Defina lo que rellena el remitente, por ejemplo un usuario y una contraseña. Sin campos, el remitente escribe libremente.",
+    "tooLarge": "La plantilla es demasiado grande. Quite algunos campos.",
+    "fieldLabel": "Campo {{number}}, por ejemplo Contraseña",
+    "addField": "Añadir un campo",
+    "textLabel": "De qué trata el texto, por ejemplo Notas",
+    "textHint": "El remitente escribe el texto.",
+    "codeHint": "El remitente pega el código.",
+    "sshKeyHint": "El remitente añade una clave SSH."
   },
   "requests": {
     "title": "Solicitudes de archivos",
     "intro": "Pide archivos a alguien. Los sube cifrados y solo tú puedes abrirlos.",
-    "yours": "Tus solicitudes",
+    "empty": "Aún no hay solicitudes",
+    "emptyAction": "Crear una solicitud",
     "localHint": "Esta lista solo existe en este navegador. El servidor no sabe qué solicitudes son tuyas.",
     "untitled": "Solicitud sin título",
     "passwordProtected": "Protegida con contraseña",
@@ -534,7 +555,15 @@
     "deleteText": "La solicitud y todos sus archivos se eliminan para siempre.",
     "passwordRequired": "Esta bandeja está protegida con contraseña",
     "deleteFileTitle": "¿Eliminar este archivo?",
-    "deleteFileText": "Se elimina para siempre. Su hueco en la solicitud sigue ocupado."
+    "deleteFileText": "Se elimina para siempre. Su hueco en la solicitud sigue ocupado.",
+    "note": "Nota",
+    "open": "Abrir",
+    "viewsLeft_one": "Queda {{count}} vista",
+    "viewsLeft_other": "Quedan {{count}} vistas",
+    "notAsked": "No solicitado",
+    "saveText": "Guardar como texto",
+    "noteTooLarge": "Esta nota es más grande que cualquier nota que admite esta instancia, por eso no se abrió.",
+    "noteFailed": "No se pudo abrir la nota."
   },
   "requestUpload": {
     "title": "Alguien te pide <a>archivos</a>",
@@ -561,9 +590,17 @@
       "gone": "Esta solicitud ya no existe.",
       "full": "Esta solicitud ya está llena.",
       "closed": "Esta solicitud se ha cerrado mientras tanto.",
-      "tooLarge": "No queda suficiente espacio en esta solicitud.",
+      "tooLarge": "La subida supera lo que permite esta solicitud.",
       "quota": "Has alcanzado el límite de subida de este servidor. Inténtalo más tarde."
     },
-    "errorText": "No se pudo cargar la solicitud. Recarga la página para intentarlo de nuevo."
+    "errorText": "No se pudo cargar la solicitud. Recarga la página para intentarlo de nuevo.",
+    "broken": "Esta solicitud no se puede leer",
+    "brokenText": "Falta su descripción o fue modificada. Pida un enlace nuevo a quien se lo envió.",
+    "noteStart": "¿Qué quiere enviar?",
+    "noteHint": "Estos campos los definió la persona que solicita y nadie los ha comprobado. Introduzca solo lo que le daría directamente a esa persona.",
+    "limitsNote_one": "Cifrado solo para quien solicita. Queda {{count}} subida, cierra en {{time}}.",
+    "limitsNote_other": "Cifrado solo para quien solicita. Quedan {{count}} subidas, cierra en {{time}}.",
+    "fileTabHint": "Hasta {{size}} por subida",
+    "noteTabHint": "Contraseñas, texto, código o una clave"
   }
 }

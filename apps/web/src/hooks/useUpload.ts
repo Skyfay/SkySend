@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import {
   generateSecret,
   generateSalt,
-  type FileMetadata,
+  type RequestUploadMetadata,
 } from "@skysend/crypto";
 import { saveUpload } from "@/lib/upload-store";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
@@ -44,10 +44,12 @@ interface ShareUploadOptions {
 
 /**
  * An upload into a file request: the file secret is wrapped to the requester's public key,
- * and the sender gets no share link and no entry in My Uploads.
+ * and the sender gets no share link and no entry in My Links. With `note`, a serialized and
+ * padded note document, the upload is that note instead of files.
  */
 interface RequestUploadOptions {
   files: File[];
+  note?: string;
   request: { id: string; uploadToken: string; publicKey: Uint8Array };
 }
 
@@ -121,7 +123,10 @@ export function useUpload() {
   }, [endRequestSession]);
 
   const upload = useCallback(async (options: UploadOptions) => {
-    const { files, request } = options;
+    const { request } = options;
+    const note = request ? options.note : undefined;
+    // A note travels like a single file, with metadata that names it a note.
+    const files = note === undefined ? options.files : [new File([note], "note")];
     const maxDownloads = request ? 0 : options.maxDownloads;
     const expireSec = request ? 0 : options.expireSec;
     const password = request ? "" : options.password;
@@ -141,10 +146,12 @@ export function useUpload() {
       const salt = generateSalt();
 
       // Build metadata and file names (main thread - needs DOM File info)
-      let metadata: FileMetadata;
+      let metadata: RequestUploadMetadata;
       const fileNames: string[] = [];
 
-      if (files.length === 1) {
+      if (note !== undefined) {
+        metadata = { type: "note", size: files[0]!.size };
+      } else if (files.length === 1) {
         const file = files[0]!;
         metadata = {
           type: "single",

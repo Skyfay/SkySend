@@ -1,42 +1,46 @@
 # File Requests
 
-A file request turns sharing around. You ask someone for files, they upload them in their browser, and only you can open them. The sender needs no account and gets nothing to share in return.
+A file request turns sharing around. You ask someone for files or a note, they send them from their browser, and only you can open them. The sender needs no account and gets nothing to share in return.
 
-Like everything in SkySend, the files are encrypted before they leave the sender's browser. The server stores ciphertext and never sees a key, a file name or the title you wrote.
+Like everything in SkySend, what they send is encrypted before it leaves their browser. The server stores ciphertext and never sees a key, a file name, a note or what you wrote into the request.
 
 ## Create a Request
 
-1. Open **Requests** in the navigation
-2. Optionally write what you need, for example "Documents for the tax return". The sender sees this text. It is encrypted, and at most 256 bytes long.
-3. Choose:
+1. Open **Request** in the navigation
+2. Choose what to ask for: **Files**, a **Note**, or **Both**
+3. Optionally write what you need, for example "Documents for the tax return". The sender sees this text. It is encrypted, and at most 256 bytes long.
+4. For a note, optionally lay out its fields in the **Note template**, for example a username and a password. Without fields the sender writes freely.
+5. Choose:
    - **Open for** - How long the request takes uploads, one of the times the instance offers
-   - **Uploads** - How many uploads it takes in total
-   - **Size per upload** - How many bytes one upload may have, at most the [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) of the instance
+   - **Uploads** - How many uploads it takes in total. A note counts as one.
+   - **Size per upload** - How many bytes one upload may have, at most the [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) of the instance. Only for files.
    - **Password** - Optional. The inbox then opens only with the link and the password together.
-4. Click **Create request**
+6. Click **Create request**
 
 You get two links, and they do very different things.
 
 | Link | Looks like | Who gets it | What it allows |
 | --- | --- | --- | --- |
-| Upload link | `https://your-instance.com/request/<id>#<key>` | The people who should send you files | Uploading into this request, nothing else |
+| Upload link | `https://your-instance.com/request/<id>#<key>` | The people who should send you something | Sending into this request, nothing else |
 | Inbox link | `https://your-instance.com/inbox/<id>#<key>` | Only you | Opening, downloading and deleting everything that arrives |
 
 ::: danger Keep the inbox link to yourself
 The inbox link is the key to every file sent to the request and the only way in. Nobody can recover it, not even the operator of the instance. Save it before you leave the page.
 :::
 
-The **Requests** page lists the requests made in this browser, with how many uploads arrived and how long each one stays open. The list lives in this browser only. The server does not know which requests are yours. A request with a password shows no status there, since that needs the password.
+**My Links**, tab **Requests**, lists the requests made in this browser, with how many uploads arrived and how long each one stays open. **Go to my requests** under the two links of a new request leads there. The list lives in this browser only. The server does not know which requests are yours. A request with a password shows no status there, since that needs the password.
 
-## Send Files Into a Request
+## Send Into a Request
 
 The sender opens the upload link and sees:
 
 - What you wrote, marked as written by the requester and not checked by anyone
 - The host the files go to
-- An upload zone with the size one upload may have
+- An upload zone with the size one upload may have, a note to fill in, or both as two tabs
 
-They drop their files, click **Encrypt and send** and see **Delivered** when it is done. There is no share link for them and nothing to keep. When a sender cancels, the slot is given back. An upload that breaks off without a cancel, for example when the connection drops, holds its slot for a while: over WebSocket until it delivered less than 1 MB in 10 minutes, over chunked HTTP for up to about an hour. One upload may hold several files, which arrive as one zip archive, like a normal multi-file upload.
+A note follows your template: the sender sees your fields with their labels fixed and fills in the values, with a reminder that nobody checked the fields. Without a template the sender writes the note freely, with the same blocks as a normal note. A note can be as large as [`NOTE_MAX_SIZE`](/user-guide/configuration/environment-variables#notes) allows.
+
+They drop their files or fill in the note, click **Encrypt and send** and see **Delivered** when it is done. There is no share link for them and nothing to keep. When a sender cancels, the slot is given back. An upload that breaks off without a cancel, for example when the connection drops, holds its slot for a while: over WebSocket until it delivered less than 1 MB in 10 minutes, over chunked HTTP for up to about an hour. One upload may hold several files, which arrive as one zip archive, like a normal multi-file upload.
 
 Every upload is limited by the request and by the instance alike: at most the size per upload of the request, at most [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) and [`FILE_MAX_FILES_PER_UPLOAD`](/user-guide/configuration/environment-variables#file). The upload counts against the sender's own upload quota, if the instance sets one.
 
@@ -45,20 +49,21 @@ Every upload is limited by the request and by the instance alike: at most the si
 Open the inbox link, and enter the password if the request has one. The inbox lists every upload with its name, size, downloads left and when it will be deleted.
 
 - **Download** decrypts the file in your browser. Listing the inbox never counts as a download.
+- **Open** shows a note in the page, with **Copy all** and **Save as text**. Opening it counts as one view, so delete a note with a password in it once you read it.
 - **Delete** removes one upload. Its slot in the request stays used, so a request never takes more uploads than you allowed.
 - **Close request** stops new uploads. Uploads already running still finish.
 - **Delete request** removes the request and every file in it.
 
-Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. One that arrived since the inbox was last open in this browser is also marked **New**.
+Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
 
 ## New Uploads
 
-While a SkySend page is visible, the browser checks up to 20 of the newest requests it keeps, every 5 minutes. A dot beside **Requests** in the navigation, and a count on the request in **Your requests**, show uploads that its inbox has not shown in this browser yet. Opening the inbox clears them.
+While a SkySend page is visible, the browser checks up to 20 of the newest requests it keeps, every 5 minutes. A dot beside **My Links** in the navigation and on its **Requests** tab, and a count on the request itself, show uploads that its inbox has not shown in this browser yet. Opening the inbox clears them.
 
 - A request with a password is not checked. Its tokens need the password, and the browser keeps none beside the protected link on purpose.
-- Nothing new is sent. Each check sends the inbox token that opening the Requests page sends anyway. The server does see the checks, so it learns that the requests checked together belong to one browser, and when that browser is open.
+- Nothing new is sent. Each check sends the inbox token that opening the list of requests sends anyway. The server does see the checks, so it learns that the requests checked together belong to one browser, and when that browser is open.
 - The pages of share links check nothing. A download, or an upload into someone else's request, never sits right next to a check of your requests.
-- A check never forgets a request. Only the Requests page does, once the server no longer has it.
+- A check never forgets a request. Only the list of requests does, once the server no longer has it.
 - Nothing is checked while every SkySend tab is closed or hidden, and there are no push notifications. They would need the server to store a push address for each request.
 
 ## What Happens Over Time
@@ -77,9 +82,11 @@ Each upload can be downloaded [`FILE_REQUEST_DOWNLOADS`](/user-guide/configurati
 | --- | --- |
 | A random request ID | The key in either link |
 | The sealed vault with your private key, which opens only with the inbox link | The public key of the request |
-| Three tokens derived from the links, to check who may upload, read and manage | The title in plain text |
-| The limits and when the request closes | File names and types |
+| Three tokens derived from the links, to check who may upload, read and manage | Your title, what you asked for and your note template |
+| The limits and when the request closes | File names and types, and what a note says |
 | For each upload: its size, the ciphertext, the encrypted metadata and the file key wrapped to your public key | Who you are or who sent a file |
+
+A note is padded to whole kilobytes, so its size tells little about how long a password in it is. The server can still tell a note from a file by its size and its short metadata.
 
 The full design is on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
 

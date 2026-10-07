@@ -21,9 +21,9 @@
   },
   "nav": {
     "upload": "Upload",
-    "myUploads": "My Uploads",
+    "myUploads": "My Links",
     "menu": "Menu",
-    "requests": "Requests",
+    "requests": "Request",
     "requestsUnseen": "New uploads in requests"
   },
   "tab": {
@@ -124,9 +124,12 @@
     "firefoxDevToolsContinue": "Download anyway"
   },
   "myUploads": {
-    "title": "My Uploads",
+    "title": "My Links",
     "empty": "No uploads yet",
     "emptyHint": "Uploads you make on this device will appear here.",
+    "intro": "Everything you share or request on this device appears here.",
+    "tabShared": "Shared",
+    "tabRequests": "Requests",
     "copyLink": "Copy link",
     "deleteConfirm": "Are you sure you want to delete this upload?",
     "deleteNoteConfirm": "Are you sure you want to delete this note?",
@@ -434,7 +437,7 @@
     "faq3Q": "What does a password add?",
     "faq3A": "Someone who gets hold of the link still needs the password. Send it on a different channel than the link.",
     "faq4Q": "When is my data deleted?",
-    "faq4A": "When the time runs out or the download or view limit is reached, whichever comes first. You can also delete a share early under My Uploads.",
+    "faq4A": "When the time runs out or the download or view limit is reached, whichever comes first. You can also delete a share early under My Links.",
     "ctaTitle": "Ready to share something?",
     "ctaText": "It takes a few seconds, and nobody but the recipient can read it.",
     "ctaButton": "Start sharing"
@@ -464,18 +467,36 @@
     "inboxLinkWarning": "Do not share the inbox link. It is the key to every file sent to this request and the only way in, so save it before you leave this page.",
     "openInbox": "Open inbox",
     "newRequest": "New request",
+    "toList": "Go to my requests",
     "error": {
       "signInRequired": "Sign in to create a request.",
       "dailyLimit": "You created as many requests as this server allows per day. Try again tomorrow.",
       "failed": "The request could not be created."
     },
     "retentionHint_one": "Each file stays for {{time}} after it arrives and can be downloaded {{count}} time.",
-    "retentionHint_other": "Each file stays for {{time}} after it arrives and can be downloaded {{count}} times."
+    "retentionHint_other": "Each file stays for {{time}} after it arrives and can be downloaded {{count}} times.",
+    "asks": "Ask for",
+    "asksFiles": "Files",
+    "asksNote": "Note",
+    "asksBoth": "Both",
+    "summaryNote": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each one a note."
+  },
+  "template": {
+    "title": "Note template",
+    "hint": "Lay out what the sender fills in, for example a username and a password. Without fields, the sender writes freely.",
+    "tooLarge": "The template is too large. Remove a few fields.",
+    "fieldLabel": "Field {{number}}, for example Password",
+    "addField": "Add a field",
+    "textLabel": "What the text is about, for example Notes",
+    "textHint": "The sender writes the text.",
+    "codeHint": "The sender pastes the code.",
+    "sshKeyHint": "The sender adds an SSH key."
   },
   "requests": {
     "title": "File requests",
     "intro": "Ask someone for files. They upload them encrypted, and only you can open them.",
-    "yours": "Your requests",
+    "empty": "No requests yet",
+    "emptyAction": "Create a request",
     "localHint": "This list lives in this browser only. The server does not know which requests are yours.",
     "untitled": "Untitled request",
     "passwordProtected": "Password protected",
@@ -529,7 +550,15 @@
     "deleteText": "The request and every file sent to it are deleted for good.",
     "passwordRequired": "This inbox is password protected",
     "deleteFileTitle": "Delete this file?",
-    "deleteFileText": "It is deleted for good. Its slot in the request stays used."
+    "deleteFileText": "It is deleted for good. Its slot in the request stays used.",
+    "note": "Note",
+    "open": "Open",
+    "viewsLeft_one": "{{count}} view left",
+    "viewsLeft_other": "{{count}} views left",
+    "notAsked": "Not asked for",
+    "saveText": "Save as text",
+    "noteTooLarge": "This note is larger than any note this instance takes, so it was not opened.",
+    "noteFailed": "The note could not be opened."
   },
   "requestUpload": {
     "title": "Someone asks you for <a>files</a>",
@@ -556,9 +585,17 @@
       "gone": "This request no longer exists.",
       "full": "This request is full now.",
       "closed": "This request closed in the meantime.",
-      "tooLarge": "There is not enough space left in this request.",
+      "tooLarge": "The upload is larger than this request allows.",
       "quota": "You reached the upload limit of this server. Try again later."
     },
-    "errorText": "The request could not be loaded. Reload the page to try again."
+    "errorText": "The request could not be loaded. Reload the page to try again.",
+    "broken": "This request cannot be read",
+    "brokenText": "Its description is missing or was changed. Ask whoever sent you the link for a new one.",
+    "noteStart": "What do you want to send?",
+    "noteHint": "The requester laid out these fields and nobody checked them. Enter only what you would give this person directly.",
+    "limitsNote_one": "Encrypted for the requester alone. {{count}} upload left, closes in {{time}}.",
+    "limitsNote_other": "Encrypted for the requester alone. {{count}} uploads left, closes in {{time}}.",
+    "fileTabHint": "Up to {{size}} per upload",
+    "noteTabHint": "Passwords, text, code or a key"
   }
 }

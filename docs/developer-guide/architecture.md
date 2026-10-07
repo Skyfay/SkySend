@@ -287,7 +287,7 @@ apps/web/src/
     ShareLink.tsx       # Share link display + copy
     DownloadCard.tsx    # Download UI
     PasswordPrompt.tsx  # Password input dialog
-    UploadCard.tsx      # Upload card in My Uploads
+    UploadCard.tsx      # Upload card in My Links
     NoteComposer.tsx    # Note tab: block cards, block list, share options
     BlockEditorFrame.tsx # Frame with move and remove controls around a block editor
     TextBlockEditor.tsx # Text block (plain or Markdown)
@@ -295,7 +295,7 @@ apps/web/src/
     CodeBlockEditor.tsx # Code block (title, language)
     SshKeyBlockEditor.tsx # SSH key block (generate or paste)
     NoteBlocks.tsx      # Renders the blocks of a received note
-    NoteCard.tsx        # Note card in My Uploads
+    NoteCard.tsx        # Note card in My Links
     PasswordGenerator.tsx # Password generator with entropy display
     ui/                 # Shadcn UI components
   hooks/
@@ -379,7 +379,7 @@ The CLI client uses the same `@skysend/crypto` library and the same API endpoint
 
 ### Client-Side
 
-- **IndexedDB** (`skysend-uploads`) - Local upload history for the "My Uploads" dashboard, and the file requests made in this browser for the Requests page
+- **IndexedDB** (`skysend-uploads`) - Local history for the "My Links" page: the uploads and notes shared from this browser, and the file requests made in it
 - **URL fragment** (`#secret`) - Encryption key, never stored or sent to server
 
 ## Security Layers

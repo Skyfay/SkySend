@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Inbox, KeyRound, Plus, QrCode, Share2 } from "lucide-react";
+import { Check, Copy, FolderOpen, Inbox, KeyRound, Plus, QrCode, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { SplitLink } from "@/components/SplitLink";
@@ -122,6 +122,12 @@ export function RequestLinksCard({
           <Link to={inboxPath}>
             <Inbox />
             {t("request.openInbox")}
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/uploads?tab=requests">
+            <FolderOpen />
+            {t("request.toList")}
           </Link>
         </Button>
         <Button type="button" variant="ghost" onClick={onNewRequest}>

@@ -2,11 +2,13 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { FileText, Heading, Maximize2, Type } from "lucide-react";
 import type { TextBlock } from "@skysend/note-format";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
 import { MarkdownView } from "@/components/NoteBlocks";
+import type { EditorMode } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
 
 interface TextBlockEditorProps {
@@ -14,10 +16,14 @@ interface TextBlockEditorProps {
   onChange: (block: TextBlock) => void;
   controls: ReactNode;
   disabled: boolean;
+  mode?: EditorMode;
 }
 
-/** A text block: plain text, or Markdown with a preview. Opens in a large dialog on request. */
-export function TextBlockEditor({ block, onChange, controls, disabled }: TextBlockEditorProps) {
+/**
+ * A text block: plain text, or Markdown with a preview. Opens in a large dialog on request.
+ * In a template it holds only what the text is about, and filling it in keeps that label.
+ */
+export function TextBlockEditor({ block, onChange, controls, disabled, mode = "compose" }: TextBlockEditorProps) {
   const { t } = useTranslation();
   const [preview, setPreview] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -48,34 +54,57 @@ export function TextBlockEditor({ block, onChange, controls, disabled }: TextBlo
     </ToggleGroup>
   );
 
+  const formatToggle = (
+    <ToggleGroup
+      variant="segmented"
+      type="single"
+      value={block.format}
+      onValueChange={(v) => {
+        if (v !== "plain" && v !== "markdown") return;
+        onChange({ ...block, format: v });
+        if (v === "plain") setPreview(false);
+      }}
+      aria-label={t("share.format")}
+      disabled={disabled}
+    >
+      <ToggleGroupItem value="plain">
+        <Type />
+        {t("note.plainText")}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="markdown">
+        <Heading />
+        {t("tab.markdown")}
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+
+  if (mode === "template") {
+    return (
+      <BlockEditorFrame icon={FileText} title={t("tab.text")} controls={controls} toolbar={formatToggle}>
+        <div className="space-y-2 p-3">
+          <Input
+            type="text"
+            value={block.label ?? ""}
+            onChange={(e) => onChange({ ...block, label: e.target.value })}
+            placeholder={t("template.textLabel")}
+            aria-label={t("template.textLabel")}
+            disabled={disabled}
+            autoComplete="off"
+          />
+          <p className="text-xs text-muted-foreground">{t("template.textHint")}</p>
+        </div>
+      </BlockEditorFrame>
+    );
+  }
+
   return (
     <BlockEditorFrame
       icon={FileText}
-      title={t("tab.text")}
+      title={mode === "fill" && block.label ? block.label : t("tab.text")}
       controls={controls}
       toolbar={
         <>
-          <ToggleGroup
-            variant="segmented"
-            type="single"
-            value={block.format}
-            onValueChange={(v) => {
-              if (v !== "plain" && v !== "markdown") return;
-              onChange({ ...block, format: v });
-              if (v === "plain") setPreview(false);
-            }}
-            aria-label={t("share.format")}
-            disabled={disabled}
-          >
-            <ToggleGroupItem value="plain">
-              <Type />
-              {t("note.plainText")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="markdown">
-              <Heading />
-              {t("tab.markdown")}
-            </ToggleGroupItem>
-          </ToggleGroup>
+          {mode === "compose" && formatToggle}
           {modeToggle}
           <IconButton variant="ghost" label={t("note.expand")} onClick={() => setExpanded(true)}>
             <Maximize2 />

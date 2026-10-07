@@ -1,5 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
-import type { Argon2idHashFn } from "@skysend/crypto";
+import type { Argon2idHashFn, RequestAsk } from "@skysend/crypto";
+import type { NoteBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
 import { openInboxLink, prepareRequest, requestLinks, type RequestLinks } from "@/lib/file-request";
 import { getAllRequests, removeRequest, saveRequest, type StoredRequest } from "@/lib/upload-store";
@@ -7,6 +8,9 @@ import { countUnseen, keepUnseen, setUnseen } from "@/lib/unseen-uploads";
 
 export interface NewRequestOptions {
   title: string;
+  asks: RequestAsk[];
+  /** The fields a sender fills in, when a note is asked for. Empty or null for a free note. */
+  template: NoteBlock[] | null;
   expireSec: number;
   maxUploads: number;
   maxSize: number;
@@ -33,6 +37,8 @@ export function useCreateRequest(argon2id: Argon2idHashFn) {
         const title = options.title.trim();
         const prepared = await prepareRequest({
           title: title || undefined,
+          asks: options.asks,
+          template: options.template,
           password: options.password || undefined,
           argon2id,
         });

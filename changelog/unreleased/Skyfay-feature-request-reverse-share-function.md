@@ -1,10 +1,11 @@
 ### ✨ Features
 
-- **crypto**: Encryption for file requests that only the requester can open.
+- **crypto**: Encryption for file requests that only the requester can open, notes sent into them included.
 - **server**: File requests with an inbox, where senders upload files that only the requester can decrypt. The requester sets how long a request stays open, how many uploads it takes and how large each may be.
-- **web**: A Requests page to create file requests, with an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
+- **web**: A Request page to create file requests, with an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
 - **web**: An upload page for senders of a file request, which encrypts their files for the requester alone and gives them no link back.
-- **web**: A dot beside Requests and a count on each request show uploads that arrived since its inbox was last open in this browser.
+- **web**: A file request can ask for a note as well as files, with a template of fields the sender fills in. The inbox opens such a note in the page.
+- **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.
 - **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.
 - **website**: The report form accepts links to file requests.
 - **infra**: The report worker accepts links to file requests.
@@ -32,6 +33,7 @@
 
 ### 🔄 Changed
 
+- **web**: My Uploads is now My Links, with one tab for what was shared and one for the file requests made in this browser.
 - **server**: `ENABLED_SERVICES` now defaults to `file,note,request`. Instances that set it explicitly add `request` to offer file requests.
 - **server**: Failed password attempts that led to no lockout are forgotten after `PASSWORD_LOCKOUT_MS`.
 

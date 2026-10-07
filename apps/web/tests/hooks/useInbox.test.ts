@@ -27,6 +27,7 @@ vi.mock("../../src/lib/file-request.js", async (importOriginal) => {
     inboxNeedsPassword: vi.fn(),
     openInboxLink: vi.fn(),
     openInbox: vi.fn(),
+    readInboxNote: vi.fn(),
   };
 });
 
@@ -101,6 +102,7 @@ beforeEach(() => {
   vi.mocked(fileRequest.openInboxLink).mockResolvedValue(access);
   vi.mocked(fileRequest.openInbox).mockResolvedValue({
     title: "Docs",
+    asks: ["files"],
     uploadFragment: "up",
     uploads: [entry()],
   });
@@ -118,6 +120,45 @@ describe("useInbox", () => {
     await waitFor(() => expect(result.current.phase).toBe("ready"));
     expect(api.fetchInbox).toHaveBeenCalledWith(ID, "inbox-token");
     expect(result.current.opened?.title).toBe("Docs");
+  });
+
+  it("opens a note in the page, counts it, and refuses one too large before fetching it", async () => {
+    const note = {
+      ...entry(),
+      file: { ...entry().file!, metadata: { type: "note" as const, size: 4096 } },
+    };
+    vi.mocked(fileRequest.openInbox).mockResolvedValue({
+      title: "Docs",
+      asks: ["note"],
+      uploadFragment: "up",
+      uploads: [note],
+    });
+    const stream = new ReadableStream<Uint8Array>();
+    vi.mocked(api.downloadInboxFile).mockResolvedValue({
+      stream,
+      size: 1,
+      fileCount: 1,
+      storageBackend: "filesystem",
+    });
+    const blocks = [{ type: "text" as const, format: "plain" as const, text: "4711" }];
+    vi.mocked(fileRequest.readInboxNote).mockResolvedValue({ blocks, unreadable: false });
+    const { result } = renderHook(() => useInbox(ID, "fragment", argon2));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+
+    await expect(result.current.openNote(note, 1024)).rejects.toThrow(
+      fileRequest.NoteTooLargeError,
+    );
+    expect(api.downloadInboxFile).not.toHaveBeenCalled();
+
+    let opened: unknown;
+    await act(async () => {
+      opened = await result.current.openNote(note, 1024 * 1024);
+    });
+    expect(opened).toEqual({ blocks, unreadable: false });
+    expect(api.downloadInboxFile).toHaveBeenCalledWith(ID, UPLOAD_ID, "inbox-token");
+    expect(fileRequest.readInboxNote).toHaveBeenCalledWith(note.file, stream, 1024 * 1024);
+    expect(result.current.opened?.uploads[0]!.upload.downloadCount).toBe(1);
+    await expect(result.current.openNote(entry(), 1024 * 1024)).rejects.toThrow("Not a note");
   });
 
   it("marks what arrived since the last visit as new, until the page is left", async () => {

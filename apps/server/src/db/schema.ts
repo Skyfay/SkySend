@@ -59,7 +59,7 @@ export type NewNote = typeof notes.$inferInsert;
  * A file request: someone asks for files, senders upload them, only the requester opens them.
  *
  * The server holds the requester's private key only as the sealed vault, which opens with a
- * key derived from the inbox link. It never stores the public key, a title in plaintext, or
+ * key derived from the inbox link. It never stores the public key, the brief in plaintext, or
  * anything that identifies the requester. The three tokens are derived and do not reverse.
  */
 export const fileRequests = sqliteTable(
@@ -71,8 +71,12 @@ export const fileRequests = sqliteTable(
     inboxAuthToken: text("inbox_auth_token").notNull(),
     inboxOwnerToken: text("inbox_owner_token").notNull(),
     uploadToken: text("upload_token").notNull(),
-    titleCiphertext: blob("title_ciphertext", { mode: "buffer" }),
-    titleNonce: blob("title_nonce", { mode: "buffer" }),
+    /**
+     * The encrypted brief: title, what is asked for, the note template. Set for every request,
+     * nullable only because migration 0004 renamed the columns of the title it replaced.
+     */
+    briefCiphertext: blob("brief_ciphertext", { mode: "buffer" }),
+    briefNonce: blob("brief_nonce", { mode: "buffer" }),
     hasPassword: integer("has_password", { mode: "boolean" }).default(false).notNull(),
     maxUploads: integer("max_uploads").notNull(),
     /** Most bytes one upload may have. */

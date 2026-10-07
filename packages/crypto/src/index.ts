@@ -33,6 +33,7 @@ export {
 export {
   encryptMetadata,
   decryptMetadata,
+  decryptRequestMetadata,
   expectedPlaintextSize,
   META_IV_LENGTH,
 } from "./metadata.js";
@@ -40,6 +41,8 @@ export type {
   FileMetadata,
   SingleFileMetadata,
   ArchiveMetadata,
+  NoteUploadMetadata,
+  RequestUploadMetadata,
   EncryptedMetadata,
 } from "./metadata.js";
 
@@ -74,8 +77,8 @@ export {
   openRequestKey,
   wrapFileSecret,
   unwrapFileSecret,
-  encryptRequestTitle,
-  decryptRequestTitle,
+  encryptRequestBrief,
+  decryptRequestBrief,
   encodeUploadFragment,
   decodeUploadFragment,
   encodeInboxFragment,
@@ -86,14 +89,19 @@ export {
   REQUEST_TOKEN_LENGTH,
   REQUEST_VAULT_LENGTH,
   REQUEST_TITLE_MAX_BYTES,
-  REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH,
+  REQUEST_BRIEF_BLOCK,
+  REQUEST_BRIEF_MAX_BYTES,
+  REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH,
+  REQUEST_BRIEF_MIN_CIPHERTEXT_LENGTH,
   WRAP_ENC_LENGTH,
   WRAP_CIPHERTEXT_LENGTH,
 } from "./request.js";
 export type {
   InboxKeys,
   LinkKeys,
-  EncryptedRequestTitle,
+  EncryptedRequestBrief,
+  RequestAsk,
+  RequestBrief,
   FileRequestSecrets,
   FileRequestPayload,
   NewFileRequest,

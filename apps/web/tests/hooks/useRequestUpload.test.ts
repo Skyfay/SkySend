@@ -5,7 +5,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 vi.mock("@skysend/crypto", () => ({
   decodeUploadFragment: vi.fn(),
   deriveLinkKeys: vi.fn(),
-  decryptRequestTitle: vi.fn(),
+  decryptRequestBrief: vi.fn(),
   fromBase64url: (s: string) => new TextEncoder().encode(s),
   toBase64url: () => "upload-token",
 }));
@@ -45,7 +45,7 @@ const publicKey = new Uint8Array(65).fill(4);
 
 function senderView(overrides: Partial<api.SenderRequest> = {}): api.SenderRequest {
   return {
-    title: { ciphertext: "ct", nonce: "n" },
+    brief: { ciphertext: "ct", nonce: "n" },
     open: true,
     closesAt: "2099-01-01T00:00:00.000Z",
     uploadsLeft: 2,
@@ -64,9 +64,13 @@ beforeEach(() => {
   });
   vi.mocked(crypto.deriveLinkKeys).mockResolvedValue({
     uploadToken: new Uint8Array(32),
-    titleKey: {} as CryptoKey,
+    briefKey: {} as CryptoKey,
   });
-  vi.mocked(crypto.decryptRequestTitle).mockResolvedValue("Tax documents");
+  vi.mocked(crypto.decryptRequestBrief).mockResolvedValue({
+    title: "Tax documents",
+    asks: ["files"],
+    template: null,
+  });
   vi.mocked(api.fetchRequestForSender).mockResolvedValue(senderView());
 });
 
@@ -75,18 +79,59 @@ afterEach(() => {
 });
 
 describe("useRequestUpload", () => {
-  it("reads the link, shows the title and uploads with the key from the link", async () => {
+  it("reads the link, shows the brief and uploads with the key from the link", async () => {
     const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
     await waitFor(() => expect(result.current.phase).toBe("ready"));
     expect(api.fetchRequestForSender).toHaveBeenCalledWith(ID, "upload-token");
-    expect(result.current.title).toBe("Tax documents");
+    expect(result.current.brief).toEqual({
+      title: "Tax documents",
+      asks: ["files"],
+      template: null,
+    });
 
     const file = new File(["x"], "a.txt");
-    await act(() => result.current.send([file]));
+    await act(() => result.current.send({ files: [file] }));
     expect(upload).toHaveBeenCalledWith({
       files: [file],
       request: { id: ID, uploadToken: "upload-token", publicKey },
     });
+  });
+
+  it("sends a note padded, so its length tells little", async () => {
+    const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    const note = [{ type: "text" as const, format: "plain" as const, text: "4711" }];
+    await act(() => result.current.send({ note }));
+    const options = upload.mock.calls[0]![0] as { note: string; files: File[] };
+    expect(options.files).toEqual([]);
+    expect(new TextEncoder().encode(options.note).length).toBe(1024);
+    expect(JSON.parse(options.note)).toEqual({ v: 1, blocks: note });
+  });
+
+  it("reads the template of a note to fill in, without any value in it", async () => {
+    vi.mocked(crypto.decryptRequestBrief).mockResolvedValueOnce({
+      title: null,
+      asks: ["note"],
+      template: { v: 1, blocks: [{ type: "password", entries: [{ label: "PIN", value: "1" }] }] },
+    });
+    const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    expect(result.current.brief).toEqual({
+      title: null,
+      asks: ["note"],
+      template: [{ type: "password", entries: [{ label: "PIN", value: "" }] }],
+    });
+  });
+
+  it("leaves a note to write freely when the template has nothing to fill in", async () => {
+    vi.mocked(crypto.decryptRequestBrief).mockResolvedValueOnce({
+      title: null,
+      asks: ["note"],
+      template: { v: 1, blocks: [{ type: "form" }] },
+    });
+    const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    expect(result.current.brief?.template).toBeNull();
   });
 
   it("calls a link that does not decode invalid without asking the server", async () => {
@@ -106,11 +151,11 @@ describe("useRequestUpload", () => {
     await waitFor(() => expect(result.current.phase).toBe("gone"));
   });
 
-  it("hides a title that does not decrypt", async () => {
-    vi.mocked(crypto.decryptRequestTitle).mockRejectedValueOnce(new Error("bad"));
+  it("calls a request whose brief does not open broken, and offers nothing to send", async () => {
+    vi.mocked(crypto.decryptRequestBrief).mockRejectedValueOnce(new Error("bad"));
     const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
-    await waitFor(() => expect(result.current.phase).toBe("ready"));
-    expect(result.current.title).toBeNull();
+    await waitFor(() => expect(result.current.phase).toBe("broken"));
+    expect(result.current.brief).toBeNull();
   });
 
   it("passes on why an upload failed", async () => {
@@ -129,8 +174,8 @@ describe("useRequestUpload", () => {
     const file = new File(["x"], "a.txt");
     let first: Promise<void> = Promise.resolve();
     act(() => {
-      first = result.current.send([file]);
-      void result.current.send([file]);
+      first = result.current.send({ files: [file] });
+      void result.current.send({ files: [file] });
     });
     expect(upload).toHaveBeenCalledTimes(1);
     finish();
@@ -164,10 +209,23 @@ describe("useRequestUpload", () => {
   });
 
   it("cleans the title before it is shown", async () => {
-    vi.mocked(crypto.decryptRequestTitle).mockResolvedValueOnce(
-      "Docs\n\n\n\n\nVerified \u202Esender",
-    );
+    vi.mocked(crypto.decryptRequestBrief).mockResolvedValueOnce({
+      title: "Docs\n\n\n\n\nVerified \u202Esender",
+      asks: ["files"],
+      template: null,
+    });
     const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
-    await waitFor(() => expect(result.current.title).toBe("Docs\n\nVerified sender"));
+    await waitFor(() => expect(result.current.brief?.title).toBe("Docs\n\nVerified sender"));
+  });
+
+  it("shows no title when it cleans down to nothing", async () => {
+    vi.mocked(crypto.decryptRequestBrief).mockResolvedValueOnce({
+      title: "\u202E\u200B",
+      asks: ["files"],
+      template: null,
+    });
+    const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    expect(result.current.brief?.title).toBeNull();
   });
 });

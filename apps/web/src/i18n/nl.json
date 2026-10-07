@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Uploaden",
-    "myUploads": "Mijn uploads",
+    "myUploads": "Mijn links",
     "menu": "Menu",
-    "requests": "Verzoeken",
+    "requests": "Aanvragen",
     "requestsUnseen": "Nieuwe uploads in verzoeken"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Toch downloaden"
   },
   "myUploads": {
-    "title": "Mijn uploads",
+    "title": "Mijn links",
     "empty": "Nog geen uploads",
     "emptyHint": "Uploads die u op dit apparaat maakt verschijnen hier.",
+    "intro": "Alles wat u op dit apparaat deelt of aanvraagt, verschijnt hier.",
+    "tabShared": "Gedeeld",
+    "tabRequests": "Verzoeken",
     "copyLink": "Link kopiëren",
     "deleteConfirm": "Weet u zeker dat u deze upload wilt verwijderen?",
     "deleteNoteConfirm": "Weet u zeker dat u deze notitie wilt verwijderen?",
@@ -439,7 +442,7 @@
     "faq3Q": "Wat voegt een wachtwoord toe?",
     "faq3A": "Wie de link in handen krijgt, heeft nog steeds het wachtwoord nodig. Stuur het via een ander kanaal dan de link.",
     "faq4Q": "Wanneer worden mijn gegevens verwijderd?",
-    "faq4A": "Zodra de tijd verstrijkt of de download- of weergavelimiet is bereikt, afhankelijk van wat het eerst gebeurt. Onder Mijn uploads kunt u een gedeeld item ook eerder verwijderen.",
+    "faq4A": "Zodra de tijd verstrijkt of de download- of weergavelimiet is bereikt, afhankelijk van wat het eerst gebeurt. Onder Mijn links kunt u een gedeeld item ook eerder verwijderen.",
     "ctaTitle": "Klaar om iets te delen?",
     "ctaText": "Het kost een paar seconden, en niemand behalve de ontvanger kan het lezen.",
     "ctaButton": "Begin met delen"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Deel de inboxlink niet. Hij is de sleutel tot alle bestanden van dit verzoek en de enige toegang. Sla hem op voordat je deze pagina verlaat.",
     "openInbox": "Inbox openen",
     "newRequest": "Nieuw verzoek",
+    "toList": "Naar mijn verzoeken",
     "error": {
       "signInRequired": "Log in om een verzoek te maken.",
       "dailyLimit": "Je hebt zoveel verzoeken gemaakt als deze server per dag toestaat. Probeer het morgen opnieuw.",
       "failed": "Het verzoek kon niet worden gemaakt."
     },
     "retentionHint_one": "Elk bestand blijft {{time}} na aankomst en kan {{count}} keer worden gedownload.",
-    "retentionHint_other": "Elk bestand blijft {{time}} na aankomst en kan {{count}} keer worden gedownload."
+    "retentionHint_other": "Elk bestand blijft {{time}} na aankomst en kan {{count}} keer worden gedownload.",
+    "asks": "Aanvragen",
+    "asksFiles": "Bestanden",
+    "asksNote": "Notitie",
+    "asksBoth": "Beide",
+    "summaryNote": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk een notitie."
+  },
+  "template": {
+    "title": "Sjabloon voor de notitie",
+    "hint": "Leg vast wat de afzender invult, bijvoorbeeld een gebruikersnaam en een wachtwoord. Zonder velden schrijft de afzender vrij.",
+    "tooLarge": "Het sjabloon is te groot. Verwijder een paar velden.",
+    "fieldLabel": "Veld {{number}}, bijvoorbeeld Wachtwoord",
+    "addField": "Veld toevoegen",
+    "textLabel": "Waar de tekst over gaat, bijvoorbeeld Opmerkingen",
+    "textHint": "De afzender schrijft de tekst.",
+    "codeHint": "De afzender plakt de code.",
+    "sshKeyHint": "De afzender voegt een SSH-sleutel toe."
   },
   "requests": {
     "title": "Bestandsverzoeken",
     "intro": "Vraag iemand om bestanden. Die uploadt ze versleuteld, en alleen jij kunt ze openen.",
-    "yours": "Je verzoeken",
+    "empty": "Nog geen verzoeken",
+    "emptyAction": "Verzoek maken",
     "localHint": "Deze lijst bestaat alleen in deze browser. De server weet niet welke verzoeken van jou zijn.",
     "untitled": "Verzoek zonder titel",
     "passwordProtected": "Met wachtwoord beveiligd",
@@ -534,7 +555,15 @@
     "deleteText": "Het verzoek en alle bestanden erin worden definitief verwijderd.",
     "passwordRequired": "Deze inbox is met een wachtwoord beveiligd",
     "deleteFileTitle": "Dit bestand verwijderen?",
-    "deleteFileText": "Het wordt definitief verwijderd. De plek in het verzoek blijft bezet."
+    "deleteFileText": "Het wordt definitief verwijderd. De plek in het verzoek blijft bezet.",
+    "note": "Notitie",
+    "open": "Openen",
+    "viewsLeft_one": "Nog {{count}} weergave",
+    "viewsLeft_other": "Nog {{count}} weergaven",
+    "notAsked": "Niet gevraagd",
+    "saveText": "Opslaan als tekst",
+    "noteTooLarge": "Deze notitie is groter dan elke notitie die deze instantie aanneemt en is daarom niet geopend.",
+    "noteFailed": "De notitie kon niet worden geopend."
   },
   "requestUpload": {
     "title": "Iemand vraagt je om <a>bestanden</a>",
@@ -561,9 +590,17 @@
       "gone": "Dit verzoek bestaat niet meer.",
       "full": "Dit verzoek is nu vol.",
       "closed": "Dit verzoek is intussen gesloten.",
-      "tooLarge": "Er is niet genoeg ruimte meer in dit verzoek.",
+      "tooLarge": "De upload is groter dan dit verzoek toestaat.",
       "quota": "Je hebt de uploadlimiet van deze server bereikt. Probeer het later opnieuw."
     },
-    "errorText": "Het verzoek kon niet worden geladen. Laad de pagina opnieuw om het nog eens te proberen."
+    "errorText": "Het verzoek kon niet worden geladen. Laad de pagina opnieuw om het nog eens te proberen.",
+    "broken": "Dit verzoek is niet te lezen",
+    "brokenText": "De beschrijving ontbreekt of is gewijzigd. Vraag degene die u de link stuurde om een nieuwe.",
+    "noteStart": "Wat wilt u versturen?",
+    "noteHint": "Deze velden heeft de aanvrager vastgelegd en niemand heeft ze gecontroleerd. Vul alleen in wat u deze persoon ook direct zou geven.",
+    "limitsNote_one": "Alleen voor de aanvrager versleuteld. Nog {{count}} upload, sluit over {{time}}.",
+    "limitsNote_other": "Alleen voor de aanvrager versleuteld. Nog {{count}} uploads, sluit over {{time}}.",
+    "fileTabHint": "Tot {{size}} per upload",
+    "noteTabHint": "Wachtwoorden, tekst, code of een sleutel"
   }
 }

@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Ladda upp",
-    "myUploads": "Mina uppladdningar",
+    "myUploads": "Mina länkar",
     "menu": "Meny",
-    "requests": "Förfrågningar",
+    "requests": "Begär",
     "requestsUnseen": "Nya uppladdningar i förfrågningar"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Ladda ner ändå"
   },
   "myUploads": {
-    "title": "Mina uppladdningar",
+    "title": "Mina länkar",
     "empty": "Inga uppladdningar ännu",
     "emptyHint": "Uppladdningar du gör på denna enhet visas här.",
+    "intro": "Allt du delar eller begär på den här enheten visas här.",
+    "tabShared": "Delade",
+    "tabRequests": "Förfrågningar",
     "copyLink": "Kopiera länk",
     "deleteConfirm": "Är du säker på att du vill ta bort denna uppladdning?",
     "deleteNoteConfirm": "Är du säker på att du vill ta bort denna anteckning?",
@@ -439,7 +442,7 @@
     "faq3Q": "Vad tillför ett lösenord?",
     "faq3A": "Den som kommer över länken behöver fortfarande lösenordet. Skicka det via en annan kanal än länken.",
     "faq4Q": "När raderas mina data?",
-    "faq4A": "När tiden löper ut eller gränsen för nedladdningar eller visningar nås, beroende på vilket som inträffar först. Du kan också radera en delning i förväg under Mina uppladdningar.",
+    "faq4A": "När tiden löper ut eller gränsen för nedladdningar eller visningar nås, beroende på vilket som inträffar först. Du kan också radera en delning i förväg under Mina länkar.",
     "ctaTitle": "Redo att dela något?",
     "ctaText": "Det tar bara några sekunder, och ingen utom mottagaren kan läsa det.",
     "ctaButton": "Börja dela"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Dela inte inkorgslänken. Den är nyckeln till alla filer i den här förfrågan och den enda vägen in. Spara den innan du lämnar sidan.",
     "openInbox": "Öppna inkorgen",
     "newRequest": "Ny förfrågan",
+    "toList": "Till mina förfrågningar",
     "error": {
       "signInRequired": "Logga in för att skapa en förfrågan.",
       "dailyLimit": "Du har skapat så många förfrågningar som servern tillåter per dag. Försök igen i morgon.",
       "failed": "Förfrågan kunde inte skapas."
     },
     "retentionHint_one": "Varje fil finns kvar i {{time}} efter att den kommit och kan laddas ner {{count}} gång.",
-    "retentionHint_other": "Varje fil finns kvar i {{time}} efter att den kommit och kan laddas ner {{count}} gånger."
+    "retentionHint_other": "Varje fil finns kvar i {{time}} efter att den kommit och kan laddas ner {{count}} gånger.",
+    "asks": "Begär",
+    "asksFiles": "Filer",
+    "asksNote": "Anteckning",
+    "asksBoth": "Båda",
+    "summaryNote": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, var och en en anteckning."
+  },
+  "template": {
+    "title": "Mall för anteckningen",
+    "hint": "Bestäm vad avsändaren fyller i, till exempel ett användarnamn och ett lösenord. Utan fält skriver avsändaren fritt.",
+    "tooLarge": "Mallen är för stor. Ta bort några fält.",
+    "fieldLabel": "Fält {{number}}, till exempel Lösenord",
+    "addField": "Lägg till ett fält",
+    "textLabel": "Vad texten handlar om, till exempel Anmärkningar",
+    "textHint": "Avsändaren skriver texten.",
+    "codeHint": "Avsändaren klistrar in koden.",
+    "sshKeyHint": "Avsändaren lägger till en SSH-nyckel."
   },
   "requests": {
     "title": "Filförfrågningar",
     "intro": "Be någon om filer. Personen laddar upp dem krypterade, och bara du kan öppna dem.",
-    "yours": "Dina förfrågningar",
+    "empty": "Inga förfrågningar än",
+    "emptyAction": "Skapa en förfrågan",
     "localHint": "Den här listan finns bara i den här webbläsaren. Servern vet inte vilka förfrågningar som är dina.",
     "untitled": "Förfrågan utan titel",
     "passwordProtected": "Lösenordsskyddad",
@@ -534,7 +555,15 @@
     "deleteText": "Förfrågan och alla filer i den tas bort för gott.",
     "passwordRequired": "Den här inkorgen är lösenordsskyddad",
     "deleteFileTitle": "Ta bort den här filen?",
-    "deleteFileText": "Den tas bort för gott. Dess plats i förfrågan förblir upptagen."
+    "deleteFileText": "Den tas bort för gott. Dess plats i förfrågan förblir upptagen.",
+    "note": "Anteckning",
+    "open": "Öppna",
+    "viewsLeft_one": "{{count}} visning kvar",
+    "viewsLeft_other": "{{count}} visningar kvar",
+    "notAsked": "Inte efterfrågad",
+    "saveText": "Spara som text",
+    "noteTooLarge": "Anteckningen är större än någon anteckning som den här instansen tar emot, så den öppnades inte.",
+    "noteFailed": "Anteckningen kunde inte öppnas."
   },
   "requestUpload": {
     "title": "Någon ber dig om <a>filer</a>",
@@ -561,9 +590,17 @@
       "gone": "Den här förfrågan finns inte längre.",
       "full": "Den här förfrågan är full nu.",
       "closed": "Den här förfrågan har stängts under tiden.",
-      "tooLarge": "Det finns inte tillräckligt med plats kvar i förfrågan.",
+      "tooLarge": "Uppladdningen är större än den här förfrågan tillåter.",
       "quota": "Du har nått serverns uppladdningsgräns. Försök igen senare."
     },
-    "errorText": "Förfrågan kunde inte laddas. Ladda om sidan för att försöka igen."
+    "errorText": "Förfrågan kunde inte laddas. Ladda om sidan för att försöka igen.",
+    "broken": "Den här förfrågan går inte att läsa",
+    "brokenText": "Beskrivningen saknas eller har ändrats. Be den som skickade länken till dig om en ny.",
+    "noteStart": "Vad vill du skicka?",
+    "noteHint": "Fälten har den som frågar lagt upp, och ingen har kontrollerat dem. Skriv bara in det du skulle ge den här personen direkt.",
+    "limitsNote_one": "Krypterad bara för den som frågar. {{count}} uppladdning kvar, stänger om {{time}}.",
+    "limitsNote_other": "Krypterad bara för den som frågar. {{count}} uppladdningar kvar, stänger om {{time}}.",
+    "fileTabHint": "Upp till {{size}} per uppladdning",
+    "noteTabHint": "Lösenord, text, kod eller en nyckel"
   }
 }

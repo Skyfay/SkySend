@@ -4,22 +4,42 @@ import { describe, expect, it } from "vitest";
 import { argon2id } from "hash-wasm";
 import {
   applyPasswordProtection,
+  calculateEncryptedSize,
   computeAuthToken,
   computeOwnerToken,
+  createDecryptStream,
+  createEncryptStream,
+  createFileRequest,
+  decryptMetadata,
   decryptNoteContent,
+  decryptRequestMetadata,
+  deriveInboxKeys,
   deriveKeyFromPassword,
   deriveKeys,
+  encryptMetadata,
   encryptNoteContent,
+  expectedPlaintextSize,
   fromBase64url,
   generateSalt,
   generateSecret,
+  openRequestKey,
   randomBytes,
   toBase64url,
+  unwrapFileSecret,
+  wrapFileSecret,
   PASSWORD_SALT_LENGTH,
   TAG_LENGTH,
   type Argon2idHashFn,
 } from "@skysend/crypto";
-import { NOTE_KIND, readNote, serializeNote, type NoteBlock } from "../src/index.js";
+import {
+  NOTE_KIND,
+  NOTE_PAD_BLOCK,
+  padNote,
+  parseNote,
+  readNote,
+  serializeNote,
+  type NoteBlock,
+} from "../src/index.js";
 import fixtures from "./fixtures/encrypted-notes.json";
 
 // The real Argon2id the web app and the CLI client use, with the production parameters.
@@ -172,5 +192,51 @@ describe("a note made of blocks", () => {
     }
     // All the server learns about the kind of a new note is NOTE_KIND.
     expect(NOTE_KIND).toBe("blocks");
+  });
+});
+
+describe("a note sent into a file request", () => {
+  it("travels padded, as an upload wrapped to the requester, and opens in the inbox", async () => {
+    const requestId = crypto.randomUUID();
+    const uploadId = crypto.randomUUID();
+    const { local, server } = await createFileRequest({ asks: ["note"] });
+    const blocks: NoteBlock[] = [
+      { type: "password", entries: [{ label: "PIN", value: "4711" }] },
+      { type: "text", format: "plain", text: "Behind the plant", label: "Where" },
+    ];
+
+    // The sender: padded note, ECE under a fresh file key, note metadata, the wrap.
+    const bytes = new TextEncoder().encode(padNote(serializeNote(blocks)));
+    expect(bytes.length % NOTE_PAD_BLOCK).toBe(0);
+    const secret = generateSecret();
+    const salt = generateSalt();
+    const keys = await deriveKeys(secret, salt);
+    const encrypted = new Blob([bytes]).stream().pipeThrough(createEncryptStream(keys.fileKey));
+    const ciphertext = new Uint8Array(await new Response(encrypted).arrayBuffer());
+    expect(ciphertext.length).toBe(calculateEncryptedSize(bytes.length));
+    const meta = await encryptMetadata({ type: "note", size: bytes.length }, keys.metaKey);
+    const wrapped = await wrapFileSecret(local.publicKey, requestId, uploadId, secret);
+
+    // The requester: the vault, the unwrap, the metadata of a request upload, the note.
+    const { inboxKey } = await deriveInboxKeys(local.inboxSecret);
+    const requestKey = await openRequestKey(
+      server.vault,
+      server.vaultNonce,
+      inboxKey,
+      server.brief,
+    );
+    const fileKeys = await deriveKeys(
+      await unwrapFileSecret(requestKey, requestId, uploadId, wrapped),
+      salt,
+    );
+    const metadata = await decryptRequestMetadata(meta.ciphertext, meta.iv, fileKeys.metaKey);
+    expect(metadata).toEqual({ type: "note", size: bytes.length });
+    const plain = new Blob([ciphertext])
+      .stream()
+      .pipeThrough(createDecryptStream(fileKeys.fileKey, expectedPlaintextSize(metadata)!));
+    const text = new TextDecoder().decode(await new Response(plain).arrayBuffer());
+    expect(parseNote(text)).toEqual(blocks);
+    // A download page never takes it for a file.
+    await expect(decryptMetadata(meta.ciphertext, meta.iv, fileKeys.metaKey)).rejects.toThrow();
   });
 });

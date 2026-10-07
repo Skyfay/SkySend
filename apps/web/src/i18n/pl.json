@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Prześlij",
-    "myUploads": "Moje przesyłki",
+    "myUploads": "Moje linki",
     "menu": "Menu",
-    "requests": "Prośby",
+    "requests": "Poproś",
     "requestsUnseen": "Nowe przesyłki w prośbach"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Pobierz mimo to"
   },
   "myUploads": {
-    "title": "Moje przesyłki",
+    "title": "Moje linki",
     "empty": "Brak przesyłek",
     "emptyHint": "Przesyłki wykonane na tym urządzeniu pojawią się tutaj.",
+    "intro": "Wszystko, co udostępnisz lub o co poprosisz na tym urządzeniu, pojawi się tutaj.",
+    "tabShared": "Udostępnione",
+    "tabRequests": "Prośby",
     "copyLink": "Kopiuj link",
     "deleteConfirm": "Czy na pewno chcesz usunąć tę przesyłkę?",
     "deleteNoteConfirm": "Czy na pewno chcesz usunąć tę notatkę?",
@@ -439,7 +442,7 @@
     "faq3Q": "Co daje hasło?",
     "faq3A": "Kto zdobędzie link, nadal potrzebuje hasła. Wyślij je innym kanałem niż link.",
     "faq4Q": "Kiedy moje dane są usuwane?",
-    "faq4A": "Gdy skończy się czas albo zostanie osiągnięty limit pobrań lub wyświetleń, zależnie od tego, co nastąpi pierwsze. Udostępnienie możesz też usunąć wcześniej w sekcji Moje przesyłki.",
+    "faq4A": "Gdy skończy się czas albo zostanie osiągnięty limit pobrań lub wyświetleń, zależnie od tego, co nastąpi pierwsze. Udostępnienie możesz też usunąć wcześniej w sekcji Moje linki.",
     "ctaTitle": "Chcesz coś udostępnić?",
     "ctaText": "To zajmuje kilka sekund, a przeczytać to może tylko odbiorca.",
     "ctaButton": "Zacznij udostępniać"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Nie udostępniaj linku do skrzynki. To klucz do wszystkich plików tej prośby i jedyna droga do nich. Zapisz go przed opuszczeniem tej strony.",
     "openInbox": "Otwórz skrzynkę",
     "newRequest": "Nowa prośba",
+    "toList": "Przejdź do moich próśb",
     "error": {
       "signInRequired": "Zaloguj się, aby utworzyć prośbę.",
       "dailyLimit": "Utworzono tyle próśb, ile ten serwer pozwala dziennie. Spróbuj jutro.",
       "failed": "Nie udało się utworzyć prośby."
     },
     "retentionHint_one": "Każdy plik zostaje przez {{time}} od dotarcia, a pobrać go można {{count}} raz.",
-    "retentionHint_other": "Każdy plik zostaje przez {{time}} od dotarcia, a liczba pobrań wynosi: {{count}}."
+    "retentionHint_other": "Każdy plik zostaje przez {{time}} od dotarcia, a liczba pobrań wynosi: {{count}}.",
+    "asks": "Poproś o",
+    "asksFiles": "Pliki",
+    "asksNote": "Notatkę",
+    "asksBoth": "Oba",
+    "summaryNote": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b>, każda to notatka."
+  },
+  "template": {
+    "title": "Szablon notatki",
+    "hint": "Ustal, co wypełnia nadawca, na przykład nazwę użytkownika i hasło. Bez pól nadawca pisze swobodnie.",
+    "tooLarge": "Szablon jest za duży. Usuń kilka pól.",
+    "fieldLabel": "Pole {{number}}, na przykład Hasło",
+    "addField": "Dodaj pole",
+    "textLabel": "Czego dotyczy tekst, na przykład Uwagi",
+    "textHint": "Tekst pisze nadawca.",
+    "codeHint": "Kod wkleja nadawca.",
+    "sshKeyHint": "Klucz SSH dodaje nadawca."
   },
   "requests": {
     "title": "Prośby o pliki",
     "intro": "Poproś kogoś o pliki. Prześle je zaszyfrowane, a tylko ty możesz je otworzyć.",
-    "yours": "Twoje prośby",
+    "empty": "Brak próśb",
+    "emptyAction": "Utwórz prośbę",
     "localHint": "Ta lista istnieje tylko w tej przeglądarce. Serwer nie wie, które prośby są twoje.",
     "untitled": "Prośba bez tytułu",
     "passwordProtected": "Chroniona hasłem",
@@ -534,7 +555,15 @@
     "deleteText": "Prośba i wszystkie jej pliki zostaną trwale usunięte.",
     "passwordRequired": "Ta skrzynka jest chroniona hasłem",
     "deleteFileTitle": "Usunąć ten plik?",
-    "deleteFileText": "Zostanie trwale usunięty. Jego miejsce w prośbie pozostanie zajęte."
+    "deleteFileText": "Zostanie trwale usunięty. Jego miejsce w prośbie pozostanie zajęte.",
+    "note": "Notatka",
+    "open": "Otwórz",
+    "viewsLeft_one": "Pozostało wyświetleń: {{count}}",
+    "viewsLeft_other": "Pozostało wyświetleń: {{count}}",
+    "notAsked": "Bez prośby",
+    "saveText": "Zapisz jako tekst",
+    "noteTooLarge": "Ta notatka jest większa niż każda notatka, którą przyjmuje ta instancja, więc nie została otwarta.",
+    "noteFailed": "Nie udało się otworzyć notatki."
   },
   "requestUpload": {
     "title": "Ktoś prosi cię o <a>pliki</a>",
@@ -561,9 +590,17 @@
       "gone": "Ta prośba już nie istnieje.",
       "full": "Ta prośba jest już pełna.",
       "closed": "Ta prośba została w międzyczasie zamknięta.",
-      "tooLarge": "W tej prośbie nie ma już wystarczająco miejsca.",
+      "tooLarge": "Przesyłka jest większa, niż pozwala ta prośba.",
       "quota": "Osiągnięto limit przesyłania tego serwera. Spróbuj później."
     },
-    "errorText": "Nie udało się wczytać prośby. Odśwież stronę, aby spróbować ponownie."
+    "errorText": "Nie udało się wczytać prośby. Odśwież stronę, aby spróbować ponownie.",
+    "broken": "Tej prośby nie da się odczytać",
+    "brokenText": "Brakuje jej opisu albo został zmieniony. Poproś osobę, która przysłała Ci link, o nowy.",
+    "noteStart": "Co chcesz wysłać?",
+    "noteHint": "Te pola ustaliła osoba prosząca i nikt ich nie sprawdził. Wpisuj tylko to, co można przekazać tej osobie bezpośrednio.",
+    "limitsNote_one": "Zaszyfrowane tylko dla osoby proszącej. Pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
+    "limitsNote_other": "Zaszyfrowane tylko dla osoby proszącej. Pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
+    "fileTabHint": "Do {{size}} na przesyłkę",
+    "noteTabHint": "Hasła, tekst, kod lub klucz"
   }
 }

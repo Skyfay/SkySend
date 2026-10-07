@@ -77,8 +77,8 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `inboxAuthToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for reading, base64url |
 | `inboxOwnerToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for managing, base64url |
 | `uploadToken` | TEXT NOT NULL | - | SHA-256 of the token from the upload link, base64url |
-| `titleCiphertext` | BLOB | NULL | AES-256-GCM encrypted title |
-| `titleNonce` | BLOB | NULL | Title IV (12 bytes) |
+| `briefCiphertext` | BLOB | NULL | AES-256-GCM encrypted brief: title, what is asked for, note template. Set for every request, nullable because migration 0004 renamed the title columns. |
+| `briefNonce` | BLOB | NULL | Brief IV (12 bytes) |
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether the inbox link is password protected |
 | `maxUploads` | INTEGER NOT NULL | - | Uploads the request takes |
 | `maxSize` | INTEGER NOT NULL | - | Most bytes one upload may have |

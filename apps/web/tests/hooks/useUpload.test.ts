@@ -96,6 +96,31 @@ describe("useUpload", () => {
     expect(saveUpload).not.toHaveBeenCalled();
   });
 
+  it("sends a note into a request as one file with note metadata", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    const note = `{"v":1,"blocks":[]}${" ".repeat(1005)}`;
+
+    act(() => {
+      result.current.upload({
+        files: [],
+        note,
+        request: { id: "req-1", uploadToken: "token", publicKey: new Uint8Array(65) },
+      });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    const sent = MockWorker.lastInstance!.postMessage.mock.calls[0]![0] as {
+      file: File;
+      files?: File[];
+      metadata: unknown;
+      fileCount: number;
+    };
+    expect(sent.metadata).toEqual({ type: "note", size: 1024 });
+    expect(sent.files).toBeUndefined();
+    expect(sent.fileCount).toBe(1);
+    expect(await sent.file.text()).toBe(note);
+  });
+
   it("ends the session of a cancelled upload into a request on the server", async () => {
     const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchSpy);

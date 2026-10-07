@@ -21,9 +21,9 @@
   },
   "nav": {
     "upload": "Hochladen",
-    "myUploads": "Meine Uploads",
+    "myUploads": "Meine Links",
     "menu": "Menü",
-    "requests": "Anfragen",
+    "requests": "Anfordern",
     "requestsUnseen": "Neue Uploads in Anfragen"
   },
   "tab": {
@@ -124,9 +124,12 @@
     "firefoxDevToolsContinue": "Trotzdem herunterladen"
   },
   "myUploads": {
-    "title": "Meine Uploads",
+    "title": "Meine Links",
     "empty": "Noch keine Uploads",
     "emptyHint": "Uploads, die Sie auf diesem Gerät machen, erscheinen hier.",
+    "intro": "Alles, was Sie auf diesem Gerät teilen oder anfordern, erscheint hier.",
+    "tabShared": "Geteilt",
+    "tabRequests": "Anfragen",
     "copyLink": "Link kopieren",
     "deleteConfirm": "Möchten Sie diesen Upload wirklich löschen?",
     "deleteNoteConfirm": "Möchten Sie diese Notiz wirklich löschen?",
@@ -434,7 +437,7 @@
     "faq3Q": "Was bringt ein Passwort?",
     "faq3A": "Wer an den Link kommt, braucht trotzdem noch das Passwort. Senden Sie es über einen anderen Kanal als den Link.",
     "faq4Q": "Wann werden meine Daten gelöscht?",
-    "faq4A": "Wenn die Zeit abläuft oder das Download- oder Aufruflimit erreicht ist, je nachdem, was zuerst eintritt. Unter Meine Uploads können Sie eine Freigabe auch früher löschen.",
+    "faq4A": "Wenn die Zeit abläuft oder das Download- oder Aufruflimit erreicht ist, je nachdem, was zuerst eintritt. Unter Meine Links können Sie eine Freigabe auch früher löschen.",
     "ctaTitle": "Bereit, etwas zu teilen?",
     "ctaText": "Es dauert nur wenige Sekunden, und niemand außer dem Empfänger kann es lesen.",
     "ctaButton": "Jetzt teilen"
@@ -464,18 +467,36 @@
     "inboxLinkWarning": "Geben Sie den Inbox-Link nicht weiter. Er ist der Schlüssel zu allen Dateien dieser Anfrage und der einzige Zugang. Speichern Sie ihn, bevor Sie diese Seite verlassen.",
     "openInbox": "Inbox öffnen",
     "newRequest": "Neue Anfrage",
+    "toList": "Zu meinen Anfragen",
     "error": {
       "signInRequired": "Melden Sie sich an, um eine Anfrage zu erstellen.",
       "dailyLimit": "Sie haben so viele Anfragen erstellt, wie dieser Server pro Tag erlaubt. Versuchen Sie es morgen wieder.",
       "failed": "Die Anfrage konnte nicht erstellt werden."
     },
     "retentionHint_one": "Jede Datei bleibt {{time}} nach dem Eingang und lässt sich {{count}} Mal herunterladen.",
-    "retentionHint_other": "Jede Datei bleibt {{time}} nach dem Eingang und lässt sich {{count}} Mal herunterladen."
+    "retentionHint_other": "Jede Datei bleibt {{time}} nach dem Eingang und lässt sich {{count}} Mal herunterladen.",
+    "asks": "Anfordern",
+    "asksFiles": "Dateien",
+    "asksNote": "Notiz",
+    "asksBoth": "Beides",
+    "summaryNote": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jeder davon eine Notiz."
+  },
+  "template": {
+    "title": "Vorlage für die Notiz",
+    "hint": "Legen Sie fest, was der Sender ausfüllt, zum Beispiel einen Benutzernamen und ein Passwort. Ohne Felder schreibt er frei.",
+    "tooLarge": "Die Vorlage ist zu groß. Entfernen Sie ein paar Felder.",
+    "fieldLabel": "Feld {{number}}, zum Beispiel Passwort",
+    "addField": "Feld hinzufügen",
+    "textLabel": "Worum es im Text geht, zum Beispiel Hinweise",
+    "textHint": "Den Text schreibt der Sender.",
+    "codeHint": "Den Code fügt der Sender ein.",
+    "sshKeyHint": "Den SSH-Schlüssel fügt der Sender hinzu."
   },
   "requests": {
     "title": "Datei-Anfragen",
     "intro": "Bitten Sie jemanden um Dateien. Die Person lädt sie verschlüsselt hoch, und nur Sie können sie öffnen.",
-    "yours": "Ihre Anfragen",
+    "empty": "Noch keine Anfragen",
+    "emptyAction": "Anfrage erstellen",
     "localHint": "Diese Liste gibt es nur in diesem Browser. Der Server weiß nicht, welche Anfragen Ihnen gehören.",
     "untitled": "Anfrage ohne Titel",
     "passwordProtected": "Passwortgeschützt",
@@ -529,7 +550,15 @@
     "deleteText": "Die Anfrage und alle Dateien darin werden endgültig gelöscht.",
     "passwordRequired": "Diese Inbox ist passwortgeschützt",
     "deleteFileTitle": "Diese Datei löschen?",
-    "deleteFileText": "Sie wird endgültig gelöscht. Ihr Platz in der Anfrage bleibt belegt."
+    "deleteFileText": "Sie wird endgültig gelöscht. Ihr Platz in der Anfrage bleibt belegt.",
+    "note": "Notiz",
+    "open": "Öffnen",
+    "viewsLeft_one": "noch {{count}} Ansicht",
+    "viewsLeft_other": "noch {{count}} Ansichten",
+    "notAsked": "Nicht angefragt",
+    "saveText": "Als Text speichern",
+    "noteTooLarge": "Diese Notiz ist größer als jede Notiz, die diese Instanz annimmt. Sie wurde deshalb nicht geöffnet.",
+    "noteFailed": "Die Notiz ließ sich nicht öffnen."
   },
   "requestUpload": {
     "title": "Jemand bittet Sie um <a>Dateien</a>",
@@ -556,9 +585,17 @@
       "gone": "Diese Anfrage gibt es nicht mehr.",
       "full": "Diese Anfrage ist inzwischen voll.",
       "closed": "Diese Anfrage wurde inzwischen geschlossen.",
-      "tooLarge": "In dieser Anfrage ist nicht mehr genug Platz.",
+      "tooLarge": "Der Upload ist größer, als diese Anfrage erlaubt.",
       "quota": "Sie haben das Upload-Limit dieses Servers erreicht. Versuchen Sie es später wieder."
     },
-    "errorText": "Die Anfrage konnte nicht geladen werden. Laden Sie die Seite neu, um es noch einmal zu versuchen."
+    "errorText": "Die Anfrage konnte nicht geladen werden. Laden Sie die Seite neu, um es noch einmal zu versuchen.",
+    "broken": "Diese Anfrage lässt sich nicht lesen",
+    "brokenText": "Ihre Beschreibung fehlt oder wurde verändert. Bitten Sie die Person, die Ihnen den Link geschickt hat, um einen neuen.",
+    "noteStart": "Was möchten Sie senden?",
+    "noteHint": "Diese Felder hat die anfragende Person vorgegeben, und niemand hat sie geprüft. Geben Sie nur ein, was Sie dieser Person auch direkt geben würden.",
+    "limitsNote_one": "Nur für die anfragende Person verschlüsselt. Noch {{count}} Upload, schließt in {{time}}.",
+    "limitsNote_other": "Nur für die anfragende Person verschlüsselt. Noch {{count}} Uploads, schließt in {{time}}.",
+    "fileTabHint": "Bis zu {{size}} pro Upload",
+    "noteTabHint": "Passwörter, Text, Code oder ein Schlüssel"
   }
 }

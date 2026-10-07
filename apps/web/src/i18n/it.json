@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Carica",
-    "myUploads": "I miei caricamenti",
+    "myUploads": "I miei link",
     "menu": "Menu",
-    "requests": "Richieste",
+    "requests": "Richiedi",
     "requestsUnseen": "Nuovi caricamenti nelle richieste"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Scarica comunque"
   },
   "myUploads": {
-    "title": "I miei caricamenti",
+    "title": "I miei link",
     "empty": "Nessun caricamento ancora",
     "emptyHint": "I caricamenti effettuati su questo dispositivo appariranno qui.",
+    "intro": "Tutto ciò che condividi o richiedi su questo dispositivo apparirà qui.",
+    "tabShared": "Condivisi",
+    "tabRequests": "Richieste",
     "copyLink": "Copia link",
     "deleteConfirm": "Sei sicuro di voler eliminare questo caricamento?",
     "deleteNoteConfirm": "Sei sicuro di voler eliminare questa nota?",
@@ -439,7 +442,7 @@
     "faq3Q": "Cosa aggiunge una password?",
     "faq3A": "Chi entra in possesso del link ha comunque bisogno della password. Inviala su un canale diverso da quello del link.",
     "faq4Q": "Quando vengono eliminati i miei dati?",
-    "faq4A": "Quando il tempo scade o viene raggiunto il limite di download o visualizzazioni, a seconda di quale avviene per primo. Puoi anche eliminare una condivisione in anticipo da I miei caricamenti.",
+    "faq4A": "Quando il tempo scade o viene raggiunto il limite di download o visualizzazioni, a seconda di quale avviene per primo. Puoi anche eliminare una condivisione in anticipo da I miei link.",
     "ctaTitle": "Pronto a condividere qualcosa?",
     "ctaText": "Bastano pochi secondi, e nessuno tranne il destinatario può leggerlo.",
     "ctaButton": "Inizia a condividere"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Non condividere il link della casella. È la chiave di tutti i file di questa richiesta e l'unico accesso. Salvalo prima di lasciare questa pagina.",
     "openInbox": "Apri casella",
     "newRequest": "Nuova richiesta",
+    "toList": "Vai alle mie richieste",
     "error": {
       "signInRequired": "Accedi per creare una richiesta.",
       "dailyLimit": "Hai creato tutte le richieste che questo server consente al giorno. Riprova domani.",
       "failed": "Impossibile creare la richiesta."
     },
     "retentionHint_one": "Ogni file resta {{time}} dopo l'arrivo e si può scaricare {{count}} volta.",
-    "retentionHint_other": "Ogni file resta {{time}} dopo l'arrivo e si può scaricare {{count}} volte."
+    "retentionHint_other": "Ogni file resta {{time}} dopo l'arrivo e si può scaricare {{count}} volte.",
+    "asks": "Richiedi",
+    "asksFiles": "File",
+    "asksNote": "Nota",
+    "asksBoth": "Entrambi",
+    "summaryNote": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno una nota."
+  },
+  "template": {
+    "title": "Modello della nota",
+    "hint": "Stabilisci cosa compila il mittente, per esempio un nome utente e una password. Senza campi, il mittente scrive liberamente.",
+    "tooLarge": "Il modello è troppo grande. Rimuovi qualche campo.",
+    "fieldLabel": "Campo {{number}}, per esempio Password",
+    "addField": "Aggiungi un campo",
+    "textLabel": "Di cosa tratta il testo, per esempio Note",
+    "textHint": "Il testo lo scrive il mittente.",
+    "codeHint": "Il codice lo incolla il mittente.",
+    "sshKeyHint": "La chiave SSH la aggiunge il mittente."
   },
   "requests": {
     "title": "Richieste di file",
     "intro": "Chiedi dei file a qualcuno. Li carica cifrati e solo tu puoi aprirli.",
-    "yours": "Le tue richieste",
+    "empty": "Ancora nessuna richiesta",
+    "emptyAction": "Crea una richiesta",
     "localHint": "Questo elenco esiste solo in questo browser. Il server non sa quali richieste sono tue.",
     "untitled": "Richiesta senza titolo",
     "passwordProtected": "Protetta da password",
@@ -534,7 +555,15 @@
     "deleteText": "La richiesta e tutti i suoi file vengono eliminati definitivamente.",
     "passwordRequired": "Questa casella è protetta da password",
     "deleteFileTitle": "Eliminare questo file?",
-    "deleteFileText": "Viene eliminato definitivamente. Il suo posto nella richiesta resta occupato."
+    "deleteFileText": "Viene eliminato definitivamente. Il suo posto nella richiesta resta occupato.",
+    "note": "Nota",
+    "open": "Apri",
+    "viewsLeft_one": "{{count}} visualizzazione rimasta",
+    "viewsLeft_other": "{{count}} visualizzazioni rimaste",
+    "notAsked": "Non richiesto",
+    "saveText": "Salva come testo",
+    "noteTooLarge": "Questa nota è più grande di qualsiasi nota accettata da questa istanza, quindi non è stata aperta.",
+    "noteFailed": "Impossibile aprire la nota."
   },
   "requestUpload": {
     "title": "Qualcuno ti chiede dei <a>file</a>",
@@ -561,9 +590,17 @@
       "gone": "Questa richiesta non esiste più.",
       "full": "Questa richiesta ora è piena.",
       "closed": "Questa richiesta è stata chiusa nel frattempo.",
-      "tooLarge": "In questa richiesta non c'è più abbastanza spazio.",
+      "tooLarge": "Il caricamento supera quanto consente questa richiesta.",
       "quota": "Hai raggiunto il limite di caricamento di questo server. Riprova più tardi."
     },
-    "errorText": "Impossibile caricare la richiesta. Ricarica la pagina per riprovare."
+    "errorText": "Impossibile caricare la richiesta. Ricarica la pagina per riprovare.",
+    "broken": "Questa richiesta non si può leggere",
+    "brokenText": "La sua descrizione manca o è stata modificata. Chiedi un nuovo link a chi te l'ha inviato.",
+    "noteStart": "Cosa vuoi inviare?",
+    "noteHint": "Questi campi li ha stabiliti chi richiede e nessuno li ha verificati. Inserisci solo ciò che daresti direttamente a questa persona.",
+    "limitsNote_one": "Cifrato solo per chi richiede. Resta {{count}} caricamento, chiude tra {{time}}.",
+    "limitsNote_other": "Cifrato solo per chi richiede. Restano {{count}} caricamenti, chiude tra {{time}}.",
+    "fileTabHint": "Fino a {{size}} per caricamento",
+    "noteTabHint": "Password, testo, codice o una chiave"
   }
 }

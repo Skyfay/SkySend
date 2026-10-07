@@ -3,7 +3,7 @@ import type { NoteBlock, ReadBlock } from "./document.js";
 function blockToText(block: NoteBlock): string {
   switch (block.type) {
     case "text":
-      return block.text;
+      return block.label && block.text ? `${block.label}\n${block.text}` : block.text;
     case "password":
       return block.entries.map((entry) => (entry.label ? `${entry.label}: ${entry.value}` : entry.value)).join("\n");
     case "code":

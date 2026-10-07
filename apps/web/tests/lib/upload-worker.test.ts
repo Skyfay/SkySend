@@ -204,7 +204,7 @@ describe("upload worker", () => {
       created.server.vault,
       created.server.vaultNonce,
       inboxKey,
-      created.server.title,
+      created.server.brief,
     );
     const unwrapped = await unwrapFileSecret(key, REQUEST_ID, UPLOAD_ID, {
       enc: fromBase64url(body.wrapEnc!),
@@ -328,7 +328,7 @@ describe("upload worker", () => {
         created.server.vault,
         created.server.vaultNonce,
         inboxKey,
-        created.server.title,
+        created.server.brief,
       );
       const unwrapped = await unwrapFileSecret(key, REQUEST_ID, UPLOAD_ID, {
         enc: fromBase64url(finalize.wrapEnc!),

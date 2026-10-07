@@ -1,9 +1,11 @@
 import {
   applyPasswordProtection,
+  calculateEncryptedSize,
+  createDecryptStream,
   createFileRequest,
   decodeInboxFragment,
-  decryptMetadata,
-  decryptRequestTitle,
+  decryptRequestBrief,
+  decryptRequestMetadata,
   deriveInboxKeys,
   deriveKeyFromPassword,
   deriveKeys,
@@ -18,9 +20,19 @@ import {
   PASSWORD_SALT_LENGTH,
   type Argon2idHashFn,
   type DerivedKeys,
-  type FileMetadata,
   type InboxKeys,
+  type RequestAsk,
+  type RequestBrief,
+  type RequestUploadMetadata,
 } from "@skysend/crypto";
+import {
+  NOTE_PAD_BLOCK,
+  cleanLabel,
+  parseNote,
+  serializeTemplate,
+  type NoteBlock,
+  type ReadBlock,
+} from "@skysend/note-format";
 import type { CreateRequestBody, Inbox, InboxUpload } from "@/lib/api";
 
 /** What creating a request gives back: the body for the server and the fragments of both links. */
@@ -31,15 +43,27 @@ export interface PreparedRequest {
 }
 
 /**
- * Builds a new request in this browser. With a password the inbox link carries the
+ * Builds a new request in this browser, with its brief: the title, what it asks for, and for
+ * a note the template a sender fills in. With a password the inbox link carries the
  * protected secret and the password salt, the same scheme a password protected file uses.
  */
 export async function prepareRequest(options: {
   title?: string;
+  asks?: RequestAsk[];
+  template?: NoteBlock[] | null;
   password?: string;
   argon2id?: Argon2idHashFn;
 }): Promise<PreparedRequest> {
-  const { local, server } = await createFileRequest({ title: options.title || undefined });
+  const asks = options.asks ?? ["files"];
+  const template =
+    asks.includes("note") && options.template && options.template.length > 0
+      ? serializeTemplate(options.template)
+      : null;
+  const { local, server } = await createFileRequest({
+    title: options.title || null,
+    asks,
+    template,
+  });
 
   let inboxFragment: string;
   if (options.password) {
@@ -64,12 +88,10 @@ export async function prepareRequest(options: {
       inboxAuthToken: toBase64url(server.inboxAuthToken),
       inboxOwnerToken: toBase64url(server.inboxOwnerToken),
       uploadToken: toBase64url(server.uploadToken),
-      title: server.title
-        ? {
-            ciphertext: toBase64url(server.title.ciphertext),
-            nonce: toBase64url(server.title.nonce),
-          }
-        : null,
+      brief: {
+        ciphertext: toBase64url(server.brief.ciphertext),
+        nonce: toBase64url(server.brief.nonce),
+      },
       hasPassword: Boolean(options.password),
     },
     inboxFragment,
@@ -134,13 +156,23 @@ export async function openInboxLink(
 /** One upload in the inbox, opened. A broken entry carries no keys and shows as damaged. */
 export interface OpenedUpload {
   upload: InboxUpload;
-  /** The file keys and the secret the download needs, or null when the entry is damaged. */
-  file: { secret: Uint8Array; salt: Uint8Array; keys: DerivedKeys; metadata: FileMetadata } | null;
+  /**
+   * The keys and the secret the download needs, or null when the entry is damaged. The
+   * metadata names a file, an archive, or a note.
+   */
+  file: {
+    secret: Uint8Array;
+    salt: Uint8Array;
+    keys: DerivedKeys;
+    metadata: RequestUploadMetadata;
+  } | null;
 }
 
 export interface OpenedInbox {
-  /** The title the requester wrote, or null when there is none or it does not decrypt. */
+  /** The title the requester wrote, or null when there is none. */
   title: string | null;
+  /** What the request asks for. Anything else that arrived was not asked for. */
+  asks: RequestAsk[];
   /** The upload link, rebuilt from the vault so it can be copied again. */
   uploadFragment: string;
   uploads: OpenedUpload[];
@@ -155,25 +187,24 @@ export async function openInbox(
   inbox: Inbox,
   keys: InboxKeys,
 ): Promise<OpenedInbox> {
-  // The vault binds the title as stored, so a title the server swapped opens nothing.
-  const storedTitle = inbox.title
-    ? { ciphertext: fromBase64url(inbox.title.ciphertext), nonce: fromBase64url(inbox.title.nonce) }
-    : null;
+  // The vault binds the brief as stored, so a brief the server swapped opens nothing.
+  const storedBrief = {
+    ciphertext: fromBase64url(inbox.brief.ciphertext),
+    nonce: fromBase64url(inbox.brief.nonce),
+  };
   const requestKey = await openRequestKey(
     fromBase64url(inbox.vault),
     fromBase64url(inbox.vaultNonce),
     keys.inboxKey,
-    storedTitle,
+    storedBrief,
   );
-  const { titleKey } = await deriveLinkKeys(requestKey.linkSecret, requestKey.publicKey);
-
-  let title: string | null = null;
-  if (storedTitle) {
-    try {
-      title = await decryptRequestTitle(storedTitle, titleKey);
-    } catch {
-      title = null;
-    }
+  const { briefKey } = await deriveLinkKeys(requestKey.linkSecret, requestKey.publicKey);
+  // The vault opened, so the brief is the one this request was made with.
+  let brief: RequestBrief = { title: null, asks: ["files"], template: null };
+  try {
+    brief = await decryptRequestBrief(storedBrief, briefKey);
+  } catch {
+    // Only a client that wrote a broken brief gets here. The uploads still open.
   }
 
   const uploads = await Promise.all(
@@ -185,7 +216,7 @@ export async function openInbox(
         });
         const salt = fromBase64url(upload.salt);
         const fileKeys = await deriveKeys(secret, salt);
-        const metadata = await decryptMetadata(
+        const metadata = await decryptRequestMetadata(
           fromBase64url(upload.encryptedMeta),
           fromBase64url(upload.metaNonce),
           fileKeys.metaKey,
@@ -193,6 +224,15 @@ export async function openInbox(
         // Every sender uses a client that records the archive size, and without it the
         // download could not be checked for completeness.
         if (metadata.type === "archive" && metadata.archiveSize === undefined) {
+          return { upload, file: null };
+        }
+        // A note is read into memory, so its size has to be what the stored bytes hold, and
+        // every client pads it to whole blocks.
+        if (
+          metadata.type === "note" &&
+          (metadata.size % NOTE_PAD_BLOCK !== 0 ||
+            upload.size !== calculateEncryptedSize(metadata.size))
+        ) {
           return { upload, file: null };
         }
         return { upload, file: { secret, salt, keys: fileKeys, metadata } };
@@ -203,10 +243,67 @@ export async function openInbox(
   );
 
   return {
-    title,
+    title: brief.title === null ? null : sanitizeTitle(brief.title) || null,
+    asks: brief.asks,
     uploadFragment: encodeUploadFragment(requestKey.publicKey, requestKey.linkSecret),
     uploads,
   };
+}
+
+/** Why a note in an inbox cannot be shown. */
+export class NoteTooLargeError extends Error {
+  override name = "NoteTooLargeError";
+}
+
+/**
+ * Whether a note is larger than any note this instance takes, padding included. Checked
+ * before it is fetched, so a crafted one never costs a download or fills the memory.
+ */
+export function noteTooLarge(file: NonNullable<OpenedUpload["file"]>, maxSize: number): boolean {
+  return file.metadata.type === "note" && file.metadata.size > maxSize + NOTE_PAD_BLOCK;
+}
+
+/**
+ * Decrypts a note a sender put into the inbox, from the stream of its upload, and reads its
+ * blocks. A sender wrote every label in it, so each one is cleaned before it is shown. A note
+ * that does not parse comes back as one block of plain text, so nothing in it is lost.
+ * `maxSize` is the largest note the instance takes, checked before anything is read.
+ */
+export async function readInboxNote(
+  file: NonNullable<OpenedUpload["file"]>,
+  stream: ReadableStream<Uint8Array>,
+  maxSize: number,
+): Promise<{ blocks: ReadBlock[]; unreadable: boolean }> {
+  const { metadata } = file;
+  if (metadata.type !== "note") throw new Error("Not a note");
+  if (noteTooLarge(file, maxSize)) {
+    await stream.cancel().catch(() => {});
+    throw new NoteTooLargeError("The note is larger than this instance takes");
+  }
+  const plain = stream.pipeThrough(createDecryptStream(file.keys.fileKey, metadata.size));
+  const text = new TextDecoder().decode(await new Response(plain).arrayBuffer());
+  try {
+    return { blocks: parseNote(text).map(cleanBlockLabels), unreadable: false };
+  } catch {
+    return { blocks: [{ type: "text", format: "plain", text: text.trimEnd() }], unreadable: true };
+  }
+}
+
+/** The block with every label a sender wrote cleaned, the values left as they are. */
+function cleanBlockLabels(block: ReadBlock): ReadBlock {
+  switch (block.type) {
+    case "text":
+      return block.label === undefined ? block : { ...block, label: cleanLabel(block.label) };
+    case "password":
+      return {
+        ...block,
+        entries: block.entries.map((entry) => ({ ...entry, label: cleanLabel(entry.label) })),
+      };
+    case "code":
+      return { ...block, title: cleanLabel(block.title) };
+    default:
+      return block;
+  }
 }
 
 /** Characters that draw as blank space but are no whitespace: the Braille blank, Hangul fillers. */

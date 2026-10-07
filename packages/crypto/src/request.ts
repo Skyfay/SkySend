@@ -1,10 +1,11 @@
 /**
- * File requests: a requester asks for files, senders drop them in, only the requester reads them.
+ * File requests: a requester asks for files or a note, senders drop them in, only the requester
+ * reads them.
  *
  * The requester's browser makes a P-256 key pair and two secrets:
  *
  *   inboxSecret -> HKDF -> inboxKey (seals the private key), inboxAuthToken, inboxOwnerToken
- *   linkSecret  -> HKDF -> uploadToken (lets a sender upload), titleKey (the request's title)
+ *   linkSecret  -> HKDF -> uploadToken (lets a sender upload), briefKey (the request's brief)
  *
  * The private key is sealed with inboxKey and stored on the server, the "vault". The public
  * key and linkSecret travel only in the fragment of the upload link, inboxSecret only in the
@@ -15,7 +16,13 @@
  * Both secrets are 32 uniform bytes, so the derivation needs no salt. That keeps every link
  * self-contained: a sender and the requester derive their token from the fragment alone, and
  * no endpoint has to hand out a salt before the token is checked. The upload token and the
- * title key also take the public key, so a link rewritten with another key is rejected.
+ * brief key also take the public key, so a link rewritten with another key is rejected.
+ *
+ * Every request carries a brief: what the requester asks for, an optional title, and an
+ * optional note template for the sender to fill in. It is versioned JSON, padded so its
+ * length tells little, and encrypted with the brief key, so a sender reads it from the link
+ * and the server never does. A server that drops it shows the sender a broken request
+ * rather than a quiet one without a brief.
  *
  * A sender uploads a file the usual way, with a fresh file secret, and wraps that secret to
  * the public key with HPKE (hpke.ts). The wrap is bound to the request and the upload, so the
@@ -27,10 +34,13 @@
  *   inbox fragment   base64url(version 1 B || secret 32 B || passwordSalt 16 B, if protected)
  *   vault plaintext  suite 1 B || publicKey 65 B || linkSecret 32 B || private scalar d 32 B
  *   vault            AES-256-GCM(inboxKey, nonce 12 B, aad "skysend-inbox-privkey-v1"
- *                    || SHA-256(title nonce || title ciphertext), if there is a title), 146 B
+ *                    || SHA-256(brief nonce || brief ciphertext)), 146 B
  *   wrap             HPKE base, info "skysend-request-v1" || requestId 16 B, aad uploadId 16 B,
  *                    plaintext the 32-byte file secret, stored as enc 65 B and ciphertext 48 B
- *   title            AES-256-GCM(titleKey, nonce 12 B, aad "skysend-request-title-v1")
+ *   brief plaintext  UTF-8 {"v":1,"title":string|null,"asks":["files"|"note",...],
+ *                    "template":object|null}, padded with spaces to a multiple of 1 KiB,
+ *                    at most 8 KiB
+ *   brief            AES-256-GCM(briefKey, nonce 12 B, aad "skysend-request-brief-v1")
  */
 
 import { importHkdfKey, SECRET_LENGTH } from "./keychain.js";
@@ -59,7 +69,7 @@ export const REQUEST_SUITE = 0x01;
 /** Length of inboxSecret and linkSecret. */
 export const REQUEST_SECRET_LENGTH = 32;
 
-/** Length of the vault nonce and the title nonce. */
+/** Length of the vault nonce and the brief nonce. */
 export const REQUEST_NONCE_LENGTH = 12;
 
 /** Length of inboxAuthToken, inboxOwnerToken and uploadToken. */
@@ -68,9 +78,23 @@ export const REQUEST_TOKEN_LENGTH = 32;
 /** Length of the sealed vault. */
 export const REQUEST_VAULT_LENGTH = 1 + HPKE_PUBLIC_KEY_LENGTH + REQUEST_SECRET_LENGTH + 32 + 16;
 
-/** The longest title in UTF-8 bytes, and the longest title ciphertext. */
+/** The longest title in UTF-8 bytes. */
 export const REQUEST_TITLE_MAX_BYTES = 256;
-export const REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH = REQUEST_TITLE_MAX_BYTES + 16;
+
+/** A brief is padded to a multiple of this many bytes. */
+export const REQUEST_BRIEF_BLOCK = 1024;
+/** The longest brief in bytes, padding included, and the longest brief ciphertext. */
+export const REQUEST_BRIEF_MAX_BYTES = 8 * REQUEST_BRIEF_BLOCK;
+export const REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH = REQUEST_BRIEF_MAX_BYTES + 16;
+/** The shortest brief ciphertext: one padded block and the tag. */
+export const REQUEST_BRIEF_MIN_CIPHERTEXT_LENGTH = REQUEST_BRIEF_BLOCK + 16;
+
+/**
+ * The version of the brief this package writes. It only goes up for a change a reader of
+ * this version has to refuse. Fields and asks added later are fine without it: a reader
+ * leaves out the fields it does not know, and the asks too, as long as one it knows is left.
+ */
+const BRIEF_VERSION = 1;
 
 /** Length of the enc and the ciphertext of a wrapped file secret. */
 export const WRAP_ENC_LENGTH = HPKE_PUBLIC_KEY_LENGTH;
@@ -87,10 +111,10 @@ const INFO_INBOX_KEY = "skysend-inbox-key";
 const INFO_INBOX_AUTH = "skysend-inbox-auth";
 const INFO_INBOX_OWNER = "skysend-inbox-owner-token";
 const INFO_UPLOAD_TOKEN = "skysend-request-upload-token";
-const INFO_TITLE_KEY = "skysend-request-title";
+const INFO_BRIEF_KEY = "skysend-request-brief";
 const HPKE_INFO = "skysend-request-v1";
 const VAULT_AAD = "skysend-inbox-privkey-v1";
-const TITLE_AAD = "skysend-request-title-v1";
+const BRIEF_AAD = "skysend-request-brief-v1";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -104,14 +128,30 @@ export interface InboxKeys {
   inboxOwnerToken: Uint8Array;
 }
 
-/** Keys derived from linkSecret and the public key. titleKey cannot be exported. */
+/** Keys derived from linkSecret and the public key. briefKey cannot be exported. */
 export interface LinkKeys {
   uploadToken: Uint8Array;
-  titleKey: CryptoKey;
+  briefKey: CryptoKey;
 }
 
-/** An encrypted title. */
-export interface EncryptedRequestTitle {
+/** What a requester asks senders for. */
+export type RequestAsk = "files" | "note";
+const ASKS: readonly RequestAsk[] = ["files", "note"];
+
+/**
+ * The brief of a request, what a sender sees before sending. The template is a note
+ * template as @skysend/note-format writes it. This package only checks that it is an object,
+ * the reader validates the rest.
+ */
+export interface RequestBrief {
+  title: string | null;
+  /** At least one, each at most once. */
+  asks: RequestAsk[];
+  template: Record<string, unknown> | null;
+}
+
+/** An encrypted brief. */
+export interface EncryptedRequestBrief {
   ciphertext: Uint8Array;
   nonce: Uint8Array;
 }
@@ -130,7 +170,7 @@ export interface FileRequestPayload {
   inboxAuthToken: Uint8Array;
   inboxOwnerToken: Uint8Array;
   uploadToken: Uint8Array;
-  title: EncryptedRequestTitle | null;
+  brief: EncryptedRequestBrief;
 }
 
 /** A new request: the secrets for the links, kept apart from what goes to the server. */
@@ -213,18 +253,15 @@ async function aesGcm(
 }
 
 /**
- * The AAD of the vault. It binds the title the server stores, so a server that swaps or
- * drops the title breaks the vault instead of showing the requester a title they never
- * wrote. Without a title it is the label alone, which no title digest can produce.
+ * The AAD of the vault. It binds the brief the server stores, so a server that swaps or
+ * drops the brief breaks the vault instead of showing the requester a brief they never wrote.
  */
-async function vaultAad(title: EncryptedRequestTitle | null): Promise<Uint8Array> {
-  const label = encodeUtf8(VAULT_AAD);
-  if (!title) return label;
+async function vaultAad(brief: EncryptedRequestBrief): Promise<Uint8Array> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    asBytes(concatBytes(title.nonce, title.ciphertext)),
+    asBytes(concatBytes(brief.nonce, brief.ciphertext)),
   );
-  return concatBytes(label, new Uint8Array(digest));
+  return concatBytes(encodeUtf8(VAULT_AAD), new Uint8Array(digest));
 }
 
 /** The keys of the inbox link: the vault key and the tokens the server checks. */
@@ -240,7 +277,7 @@ export async function deriveInboxKeys(inboxSecret: Uint8Array): Promise<InboxKey
 }
 
 /**
- * The keys of the upload link: the token that lets a sender upload and the title key. Both
+ * The keys of the upload link: the token that lets a sender upload and the brief key. Both
  * bind the public key, so a link with a swapped key yields a token the server rejects.
  */
 export async function deriveLinkKeys(
@@ -250,44 +287,125 @@ export async function deriveLinkKeys(
   checkLength(linkSecret, REQUEST_SECRET_LENGTH, "Link secret");
   assertUncompressedPoint(publicKey);
   const base = await importHkdfKey(linkSecret);
-  const [uploadToken, titleKey] = await Promise.all([
+  const [uploadToken, briefKey] = await Promise.all([
     deriveToken(base, concatBytes(encodeUtf8(INFO_UPLOAD_TOKEN), publicKey)),
-    deriveAesKey(base, concatBytes(encodeUtf8(INFO_TITLE_KEY), publicKey)),
+    deriveAesKey(base, concatBytes(encodeUtf8(INFO_BRIEF_KEY), publicKey)),
   ]);
-  return { uploadToken, titleKey };
+  return { uploadToken, briefKey };
 }
 
-/** Encrypts the title of a request. The server stores it without being able to read it. */
-export async function encryptRequestTitle(
-  title: string,
-  titleKey: CryptoKey,
-): Promise<EncryptedRequestTitle> {
-  const bytes = encodeUtf8(title);
-  if (bytes.length > REQUEST_TITLE_MAX_BYTES) {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Checks a brief and brings it into one form: an empty title becomes null, the asks keep the
+ * order of ASKS, and a template without a note to fill in is left out. Throws for anything a
+ * reader of this version would not understand.
+ */
+function checkBrief(brief: RequestBrief): RequestBrief {
+  const title = brief.title === "" ? null : brief.title;
+  if (title !== null && typeof title !== "string") throw new Error("Brief title must be text");
+  if (title !== null && encodeUtf8(title).length > REQUEST_TITLE_MAX_BYTES) {
     throw new Error(`Title must be at most ${REQUEST_TITLE_MAX_BYTES} bytes`);
   }
-  const nonce = randomBytes(REQUEST_NONCE_LENGTH);
-  return { ciphertext: await aesGcm("encrypt", titleKey, nonce, TITLE_AAD, bytes), nonce };
+  if (!Array.isArray(brief.asks) || brief.asks.length === 0) {
+    throw new Error("A brief asks for at least one thing");
+  }
+  if (
+    brief.asks.some((ask) => !ASKS.includes(ask)) ||
+    new Set(brief.asks).size !== brief.asks.length
+  ) {
+    throw new Error("A brief asks for files or a note, each once");
+  }
+  if (brief.template !== null && !isRecord(brief.template)) {
+    throw new Error("Brief template must be an object");
+  }
+  const asks = ASKS.filter((ask) => brief.asks.includes(ask));
+  return { title, asks, template: asks.includes("note") ? brief.template : null };
 }
 
-/** Decrypts the title of a request. Throws if it was changed or the key is wrong. */
-export async function decryptRequestTitle(
-  title: EncryptedRequestTitle,
-  titleKey: CryptoKey,
-): Promise<string> {
-  checkLength(title.nonce, REQUEST_NONCE_LENGTH, "Title nonce");
-  if (title.ciphertext.length > REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH)
-    throw new Error("Title is too long");
-  return decodeUtf8(await aesGcm("decrypt", titleKey, title.nonce, TITLE_AAD, title.ciphertext));
+/** Whether a brief ciphertext has a length a writer of this version produces. */
+function checkBriefLength(brief: EncryptedRequestBrief): void {
+  checkLength(brief.nonce, REQUEST_NONCE_LENGTH, "Brief nonce");
+  const length = brief.ciphertext.length;
+  if (
+    length < REQUEST_BRIEF_MIN_CIPHERTEXT_LENGTH ||
+    length > REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH ||
+    (length - 16) % REQUEST_BRIEF_BLOCK !== 0
+  ) {
+    throw new Error("Brief has the wrong length");
+  }
+}
+
+/** The brief as bytes: versioned JSON, padded with spaces to a multiple of a block. */
+function encodeBrief(brief: RequestBrief): Uint8Array {
+  const { title, asks, template } = checkBrief(brief);
+  const json = encodeUtf8(JSON.stringify({ v: BRIEF_VERSION, title, asks, template }));
+  const padded = Math.max(1, Math.ceil(json.length / REQUEST_BRIEF_BLOCK)) * REQUEST_BRIEF_BLOCK;
+  if (padded > REQUEST_BRIEF_MAX_BYTES) {
+    throw new Error(`A brief must be at most ${REQUEST_BRIEF_MAX_BYTES} bytes`);
+  }
+  const bytes = new Uint8Array(padded).fill(0x20);
+  bytes.set(json);
+  return bytes;
+}
+
+/** Reads a decrypted brief. Throws for anything but a brief this version can read. */
+function decodeBrief(bytes: Uint8Array): RequestBrief {
+  let data: unknown;
+  try {
+    data = JSON.parse(decodeUtf8(bytes));
+  } catch {
+    throw new Error("Not a valid request brief");
+  }
+  if (!isRecord(data) || data.v !== BRIEF_VERSION) throw new Error("Unsupported request brief");
+  const title = data.title ?? null;
+  if (title !== null && typeof title !== "string") throw new Error("Not a valid request brief");
+  if (!Array.isArray(data.asks)) throw new Error("Not a valid request brief");
+  // An ask from a later version is left out, see BRIEF_VERSION.
+  const asks = data.asks.filter((ask): ask is RequestAsk => ASKS.includes(ask as RequestAsk));
+  const template = data.template ?? null;
+  try {
+    return checkBrief({ title, asks, template: template as Record<string, unknown> | null });
+  } catch {
+    throw new Error("Not a valid request brief");
+  }
+}
+
+/** Encrypts the brief of a request. The server stores it without being able to read it. */
+export async function encryptRequestBrief(
+  brief: RequestBrief,
+  briefKey: CryptoKey,
+): Promise<EncryptedRequestBrief> {
+  const plaintext = encodeBrief(brief);
+  const nonce = randomBytes(REQUEST_NONCE_LENGTH);
+  return { ciphertext: await aesGcm("encrypt", briefKey, nonce, BRIEF_AAD, plaintext), nonce };
+}
+
+/** Decrypts and reads the brief of a request. Throws if it was changed or the key is wrong. */
+export async function decryptRequestBrief(
+  brief: EncryptedRequestBrief,
+  briefKey: CryptoKey,
+): Promise<RequestBrief> {
+  checkBriefLength(brief);
+  return decodeBrief(await aesGcm("decrypt", briefKey, brief.nonce, BRIEF_AAD, brief.ciphertext));
 }
 
 /**
- * Creates a request: key pair, both secrets, the sealed vault, the tokens and the title.
+ * Creates a request: key pair, both secrets, the sealed vault, the tokens and the brief. A
+ * brief left out asks for files, with no title and no template.
  *
  * The private key is the one key in this package that is generated extractable, because it
  * has to be sealed into the vault once. Only its scalar leaves this function, inside the vault.
  */
-export async function createFileRequest(options: { title?: string } = {}): Promise<NewFileRequest> {
+export async function createFileRequest(
+  brief: Partial<RequestBrief> = {},
+): Promise<NewFileRequest> {
+  const checked = checkBrief({
+    title: brief.title ?? null,
+    asks: brief.asks ?? ["files"],
+    template: brief.template ?? null,
+  });
   const inboxSecret = randomBytes(REQUEST_SECRET_LENGTH);
   const linkSecret = randomBytes(REQUEST_SECRET_LENGTH);
 
@@ -302,7 +420,7 @@ export async function createFileRequest(options: { title?: string } = {}): Promi
     deriveInboxKeys(inboxSecret),
     deriveLinkKeys(linkSecret, publicKey),
   ]);
-  const title = options.title ? await encryptRequestTitle(options.title, link.titleKey) : null;
+  const encryptedBrief = await encryptRequestBrief(checked, link.briefKey);
   const plaintext = concatBytes(new Uint8Array([REQUEST_SUITE]), publicKey, linkSecret, scalar);
   scalar.fill(0);
   const vaultNonce = randomBytes(REQUEST_NONCE_LENGTH);
@@ -310,7 +428,7 @@ export async function createFileRequest(options: { title?: string } = {}): Promi
     "encrypt",
     inbox.inboxKey,
     vaultNonce,
-    await vaultAad(title),
+    await vaultAad(encryptedBrief),
     plaintext,
   );
   plaintext.fill(0);
@@ -323,24 +441,26 @@ export async function createFileRequest(options: { title?: string } = {}): Promi
       inboxAuthToken: inbox.inboxAuthToken,
       inboxOwnerToken: inbox.inboxOwnerToken,
       uploadToken: link.uploadToken,
-      title,
+      brief: encryptedBrief,
     },
   };
 }
 
 /**
- * Opens the vault with the key of the inbox link and the title as the server stores it.
+ * Opens the vault with the key of the inbox link and the brief as the server stores it.
  * Throws if either was changed or the key is wrong.
  */
 export async function openRequestKey(
   vault: Uint8Array,
   vaultNonce: Uint8Array,
   inboxKey: CryptoKey,
-  title: EncryptedRequestTitle | null,
+  brief: EncryptedRequestBrief,
 ): Promise<RequestKey> {
   checkLength(vaultNonce, REQUEST_NONCE_LENGTH, "Vault nonce");
   checkLength(vault, REQUEST_VAULT_LENGTH, "Vault");
-  const plaintext = await aesGcm("decrypt", inboxKey, vaultNonce, await vaultAad(title), vault);
+  // The AAD hashes nonce and ciphertext together, so their split has to be the one written.
+  checkBriefLength(brief);
+  const plaintext = await aesGcm("decrypt", inboxKey, vaultNonce, await vaultAad(brief), vault);
   try {
     if (plaintext.length !== VAULT_PLAINTEXT_LENGTH || plaintext[0] !== REQUEST_SUITE) {
       throw new Error("Unsupported request vault");

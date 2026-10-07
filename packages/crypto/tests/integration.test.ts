@@ -361,7 +361,7 @@ describe("Integration: file request roundtrip", () => {
 
     // The requester opens the inbox link on any device: vault, wrap, then a normal download.
     const { inboxKey } = await deriveInboxKeys(decodeInboxFragment(inboxLink).secret);
-    const key = await openRequestKey(server.vault, server.vaultNonce, inboxKey, server.title);
+    const key = await openRequestKey(server.vault, server.vaultNonce, inboxKey, server.brief);
     const recovered = await unwrapFileSecret(key, requestId, uploadId, wrapped);
     expect(constantTimeEqual(recovered, fileSecret)).toBe(true);
     const readerKeys = await deriveKeys(recovered, salt);

@@ -2,7 +2,7 @@
 
 A file request lets senders upload into an inbox that only the requester can open. There are two route families: `/api/request` for creating a request and for uploading into it, and `/api/inbox` for everything the requester does afterwards. Both answer `403` when `request` is not in `ENABLED_SERVICES`, and `/api/config` reports the feature as `fileRequestsEnabled`.
 
-The server never receives a key, the request's public key, a file name or the title in plain text. How the client builds what it sends is on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
+The server never receives a key, the request's public key, a file name, the brief or a note in plain text. How the client builds what it sends is on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
 
 Every binary field is canonical base64url without padding, checked for its exact length. Any other spelling of the same bytes is refused.
 
@@ -27,7 +27,7 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
   "inboxAuthToken": "<32 bytes>",
   "inboxOwnerToken": "<32 bytes>",
   "uploadToken": "<32 bytes>",
-  "title": { "ciphertext": "<16 to 272 bytes>", "nonce": "<12 bytes>" },
+  "brief": { "ciphertext": "<1040 to 8208 bytes>", "nonce": "<12 bytes>" },
   "expireSec": 259200,
   "maxUploads": 10,
   "maxSize": 2147483648,
@@ -37,7 +37,7 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
 
 | Field | Rule |
 | --- | --- |
-| `title` | Optional, `null` when there is none |
+| `brief` | Required. The ciphertext is 16 bytes longer than a multiple of 1024, see [the brief](/developer-guide/crypto/file-requests#the-brief) |
 | `expireSec` | One of `FILE_REQUEST_EXPIRE_OPTIONS_SEC` |
 | `maxUploads` | At most `FILE_REQUEST_MAX_UPLOADS` |
 | `maxSize` | Most bytes one upload may have, at most `FILE_REQUEST_MAX_SIZE` |
@@ -59,7 +59,7 @@ What a sender sees. Needs `X-Upload-Token`.
 
 ```json
 {
-  "title": { "ciphertext": "...", "nonce": "..." },
+  "brief": { "ciphertext": "...", "nonce": "..." },
   "open": true,
   "closesAt": "2026-10-09T12:00:00.000Z",
   "uploadsLeft": 9,
@@ -151,7 +151,7 @@ Needs `X-Inbox-Token`. Never counts as a download.
 {
   "vault": "...",
   "vaultNonce": "...",
-  "title": { "ciphertext": "...", "nonce": "..." },
+  "brief": { "ciphertext": "...", "nonce": "..." },
   "hasPassword": false,
   "open": true,
   "closesAt": "2026-10-09T12:00:00.000Z",

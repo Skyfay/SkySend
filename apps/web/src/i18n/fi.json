@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Lähetä",
-    "myUploads": "Omat lähetykset",
+    "myUploads": "Omat linkit",
     "menu": "Valikko",
-    "requests": "Pyynnöt",
+    "requests": "Pyydä",
     "requestsUnseen": "Uusia lähetyksiä pyynnöissä"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Lataa silti"
   },
   "myUploads": {
-    "title": "Omat lähetykset",
+    "title": "Omat linkit",
     "empty": "Ei vielä lähetyksiä",
     "emptyHint": "Tällä laitteella tehdyt lähetykset näkyvät täällä.",
+    "intro": "Kaikki tällä laitteella jaettu tai pyydetty näkyy täällä.",
+    "tabShared": "Jaetut",
+    "tabRequests": "Pyynnöt",
     "copyLink": "Kopioi linkki",
     "deleteConfirm": "Haluatko varmasti poistaa tämän lähetyksen?",
     "deleteNoteConfirm": "Haluatko varmasti poistaa tämän muistiinpanon?",
@@ -439,7 +442,7 @@
     "faq3Q": "Mitä salasana tuo lisää?",
     "faq3A": "Linkin haltuunsa saanut tarvitsee silti salasanan. Lähetä se eri kanavaa pitkin kuin linkki.",
     "faq4Q": "Milloin tietoni poistetaan?",
-    "faq4A": "Kun aika loppuu tai lataus- tai katseluraja täyttyy, sen mukaan kumpi tapahtuu ensin. Voit myös poistaa jaon aiemmin kohdassa Omat lähetykset.",
+    "faq4A": "Kun aika loppuu tai lataus- tai katseluraja täyttyy, sen mukaan kumpi tapahtuu ensin. Voit myös poistaa jaon aiemmin kohdassa Omat linkit.",
     "ctaTitle": "Valmis jakamaan jotain?",
     "ctaText": "Se vie vain muutaman sekunnin, eikä kukaan muu kuin vastaanottaja voi lukea sitä.",
     "ctaButton": "Aloita jakaminen"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Älä jaa saapuneiden linkkiä. Se on avain tämän pyynnön kaikkiin tiedostoihin ja ainoa pääsy niihin. Tallenna se ennen kuin poistut sivulta.",
     "openInbox": "Avaa saapuneet",
     "newRequest": "Uusi pyyntö",
+    "toList": "Omiin pyyntöihin",
     "error": {
       "signInRequired": "Kirjaudu sisään luodaksesi pyynnön.",
       "dailyLimit": "Olet luonut niin monta pyyntöä kuin tämä palvelin sallii päivässä. Yritä huomenna uudelleen.",
       "failed": "Pyyntöä ei voitu luoda."
     },
     "retentionHint_one": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kerran.",
-    "retentionHint_other": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kertaa."
+    "retentionHint_other": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kertaa.",
+    "asks": "Pyydä",
+    "asksFiles": "Tiedostot",
+    "asksNote": "Muistiinpano",
+    "asksBoth": "Molemmat",
+    "summaryNote": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kukin muistiinpano."
+  },
+  "template": {
+    "title": "Muistiinpanon pohja",
+    "hint": "Määritä, mitä lähettäjä täyttää, esimerkiksi käyttäjätunnus ja salasana. Ilman kenttiä lähettäjä kirjoittaa vapaasti.",
+    "tooLarge": "Pohja on liian suuri. Poista muutama kenttä.",
+    "fieldLabel": "Kenttä {{number}}, esimerkiksi Salasana",
+    "addField": "Lisää kenttä",
+    "textLabel": "Mistä tekstissä on kyse, esimerkiksi Huomiot",
+    "textHint": "Lähettäjä kirjoittaa tekstin.",
+    "codeHint": "Lähettäjä liittää koodin.",
+    "sshKeyHint": "Lähettäjä lisää SSH-avaimen."
   },
   "requests": {
     "title": "Tiedostopyynnöt",
     "intro": "Pyydä joltakulta tiedostoja. Hän lähettää ne salattuina, ja vain sinä voit avata ne.",
-    "yours": "Pyyntösi",
+    "empty": "Ei vielä pyyntöjä",
+    "emptyAction": "Luo pyyntö",
     "localHint": "Tämä luettelo on vain tässä selaimessa. Palvelin ei tiedä, mitkä pyynnöt ovat sinun.",
     "untitled": "Nimetön pyyntö",
     "passwordProtected": "Salasanasuojattu",
@@ -534,7 +555,15 @@
     "deleteText": "Pyyntö ja kaikki sen tiedostot poistetaan pysyvästi.",
     "passwordRequired": "Nämä saapuneet on suojattu salasanalla",
     "deleteFileTitle": "Poistetaanko tämä tiedosto?",
-    "deleteFileText": "Se poistetaan pysyvästi. Sen paikka pyynnössä pysyy käytettynä."
+    "deleteFileText": "Se poistetaan pysyvästi. Sen paikka pyynnössä pysyy käytettynä.",
+    "note": "Muistiinpano",
+    "open": "Avaa",
+    "viewsLeft_one": "{{count}} katselu jäljellä",
+    "viewsLeft_other": "{{count}} katselua jäljellä",
+    "notAsked": "Ei pyydetty",
+    "saveText": "Tallenna tekstinä",
+    "noteTooLarge": "Tämä muistiinpano on suurempi kuin mikään muistiinpano, jonka tämä instanssi ottaa vastaan, joten sitä ei avattu.",
+    "noteFailed": "Muistiinpanoa ei voitu avata."
   },
   "requestUpload": {
     "title": "Joku pyytää sinulta <a>tiedostoja</a>",
@@ -561,9 +590,17 @@
       "gone": "Tätä pyyntöä ei ole enää.",
       "full": "Tämä pyyntö on nyt täynnä.",
       "closed": "Tämä pyyntö suljettiin sillä välin.",
-      "tooLarge": "Tässä pyynnössä ei ole enää tarpeeksi tilaa.",
+      "tooLarge": "Lähetys on suurempi kuin tämä pyyntö sallii.",
       "quota": "Olet saavuttanut tämän palvelimen lähetysrajan. Yritä myöhemmin uudelleen."
     },
-    "errorText": "Pyyntöä ei voitu ladata. Lataa sivu uudelleen yrittääksesi uudestaan."
+    "errorText": "Pyyntöä ei voitu ladata. Lataa sivu uudelleen yrittääksesi uudestaan.",
+    "broken": "Tätä pyyntöä ei voi lukea",
+    "brokenText": "Sen kuvaus puuttuu tai sitä on muutettu. Pyydä uusi linkki siltä, joka lähetti sen sinulle.",
+    "noteStart": "Mitä haluat lähettää?",
+    "noteHint": "Pyytäjä määritti nämä kentät, eikä kukaan ole tarkistanut niitä. Syötä vain se, minkä antaisit tälle henkilölle suoraan.",
+    "limitsNote_one": "Salattu vain pyytäjälle. {{count}} lähetys jäljellä, sulkeutuu {{time}} kuluttua.",
+    "limitsNote_other": "Salattu vain pyytäjälle. {{count}} lähetystä jäljellä, sulkeutuu {{time}} kuluttua.",
+    "fileTabHint": "Enintään {{size}} lähetystä kohden",
+    "noteTabHint": "Salasanoja, tekstiä, koodia tai avain"
   }
 }

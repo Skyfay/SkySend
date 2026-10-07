@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { serializeNote, type NoteBlock } from "@skysend/note-format";
-import { blocksToSend, emptyBlock, noteKinds, storedNoteKinds } from "../../src/lib/note-editor";
+import { blocksToSend, emptyBlock, noteKinds, storedNoteKinds, toDrafts } from "../../src/lib/note-editor";
 
 describe("emptyBlock", () => {
   it("starts each type the way its editor expects it", () => {
@@ -21,7 +21,22 @@ describe("emptyBlock", () => {
   });
 });
 
+describe("toDrafts", () => {
+  it("keys the blocks of a template from 1", () => {
+    expect(toDrafts([emptyBlock("text"), emptyBlock("code")]).map((draft) => draft.id)).toEqual([1, 2]);
+  });
+});
+
 describe("blocksToSend", () => {
+  it("keeps the label of a text block from a template, and adds none", () => {
+    expect(blocksToSend([{ type: "text", format: "plain", text: "1", label: "PIN" }])).toEqual([
+      { type: "text", format: "plain", text: "1", label: "PIN" },
+    ]);
+    expect(blocksToSend([{ type: "text", format: "plain", text: "1", label: "" }])).toEqual([
+      { type: "text", format: "plain", text: "1" },
+    ]);
+  });
+
   it("leaves out blocks without content", () => {
     expect(blocksToSend([emptyBlock("text"), emptyBlock("password"), emptyBlock("code"), emptyBlock("sshkey")])).toEqual([]);
   });

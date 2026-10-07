@@ -1,17 +1,31 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, useSyncExternalStore } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Inbox, File, FileText, Layers, KeyRound, Code, Heading, Terminal } from "lucide-react";
+import {
+  ArrowRight,
+  Inbox,
+  File,
+  FileText,
+  Layers,
+  KeyRound,
+  Code,
+  Heading,
+  Share2,
+  Terminal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RequestList } from "@/components/RequestList";
 import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { storedNoteKinds, type NoteKindKey } from "@/lib/note-editor";
+import { subscribeUnseen, unseenTotal } from "@/lib/unseen-uploads";
 import { toast } from "sonner";
 
 type Filter = "all" | "files" | "notes-text" | "notes-password" | "notes-code" | "notes-markdown" | "notes-sshkey";
@@ -26,9 +40,15 @@ const FILTER_ICONS: Record<Filter, React.ComponentType<{ className?: string }>> 
   "notes-sshkey": Terminal,
 };
 
+/**
+ * My Links: everything this browser shared, and the file requests it made, each in its own
+ * tab when the instance offers both.
+ */
 export function MyUploadsPage() {
   const { t } = useTranslation();
   const { config } = useServerConfig();
+  const [params, setParams] = useSearchParams();
+  const unseen = useSyncExternalStore(subscribeUnseen, unseenTotal);
   const {
     uploads,
     loading: uploadsLoading,
@@ -121,18 +141,19 @@ export function MyUploadsPage() {
     return noteTypeCounts[ct] ?? 0;
   };
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <h1
-          data-slot="hero-title"
-          className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[38px]"
-        >
-          {t("myUploads.title")}
-        </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{t("myUploads.emptyHint")}</p>
-      </header>
+  // The same rule as the navigation: an instance with only file requests shares nothing.
+  const sharing = !config || config.enabledServices.length > 0;
+  const requests = config?.fileRequestsEnabled ?? false;
+  const section = !sharing || (requests && params.get("tab") === "requests") ? "requests" : "shared";
+  const intro =
+    sharing && requests
+      ? t("myUploads.intro")
+      : sharing
+        ? t("myUploads.emptyHint")
+        : t("requests.localHint");
 
+  const shared = (
+    <>
       {(uploads.length > 0 || notes.length > 0) && (
         <ToggleGroup
           type="single"
@@ -203,6 +224,59 @@ export function MyUploadsPage() {
           </ul>
         </Card>
       )}
+    </>
+  );
+
+  let body;
+  if (sharing && requests) {
+    body = (
+      <Tabs
+        value={section}
+        onValueChange={(v) => setParams(v === "requests" ? { tab: "requests" } : {}, { replace: true })}
+        className="space-y-6"
+      >
+        <TabsList aria-label={t("myUploads.title")}>
+          <TabsTrigger value="shared">
+            <Share2 />
+            {t("myUploads.tabShared")}
+          </TabsTrigger>
+          <TabsTrigger value="requests">
+            <Inbox />
+            {t("myUploads.tabRequests")}
+            {unseen > 0 && (
+              <>
+                <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span className="sr-only">{t("nav.requestsUnseen")}</span>
+              </>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="shared" className="space-y-6">
+          {shared}
+        </TabsContent>
+        <TabsContent value="requests">
+          <RequestList />
+        </TabsContent>
+      </Tabs>
+    );
+  } else if (sharing) {
+    body = shared;
+  } else {
+    body = <RequestList />;
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header>
+        <h1
+          data-slot="hero-title"
+          className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[38px]"
+        >
+          {t("myUploads.title")}
+        </h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{intro}</p>
+      </header>
+      {body}
     </div>
   );
 }

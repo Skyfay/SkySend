@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Téléverser",
-    "myUploads": "Mes envois",
+    "myUploads": "Mes liens",
     "menu": "Menu",
-    "requests": "Demandes",
+    "requests": "Demander",
     "requestsUnseen": "Nouveaux envois dans les demandes"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Télécharger quand même"
   },
   "myUploads": {
-    "title": "Mes envois",
+    "title": "Mes liens",
     "empty": "Aucun envoi pour le moment",
     "emptyHint": "Les envois effectués depuis cet appareil apparaîtront ici.",
+    "intro": "Tout ce que vous partagez ou demandez depuis cet appareil apparaîtra ici.",
+    "tabShared": "Partagés",
+    "tabRequests": "Demandes",
     "copyLink": "Copier le lien",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet envoi ?",
     "deleteNoteConfirm": "Êtes-vous sûr de vouloir supprimer cette note ?",
@@ -439,7 +442,7 @@
     "faq3Q": "Qu'apporte un mot de passe ?",
     "faq3A": "Quiconque met la main sur le lien a encore besoin du mot de passe. Envoyez-le par un autre canal que le lien.",
     "faq4Q": "Quand mes données sont-elles supprimées ?",
-    "faq4A": "Lorsque le délai expire ou que la limite de téléchargements ou de vues est atteinte, selon ce qui arrive en premier. Vous pouvez aussi supprimer un partage plus tôt dans Mes envois.",
+    "faq4A": "Lorsque le délai expire ou que la limite de téléchargements ou de vues est atteinte, selon ce qui arrive en premier. Vous pouvez aussi supprimer un partage plus tôt dans Mes liens.",
     "ctaTitle": "Prêt à partager quelque chose ?",
     "ctaText": "Cela prend quelques secondes, et personne d'autre que le destinataire ne peut le lire.",
     "ctaButton": "Commencer à partager"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Ne partagez pas le lien de la boîte. C'est la clé de tous les fichiers de cette demande et le seul accès. Enregistrez-le avant de quitter cette page.",
     "openInbox": "Ouvrir la boîte",
     "newRequest": "Nouvelle demande",
+    "toList": "Voir mes demandes",
     "error": {
       "signInRequired": "Connectez-vous pour créer une demande.",
       "dailyLimit": "Vous avez créé autant de demandes que ce serveur en autorise par jour. Réessayez demain.",
       "failed": "La demande n'a pas pu être créée."
     },
     "retentionHint_one": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois.",
-    "retentionHint_other": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois."
+    "retentionHint_other": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois.",
+    "asks": "Demander",
+    "asksFiles": "Fichiers",
+    "asksNote": "Note",
+    "asksBoth": "Les deux",
+    "summaryNote": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b>, chacun une note."
+  },
+  "template": {
+    "title": "Modèle de la note",
+    "hint": "Définissez ce que l'expéditeur remplit, par exemple un identifiant et un mot de passe. Sans champs, l'expéditeur écrit librement.",
+    "tooLarge": "Le modèle est trop volumineux. Supprimez quelques champs.",
+    "fieldLabel": "Champ {{number}}, par exemple Mot de passe",
+    "addField": "Ajouter un champ",
+    "textLabel": "De quoi parle le texte, par exemple Remarques",
+    "textHint": "L'expéditeur écrit le texte.",
+    "codeHint": "L'expéditeur colle le code.",
+    "sshKeyHint": "L'expéditeur ajoute une clé SSH."
   },
   "requests": {
     "title": "Demandes de fichiers",
     "intro": "Demandez des fichiers à quelqu'un. Il les envoie chiffrés, et vous seul pouvez les ouvrir.",
-    "yours": "Vos demandes",
+    "empty": "Aucune demande pour l'instant",
+    "emptyAction": "Créer une demande",
     "localHint": "Cette liste n'existe que dans ce navigateur. Le serveur ne sait pas quelles demandes sont les vôtres.",
     "untitled": "Demande sans titre",
     "passwordProtected": "Protégée par mot de passe",
@@ -534,7 +555,15 @@
     "deleteText": "La demande et tous ses fichiers sont supprimés définitivement.",
     "passwordRequired": "Cette boîte est protégée par mot de passe",
     "deleteFileTitle": "Supprimer ce fichier ?",
-    "deleteFileText": "Il est supprimé définitivement. Sa place dans la demande reste occupée."
+    "deleteFileText": "Il est supprimé définitivement. Sa place dans la demande reste occupée.",
+    "note": "Note",
+    "open": "Ouvrir",
+    "viewsLeft_one": "{{count}} consultation restante",
+    "viewsLeft_other": "{{count}} consultations restantes",
+    "notAsked": "Non demandé",
+    "saveText": "Enregistrer en texte",
+    "noteTooLarge": "Cette note est plus volumineuse que toute note acceptée par cette instance, elle n'a donc pas été ouverte.",
+    "noteFailed": "La note n'a pas pu être ouverte."
   },
   "requestUpload": {
     "title": "Quelqu'un vous demande des <a>fichiers</a>",
@@ -561,9 +590,17 @@
       "gone": "Cette demande n'existe plus.",
       "full": "Cette demande est maintenant pleine.",
       "closed": "Cette demande a été fermée entre-temps.",
-      "tooLarge": "Il ne reste plus assez de place dans cette demande.",
+      "tooLarge": "L'envoi dépasse ce que cette demande autorise.",
       "quota": "Vous avez atteint la limite d'envoi de ce serveur. Réessayez plus tard."
     },
-    "errorText": "La demande n'a pas pu être chargée. Rechargez la page pour réessayer."
+    "errorText": "La demande n'a pas pu être chargée. Rechargez la page pour réessayer.",
+    "broken": "Cette demande est illisible",
+    "brokenText": "Sa description manque ou a été modifiée. Demandez un nouveau lien à la personne qui vous l'a envoyé.",
+    "noteStart": "Que voulez-vous envoyer ?",
+    "noteHint": "Ces champs ont été définis par la personne qui demande, et personne ne les a vérifiés. Saisissez seulement ce que vous lui donneriez directement.",
+    "limitsNote_one": "Chiffré pour la personne qui demande uniquement. {{count}} envoi restant, ferme dans {{time}}.",
+    "limitsNote_other": "Chiffré pour la personne qui demande uniquement. {{count}} envois restants, ferme dans {{time}}.",
+    "fileTabHint": "Jusqu'à {{size}} par envoi",
+    "noteTabHint": "Mots de passe, texte, code ou une clé"
   }
 }

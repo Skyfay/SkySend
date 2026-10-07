@@ -405,7 +405,8 @@ export async function deleteNote(
 /** Binary fields of the request API are base64url without padding. */
 const base64url = z.string().regex(/^[A-Za-z0-9_-]*$/);
 
-const encryptedTitleSchema = z.object({ ciphertext: base64url, nonce: base64url }).nullable();
+// Every request carries a brief. A server that drops it shows the sender a broken request.
+const encryptedBriefSchema = z.object({ ciphertext: base64url, nonce: base64url });
 
 export interface CreateRequestBody {
   vault: string;
@@ -413,7 +414,7 @@ export interface CreateRequestBody {
   inboxAuthToken: string;
   inboxOwnerToken: string;
   uploadToken: string;
-  title: { ciphertext: string; nonce: string } | null;
+  brief: { ciphertext: string; nonce: string };
   expireSec: number;
   maxUploads: number;
   maxSize: number;
@@ -432,7 +433,7 @@ export async function createRequest(body: CreateRequestBody): Promise<z.infer<ty
 }
 
 const senderRequestSchema = z.object({
-  title: encryptedTitleSchema,
+  brief: encryptedBriefSchema,
   open: z.boolean(),
   closesAt: z.string().datetime(),
   uploadsLeft: z.number().int().nonnegative(),
@@ -470,7 +471,7 @@ export type InboxUpload = z.infer<typeof inboxUploadSchema>;
 const inboxResponseSchema = z.object({
   vault: base64url,
   vaultNonce: base64url,
-  title: encryptedTitleSchema,
+  brief: encryptedBriefSchema,
   hasPassword: z.boolean(),
   open: z.boolean(),
   closesAt: z.string(),

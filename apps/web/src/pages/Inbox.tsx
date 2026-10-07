@@ -30,12 +30,13 @@ import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
 import { FirefoxDevToolsWarning } from "@/components/FirefoxDevToolsWarning";
 import { InboxFileRow } from "@/components/InboxFileRow";
+import { InboxNoteDialog, type OpenedNote } from "@/components/InboxNoteDialog";
 import { useInbox } from "@/hooks/useInbox";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { NotFoundPage } from "@/pages/NotFound";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { copyText } from "@/lib/clipboard";
-import { requestLinks, type OpenedUpload } from "@/lib/file-request";
+import { NoteTooLargeError, requestLinks, type OpenedUpload } from "@/lib/file-request";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import {
@@ -86,6 +87,7 @@ export function InboxPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [note, setNote] = useState<{ entry: OpenedUpload; opened: OpenedNote } | null>(null);
 
   useEffect(() => {
     if (wasShareLinkRewritten()) showRewrittenLinkWarning("inbox");
@@ -178,7 +180,20 @@ export function InboxPage() {
     }
   };
 
+  const openNote = async (entry: OpenedUpload) => {
+    try {
+      setNote({ entry, opened: await inbox.openNote(entry, config?.noteMaxSize ?? 0) });
+    } catch (err) {
+      toast.error(
+        err instanceof NoteTooLargeError ? t("inbox.noteTooLarge") : t("inbox.noteFailed"),
+      );
+      void inbox.refresh();
+    }
+  };
+
   const requestDownload = (entry: OpenedUpload) => {
+    // A note opens in this page, so no saving tier or browser warning is involved.
+    if (entry.file?.metadata.type === "note") return void openNote(entry);
     if (isFirefox() && isDevToolsOpen()) return setPending({ entry, reason: "devtools" });
     if (isSafari() && entry.upload.size > SAFARI_BIG_SIZE)
       return setPending({ entry, reason: "safari" });
@@ -273,6 +288,7 @@ export function InboxPage() {
                 key={entry.upload.id}
                 entry={entry}
                 fresh={inbox.fresh.has(entry.upload.id)}
+                asks={opened.asks}
                 progress={inbox.downloads[entry.upload.id]}
                 onDownload={() => requestDownload(entry)}
                 onCancel={() => inbox.cancelDownload(entry.upload.id)}
@@ -301,6 +317,17 @@ export function InboxPage() {
           {t("inbox.delete")}
         </Button>
       </div>
+
+      <InboxNoteDialog
+        note={note?.opened ?? null}
+        onClose={() => setNote(null)}
+        onDelete={() => {
+          if (!note) return;
+          const { entry } = note;
+          setNote(null);
+          ask({ kind: "file", entry });
+        }}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   decodeUploadFragment,
-  decryptRequestTitle,
+  decryptRequestBrief,
   deriveLinkKeys,
   fromBase64url,
   toBase64url,
+  type RequestAsk,
 } from "@skysend/crypto";
+import { padNote, parseTemplate, serializeNote, type NoteBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
 import { sanitizeTitle } from "@/lib/file-request";
 import { useUpload, type UploadPhase } from "@/hooks/useUpload";
@@ -13,11 +15,21 @@ import { useUpload, type UploadPhase } from "@/hooks/useUpload";
 export type RequestUploadPhase =
   | "loading"
   | "invalid"
+  | "broken"
   | "gone"
   | "error"
   | "ready"
   | "uploading"
   | "delivered";
+
+/** What the requester asked for, read from the brief. */
+export interface SenderBrief {
+  /** Cleaned for showing, or null when there is none. */
+  title: string | null;
+  asks: RequestAsk[];
+  /** The blocks to fill in, or null for a note written freely. */
+  template: NoteBlock[] | null;
+}
 
 /** The keys behind an upload link. The public key comes only from the link, never from the server. */
 interface LinkAccess {
@@ -34,7 +46,8 @@ const BUSY: UploadPhase[] = ["zipping", "uploading", "saving-meta"];
 
 /**
  * The sender side of a file request: reads the link, asks the server how much the request
- * still takes, shows the requester's title, and uploads into the request through useUpload.
+ * still takes, reads the requester's brief, and uploads files or a note into the request
+ * through useUpload.
  */
 export function useRequestUpload(id: string, fragment: string) {
   const {
@@ -43,9 +56,11 @@ export function useRequestUpload(id: string, fragment: string) {
     cancel: cancelUpload,
     ...uploadState
   } = useUpload();
-  const [phase, setPhase] = useState<"loading" | "invalid" | "gone" | "error" | "ready">("loading");
+  const [phase, setPhase] = useState<"loading" | "invalid" | "broken" | "gone" | "error" | "ready">(
+    "loading",
+  );
   const [status, setStatus] = useState<api.SenderRequest | null>(null);
-  const [title, setTitle] = useState<string | null>(null);
+  const [brief, setBrief] = useState<SenderBrief | null>(null);
   const accessRef = useRef<LinkAccess | null>(null);
   /** Set at the click already, so a double click cannot open two uploads. */
   const sendingRef = useRef(false);
@@ -64,12 +79,12 @@ export function useRequestUpload(id: string, fragment: string) {
     let cancelled = false;
     (async () => {
       let access: LinkAccess;
-      let titleKey: CryptoKey;
+      let briefKey: CryptoKey;
       try {
         const { publicKey, linkSecret } = await decodeUploadFragment(fragment);
         const keys = await deriveLinkKeys(linkSecret, publicKey);
         access = { publicKey, uploadToken: toBase64url(keys.uploadToken) };
-        titleKey = keys.titleKey;
+        briefKey = keys.briefKey;
       } catch {
         if (!cancelled) setPhase("invalid");
         return;
@@ -84,18 +99,31 @@ export function useRequestUpload(id: string, fragment: string) {
         return;
       }
       if (cancelled) return;
-      if (sender.title) {
-        // The requester wrote it, and a broken one just stays hidden.
-        const text = await decryptRequestTitle(
-          {
-            ciphertext: fromBase64url(sender.title.ciphertext),
-            nonce: fromBase64url(sender.title.nonce),
-          },
-          titleKey,
-        ).catch(() => null);
-        if (!cancelled) setTitle(text === null ? null : sanitizeTitle(text));
-      }
+      // Every request has a brief. One that does not open was dropped or swapped, and
+      // guessing what the requester wanted would only help whoever did that.
+      const opened = await decryptRequestBrief(
+        {
+          ciphertext: fromBase64url(sender.brief.ciphertext),
+          nonce: fromBase64url(sender.brief.nonce),
+        },
+        briefKey,
+      ).catch(() => null);
       if (cancelled) return;
+      if (!opened) {
+        setPhase("broken");
+        return;
+      }
+      let template: NoteBlock[] | null = null;
+      if (opened.asks.includes("note") && opened.template) {
+        try {
+          template = parseTemplate(opened.template);
+        } catch {
+          // A template nothing in can be filled in leaves a note written freely.
+          template = null;
+        }
+      }
+      const title = opened.title === null ? "" : sanitizeTitle(opened.title);
+      setBrief({ title: title || null, asks: opened.asks, template });
       setStatus(sender);
       setPhase("ready");
     })();
@@ -104,16 +132,19 @@ export function useRequestUpload(id: string, fragment: string) {
     };
   }, [id, fragment]);
 
+  /** Sends files, or with `note` the blocks of a note, padded so its length tells little. */
   const send = useCallback(
-    async (files: File[]) => {
+    async (content: { files: File[] } | { note: NoteBlock[] }) => {
       const access = accessRef.current;
       if (!access || sendingRef.current) return;
       sendingRef.current = true;
       try {
-        await startUpload({
-          files,
-          request: { id, uploadToken: access.uploadToken, publicKey: access.publicKey },
-        });
+        const request = { id, uploadToken: access.uploadToken, publicKey: access.publicKey };
+        await startUpload(
+          "note" in content
+            ? { files: [], note: padNote(serializeNote(content.note)), request }
+            : { files: content.files, request },
+        );
       } finally {
         sendingRef.current = false;
       }
@@ -146,7 +177,7 @@ export function useRequestUpload(id: string, fragment: string) {
   return {
     phase: overall,
     status,
-    title,
+    brief,
     uploadPhase: uploadState.phase,
     progress: uploadState.progress,
     speed: uploadState.speed,

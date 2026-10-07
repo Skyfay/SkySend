@@ -5,7 +5,13 @@ import { getDb } from "../db/index.js";
 import { fileRequests, requestUploads, type FileRequest } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
 import { deleteFileRequest } from "../lib/cleanup.js";
-import { encodeBytes, tokenHeader, tokenMatches, UUID_PATTERN } from "../lib/request-validation.js";
+import {
+  briefResponse,
+  encodeBytes,
+  tokenHeader,
+  tokenMatches,
+  UUID_PATTERN,
+} from "../lib/request-validation.js";
 import type { PasswordLockout } from "../lib/password-lockout.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
@@ -79,7 +85,7 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
 
   /**
    * GET /api/inbox/:id
-   * The vault, the encrypted title and every upload that can still be downloaded, with its
+   * The vault, the encrypted brief and every upload that can still be downloaded, with its
    * wrapped file secret. Listing never counts as a download.
    */
   route.get("/:id", async (c) => {
@@ -97,13 +103,7 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
     return c.json({
       vault: encodeBytes(request.vault),
       vaultNonce: encodeBytes(request.vaultNonce),
-      title:
-        request.titleCiphertext && request.titleNonce
-          ? {
-              ciphertext: encodeBytes(request.titleCiphertext),
-              nonce: encodeBytes(request.titleNonce),
-            }
-          : null,
+      brief: briefResponse(request),
       hasPassword: request.hasPassword,
       open: !request.closed && request.closesAt > new Date(),
       closesAt: request.closesAt.toISOString(),

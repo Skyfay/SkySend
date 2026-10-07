@@ -2,11 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { expectedPlaintextSize, type Argon2idHashFn } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { saveDecryptedDownload } from "@/lib/download-tiers";
+import type { ReadBlock } from "@skysend/note-format";
 import {
   inboxNeedsPassword,
+  noteTooLarge,
   openInbox,
   openInboxLink,
+  readInboxNote,
   sanitizeFilename,
+  NoteTooLargeError,
   type InboxAccess,
   type OpenedInbox,
   type OpenedUpload,
@@ -170,6 +174,23 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
       return { ...s, downloads };
     });
 
+  /** Counts one more download of an upload in the list, as the server just did. */
+  const countDownload = useCallback(
+    (uploadId: string) =>
+      setState((s) => ({
+        ...s,
+        opened: s.opened && {
+          ...s.opened,
+          uploads: s.opened.uploads.map((u) =>
+            u.upload.id === uploadId
+              ? { ...u, upload: { ...u.upload, downloadCount: u.upload.downloadCount + 1 } }
+              : u,
+          ),
+        },
+      })),
+    [],
+  );
+
   /** Decrypts one upload and hands it to the browser. Throws what the pipeline throws. */
   const download = useCallback(
     async (entry: OpenedUpload) => {
@@ -199,17 +220,7 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
           onProgress: (progress) => setDownload(uploadId, progress),
           onDebug: () => null,
         });
-        setState((s) => ({
-          ...s,
-          opened: s.opened && {
-            ...s.opened,
-            uploads: s.opened.uploads.map((u) =>
-              u.upload.id === uploadId
-                ? { ...u, upload: { ...u.upload, downloadCount: u.upload.downloadCount + 1 } }
-                : u,
-            ),
-          },
-        }));
+        countDownload(uploadId);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         throw err;
@@ -218,7 +229,27 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
         setDownload(uploadId, null);
       }
     },
-    [id],
+    [id, countDownload],
+  );
+
+  /**
+   * Opens a note in this page. It counts as a download, and its plaintext lives in the state
+   * of the caller only, never in a store. `maxSize` is the largest note the instance takes.
+   */
+  const openNote = useCallback(
+    async (
+      entry: OpenedUpload,
+      maxSize: number,
+    ): Promise<{ blocks: ReadBlock[]; unreadable: boolean }> => {
+      const access = accessRef.current;
+      if (!access || entry.file?.metadata.type !== "note") throw new Error("Not a note");
+      // Checked before the fetch, so a crafted note costs no download and no memory.
+      if (noteTooLarge(entry.file, maxSize)) throw new NoteTooLargeError("Note too large");
+      const { stream } = await api.downloadInboxFile(id, entry.upload.id, access.inboxToken);
+      countDownload(entry.upload.id);
+      return readInboxNote(entry.file, stream, maxSize);
+    },
+    [id, countDownload],
   );
 
   const cancelDownload = useCallback((uploadId: string) => {
@@ -257,5 +288,15 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
     setState((s) => ({ ...s, phase: "deleted", inbox: null, opened: null }));
   }, [id]);
 
-  return { ...state, unlock, refresh, download, cancelDownload, deleteFile, close, deleteAll };
+  return {
+    ...state,
+    unlock,
+    refresh,
+    download,
+    openNote,
+    cancelDownload,
+    deleteFile,
+    close,
+    deleteAll,
+  };
 }

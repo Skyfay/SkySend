@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateEncryptedSize,
+  createEncryptStream,
+  decodeUploadFragment,
+  decryptRequestBrief,
   deriveKeys,
+  deriveLinkKeys,
   encryptMetadata,
   fromBase64url,
   generateSalt,
@@ -9,13 +14,17 @@ import {
   wrapFileSecret,
   type Argon2idHashFn,
 } from "@skysend/crypto";
+import { padNote, parseTemplate, serializeNote, type NoteBlock } from "@skysend/note-format";
 import {
   inboxNeedsPassword,
+  noteTooLarge,
   openInbox,
   openInboxLink,
   prepareRequest,
+  readInboxNote,
   sanitizeFilename,
   sanitizeTitle,
+  NoteTooLargeError,
 } from "../../src/lib/file-request.js";
 import type { Inbox, InboxUpload } from "../../src/lib/api.js";
 
@@ -35,7 +44,7 @@ function inboxFor(
   return {
     vault: body.vault,
     vaultNonce: body.vaultNonce,
-    title: body.title,
+    brief: body.brief,
     hasPassword: body.hasPassword,
     open: true,
     closesAt: "2099-01-01T00:00:00.000Z",
@@ -82,6 +91,145 @@ async function senderUpload(
     },
   };
 }
+
+/** What a sender stores for a note: the padded document, ECE, note metadata, the wrap. */
+async function senderNote(uploadFragment: string, document: string, size?: number) {
+  const { publicKey } = await decodeUploadFragment(uploadFragment);
+  const uploadId = crypto.randomUUID();
+  const secret = generateSecret();
+  const salt = generateSalt();
+  const keys = await deriveKeys(secret, salt);
+  const bytes = new TextEncoder().encode(document);
+  const stream = new Blob([bytes]).stream().pipeThrough(createEncryptStream(keys.fileKey));
+  const ciphertext = new Uint8Array(await new Response(stream).arrayBuffer());
+  const meta = await encryptMetadata({ type: "note", size: size ?? bytes.length }, keys.metaKey);
+  const wrapped = await wrapFileSecret(publicKey, REQUEST_ID, uploadId, secret);
+  const upload: InboxUpload = {
+    id: uploadId,
+    size: calculateEncryptedSize(size ?? bytes.length),
+    fileCount: 1,
+    salt: toBase64url(salt),
+    wrapEnc: toBase64url(wrapped.enc),
+    wrapCiphertext: toBase64url(wrapped.ciphertext),
+    encryptedMeta: toBase64url(meta.ciphertext),
+    metaNonce: toBase64url(meta.iv),
+    downloadCount: 0,
+    maxDownloads: 5,
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  return { upload, stream: () => new Blob([ciphertext]).stream() };
+}
+
+const MiB = 1024 * 1024;
+
+describe("note requests in the browser", () => {
+  it("writes what is asked for and the template into the brief a sender reads", async () => {
+    const template: NoteBlock[] = [
+      { type: "password", entries: [{ label: "PIN", value: "not for the template" }] },
+    ];
+    const prepared = await prepareRequest({
+      title: "Bank",
+      asks: ["files", "note"],
+      template,
+    });
+    const { publicKey, linkSecret } = await decodeUploadFragment(prepared.uploadFragment);
+    const { briefKey } = await deriveLinkKeys(linkSecret, publicKey);
+    const brief = await decryptRequestBrief(
+      {
+        ciphertext: fromBase64url(prepared.body.brief.ciphertext),
+        nonce: fromBase64url(prepared.body.brief.nonce),
+      },
+      briefKey,
+    );
+    expect(brief).toMatchObject({ title: "Bank", asks: ["files", "note"] });
+    expect(parseTemplate(brief.template)).toEqual([
+      { type: "password", entries: [{ label: "PIN", value: "" }] },
+    ]);
+
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body), access.keys);
+    expect(opened).toMatchObject({ title: "Bank", asks: ["files", "note"] });
+  });
+
+  it("asks for files with no template when nothing else is said", async () => {
+    const prepared = await prepareRequest({
+      template: [{ type: "sshkey", publicKey: "", privateKey: "", passphrase: "" }],
+    });
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body), access.keys);
+    expect(opened.asks).toEqual(["files"]);
+  });
+
+  it("opens a note a sender put into the inbox, with every label cleaned", async () => {
+    const prepared = await prepareRequest({ asks: ["note"] });
+    const blocks: NoteBlock[] = [
+      { type: "password", entries: [{ label: "PIN\u202Egnp", value: "4711" }] },
+      { type: "text", format: "plain", text: "ok", label: "Note\u0007" },
+      { type: "code", title: "a\u200Bb", language: "auto", code: "x" },
+    ];
+    const note = await senderNote(prepared.uploadFragment, padNote(serializeNote(blocks)));
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body, [note.upload]), access.keys);
+    const file = opened.uploads[0]!.file!;
+    expect(file.metadata).toEqual({ type: "note", size: 1024 });
+    expect(noteTooLarge(file, MiB)).toBe(false);
+
+    const read = await readInboxNote(file, note.stream(), MiB);
+    expect(read.unreadable).toBe(false);
+    expect(read.blocks).toEqual([
+      { type: "password", entries: [{ label: "PINgnp", value: "4711" }] },
+      { type: "text", format: "plain", text: "ok", label: "Note" },
+      { type: "code", title: "ab", language: "auto", code: "x" },
+    ]);
+  });
+
+  it("shows a note that does not parse as plain text, so nothing in it is lost", async () => {
+    const prepared = await prepareRequest({ asks: ["note"] });
+    const note = await senderNote(prepared.uploadFragment, padNote("not a document"));
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body, [note.upload]), access.keys);
+    const read = await readInboxNote(opened.uploads[0]!.file!, note.stream(), MiB);
+    expect(read).toEqual({
+      unreadable: true,
+      blocks: [{ type: "text", format: "plain", text: "not a document" }],
+    });
+  });
+
+  it("refuses to read a note larger than the instance takes, before reading it", async () => {
+    const prepared = await prepareRequest({ asks: ["note"] });
+    const note = await senderNote(prepared.uploadFragment, padNote("x".repeat(5000)));
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body, [note.upload]), access.keys);
+    const file = opened.uploads[0]!.file!;
+    expect(noteTooLarge(file, 1024)).toBe(true);
+    await expect(readInboxNote(file, note.stream(), 1024)).rejects.toThrow(NoteTooLargeError);
+  });
+
+  it("counts a note as damaged when its size is not padded or not what is stored", async () => {
+    const prepared = await prepareRequest({ asks: ["note"] });
+    const unpadded = await senderNote(prepared.uploadFragment, '{"v":1,"blocks":[]}');
+    const lying = await senderNote(prepared.uploadFragment, padNote("{}"));
+    lying.upload.size += 1;
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(
+      REQUEST_ID,
+      inboxFor(prepared.body, [unpadded.upload, lying.upload]),
+      access.keys,
+    );
+    expect(opened.uploads.map((u) => u.file)).toEqual([null, null]);
+  });
+
+  it("does not read a file as a note", async () => {
+    const prepared = await prepareRequest({});
+    const file = await senderUpload(prepared.uploadFragment, "a.txt");
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body, [file.upload]), access.keys);
+    const entry = opened.uploads[0]!.file!;
+    expect(noteTooLarge(entry, 0)).toBe(false);
+    await expect(readInboxNote(entry, new Blob([]).stream(), MiB)).rejects.toThrow("Not a note");
+  });
+});
 
 describe("file requests in the browser", () => {
   it("opens the inbox a new request made, with its title and the upload link", async () => {

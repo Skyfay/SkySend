@@ -28,7 +28,7 @@ import {
   randomBytes,
   wrapFileSecret,
   PASSWORD_SALT_LENGTH,
-  type FileMetadata,
+  type RequestUploadMetadata,
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import { argon2id } from "hash-wasm";
@@ -78,7 +78,7 @@ export interface UploadWorkerRequest {
   /** Optional password (empty string = no password). */
   password: string;
   /** File metadata for encrypted meta blob. */
-  metadata: FileMetadata;
+  metadata: RequestUploadMetadata;
   /** Number of files in the upload. */
   fileCount: number;
   /** Base URL for API requests (e.g. "http://localhost:3000" in dev). */
@@ -209,7 +209,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     // The archive size is only known once the zip is built. The recipient needs
     // it to tell a complete download from one the server cut short.
-    const metadata: FileMetadata =
+    const metadata: RequestUploadMetadata =
       msg.metadata.type === "archive"
         ? { ...msg.metadata, archiveSize: plaintextSize }
         : msg.metadata;
@@ -520,7 +520,7 @@ interface RequestUploadOpts {
   request: NonNullable<UploadWorkerRequest["request"]>;
   secret: Uint8Array;
   salt: Uint8Array;
-  metadata: FileMetadata;
+  metadata: RequestUploadMetadata;
   metaKey: CryptoKey;
   fileCount: number;
   encryptedStream: ReadableStream<Uint8Array>;

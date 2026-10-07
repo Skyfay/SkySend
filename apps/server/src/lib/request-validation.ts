@@ -70,3 +70,17 @@ export function tokenMatches(value: string | undefined, storedHash: string): boo
 export function encodeBytes(value: Buffer): string {
   return toBase64url(new Uint8Array(value));
 }
+
+/**
+ * The encrypted brief of a request for a response. Every request is created with one. A row
+ * a development build wrote before briefs holds an old title here, or nothing, and its vault
+ * opens for no one, so it only has to stay readable for the routes.
+ */
+export function briefResponse(request: {
+  briefCiphertext: Buffer | null;
+  briefNonce: Buffer | null;
+}): { ciphertext: string; nonce: string } | null {
+  return request.briefCiphertext && request.briefNonce
+    ? { ciphertext: encodeBytes(request.briefCiphertext), nonce: encodeBytes(request.briefNonce) }
+    : null;
+}

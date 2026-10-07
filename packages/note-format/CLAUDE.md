@@ -20,6 +20,10 @@ The encryption never sees blocks, only a string. This package never sees a key. 
 3. **Renderers stay safe for every block.** This package only returns data. The web app renders text as text, Markdown through `rehype-sanitize`, code through DOMPurify. A server that lies about `kind` must only ever pick the wrong reader, never unlock unsafe rendering.
 4. **`serializeNote` validates too**, so an editor bug cannot write a note its recipient cannot read.
 
+## Templates
+
+`template.ts` holds the templates of file requests: a note document without values, which a requester lays out and a sender fills in. `parseTemplate` treats one as untrusted input like a note, throws every value away and cleans every label with `cleanLabel`. `padNote` pads a note sent into a request to whole 1 KiB blocks. A template is shaped like a note, so a filled-in template is a note and needs no format of its own.
+
 ## Legacy notes
 
 Before v3 every note had one content type with a plaintext format of its own. `legacy.ts` turns those into blocks, following the v2 web app's parsing exactly, and `tests/legacy.test.ts` pins it with the formats v2 wrote.

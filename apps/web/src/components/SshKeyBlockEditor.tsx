@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
 import { copyText } from "@/lib/clipboard";
+import type { EditorMode } from "@/lib/note-editor";
 import { Ed25519UnsupportedError, generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "@/lib/ssh-keygen";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -36,13 +37,15 @@ interface SshKeyBlockEditorProps {
   onChange: (block: SshKeyBlock) => void;
   controls: ReactNode;
   disabled: boolean;
+  /** A template asks for a key and holds none, filling it in works like writing a note. */
+  mode?: EditorMode;
 }
 
 /**
  * An SSH key pair, generated in the browser or pasted. The block only holds what goes into
  * the note. The settings of the generator stay in this editor.
  */
-export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKeyBlockEditorProps) {
+export function SshKeyBlockEditor({ block, onChange, controls, disabled, mode: editorMode = "compose" }: SshKeyBlockEditorProps) {
   const { t } = useTranslation();
   const id = useId();
   const [mode, setMode] = useState<Mode>("generate");
@@ -86,6 +89,14 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
   };
 
   const keyTextarea = "resize-y rounded-xl border-0 bg-transparent px-3 font-mono text-sm shadow-none placeholder:font-sans focus-visible:ring-0";
+
+  if (editorMode === "template") {
+    return (
+      <BlockEditorFrame icon={Terminal} title={t("tab.sshkey")} controls={controls}>
+        <p className="p-3 text-xs text-muted-foreground">{t("template.sshKeyHint")}</p>
+      </BlockEditorFrame>
+    );
+  }
 
   return (
     <BlockEditorFrame

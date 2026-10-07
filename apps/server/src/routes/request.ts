@@ -4,8 +4,10 @@ import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { and, eq, gt, sql } from "drizzle-orm";
 import {
+  REQUEST_BRIEF_BLOCK,
+  REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH,
+  REQUEST_BRIEF_MIN_CIPHERTEXT_LENGTH,
   REQUEST_NONCE_LENGTH,
-  REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH,
   REQUEST_TOKEN_LENGTH,
   REQUEST_VAULT_LENGTH,
   META_IV_LENGTH,
@@ -19,7 +21,7 @@ import { getConfig } from "../lib/config.js";
 import { createChunkedUploads } from "../lib/chunked-upload.js";
 import {
   base64urlBytes,
-  encodeBytes,
+  briefResponse,
   hashToken,
   tokenMatches,
   UUID_PATTERN,
@@ -49,14 +51,17 @@ const createSchema = z
     inboxAuthToken: base64urlBytes(REQUEST_TOKEN_LENGTH),
     inboxOwnerToken: base64urlBytes(REQUEST_TOKEN_LENGTH),
     uploadToken: base64urlBytes(REQUEST_TOKEN_LENGTH),
-    title: z
+    // Every request has one. A sender who gets none sees a broken request, not a plain one.
+    // Briefs are padded to whole blocks, so any other length did not come from a client.
+    brief: z
       .object({
-        ciphertext: base64urlBytes(16, REQUEST_TITLE_MAX_CIPHERTEXT_LENGTH),
+        ciphertext: base64urlBytes(
+          REQUEST_BRIEF_MIN_CIPHERTEXT_LENGTH,
+          REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH,
+        ).refine((bytes) => (bytes.length - 16) % REQUEST_BRIEF_BLOCK === 0, "Unpadded brief"),
         nonce: base64urlBytes(REQUEST_NONCE_LENGTH),
       })
-      .strict()
-      .nullable()
-      .default(null),
+      .strict(),
     expireSec: z.number().int().positive(),
     maxUploads: z.number().int().positive(),
     maxSize: z.number().int().positive(),
@@ -277,12 +282,13 @@ export function createRequestRoute({
 
   /**
    * POST /api/request
-   * Stores a new request: the sealed vault, the three tokens and the encrypted title.
+   * Stores a new request: the sealed vault, the three tokens and the encrypted brief.
    */
   route.post(
     "/",
     // Only creating a request needs the login. A sender never does, the upload link is enough.
     createGuard ?? ((_c, next) => next()),
+    // The largest brief is about 11 KiB of base64url, the rest of the body well under 1 KiB.
     bodyLimit({
       maxSize: 16 * 1024,
       onError: (c) => c.json({ error: "Request body too large" }, 413),
@@ -344,8 +350,8 @@ export function createRequestRoute({
           inboxAuthToken: hashToken(data.inboxAuthToken),
           inboxOwnerToken: hashToken(data.inboxOwnerToken),
           uploadToken: hashToken(data.uploadToken),
-          titleCiphertext: data.title?.ciphertext ?? null,
-          titleNonce: data.title?.nonce ?? null,
+          briefCiphertext: data.brief.ciphertext,
+          briefNonce: data.brief.nonce,
           hasPassword: data.hasPassword,
           maxUploads: data.maxUploads,
           maxSize: data.maxSize,
@@ -360,7 +366,7 @@ export function createRequestRoute({
 
   /**
    * GET /api/request/:id
-   * What a sender sees: the encrypted title and how much the request still takes.
+   * What a sender sees: the encrypted brief and how much the request still takes.
    */
   route.get("/:id", async (c) => {
     const request = await requestForUploadToken(c, c.req.param("id"));
@@ -368,13 +374,7 @@ export function createRequestRoute({
     const config = getConfig();
     const open = isOpen(request);
     return c.json({
-      title:
-        request.titleCiphertext && request.titleNonce
-          ? {
-              ciphertext: encodeBytes(request.titleCiphertext),
-              nonce: encodeBytes(request.titleNonce),
-            }
-          : null,
+      brief: briefResponse(request),
       open,
       closesAt: request.closesAt.toISOString(),
       uploadsLeft: open ? Math.max(0, request.maxUploads - request.reservedUploads) : 0,

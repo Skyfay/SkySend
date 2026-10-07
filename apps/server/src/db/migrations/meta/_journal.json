@@ -29,6 +29,13 @@
       "when": 1791321738762,
       "tag": "0003_fearless_black_bird",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791361713655,
+      "tag": "0004_request_brief",
+      "breakpoints": true
     }
   ]
 }

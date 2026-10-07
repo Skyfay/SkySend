@@ -26,9 +26,9 @@
   },
   "nav": {
     "upload": "Last opp",
-    "myUploads": "Mine opplastinger",
+    "myUploads": "Mine lenker",
     "menu": "Meny",
-    "requests": "Forespørsler",
+    "requests": "Be om",
     "requestsUnseen": "Nye opplastinger i forespørsler"
   },
   "tab": {
@@ -129,9 +129,12 @@
     "firefoxDevToolsContinue": "Last ned likevel"
   },
   "myUploads": {
-    "title": "Mine opplastinger",
+    "title": "Mine lenker",
     "empty": "Ingen opplastinger ennå",
     "emptyHint": "Opplastinger du gjør på denne enheten vil vises her.",
+    "intro": "Alt du deler eller ber om på denne enheten, vises her.",
+    "tabShared": "Delt",
+    "tabRequests": "Forespørsler",
     "copyLink": "Kopier lenke",
     "deleteConfirm": "Er du sikker på at du vil slette denne opplastingen?",
     "deleteNoteConfirm": "Er du sikker på at du vil slette dette notatet?",
@@ -439,7 +442,7 @@
     "faq3Q": "Hva tilfører et passord?",
     "faq3A": "Den som får tak i lenken trenger fortsatt passordet. Send det via en annen kanal enn lenken.",
     "faq4Q": "Når slettes dataene mine?",
-    "faq4A": "Når tiden går ut eller grensen for nedlastinger eller visninger nås, avhengig av hva som inntreffer først. Du kan også slette en deling tidligere under Mine opplastinger.",
+    "faq4A": "Når tiden går ut eller grensen for nedlastinger eller visninger nås, avhengig av hva som inntreffer først. Du kan også slette en deling tidligere under Mine lenker.",
     "ctaTitle": "Klar til å dele noe?",
     "ctaText": "Det tar bare noen sekunder, og ingen andre enn mottakeren kan lese det.",
     "ctaButton": "Begynn å dele"
@@ -469,18 +472,36 @@
     "inboxLinkWarning": "Ikke del innbokslenken. Den er nøkkelen til alle filene i denne forespørselen og eneste vei inn. Lagre den før du forlater siden.",
     "openInbox": "Åpne innboksen",
     "newRequest": "Ny forespørsel",
+    "toList": "Til forespørslene mine",
     "error": {
       "signInRequired": "Logg inn for å opprette en forespørsel.",
       "dailyLimit": "Du har opprettet så mange forespørsler som serveren tillater per dag. Prøv igjen i morgen.",
       "failed": "Forespørselen kunne ikke opprettes."
     },
     "retentionHint_one": "Hver fil blir liggende i {{time}} etter at den kom, og kan lastes ned {{count}} gang.",
-    "retentionHint_other": "Hver fil blir liggende i {{time}} etter at den kom, og kan lastes ned {{count}} ganger."
+    "retentionHint_other": "Hver fil blir liggende i {{time}} etter at den kom, og kan lastes ned {{count}} ganger.",
+    "asks": "Be om",
+    "asksFiles": "Filer",
+    "asksNote": "Notat",
+    "asksBoth": "Begge",
+    "summaryNote": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver av dem et notat."
+  },
+  "template": {
+    "title": "Mal for notatet",
+    "hint": "Bestem hva avsenderen fyller ut, for eksempel et brukernavn og et passord. Uten felt skriver avsenderen fritt.",
+    "tooLarge": "Malen er for stor. Fjern noen felt.",
+    "fieldLabel": "Felt {{number}}, for eksempel Passord",
+    "addField": "Legg til et felt",
+    "textLabel": "Hva teksten handler om, for eksempel Merknader",
+    "textHint": "Avsenderen skriver teksten.",
+    "codeHint": "Avsenderen limer inn koden.",
+    "sshKeyHint": "Avsenderen legger til en SSH-nøkkel."
   },
   "requests": {
     "title": "Filforespørsler",
     "intro": "Be noen om filer. De laster dem opp kryptert, og bare du kan åpne dem.",
-    "yours": "Dine forespørsler",
+    "empty": "Ingen forespørsler ennå",
+    "emptyAction": "Opprett en forespørsel",
     "localHint": "Denne listen finnes bare i denne nettleseren. Serveren vet ikke hvilke forespørsler som er dine.",
     "untitled": "Forespørsel uten tittel",
     "passwordProtected": "Passordbeskyttet",
@@ -534,7 +555,15 @@
     "deleteText": "Forespørselen og alle filene i den slettes for godt.",
     "passwordRequired": "Denne innboksen er passordbeskyttet",
     "deleteFileTitle": "Slette denne filen?",
-    "deleteFileText": "Den slettes for godt. Plassen den har i forespørselen forblir brukt."
+    "deleteFileText": "Den slettes for godt. Plassen den har i forespørselen forblir brukt.",
+    "note": "Notat",
+    "open": "Åpne",
+    "viewsLeft_one": "{{count}} visning igjen",
+    "viewsLeft_other": "{{count}} visninger igjen",
+    "notAsked": "Ikke bedt om",
+    "saveText": "Lagre som tekst",
+    "noteTooLarge": "Dette notatet er større enn noe notat denne instansen tar imot, så det ble ikke åpnet.",
+    "noteFailed": "Notatet kunne ikke åpnes."
   },
   "requestUpload": {
     "title": "Noen ber deg om <a>filer</a>",
@@ -561,9 +590,17 @@
       "gone": "Denne forespørselen finnes ikke lenger.",
       "full": "Denne forespørselen er full nå.",
       "closed": "Denne forespørselen ble lukket i mellomtiden.",
-      "tooLarge": "Det er ikke nok plass igjen i denne forespørselen.",
+      "tooLarge": "Opplastingen er større enn denne forespørselen tillater.",
       "quota": "Du har nådd opplastingsgrensen på denne serveren. Prøv igjen senere."
     },
-    "errorText": "Forespørselen kunne ikke lastes. Last inn siden på nytt for å prøve igjen."
+    "errorText": "Forespørselen kunne ikke lastes. Last inn siden på nytt for å prøve igjen.",
+    "broken": "Denne forespørselen kan ikke leses",
+    "brokenText": "Beskrivelsen mangler eller er endret. Be den som sendte deg lenken om en ny.",
+    "noteStart": "Hva vil du sende?",
+    "noteHint": "Disse feltene har den som spør lagt opp, og ingen har sjekket dem. Skriv bare inn det du ville gitt denne personen direkte.",
+    "limitsNote_one": "Kryptert bare for den som spør. {{count}} opplasting igjen, stenger om {{time}}.",
+    "limitsNote_other": "Kryptert bare for den som spør. {{count}} opplastinger igjen, stenger om {{time}}.",
+    "fileTabHint": "Opptil {{size}} per opplasting",
+    "noteTabHint": "Passord, tekst, kode eller en nøkkel"
   }
 }

@@ -4,11 +4,14 @@ import {
   Archive,
   Clock,
   Download,
+  Eye,
   MoreHorizontal,
+  NotebookPen,
   ShieldQuestion,
   Trash2,
   X,
 } from "lucide-react";
+import type { RequestAsk } from "@skysend/crypto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,8 +31,11 @@ interface InboxFileRowProps {
   entry: OpenedUpload;
   /** Whether it arrived since the inbox was last open in this browser. */
   fresh: boolean;
+  /** What the request asks for, so a kind it did not ask for stands out. */
+  asks: RequestAsk[];
   /** Progress in percent while a download runs. */
   progress: number | undefined;
+  /** Downloads a file, or opens a note in this page. Either one counts as a download. */
   onDownload: () => void;
   onCancel: () => void;
   onDelete: () => void;
@@ -42,6 +48,7 @@ interface InboxFileRowProps {
 export function InboxFileRow({
   entry,
   fresh,
+  asks,
   progress,
   onDownload,
   onCancel,
@@ -51,6 +58,8 @@ export function InboxFileRow({
   const { upload, file } = entry;
   const metadata = file?.metadata;
   const downloadsLeft = upload.maxDownloads - upload.downloadCount;
+  const isNote = metadata?.type === "note";
+  const notAsked = metadata !== undefined && !asks.includes(isNote ? "note" : "files");
 
   let tile;
   let title: string;
@@ -63,6 +72,13 @@ export function InboxFileRow({
     );
     title = t("inbox.damaged");
     detail = t("inbox.damagedHint");
+  } else if (metadata.type === "note") {
+    tile = (
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
+        <NotebookPen className="h-4 w-4" />
+      </span>
+    );
+    title = t("inbox.note");
   } else if (metadata.type === "single") {
     const name = sanitizeFilename(metadata.name);
     const badge = fileBadge(name);
@@ -86,10 +102,13 @@ export function InboxFileRow({
     title = t("myUploads.files", { count: metadata.files.length });
     detail = metadata.files.map((f) => sanitizeFilename(f.name)).join(", ");
   }
+  // The size of a note is its padded size, which says nothing about it.
   const size = metadata
-    ? metadata.type === "single"
-      ? metadata.size
-      : metadata.totalSize
+    ? metadata.type === "archive"
+      ? metadata.totalSize
+      : metadata.type === "single"
+        ? metadata.size
+        : null
     : upload.size;
 
   return (
@@ -107,9 +126,9 @@ export function InboxFileRow({
                 {t("inbox.new")}
               </Badge>
             )}
-            <span>{formatBytes(size)}</span>
-            <HistoryStat icon={Download}>
-              {t("inbox.downloadsLeft", { count: downloadsLeft })}
+            {size !== null && <span>{formatBytes(size)}</span>}
+            <HistoryStat icon={isNote ? Eye : Download}>
+              {t(isNote ? "inbox.viewsLeft" : "inbox.downloadsLeft", { count: downloadsLeft })}
             </HistoryStat>
             <HistoryStat icon={Clock}>
               {t("inbox.deletedIn", { time: formatTimeRemaining(upload.expiresAt) })}
@@ -125,6 +144,11 @@ export function InboxFileRow({
                 <TooltipContent>{t("inbox.unverifiedHint")}</TooltipContent>
               </Tooltip>
             )}
+            {notAsked && (
+              <Badge variant="warning" className="h-5 px-2">
+                {t("inbox.notAsked")}
+              </Badge>
+            )}
           </div>
           {progress !== undefined && <Progress value={progress} className="mt-2 h-1.5" />}
         </div>
@@ -139,8 +163,8 @@ export function InboxFileRow({
         ) : (
           metadata && (
             <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadsLeft <= 0}>
-              <Download />
-              {t("common.download")}
+              {isNote ? <Eye /> : <Download />}
+              {isNote ? t("inbox.open") : t("common.download")}
             </Button>
           )
         )}

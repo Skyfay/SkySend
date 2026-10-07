@@ -7,26 +7,31 @@ import {
   decodeInboxFragment,
   decodeUploadFragment,
   decryptMetadata,
-  decryptRequestTitle,
+  decryptRequestBrief,
   deriveInboxKeys,
   deriveKeys,
   deriveLinkKeys,
   encodeInboxFragment,
   encodeUploadFragment,
   encryptMetadata,
-  encryptRequestTitle,
+  concatBytes,
+  encryptRequestBrief,
+  encodeUtf8,
   generateSecret,
   openRequestKey,
   randomBytes,
   toBase64url,
   unwrapFileSecret,
   wrapFileSecret,
+  REQUEST_BRIEF_BLOCK,
+  REQUEST_BRIEF_MAX_BYTES,
   REQUEST_SUITE,
   REQUEST_TITLE_MAX_BYTES,
   REQUEST_VAULT_LENGTH,
   WRAP_CIPHERTEXT_LENGTH,
   WRAP_ENC_LENGTH,
   type NewFileRequest,
+  type RequestBrief,
   type RequestKey,
   type WrappedFileSecret,
 } from "../src/index.js";
@@ -37,8 +42,10 @@ const requestId = crypto.randomUUID();
 const uploadId = crypto.randomUUID();
 
 /** A fresh request and its opened vault, the way the requester's browser holds it. */
-async function freshRequest(title?: string): Promise<{ request: NewFileRequest; key: RequestKey }> {
-  const request = await createFileRequest({ title });
+async function freshRequest(
+  brief: Partial<RequestBrief> = {},
+): Promise<{ request: NewFileRequest; key: RequestKey }> {
+  const request = await createFileRequest(brief);
   const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
   return {
     request,
@@ -46,9 +53,26 @@ async function freshRequest(title?: string): Promise<{ request: NewFileRequest; 
       request.server.vault,
       request.server.vaultNonce,
       inboxKey,
-      request.server.title,
+      request.server.brief,
     ),
   };
+}
+
+const PLAIN_BRIEF: RequestBrief = { title: null, asks: ["files"], template: null };
+
+/** Encrypts any bytes the way a brief is encrypted, to hand the reader what no writer makes. */
+async function rawBrief(briefKey: CryptoKey, text: string) {
+  const nonce = randomBytes(12);
+  const padded = new Uint8Array(REQUEST_BRIEF_BLOCK).fill(0x20);
+  padded.set(encodeUtf8(text));
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: nonce, additionalData: encodeUtf8("skysend-request-brief-v1") },
+      briefKey,
+      padded,
+    ),
+  );
+  return { ciphertext, nonce };
 }
 
 describe("the frozen file request fixture", () => {
@@ -88,12 +112,12 @@ describe("the frozen file request fixture", () => {
 
   it("should open the frozen vault and unwrap the frozen file secret", async () => {
     const { inboxKey } = await deriveInboxKeys(fromHex(input.inboxSecret));
-    const title = { ciphertext: fromHex(output.titleCiphertext), nonce: fromHex(input.titleNonce) };
+    const brief = { ciphertext: fromHex(output.briefCiphertext), nonce: fromHex(input.briefNonce) };
     const key = await openRequestKey(
       fromHex(output.vault),
       fromHex(input.vaultNonce),
       inboxKey,
-      title,
+      brief,
     );
     expect(toHex(key.publicKey)).toBe(input.publicKey);
     expect(toHex(key.linkSecret)).toBe(input.linkSecret);
@@ -103,10 +127,11 @@ describe("the frozen file request fixture", () => {
     );
   });
 
-  it("should decrypt the frozen title", async () => {
-    const { titleKey } = await deriveLinkKeys(fromHex(input.linkSecret), publicKey);
-    const title = { ciphertext: fromHex(output.titleCiphertext), nonce: fromHex(input.titleNonce) };
-    expect(await decryptRequestTitle(title, titleKey)).toBe(input.title);
+  it("should decrypt the frozen brief", async () => {
+    const { briefKey } = await deriveLinkKeys(fromHex(input.linkSecret), publicKey);
+    const brief = { ciphertext: fromHex(output.briefCiphertext), nonce: fromHex(input.briefNonce) };
+    expect(brief.ciphertext.length).toBe(REQUEST_BRIEF_BLOCK + 16);
+    expect(await decryptRequestBrief(brief, briefKey)).toEqual(input.brief);
   });
 });
 
@@ -119,13 +144,14 @@ describe("createFileRequest", () => {
     expect(request.server.vault.length).toBe(REQUEST_VAULT_LENGTH);
     expect(key.publicKey).toEqual(request.local.publicKey);
     expect(key.linkSecret).toEqual(request.local.linkSecret);
-    expect(request.server.title).toBeNull();
+    const { briefKey } = await deriveLinkKeys(key.linkSecret, key.publicKey);
+    expect(await decryptRequestBrief(request.server.brief, briefKey)).toEqual(PLAIN_BRIEF);
   });
 
-  it("should hand the server only the vault, the tokens and the title", async () => {
-    const { request } = await freshRequest("Tax documents");
+  it("should hand the server only the vault, the tokens and the brief", async () => {
+    const { request } = await freshRequest({ title: "Tax documents" });
     expect(Object.keys(request.server).sort()).toEqual(
-      ["inboxAuthToken", "inboxOwnerToken", "title", "uploadToken", "vault", "vaultNonce"].sort(),
+      ["brief", "inboxAuthToken", "inboxOwnerToken", "uploadToken", "vault", "vaultNonce"].sort(),
     );
     const sent = JSON.stringify(request.server, (_key, value: unknown) =>
       value instanceof Uint8Array ? toHex(value) : value,
@@ -148,10 +174,22 @@ describe("createFileRequest", () => {
     expect(request.server.uploadToken).toEqual(link.uploadToken);
   });
 
-  it("should encrypt the title for the upload link", async () => {
-    const { request, key } = await freshRequest("Unterlagen 2026");
-    const { titleKey } = await deriveLinkKeys(key.linkSecret, key.publicKey);
-    expect(await decryptRequestTitle(request.server.title!, titleKey)).toBe("Unterlagen 2026");
+  it("should encrypt the brief for the upload link", async () => {
+    const brief: RequestBrief = {
+      title: "Unterlagen 2026",
+      asks: ["files", "note"],
+      template: { v: 1, blocks: [{ type: "password", entries: [{ label: "PIN", value: "" }] }] },
+    };
+    const { request, key } = await freshRequest(brief);
+    const { briefKey } = await deriveLinkKeys(key.linkSecret, key.publicKey);
+    expect(await decryptRequestBrief(request.server.brief, briefKey)).toEqual(brief);
+  });
+
+  it("should refuse a brief it cannot write", async () => {
+    await expect(createFileRequest({ asks: [] })).rejects.toThrow("at least one");
+    await expect(
+      createFileRequest({ title: "a".repeat(REQUEST_TITLE_MAX_BYTES + 1) }),
+    ).rejects.toThrow(`Title must be at most ${REQUEST_TITLE_MAX_BYTES} bytes`);
   });
 
   it("should never hand out an exportable key", async () => {
@@ -159,9 +197,9 @@ describe("createFileRequest", () => {
     expect(key.privateKey.extractable).toBe(false);
     await expect(crypto.subtle.exportKey("jwk", key.privateKey)).rejects.toThrow();
     const { inboxKey } = await deriveInboxKeys(randomBytes(32));
-    const { titleKey } = await deriveLinkKeys(randomBytes(32), key.publicKey);
+    const { briefKey } = await deriveLinkKeys(randomBytes(32), key.publicKey);
     expect(inboxKey.extractable).toBe(false);
-    expect(titleKey.extractable).toBe(false);
+    expect(briefKey.extractable).toBe(false);
   });
 
   it("should make every request different", async () => {
@@ -178,46 +216,54 @@ describe("openRequestKey", () => {
     const { request } = await freshRequest();
     const { inboxKey } = await deriveInboxKeys(randomBytes(32));
     await expect(
-      openRequestKey(request.server.vault, request.server.vaultNonce, inboxKey, null),
-    ).rejects.toThrow();
-  });
-
-  it("should reject a title the server swapped, added or dropped", async () => {
-    const { request } = await freshRequest("Tax documents");
-    const other = await createFileRequest({ title: "Upload your ID here" });
-    const { vault, vaultNonce, title } = request.server;
-    const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
-    await expect(openRequestKey(vault, vaultNonce, inboxKey, title)).resolves.toBeTruthy();
-    await expect(openRequestKey(vault, vaultNonce, inboxKey, null)).rejects.toThrow();
-    await expect(openRequestKey(vault, vaultNonce, inboxKey, other.server.title)).rejects.toThrow();
-    const flippedTitle = { ciphertext: flipped(title!.ciphertext), nonce: title!.nonce };
-    await expect(openRequestKey(vault, vaultNonce, inboxKey, flippedTitle)).rejects.toThrow();
-
-    const untitled = await freshRequest();
-    const untitledKey = (await deriveInboxKeys(untitled.request.local.inboxSecret)).inboxKey;
-    await expect(
       openRequestKey(
-        untitled.request.server.vault,
-        untitled.request.server.vaultNonce,
-        untitledKey,
-        title,
+        request.server.vault,
+        request.server.vaultNonce,
+        inboxKey,
+        request.server.brief,
       ),
     ).rejects.toThrow();
   });
 
+  it("should reject a brief the server swapped or changed", async () => {
+    const { request } = await freshRequest({ title: "Tax documents" });
+    const other = await createFileRequest({ title: "Upload your ID here" });
+    const { vault, vaultNonce, brief } = request.server;
+    const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, brief)).resolves.toBeTruthy();
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, other.server.brief)).rejects.toThrow();
+    const flippedBrief = { ciphertext: flipped(brief.ciphertext), nonce: brief.nonce };
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, flippedBrief)).rejects.toThrow();
+    const otherNonce = { ciphertext: brief.ciphertext, nonce: randomBytes(12) };
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, otherNonce)).rejects.toThrow();
+    // The same bytes split another way hash the same, so the split is checked first.
+    const moved = {
+      ciphertext: concatBytes(brief.nonce.subarray(11), brief.ciphertext),
+      nonce: brief.nonce.subarray(0, 11),
+    };
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, moved)).rejects.toThrow(
+      "Brief nonce must be exactly 12 bytes",
+    );
+    const unpadded = { ciphertext: brief.ciphertext.subarray(1), nonce: brief.nonce };
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, unpadded)).rejects.toThrow(
+      "Brief has the wrong length",
+    );
+  });
+
   it("should reject a changed vault or nonce, or one of the wrong length", async () => {
     const { request } = await freshRequest();
-    const { vault, vaultNonce } = request.server;
+    const { vault, vaultNonce, brief } = request.server;
     const { inboxKey } = await deriveInboxKeys(request.local.inboxSecret);
-    await expect(openRequestKey(flipped(vault), vaultNonce, inboxKey, null)).rejects.toThrow();
+    await expect(openRequestKey(vault, vaultNonce, inboxKey, brief)).resolves.toBeTruthy();
+    await expect(openRequestKey(flipped(vault), vaultNonce, inboxKey, brief)).rejects.toThrow();
     await expect(
-      openRequestKey(flipped(vault, vault.length - 1), vaultNonce, inboxKey, null),
+      openRequestKey(flipped(vault, vault.length - 1), vaultNonce, inboxKey, brief),
     ).rejects.toThrow();
-    await expect(openRequestKey(vault, flipped(vaultNonce), inboxKey, null)).rejects.toThrow();
-    await expect(openRequestKey(vault, vaultNonce.slice(0, 11), inboxKey, null)).rejects.toThrow(
+    await expect(openRequestKey(vault, flipped(vaultNonce), inboxKey, brief)).rejects.toThrow();
+    await expect(openRequestKey(vault, vaultNonce.slice(0, 11), inboxKey, brief)).rejects.toThrow(
       "Vault nonce must be exactly 12 bytes",
     );
-    await expect(openRequestKey(vault.slice(1), vaultNonce, inboxKey, null)).rejects.toThrow(
+    await expect(openRequestKey(vault.slice(1), vaultNonce, inboxKey, brief)).rejects.toThrow(
       "Vault must be exactly 146 bytes",
     );
   });
@@ -226,15 +272,24 @@ describe("openRequestKey", () => {
     const inboxSecret = randomBytes(32);
     const { inboxKey } = await deriveInboxKeys(inboxSecret);
     const { request } = await freshRequest();
+    // The AAD as the vault documents it, for the brief of the fresh request.
+    const { brief } = request.server;
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      concatBytes(brief.nonce, brief.ciphertext),
+    );
+    const additionalData = concatBytes(
+      encodeUtf8("skysend-inbox-privkey-v1"),
+      new Uint8Array(digest),
+    );
     const seal = async (plaintext: Uint8Array) => {
       const nonce = randomBytes(12);
-      const additionalData = new TextEncoder().encode("skysend-inbox-privkey-v1");
       const sealed = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv: nonce, additionalData },
         inboxKey,
         plaintext,
       );
-      return openRequestKey(new Uint8Array(sealed), nonce, inboxKey, null);
+      return openRequestKey(new Uint8Array(sealed), nonce, inboxKey, brief);
     };
     const body = [...request.local.publicKey, ...request.local.linkSecret, ...randomBytes(32)];
     await expect(seal(new Uint8Array([0x02, ...body]))).rejects.toThrow(
@@ -363,26 +418,26 @@ describe("request key derivation", () => {
     const secret = randomBytes(32);
     const { publicKey } = (await createFileRequest()).local;
     const { inboxKey } = await deriveInboxKeys(secret);
-    const { titleKey } = await deriveLinkKeys(secret, publicKey);
+    const { briefKey } = await deriveLinkKeys(secret, publicKey);
     const { metaKey } = await deriveKeys(secret, randomBytes(32));
-    const title = await encryptRequestTitle("hello", titleKey);
-    await expect(decryptRequestTitle(title, inboxKey)).rejects.toThrow();
+    const brief = await encryptRequestBrief(PLAIN_BRIEF, briefKey);
+    await expect(decryptRequestBrief(brief, inboxKey)).rejects.toThrow();
     const metadata = await encryptMetadata(
       { type: "single", name: "a", size: 1, mimeType: "text/plain" },
       metaKey,
     );
-    await expect(decryptMetadata(metadata.ciphertext, metadata.iv, titleKey)).rejects.toThrow();
+    await expect(decryptMetadata(metadata.ciphertext, metadata.iv, briefKey)).rejects.toThrow();
   });
 
-  it("should bind the upload token and the title key to the public key", async () => {
+  it("should bind the upload token and the brief key to the public key", async () => {
     const linkSecret = randomBytes(32);
     const a = (await createFileRequest()).local.publicKey;
     const b = (await createFileRequest()).local.publicKey;
     const keysA = await deriveLinkKeys(linkSecret, a);
     const keysB = await deriveLinkKeys(linkSecret, b);
     expect(toHex(keysA.uploadToken)).not.toBe(toHex(keysB.uploadToken));
-    const title = await encryptRequestTitle("hello", keysA.titleKey);
-    await expect(decryptRequestTitle(title, keysB.titleKey)).rejects.toThrow();
+    const brief = await encryptRequestBrief(PLAIN_BRIEF, keysA.briefKey);
+    await expect(decryptRequestBrief(brief, keysB.briefKey)).rejects.toThrow();
   });
 
   it("should reject secrets and keys of the wrong form", async () => {
@@ -399,34 +454,109 @@ describe("request key derivation", () => {
   });
 });
 
-describe("request titles", () => {
-  it("should round-trip a title, also an empty one and one at the limit", async () => {
+describe("request briefs", () => {
+  async function briefKey() {
     const { publicKey } = (await createFileRequest()).local;
-    const { titleKey } = await deriveLinkKeys(randomBytes(32), publicKey);
-    for (const title of ["Steuerunterlagen 2026 ✓", "", "a".repeat(REQUEST_TITLE_MAX_BYTES)]) {
-      expect(await decryptRequestTitle(await encryptRequestTitle(title, titleKey), titleKey)).toBe(
-        title,
-      );
+    return (await deriveLinkKeys(randomBytes(32), publicKey)).briefKey;
+  }
+
+  it("should round-trip a brief and bring it into one form", async () => {
+    const key = await briefKey();
+    const roundTrip = async (brief: RequestBrief) =>
+      decryptRequestBrief(await encryptRequestBrief(brief, key), key);
+    expect(
+      await roundTrip({ title: "Steuerunterlagen 2026 ✓", asks: ["note"], template: {} }),
+    ).toEqual({ title: "Steuerunterlagen 2026 ✓", asks: ["note"], template: {} });
+    expect(await roundTrip({ title: "", asks: ["note", "files"], template: null })).toEqual({
+      title: null,
+      asks: ["files", "note"],
+      template: null,
+    });
+    const limit = "a".repeat(REQUEST_TITLE_MAX_BYTES);
+    expect((await roundTrip({ ...PLAIN_BRIEF, title: limit })).title).toBe(limit);
+  });
+
+  it("should pad a brief to whole blocks, so its length tells little", async () => {
+    const key = await briefKey();
+    const small = await encryptRequestBrief(PLAIN_BRIEF, key);
+    const titled = await encryptRequestBrief({ ...PLAIN_BRIEF, title: "x".repeat(200) }, key);
+    expect(small.ciphertext.length).toBe(REQUEST_BRIEF_BLOCK + 16);
+    expect(titled.ciphertext.length).toBe(REQUEST_BRIEF_BLOCK + 16);
+    const big = await encryptRequestBrief(
+      { title: null, asks: ["note"], template: { text: "x".repeat(REQUEST_BRIEF_BLOCK * 2) } },
+      key,
+    );
+    expect(big.ciphertext.length).toBe(3 * REQUEST_BRIEF_BLOCK + 16);
+  });
+
+  it("should refuse to write a brief it would not read", async () => {
+    const key = await briefKey();
+    const refused = (brief: unknown) =>
+      expect(encryptRequestBrief(brief as RequestBrief, key)).rejects.toThrow();
+    await refused({ ...PLAIN_BRIEF, title: "ä".repeat(REQUEST_TITLE_MAX_BYTES / 2 + 1) });
+    await refused({ ...PLAIN_BRIEF, title: 5 });
+    await refused({ ...PLAIN_BRIEF, asks: [] });
+    await refused({ ...PLAIN_BRIEF, asks: ["files", "files"] });
+    await refused({ ...PLAIN_BRIEF, asks: ["links"] });
+    await refused({ ...PLAIN_BRIEF, asks: "files" });
+    await refused({ ...PLAIN_BRIEF, template: [] });
+    await refused({ ...PLAIN_BRIEF, template: "template" });
+    await expect(
+      encryptRequestBrief(
+        { title: null, asks: ["note"], template: { text: "x".repeat(REQUEST_BRIEF_MAX_BYTES) } },
+        key,
+      ),
+    ).rejects.toThrow(`at most ${REQUEST_BRIEF_MAX_BYTES} bytes`);
+  });
+
+  it("should leave out a template when no note is asked for", async () => {
+    const key = await briefKey();
+    const brief = await encryptRequestBrief(
+      { ...PLAIN_BRIEF, template: { v: 1, blocks: [] } },
+      key,
+    );
+    expect(await decryptRequestBrief(brief, key)).toEqual(PLAIN_BRIEF);
+  });
+
+  it("should reject a changed brief, a wrong key or nonce, and one of the wrong length", async () => {
+    const key = await briefKey();
+    const other = await briefKey();
+    const brief = await encryptRequestBrief(PLAIN_BRIEF, key);
+    await expect(
+      decryptRequestBrief({ ...brief, ciphertext: flipped(brief.ciphertext) }, key),
+    ).rejects.toThrow();
+    await expect(decryptRequestBrief(brief, other)).rejects.toThrow();
+    await expect(
+      decryptRequestBrief({ ...brief, nonce: brief.nonce.slice(1) }, key),
+    ).rejects.toThrow("Brief nonce must be exactly 12 bytes");
+    for (const length of [
+      REQUEST_BRIEF_BLOCK + 15,
+      REQUEST_BRIEF_BLOCK + 17,
+      REQUEST_BRIEF_MAX_BYTES + 17,
+    ]) {
+      await expect(
+        decryptRequestBrief({ ciphertext: randomBytes(length), nonce: brief.nonce }, key),
+      ).rejects.toThrow("Brief has the wrong length");
     }
   });
 
-  it("should reject a title over the limit, a changed title, a wrong key or nonce", async () => {
-    const { publicKey } = (await createFileRequest()).local;
-    const { titleKey } = await deriveLinkKeys(randomBytes(32), publicKey);
-    const other = await deriveLinkKeys(randomBytes(32), publicKey);
-    await expect(
-      encryptRequestTitle("ä".repeat(REQUEST_TITLE_MAX_BYTES / 2 + 1), titleKey),
-    ).rejects.toThrow(`Title must be at most ${REQUEST_TITLE_MAX_BYTES} bytes`);
-    const title = await encryptRequestTitle("Hello", titleKey);
-    await expect(
-      decryptRequestTitle({ ...title, ciphertext: flipped(title.ciphertext) }, titleKey),
-    ).rejects.toThrow();
-    await expect(decryptRequestTitle(title, other.titleKey)).rejects.toThrow();
-    await expect(
-      decryptRequestTitle({ ...title, nonce: title.nonce.slice(1) }, titleKey),
-    ).rejects.toThrow("Title nonce must be exactly 12 bytes");
-    const tooLong = { ciphertext: randomBytes(REQUEST_TITLE_MAX_BYTES + 17), nonce: title.nonce };
-    await expect(decryptRequestTitle(tooLong, titleKey)).rejects.toThrow("Title is too long");
+  it("should read only a brief of this version, whatever the key opens", async () => {
+    const key = await briefKey();
+    const read = async (text: string) => decryptRequestBrief(await rawBrief(key, text), key);
+    await expect(read("not json")).rejects.toThrow("Not a valid request brief");
+    await expect(read("[1]")).rejects.toThrow("Unsupported request brief");
+    await expect(read('{"v":2,"asks":["files"]}')).rejects.toThrow("Unsupported request brief");
+    await expect(read('{"v":1,"title":7,"asks":["files"]}')).rejects.toThrow(
+      "Not a valid request brief",
+    );
+    await expect(read('{"v":1,"asks":["x"]}')).rejects.toThrow("Not a valid request brief");
+    await expect(read('{"v":1,"asks":"files"}')).rejects.toThrow("Not a valid request brief");
+    await expect(read('{"v":1,"asks":["note"],"template":[1]}')).rejects.toThrow(
+      "Not a valid request brief",
+    );
+    // Missing fields, and fields and asks a later addition brings, are left out.
+    expect(await read('{"v":1,"asks":["files"],"extra":true}')).toEqual(PLAIN_BRIEF);
+    expect(await read('{"v":1,"asks":["links","files"]}')).toEqual(PLAIN_BRIEF);
   });
 });
 
