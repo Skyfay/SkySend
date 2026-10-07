@@ -54,7 +54,7 @@
     },
     "startHint": "Wählen Sie, womit Sie anfangen. Weitere Blöcke können Sie danach hinzufügen.",
     "cardText": "Freier Text, auf Wunsch mit Markdown",
-    "cardPassword": "Ein oder mehrere Passwörter, mit Generator",
+    "cardPassword": "Passwörter, Benutzernamen und mehr",
     "cardCode": "Hervorhebung für über 40 Sprachen",
     "cardSshKey": "Schlüsselpaar erzeugen oder einfügen",
     "addBlock": "Block hinzufügen",

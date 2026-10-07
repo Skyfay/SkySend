@@ -59,7 +59,7 @@
     },
     "startHint": "Valitse, millä aloitat. Voit lisätä lohkoja myöhemmin.",
     "cardText": "Vapaata tekstiä, halutessasi Markdownina",
-    "cardPassword": "Yksi tai useampi salasana, generaattorilla",
+    "cardPassword": "Salasanat, käyttäjänimet ja muuta",
     "cardCode": "Korostus yli 40 kielelle",
     "cardSshKey": "Luo avainpari tai liitä olemassa oleva",
     "addBlock": "Lisää lohko",

@@ -59,7 +59,7 @@
     },
     "startHint": "Kies waarmee u begint. Daarna kunt u meer blokken toevoegen.",
     "cardText": "Vrije tekst, desgewenst met Markdown",
-    "cardPassword": "Een of meer wachtwoorden, met generator",
+    "cardPassword": "Wachtwoorden, gebruikersnamen en meer",
     "cardCode": "Markering voor meer dan 40 talen",
     "cardSshKey": "Genereer een sleutelpaar of plak er een",
     "addBlock": "Blok toevoegen",

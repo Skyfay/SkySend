@@ -59,7 +59,7 @@
     },
     "startHint": "Scegli da cosa iniziare. Potrai aggiungere altri blocchi dopo.",
     "cardText": "Testo libero, con Markdown se vuoi",
-    "cardPassword": "Una o più password, con generatore",
+    "cardPassword": "Password, nomi utente e altro",
     "cardCode": "Evidenziazione per oltre 40 linguaggi",
     "cardSshKey": "Genera una coppia di chiavi o incollane una",
     "addBlock": "Aggiungi un blocco",

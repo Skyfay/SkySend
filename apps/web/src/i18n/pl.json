@@ -59,7 +59,7 @@
     },
     "startHint": "Wybierz, od czego zacząć. Potem możesz dodać kolejne bloki.",
     "cardText": "Dowolny tekst, opcjonalnie w Markdown",
-    "cardPassword": "Jedno lub więcej haseł, z generatorem",
+    "cardPassword": "Hasła, nazwy użytkownika i więcej",
     "cardCode": "Podświetlanie dla ponad 40 języków",
     "cardSshKey": "Wygeneruj parę kluczy lub wklej istniejącą",
     "addBlock": "Dodaj blok",

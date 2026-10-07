@@ -59,7 +59,7 @@
     },
     "startHint": "Velg hva du vil begynne med. Du kan legge til flere blokker etterpå.",
     "cardText": "Fritekst, med Markdown om du vil",
-    "cardPassword": "Ett eller flere passord, med generator",
+    "cardPassword": "Passord, brukernavn og mer",
     "cardCode": "Fremheving for over 40 språk",
     "cardSshKey": "Lag et nøkkelpar eller lim inn et",
     "addBlock": "Legg til blokk",

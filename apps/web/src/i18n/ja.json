@@ -555,7 +555,7 @@
     },
     "startHint": "最初に追加するものを選んでください。あとからブロックを追加できます。",
     "cardText": "自由なテキスト、Markdown も使用可能",
-    "cardPassword": "1 つ以上のパスワード、生成機能付き",
+    "cardPassword": "パスワード、ユーザー名など",
     "cardCode": "40 以上の言語のハイライト",
     "cardSshKey": "鍵ペアを生成、または貼り付け",
     "addBlock": "ブロックを追加",

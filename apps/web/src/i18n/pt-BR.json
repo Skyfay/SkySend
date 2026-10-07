@@ -343,7 +343,8 @@
       "password.fieldNumber",
       "tab.fields",
       "template.blockTitle",
-      "note.blockTitle"
+      "note.blockTitle",
+      "note.cardPassword"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -402,7 +403,7 @@
     },
     "startHint": "Escolha por onde começar. Depois você pode adicionar mais blocos.",
     "cardText": "Texto livre, com Markdown se quiser",
-    "cardPassword": "Uma ou mais senhas, com gerador",
+    "cardPassword": "Senhas, usuários e mais",
     "cardCode": "Destaque para mais de 40 linguagens",
     "cardSshKey": "Gere um par de chaves ou cole um",
     "addBlock": "Adicionar um bloco",
