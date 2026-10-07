@@ -127,7 +127,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
       );
 
-      const partPath = path.join(dir, `.${path.basename(outputPath)}.${crypto.randomUUID()}.part`);
+      const partPath = path.join(dir, `.skysend-${crypto.randomUUID()}.part`);
       const writer = fs.createWriteStream(partPath, { flags: "wx" });
       partial = { path: partPath, writer };
       const reader = decryptedStream.getReader();
