@@ -139,8 +139,9 @@ export function registerDownloadCommand(program: Command): void {
         };
 
         // Write to file
-        const writer = fs.createWriteStream(outputPath);
-        partial = { path: outputPath, writer };
+        const partPath = path.join(dir, `.${path.basename(outputPath)}.${crypto.randomUUID()}.part`);
+        const writer = fs.createWriteStream(partPath, { flags: "wx" });
+        partial = { path: partPath, writer };
         const reader = decryptedStream.getReader();
 
         let totalWritten = 0;
@@ -156,9 +157,11 @@ export function registerDownloadCommand(program: Command): void {
         }
 
         await new Promise<void>((resolve, reject) => {
-          writer.end(() => resolve());
+          writer.on("close", () => resolve());
           writer.on("error", reject);
+          writer.end();
         });
+        fs.renameSync(partPath, outputPath);
         partial = undefined;
 
         if (!options.json) { clearLine(); writeLine("Download complete."); }

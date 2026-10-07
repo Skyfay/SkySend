@@ -127,8 +127,9 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
       );
 
-      const writer = fs.createWriteStream(outputPath);
-      partial = { path: outputPath, writer };
+      const partPath = path.join(dir, `.${path.basename(outputPath)}.${crypto.randomUUID()}.part`);
+      const writer = fs.createWriteStream(partPath, { flags: "wx" });
+      partial = { path: partPath, writer };
       const reader = decryptedStream.getReader();
       const startTime = Date.now();
       let totalWritten = 0;
@@ -149,9 +150,11 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       }
 
       await new Promise<void>((resolve, reject) => {
-        writer.end(() => resolve());
+        writer.on("close", () => resolve());
         writer.on("error", reject);
+        writer.end();
       });
+      fs.renameSync(partPath, outputPath);
       partial = undefined;
 
       setResultPath(outputPath);
