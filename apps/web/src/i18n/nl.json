@@ -38,7 +38,8 @@
     "code": "Code",
     "sshkey": "SSH-sleutel",
     "markdown": "Markdown",
-    "note": "Notitie"
+    "note": "Notitie",
+    "fields": "Velden"
   },
   "note": {
     "expiry": "Verloopt na",
@@ -236,7 +237,8 @@
     "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)",
     "makePlain": "Geen geheim, leesbaar tonen",
     "makeSecret": "Een geheim, verborgen tonen",
-    "enterValue": "Waarde invoeren..."
+    "enterValue": "Waarde invoeren...",
+    "fieldNumber": "Veld {{number}}"
   },
   "code": {
     "titlePlaceholder": "Bestandsnaam (bijv. docker-compose.yaml, optioneel)",

@@ -56,7 +56,7 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
                   return (
                     <Box key={j} borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
                       <Box justifyContent="space-between">
-                        <Text bold color={accent}>{entry.label ? forTerminal(entry.label) : `Password ${number}`}</Text>
+                        <Text bold color={accent}>{entry.label ? forTerminal(entry.label) : `${plain ? "Field" : "Password"} ${number}`}</Text>
                         <Text dimColor>{plain ? "" : `[${number}] ${shown ? "visible" : "hidden"}`}</Text>
                       </Box>
                       <Text>{shown ? forTerminal(entry.value) : "•".repeat(Math.min(entry.value.length, 32))}</Text>

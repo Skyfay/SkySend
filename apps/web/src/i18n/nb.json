@@ -38,7 +38,8 @@
     "code": "Kode",
     "sshkey": "SSH-nøkkel",
     "markdown": "Markdown",
-    "note": "Notat"
+    "note": "Notat",
+    "fields": "Felt"
   },
   "note": {
     "expiry": "Utløper etter",
@@ -236,7 +237,8 @@
     "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)",
     "makePlain": "Ikke en hemmelighet, vis i klartekst",
     "makeSecret": "En hemmelighet, vis skjult",
-    "enterValue": "Skriv inn verdi..."
+    "enterValue": "Skriv inn verdi...",
+    "fieldNumber": "Felt {{number}}"
   },
   "code": {
     "titlePlaceholder": "Filnavn (f.eks. docker-compose.yaml, valgfritt)",

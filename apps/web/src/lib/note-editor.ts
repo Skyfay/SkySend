@@ -6,6 +6,8 @@ import {
   type LegacyNoteKind,
   type NoteBlock,
   type NoteBlockType,
+  type PasswordBlock,
+  type PasswordEntry,
 } from "@skysend/note-format";
 
 /** What a block is called in the interface and in "My Links". Markdown counts on its own. */
@@ -109,6 +111,19 @@ export function measureRequestNote(
     tooLarge,
     ready: toSend.length > 0 && !tooLarge,
   };
+}
+
+/**
+ * The title of a password block: "Password" while every entry is a secret, and "Fields" once
+ * one is shown in clear, a username or an address, which a block of passwords no longer is.
+ */
+export function passwordBlockTitle(block: PasswordBlock): "tab.password" | "tab.fields" {
+  return block.entries.some((entry) => entry.secret === false) ? "tab.fields" : "tab.password";
+}
+
+/** The name of an entry without a label, "Password 2" for a secret and "Field 2" otherwise. */
+export function entryFallback(entry: PasswordEntry): "password.passwordNumber" | "password.fieldNumber" {
+  return entry.secret === false ? "password.fieldNumber" : "password.passwordNumber";
 }
 
 /** Which kinds of blocks a note holds, each once, in the order they first appear. */

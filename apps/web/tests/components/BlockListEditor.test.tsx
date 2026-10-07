@@ -114,8 +114,13 @@ describe("entries that are no secret", () => {
         start: [{ id: 1, type: "password", entries: [{ label: "User", value: "" }] }],
       }),
     );
+    // The block's own title, not the card that adds another block of its type.
+    const title = () => screen.getAllByText(/^tab\.(password|fields)$/)[0]!.textContent;
+    expect(title()).toBe("tab.password");
     fireEvent.click(screen.getByLabelText("password.makePlain"));
     expect(latest[0]).toMatchObject({ entries: [{ label: "User", value: "", secret: false }] });
+    // A block with an entry in clear is no longer only passwords.
+    expect(title()).toBe("tab.fields");
     fireEvent.click(screen.getByLabelText("password.makeSecret"));
     expect(latest[0]).toMatchObject({ entries: [{ label: "User", value: "" }] });
     expect((latest[0] as { entries: object[] }).entries[0]).not.toHaveProperty("secret");
@@ -164,6 +169,7 @@ describe("entries that are no secret", () => {
     render(createElement(TooltipProvider, null, createElement(NoteBlocks, { blocks })));
     expect(screen.getByText("alice")).toBeTruthy();
     expect(screen.queryByText("hunter2")).toBeNull();
+    expect(screen.getByRole("heading", { name: "tab.fields" })).toBeTruthy();
     expect(screen.getAllByLabelText("noteView.reveal")).toHaveLength(1);
   });
 });

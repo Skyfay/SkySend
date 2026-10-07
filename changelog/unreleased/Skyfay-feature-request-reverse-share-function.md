@@ -8,7 +8,7 @@
 - **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.
 - **web**: Templates keep the setup of a request for the next one, with built-in ones for credentials, an SSH key, Wi-Fi and an API key. They live in this browser and move to another one as a file or a link, sealed with a password if wanted.
 - **crypto**: `sealWithPassword` and `openWithPassword` encrypt an export with a key Argon2id derives from a password.
-- **web**: A field of a password block can be marked as no secret, like a username or an address. It is then typed and shown in clear, without a generator.
+- **web**: A field of a password block can be marked as no secret, like a username or an address, and is then shown in clear without a generator. A block with such a field is called Fields instead of Password.
 - **client**: Fields of a password block that are no secret show in clear in the terminal view of a note.
 - **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.
 - **website**: The report form accepts links to file requests.

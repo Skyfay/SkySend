@@ -38,7 +38,8 @@
     "code": "Kod",
     "sshkey": "SSH-nyckel",
     "markdown": "Markdown",
-    "note": "Anteckning"
+    "note": "Anteckning",
+    "fields": "Fält"
   },
   "note": {
     "expiry": "Upphör efter",
@@ -236,7 +237,8 @@
     "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)",
     "makePlain": "Ingen hemlighet, visa i klartext",
     "makeSecret": "En hemlighet, visa dold",
-    "enterValue": "Ange värde..."
+    "enterValue": "Ange värde...",
+    "fieldNumber": "Fält {{number}}"
   },
   "code": {
     "titlePlaceholder": "Filnamn (t.ex. docker-compose.yaml, valfritt)",

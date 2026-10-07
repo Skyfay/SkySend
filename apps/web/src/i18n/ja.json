@@ -492,7 +492,9 @@
       "templates.duplicated",
       "password.makePlain",
       "password.makeSecret",
-      "password.enterValue"
+      "password.enterValue",
+      "password.fieldNumber",
+      "tab.fields"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -530,7 +532,8 @@
     "code": "コード",
     "sshkey": "SSH Key",
     "markdown": "Markdown",
-    "note": "メモ"
+    "note": "メモ",
+    "fields": "項目"
   },
   "note": {
     "expiry": "有効期限",
@@ -728,7 +731,8 @@
     "labelPlaceholder": "パスワード {{number}} のラベル（任意）",
     "makePlain": "秘密ではない、そのまま表示",
     "makeSecret": "秘密、伏せて表示",
-    "enterValue": "値を入力..."
+    "enterValue": "値を入力...",
+    "fieldNumber": "項目 {{number}}"
   },
   "code": {
     "titlePlaceholder": "ファイル名（例: docker-compose.yaml、任意）",

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
 import { copyText } from "@/lib/clipboard";
-import type { EditorMode } from "@/lib/note-editor";
+import { entryFallback, passwordBlockTitle, type EditorMode } from "@/lib/note-editor";
 
 interface PasswordBlockEditorProps {
   block: PasswordBlock;
@@ -80,7 +80,7 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
   };
 
   return (
-    <BlockEditorFrame icon={KeyRound} title={t("tab.password")} controls={controls}>
+    <BlockEditorFrame icon={KeyRound} title={t(passwordBlockTitle(block))} controls={controls}>
       <div className="space-y-3 p-3">
         {entries.map((entry, index) => {
           const plain = entry.secret === false;
@@ -89,7 +89,7 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
             <div className="flex flex-wrap gap-2">
               {mode === "fill" ? (
                 <span className="flex min-w-40 flex-1 basis-44 items-center text-sm font-medium wrap-anywhere">
-                  {entry.label || t("password.passwordNumber", { number: index + 1 })}
+                  {entry.label || t(entryFallback(entry), { number: index + 1 })}
                 </span>
               ) : (
                 <Input
@@ -121,7 +121,7 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
                     value={entry.value}
                     onChange={(e) => update(index, { value: e.target.value })}
                     placeholder={t("password.enterValue")}
-                    aria-label={entry.label || t("password.passwordNumber", { number: index + 1 })}
+                    aria-label={entry.label || t("password.fieldNumber", { number: index + 1 })}
                     className="min-w-0 flex-1 font-mono placeholder:font-sans"
                     disabled={disabled}
                     autoComplete="off"

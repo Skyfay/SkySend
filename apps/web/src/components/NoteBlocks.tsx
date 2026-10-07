@@ -24,6 +24,7 @@ import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
 import { highlightAs, highlightCode, highlightedBlocks } from "@/lib/highlight";
 import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
+import { entryFallback, passwordBlockTitle } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
 
 // Every block comes from a decrypted note, which anyone with a link can craft. Text is only
@@ -154,7 +155,7 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
     });
 
   return (
-    <BlockFrame icon={KeyRound} title={t("tab.password")}>
+    <BlockFrame icon={KeyRound} title={t(passwordBlockTitle(block))}>
       <div className="space-y-3 p-3">
         {block.entries.map((entry, index) => {
           // An entry that is no secret, like a username, needs no reveal.
@@ -163,7 +164,7 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
           return (
             <div key={index}>
               <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                {entry.label || t("password.passwordNumber", { number: index + 1 })}
+                {entry.label || t(entryFallback(entry), { number: index + 1 })}
               </p>
               <div className="flex items-center gap-1.5">
                 <div className="min-h-10 min-w-0 flex-1 break-all rounded-xl border border-border bg-card px-4 py-2 font-mono text-sm leading-6">

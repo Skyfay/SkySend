@@ -38,7 +38,8 @@
     "code": "Code",
     "sshkey": "Clé SSH",
     "markdown": "Markdown",
-    "note": "Note"
+    "note": "Note",
+    "fields": "Champs"
   },
   "note": {
     "expiry": "Expire après",
@@ -236,7 +237,8 @@
     "labelPlaceholder": "Libellé du mot de passe {{number}} (facultatif)",
     "makePlain": "Pas un secret, afficher en clair",
     "makeSecret": "Un secret, afficher masqué",
-    "enterValue": "Saisir la valeur..."
+    "enterValue": "Saisir la valeur...",
+    "fieldNumber": "Champ {{number}}"
   },
   "code": {
     "titlePlaceholder": "Nom de fichier (ex. docker-compose.yaml, optionnel)",

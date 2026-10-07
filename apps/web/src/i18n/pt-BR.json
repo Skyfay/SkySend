@@ -339,7 +339,9 @@
       "templates.duplicated",
       "password.makePlain",
       "password.makeSecret",
-      "password.enterValue"
+      "password.enterValue",
+      "password.fieldNumber",
+      "tab.fields"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -377,7 +379,8 @@
     "code": "Código",
     "sshkey": "Chave SSH",
     "markdown": "Markdown",
-    "note": "Nota"
+    "note": "Nota",
+    "fields": "Campos"
   },
   "note": {
     "expiry": "Expira após",
@@ -575,7 +578,8 @@
     "labelPlaceholder": "Rótulo para senha {{number}} (opcional)",
     "makePlain": "Não é segredo, mostrar às claras",
     "makeSecret": "É segredo, mostrar oculto",
-    "enterValue": "Digite o valor..."
+    "enterValue": "Digite o valor...",
+    "fieldNumber": "Campo {{number}}"
   },
   "code": {
     "titlePlaceholder": "Nome do arquivo (ex. docker-compose.yaml, opcional)",

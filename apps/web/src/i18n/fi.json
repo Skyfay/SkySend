@@ -38,7 +38,8 @@
     "code": "Koodi",
     "sshkey": "SSH-avain",
     "markdown": "Markdown",
-    "note": "Muistiinpano"
+    "note": "Muistiinpano",
+    "fields": "Kentät"
   },
   "note": {
     "expiry": "Vanhenee",
@@ -236,7 +237,8 @@
     "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)",
     "makePlain": "Ei salaisuus, näytä selkokielisenä",
     "makeSecret": "Salaisuus, näytä peitettynä",
-    "enterValue": "Syötä arvo..."
+    "enterValue": "Syötä arvo...",
+    "fieldNumber": "Kenttä {{number}}"
   },
   "code": {
     "titlePlaceholder": "Tiedostonimi (esim. docker-compose.yaml, valinnainen)",

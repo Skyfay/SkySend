@@ -3,7 +3,9 @@ import { serializeNote, type NoteBlock } from "@skysend/note-format";
 import {
   blocksToSend,
   emptyBlock,
+  entryFallback,
   measureRequestNote,
+  passwordBlockTitle,
   noteKinds,
   storedNoteKinds,
   toDrafts,
@@ -113,6 +115,17 @@ describe("storedNoteKinds", () => {
   it("uses the content type of a note from before v3 as its only kind", () => {
     expect(storedNoteKinds({ contentType: "markdown" })).toEqual(["markdown"]);
     expect(storedNoteKinds({ contentType: "sshkey" })).toEqual(["sshkey"]);
+  });
+});
+
+describe("passwordBlockTitle and entryFallback", () => {
+  it("calls a block of secrets passwords, and one with an entry in clear fields", () => {
+    const secret = { label: "", value: "x" };
+    const plain = { label: "", value: "alice", secret: false as const };
+    expect(passwordBlockTitle({ type: "password", entries: [secret] })).toBe("tab.password");
+    expect(passwordBlockTitle({ type: "password", entries: [plain, secret] })).toBe("tab.fields");
+    expect(entryFallback(secret)).toBe("password.passwordNumber");
+    expect(entryFallback(plain)).toBe("password.fieldNumber");
   });
 });
 
