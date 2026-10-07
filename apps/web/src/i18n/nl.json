@@ -342,6 +342,8 @@
     "more": "Meer",
     "password": "Wachtwoord",
     "passwordHint": "De ontvanger heeft het nodig om het te openen.",
+    "summary": "Verwijderd na <b>{{expiry}}</b>.",
+    "summaryLimit": "Verwijderd na <b>{{expiry}}</b> of <b>{{limit}}</b>, afhankelijk van wat het eerst gebeurt.",
     "passwordForced": "De server vereist een wachtwoord.",
     "encryptUpload": "Versleutelen en uploaden",
     "encryptShare": "Versleutelen en delen",

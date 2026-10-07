@@ -342,6 +342,8 @@
     "more": "Enemmän",
     "password": "Salasana",
     "passwordHint": "Vastaanottaja tarvitsee sen jaon avaamiseen.",
+    "summary": "Poistetaan <b>{{expiry}}</b> kuluttua.",
+    "summaryLimit": "Poistetaan <b>{{expiry}}</b> kuluttua tai kun <b>{{limit}}</b> on saavutettu, sen mukaan kumpi tulee ensin.",
     "passwordForced": "Palvelin vaatii salasanan.",
     "encryptUpload": "Salaa ja lähetä",
     "encryptShare": "Salaa ja jaa",

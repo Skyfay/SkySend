@@ -342,6 +342,8 @@
     "more": "Więcej",
     "password": "Hasło",
     "passwordHint": "Odbiorca potrzebuje go, aby to otworzyć.",
+    "summary": "Zostanie usunięte za <b>{{expiry}}</b>.",
+    "summaryLimit": "Zostanie usunięte za <b>{{expiry}}</b> lub po osiągnięciu limitu: <b>{{limit}}</b>, zależnie od tego, co nastąpi pierwsze.",
     "passwordForced": "Serwer wymaga hasła.",
     "encryptUpload": "Zaszyfruj i prześlij",
     "encryptShare": "Zaszyfruj i udostępnij",

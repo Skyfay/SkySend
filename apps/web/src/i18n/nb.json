@@ -342,6 +342,8 @@
     "more": "Flere",
     "password": "Passord",
     "passwordHint": "Mottakeren trenger det for å åpne delingen.",
+    "summary": "Slettes etter <b>{{expiry}}</b>.",
+    "summaryLimit": "Slettes etter <b>{{expiry}}</b> eller <b>{{limit}}</b>, avhengig av hva som inntreffer først.",
     "passwordForced": "Serveren krever et passord.",
     "encryptUpload": "Krypter og last opp",
     "encryptShare": "Krypter og del",

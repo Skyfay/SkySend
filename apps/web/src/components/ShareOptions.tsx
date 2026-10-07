@@ -26,13 +26,13 @@ interface ShareOptionsProps {
   disabled?: boolean;
 }
 
-/** How a limit reads, for the steppers of the defaults. */
+/** How a limit reads, for the steppers of the defaults and the summary of a share. */
 export function useLimitLabel(kind: ShareKind) {
   const { t } = useTranslation();
-  return (value: number) => {
+  return (value: number, short = false) => {
     if (kind === "file") return t("share.downloads", { count: value });
     if (value === 0) return t("note.unlimited");
-    if (value === 1) return t("note.burnAfterReading");
+    if (value === 1 && !short) return t("note.burnAfterReading");
     return t("share.views", { count: value });
   };
 }

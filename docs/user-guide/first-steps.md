@@ -10,7 +10,7 @@ This guide walks you through uploading and sharing your first file with SkySend.
    - **Expires after** - One of the offered times
    - **Downloads** - How often the file can be downloaded before it is deleted
    - **Password** - A switch for optional password protection
-4. Click **Encrypt and upload**. The upload is deleted after the time or the downloads, whichever comes first.
+4. Click **Encrypt and upload**. The line next to the button sums up when the upload will be deleted.
 5. Wait for the encryption and upload to complete
 6. Copy the share link, or open its QR code
 

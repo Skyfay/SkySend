@@ -342,6 +342,8 @@
     "more": "Más",
     "password": "Contraseña",
     "passwordHint": "El destinatario la necesita para abrirlo.",
+    "summary": "Se elimina tras <b>{{expiry}}</b>.",
+    "summaryLimit": "Se elimina tras <b>{{expiry}}</b> o <b>{{limit}}</b>, lo que ocurra primero.",
     "passwordForced": "El servidor exige una contraseña.",
     "encryptUpload": "Cifrar y subir",
     "encryptShare": "Cifrar y compartir",

@@ -342,6 +342,8 @@
     "more": "Fler",
     "password": "Lösenord",
     "passwordHint": "Mottagaren behöver det för att öppna delningen.",
+    "summary": "Raderas efter <b>{{expiry}}</b>.",
+    "summaryLimit": "Raderas efter <b>{{expiry}}</b> eller <b>{{limit}}</b>, beroende på vilket som inträffar först.",
     "passwordForced": "Servern kräver ett lösenord.",
     "encryptUpload": "Kryptera och ladda upp",
     "encryptShare": "Kryptera och dela",

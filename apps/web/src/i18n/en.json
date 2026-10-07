@@ -337,6 +337,8 @@
     "more": "More",
     "password": "Password",
     "passwordHint": "The recipient needs it to open the share.",
+    "summary": "Deleted after <b>{{expiry}}</b>.",
+    "summaryLimit": "Deleted after <b>{{expiry}}</b> or <b>{{limit}}</b>, whichever comes first.",
     "passwordForced": "The server requires a password.",
     "encryptUpload": "Encrypt and upload",
     "encryptShare": "Encrypt and share",

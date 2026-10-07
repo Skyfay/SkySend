@@ -728,6 +728,8 @@
     "more": "增加",
     "password": "密码",
     "passwordHint": "接收者打开时需要输入。",
+    "summary": "将在 <b>{{expiry}}</b> 后删除。",
+    "summaryLimit": "将在 <b>{{expiry}}</b> 后或 <b>{{limit}}</b> 后删除，以先到者为准。",
     "passwordForced": "服务器要求设置密码。",
     "encryptUpload": "加密并上传",
     "encryptShare": "加密并分享",

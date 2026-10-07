@@ -160,7 +160,7 @@ export function UploadPage() {
             <Skeleton className="h-8 w-3/4 rounded-full" />
             <Skeleton className="h-8 w-1/2 rounded-full" />
           </div>
-          <Skeleton className="h-12 w-full rounded-2xl sm:ml-auto sm:w-48" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
         </Card>
       </div>
     );
@@ -300,6 +300,9 @@ export function UploadPage() {
                 />
               </div>
               <ShareFooter
+                kind="file"
+                expireSec={expireSec}
+                limit={maxDownloads}
                 label={t("share.encryptUpload")}
                 icon={<Lock />}
                 disabled={!canUpload}

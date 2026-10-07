@@ -337,6 +337,8 @@
     "more": "Mehr",
     "password": "Passwort",
     "passwordHint": "Der Empfänger braucht es zum Öffnen.",
+    "summary": "Wird nach <b>{{expiry}}</b> gelöscht.",
+    "summaryLimit": "Wird nach <b>{{expiry}}</b> oder <b>{{limit}}</b> gelöscht, je nachdem, was zuerst eintritt.",
     "passwordForced": "Der Server verlangt ein Passwort.",
     "encryptUpload": "Verschlüsseln und hochladen",
     "encryptShare": "Verschlüsseln und teilen",

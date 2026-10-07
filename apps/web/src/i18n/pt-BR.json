@@ -728,6 +728,8 @@
     "more": "Mais",
     "password": "Senha",
     "passwordHint": "O destinatário precisa dela para abrir o compartilhamento.",
+    "summary": "Excluído após <b>{{expiry}}</b>.",
+    "summaryLimit": "Excluído após <b>{{expiry}}</b> ou <b>{{limit}}</b>, o que ocorrer primeiro.",
     "passwordForced": "O servidor exige uma senha.",
     "encryptUpload": "Criptografar e enviar",
     "encryptShare": "Criptografar e compartilhar",
