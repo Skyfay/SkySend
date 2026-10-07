@@ -7,6 +7,7 @@ Set up a local development environment for SkySend.
 - [Node.js](https://nodejs.org/) 24 LTS or later
 - [pnpm](https://pnpm.io/) 10
 - [Git](https://git-scm.com/)
+- Linux, macOS or Windows on x64 or arm64, the platforms the SQLite driver of the server ships prebuilt binaries for
 
 ## Clone and Install
 
