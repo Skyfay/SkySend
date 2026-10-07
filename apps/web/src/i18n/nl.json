@@ -29,7 +29,8 @@
     "myUploads": "Mijn links",
     "menu": "Menu",
     "requests": "Aanvragen",
-    "requestsUnseen": "Nieuwe uploads in verzoeken"
+    "requestsUnseen": "Nieuwe uploads in verzoeken",
+    "settings": "Instellingen"
   },
   "tab": {
     "file": "Bestand",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} downloads resterend",
     "expired": "Verlopen",
     "unavailable": "Niet beschikbaar",
-    "files": "{{count}} bestand(en)",
-    "tabTemplates": "Sjablonen"
+    "files": "{{count}} bestand(en)"
   },
   "noteView": {
     "title": "Versleutelde notitie",
@@ -753,5 +753,19 @@
     "skip": "Overslaan",
     "notFound": "Dit sjabloon staat niet meer in deze browser.",
     "duplicated": "Gedupliceerd als “{{name}}”."
+  },
+  "settings": {
+    "title": "Instellingen",
+    "intro": "Ze gelden alleen in deze browser, en de server weet er niets van.",
+    "tabDefaults": "Standaardwaarden",
+    "tabTemplates": "Sjablonen",
+    "files": "Bestanden delen",
+    "notes": "Notities delen",
+    "requests": "Aanvragen",
+    "reset": "Herstellen",
+    "passwordOn": "Begint ingeschakeld",
+    "passwordOff": "Begint uitgeschakeld",
+    "sendsHint": "In een verzoek om bestanden en een notitie zijn dit inzendingen.",
+    "defaultsHint": "Een nieuwe deling of een nieuw verzoek begint met deze waarden, en het formulier kan ze nog wijzigen. Een waarde die de server niet meer aanbiedt, valt terug op zijn standaard, en een wachtwoord dat de server vraagt, staat altijd aan."
   }
 }

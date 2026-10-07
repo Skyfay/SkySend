@@ -24,7 +24,8 @@
     "myUploads": "Meine Links",
     "menu": "Menü",
     "requests": "Anfordern",
-    "requestsUnseen": "Neue Uploads in Anfragen"
+    "requestsUnseen": "Neue Uploads in Anfragen",
+    "settings": "Einstellungen"
   },
   "tab": {
     "file": "Datei",
@@ -158,8 +159,7 @@
     "remaining": "{{count}} Downloads verbleibend",
     "expired": "Abgelaufen",
     "unavailable": "Nicht verfügbar",
-    "files": "{{count}} Datei(en)",
-    "tabTemplates": "Vorlagen"
+    "files": "{{count}} Datei(en)"
   },
   "noteView": {
     "title": "Verschlüsselte Notiz",
@@ -748,5 +748,19 @@
     "skip": "Überspringen",
     "notFound": "Diese Vorlage liegt nicht mehr in diesem Browser.",
     "duplicated": "Als „{{name}}“ dupliziert."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "intro": "Sie gelten nur in diesem Browser, und der Server erfährt nichts davon.",
+    "tabDefaults": "Standardwerte",
+    "tabTemplates": "Vorlagen",
+    "files": "Dateien teilen",
+    "notes": "Notizen teilen",
+    "requests": "Anfordern",
+    "reset": "Zurücksetzen",
+    "passwordOn": "Startet eingeschaltet",
+    "passwordOff": "Startet ausgeschaltet",
+    "sendsHint": "Bei einer Anfrage für Dateien und eine Notiz sind das Einsendungen.",
+    "defaultsHint": "Ein neues Teilen oder eine neue Anfrage startet mit diesen Werten, und im Formular lässt sich alles noch ändern. Bietet der Server einen Wert nicht mehr an, gilt sein Standard, und ein Passwort, das der Server verlangt, ist immer an."
   }
 }

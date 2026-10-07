@@ -44,7 +44,7 @@ export function RequestsPage() {
   useEffect(() => {
     if (!editGone) return;
     toast.error(t("templates.notFound"), { id: "template-gone" });
-    navigate("/uploads?tab=templates", { replace: true });
+    navigate("/settings?tab=templates", { replace: true });
   }, [editGone, navigate, t]);
 
   // A template counts as used once a request was created from it, not when that failed.
@@ -101,7 +101,7 @@ export function RequestsPage() {
         start={start}
         editing={editing}
         onSaveTemplate={kept.save}
-        onEditDone={() => navigate("/uploads?tab=templates", { replace: true })}
+        onEditDone={() => navigate("/settings?tab=templates", { replace: true })}
       />
     );
   }

@@ -36,9 +36,9 @@ A template keeps the setup of a request for the next one of its kind: what it as
 
 - **Start with** above the form fills it in from a template, and **Undo** in the message that follows brings back what you had typed. **Blank** empties it again, and **Built-in** offers templates that come with SkySend, for credentials, an SSH key, a Wi-Fi network and an API key. Everything stays open to change afterwards.
 - **Save as template** under the form keeps the current setup. Choose a name, and whether the title and the limits go with it. A name you used before replaces that template.
-- **My Links**, tab **Templates**, lists your templates. **Use** starts a request from one, the menu edits, duplicates, exports or deletes it, and **Copy as your own** turns a built-in one into yours.
+- **Settings**, the gear in the header, tab **Templates**, lists your templates. **Use** starts a request from one, the menu edits, duplicates, exports or deletes it, and **Copy as your own** turns a built-in one into yours.
 
-Templates live in this browser only, like the list of your requests. To move them to another device or browser, **Export** them:
+Templates live in this browser only, like the list of your requests. The defaults for a new request, in the same **Settings**, apply where a template keeps no limits of its own, see [Settings](/user-guide/settings). To move them to another device or browser, **Export** them:
 
 - **As a file** - A `.json` file to keep or carry over
 - **As a link** - Everything sits after the `#` of the link, so it never reaches a server. Open it on the other device to import.

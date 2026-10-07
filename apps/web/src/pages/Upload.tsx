@@ -31,6 +31,7 @@ import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
+import { fileStart } from "@/lib/defaults";
 import { formatBytes } from "@/lib/utils";
 
 type Tab = "file" | "note";
@@ -125,16 +126,17 @@ export function UploadPage() {
     uploadHook.phase !== "error";
   useFaviconProgress(isUploading ? uploadHook.progress : null);
 
-  // Initialize defaults when config loads
+  // Initialize defaults when config loads, this browser's own within what the server offers
   if (config && expireSec === 0) {
-    setExpireSec(config.fileDefaultExpire);
-    setMaxDownloads(config.fileDefaultDownload);
+    const start = fileStart(config);
+    setExpireSec(start.expireSec);
+    setMaxDownloads(start.limit);
     // Set initial tab: use server default if available, else first available tab
     const preferredTab: Tab = defaultTab === "file" ? "file" : "note";
     const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;
     setActiveTab(targetTab);
-    // Apply force-password for file uploads
-    if (config.forceFilePassword) {
+    // Apply force-password for file uploads, or this browser's wish for one
+    if (start.password) {
       setPasswordEnabled(true);
     }
   }
@@ -184,7 +186,7 @@ export function UploadPage() {
     uploadHook.reset();
     setFiles([]);
     setPassword("");
-    setPasswordEnabled(config.forceFilePassword);
+    setPasswordEnabled(fileStart(config).password);
     setQuotaRefreshKey((k) => k + 1);
   };
 

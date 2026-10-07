@@ -29,7 +29,8 @@
     "myUploads": "Mina länkar",
     "menu": "Meny",
     "requests": "Begär",
-    "requestsUnseen": "Nya uppladdningar i förfrågningar"
+    "requestsUnseen": "Nya uppladdningar i förfrågningar",
+    "settings": "Inställningar"
   },
   "tab": {
     "file": "Fil",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} nedladdningar kvar",
     "expired": "Upphörd",
     "unavailable": "Ej tillgänglig",
-    "files": "{{count}} fil(er)",
-    "tabTemplates": "Mallar"
+    "files": "{{count}} fil(er)"
   },
   "noteView": {
     "title": "Krypterad anteckning",
@@ -753,5 +753,19 @@
     "skip": "Hoppa över",
     "notFound": "Den här mallen finns inte längre i den här webbläsaren.",
     "duplicated": "Duplicerad som ”{{name}}”."
+  },
+  "settings": {
+    "title": "Inställningar",
+    "intro": "De gäller bara i den här webbläsaren, och servern får inte veta något om dem.",
+    "tabDefaults": "Standardvärden",
+    "tabTemplates": "Mallar",
+    "files": "Dela filer",
+    "notes": "Dela anteckningar",
+    "requests": "Begära",
+    "reset": "Återställ",
+    "passwordOn": "Börjar påslaget",
+    "passwordOff": "Börjar avslaget",
+    "sendsHint": "I en förfrågan om filer och en anteckning är detta inskick.",
+    "defaultsHint": "En ny delning eller förfrågan börjar med de här värdena, och formuläret kan fortfarande ändra dem. Ett värde som servern inte längre erbjuder faller tillbaka på dess standard, och ett lösenord som servern kräver är alltid på."
   }
 }

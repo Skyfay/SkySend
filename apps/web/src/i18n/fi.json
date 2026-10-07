@@ -29,7 +29,8 @@
     "myUploads": "Omat linkit",
     "menu": "Valikko",
     "requests": "Pyydä",
-    "requestsUnseen": "Uusia lähetyksiä pyynnöissä"
+    "requestsUnseen": "Uusia lähetyksiä pyynnöissä",
+    "settings": "Asetukset"
   },
   "tab": {
     "file": "Tiedosto",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} latausta jäljellä",
     "expired": "Vanhentunut",
     "unavailable": "Ei saatavilla",
-    "files": "{{count}} tiedosto(a)",
-    "tabTemplates": "Pohjat"
+    "files": "{{count}} tiedosto(a)"
   },
   "noteView": {
     "title": "Salattu muistiinpano",
@@ -753,5 +753,19 @@
     "skip": "Ohita",
     "notFound": "Tätä pohjaa ei enää ole tässä selaimessa.",
     "duplicated": "Kopioitu nimellä ”{{name}}”."
+  },
+  "settings": {
+    "title": "Asetukset",
+    "intro": "Ne koskevat vain tätä selainta, eikä palvelin saa niistä tietää.",
+    "tabDefaults": "Oletukset",
+    "tabTemplates": "Pohjat",
+    "files": "Tiedostojen jakaminen",
+    "notes": "Muistiinpanojen jakaminen",
+    "requests": "Pyytäminen",
+    "reset": "Palauta",
+    "passwordOn": "Alkaa päällä",
+    "passwordOff": "Alkaa pois päältä",
+    "sendsHint": "Tiedostoja ja muistiinpanoa koskevassa pyynnössä nämä ovat lähetyskertoja.",
+    "defaultsHint": "Uusi jako tai pyyntö alkaa näillä arvoilla, ja lomakkeessa niitä voi yhä muuttaa. Jos palvelin ei enää tarjoa arvoa, käytetään sen oletusta, ja palvelimen vaatima salasana on aina päällä."
   }
 }

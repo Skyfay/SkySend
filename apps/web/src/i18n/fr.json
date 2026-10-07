@@ -29,7 +29,8 @@
     "myUploads": "Mes liens",
     "menu": "Menu",
     "requests": "Demander",
-    "requestsUnseen": "Nouveaux envois dans les demandes"
+    "requestsUnseen": "Nouveaux envois dans les demandes",
+    "settings": "Paramètres"
   },
   "tab": {
     "file": "Fichier",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} téléchargements restants",
     "expired": "Expiré",
     "unavailable": "Indisponible",
-    "files": "{{count}} fichier(s)",
-    "tabTemplates": "Modèles"
+    "files": "{{count}} fichier(s)"
   },
   "noteView": {
     "title": "Note chiffrée",
@@ -753,5 +753,19 @@
     "skip": "Ignorer",
     "notFound": "Ce modèle n'est plus enregistré dans ce navigateur.",
     "duplicated": "Dupliqué sous « {{name}} »."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "intro": "Ils ne valent que pour ce navigateur, et le serveur n'en sait rien.",
+    "tabDefaults": "Valeurs par défaut",
+    "tabTemplates": "Modèles",
+    "files": "Partager des fichiers",
+    "notes": "Partager des notes",
+    "requests": "Demander",
+    "reset": "Réinitialiser",
+    "passwordOn": "Activé au départ",
+    "passwordOff": "Désactivé au départ",
+    "sendsHint": "Dans une demande de fichiers et d'une note, ce sont des dépôts.",
+    "defaultsHint": "Un nouveau partage ou une nouvelle demande commence avec ces valeurs, et le formulaire peut encore les changer. Une valeur que le serveur ne propose plus revient à sa valeur par défaut, et un mot de passe exigé par le serveur est toujours activé."
   }
 }

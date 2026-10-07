@@ -59,7 +59,7 @@ export function TemplateStart({ templates, value, onPick, disabled }: TemplateSt
           {t("templates.startWith")}
         </h3>
         <Link
-          to="/uploads?tab=templates"
+          to="/settings?tab=templates"
           className="text-xs text-primary-text underline-offset-4 hover:underline"
         >
           {t("templates.manage")}

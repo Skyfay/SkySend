@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { Upload, FolderOpen, Inbox, LogOut, Menu, X, Sparkles } from "lucide-react";
+import { Upload, FolderOpen, Inbox, LogOut, Menu, X, Settings, Sparkles } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ColorSchemeToggle } from "@/components/ColorSchemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -85,6 +85,28 @@ export function Layout() {
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
 
+  // Settings sit with the switches of this browser, as an icon, so the nav stays short.
+  const settingsLink = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to="/settings"
+          aria-label={t("nav.settings")}
+          aria-current={isActive("/settings") ? "page" : undefined}
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+            isActive("/settings")
+              ? "bg-primary-soft text-primary-text"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{t("nav.settings")}</TooltipContent>
+    </Tooltip>
+  );
+
   const logoutButton = oidcEnabled && isLoggedIn && (
     authLoading ? (
       <Skeleton className="h-9 w-9 rounded-full" />
@@ -149,6 +171,7 @@ export function Layout() {
             <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
             <LanguageSwitcher />
             <ColorSchemeToggle />
+            {settingsLink}
             {logoutButton}
           </nav>
 
@@ -194,6 +217,20 @@ export function Layout() {
               <div className="-mx-1.5 my-1.5 h-px bg-border" />
               <LanguageSwitcher mobile />
               <ColorSchemeToggle mobile />
+              <Link
+                to="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive("/settings") ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  isActive("/settings")
+                    ? "bg-primary-soft text-primary-text"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                {t("nav.settings")}
+              </Link>
               {oidcEnabled && isLoggedIn && (
                 <>
                   <div className="-mx-1.5 my-1.5 h-px bg-border" />

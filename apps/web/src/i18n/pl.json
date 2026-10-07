@@ -29,7 +29,8 @@
     "myUploads": "Moje linki",
     "menu": "Menu",
     "requests": "Poproś",
-    "requestsUnseen": "Nowe przesyłki w prośbach"
+    "requestsUnseen": "Nowe przesyłki w prośbach",
+    "settings": "Ustawienia"
   },
   "tab": {
     "file": "Plik",
@@ -163,8 +164,7 @@
     "remaining": "Pozostało {{count}} pobrań",
     "expired": "Wygasło",
     "unavailable": "Niedostępne",
-    "files": "{{count}} plik(ów)",
-    "tabTemplates": "Szablony"
+    "files": "{{count}} plik(ów)"
   },
   "noteView": {
     "title": "Zaszyfrowana notatka",
@@ -753,5 +753,19 @@
     "skip": "Pomiń",
     "notFound": "Tego szablonu nie ma już w tej przeglądarce.",
     "duplicated": "Zduplikowano jako „{{name}}”."
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "intro": "Obowiązują tylko w tej przeglądarce, a serwer nic o nich nie wie.",
+    "tabDefaults": "Wartości domyślne",
+    "tabTemplates": "Szablony",
+    "files": "Udostępnianie plików",
+    "notes": "Udostępnianie notatek",
+    "requests": "Prośby",
+    "reset": "Przywróć",
+    "passwordOn": "Na start włączone",
+    "passwordOff": "Na start wyłączone",
+    "sendsHint": "W prośbie o pliki i notatkę są to zgłoszenia.",
+    "defaultsHint": "Nowe udostępnienie lub prośba zaczyna się od tych wartości, a w formularzu nadal można je zmienić. Wartość, której serwer już nie oferuje, wraca do jego domyślnej, a hasło wymagane przez serwer jest zawsze włączone."
   }
 }

@@ -8,6 +8,7 @@ import { ShareLink } from "@/components/ShareLink";
 import { ShareOptions } from "@/components/ShareOptions";
 import { useNoteUpload } from "@/hooks/useNoteUpload";
 import type { ServerConfig } from "@/lib/api";
+import { noteStart } from "@/lib/defaults";
 import { blocksToSend, emptyBlock, type DraftBlock } from "@/lib/note-editor";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn, formatBytes } from "@/lib/utils";
@@ -61,10 +62,12 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
   const noteHook = useNoteUpload();
   const initialBlocks = (): DraftBlock[] => (startWith ? [{ ...emptyBlock(startWith), id: 1 }] : []);
   const [drafts, setDrafts] = useState<DraftBlock[]>(initialBlocks);
-  const [expireSec, setExpireSec] = useState(config.noteDefaultExpire);
-  const [maxViews, setMaxViews] = useState(config.noteDefaultViews);
+  // This browser's defaults within what the server offers.
+  const [start] = useState(() => noteStart(config));
+  const [expireSec, setExpireSec] = useState(start.expireSec);
+  const [maxViews, setMaxViews] = useState(start.limit);
   const [password, setPassword] = useState("");
-  const [passwordEnabled, setPasswordEnabled] = useState(config.forceNotePassword);
+  const [passwordEnabled, setPasswordEnabled] = useState(start.password);
 
   useEffect(() => {
     if (noteHook.phase === "error" && noteHook.error) showKnownErrorToast(noteHook.error);
@@ -86,7 +89,7 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
     noteHook.reset();
     setDrafts(initialBlocks());
     setPassword("");
-    setPasswordEnabled(config.forceNotePassword);
+    setPasswordEnabled(noteStart(config).password);
   };
 
   if (noteHook.phase === "done" && noteHook.shareLink) {

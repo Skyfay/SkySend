@@ -76,7 +76,8 @@ export default defineConfig({
             { text: 'Introduction', link: '/user-guide/getting-started' },
             { text: 'Installation', link: '/user-guide/installation' },
             { text: 'First Steps', link: '/user-guide/first-steps' },
-            { text: 'File Requests', link: '/user-guide/file-requests' }
+            { text: 'File Requests', link: '/user-guide/file-requests' },
+            { text: 'Settings', link: '/user-guide/settings' }
           ]
         },
         {

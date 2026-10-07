@@ -15,6 +15,7 @@ import { RequestForm } from "../../src/components/RequestForm.js";
 import { TooltipProvider } from "../../src/components/ui/tooltip.js";
 import type { ServerConfig } from "../../src/lib/api.js";
 import type { RequestTemplate, TemplateFields } from "../../src/lib/request-templates.js";
+import { writeDefaults } from "../../src/lib/defaults.js";
 
 const GIB = 1024 ** 3;
 const config = {
@@ -89,6 +90,7 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
+  writeDefaults({ file: {}, note: {}, request: {} });
 });
 
 describe("RequestForm with templates", () => {
@@ -109,6 +111,16 @@ describe("RequestForm with templates", () => {
     fireEvent.click(screen.getByRole("radio", { name: "templates.blank" }));
     expect(titleInput().value).toBe("");
     expect(screen.getByRole("tab", { selected: true }).textContent).toContain("request.asksFiles");
+  });
+
+  it("starts from this browser's defaults, also from a template that keeps no limits", () => {
+    writeDefaults({ file: {}, note: {}, request: { expireSec: 259_200, sends: 3 } });
+    const handlers = renderForm({ start: wlan });
+    fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
+    expect(handlers.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ asks: ["note"], expireSec: 259_200, maxUploads: 3 }),
+      wlan,
+    );
   });
 
   it("names the template a request is created from, so it counts as used once created", () => {

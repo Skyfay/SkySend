@@ -14,7 +14,7 @@ function takeFragment(): string {
 
 /**
  * A templates link: the export sits in the fragment, which never reaches the server. It goes
- * on to the Templates tab of My Links in memory, which offers to import it.
+ * on to the Templates tab of the settings in memory, which offers to import it.
  */
 export function TemplatesLinkPage() {
   const { config, loading } = useServerConfig();
@@ -37,5 +37,5 @@ export function TemplatesLinkPage() {
     // An empty export, which the import names as not readable.
   }
   setLinkImport(text);
-  return <Navigate to="/uploads?tab=templates" replace />;
+  return <Navigate to="/settings?tab=templates" replace />;
 }

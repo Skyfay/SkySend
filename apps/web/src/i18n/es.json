@@ -29,7 +29,8 @@
     "myUploads": "Mis enlaces",
     "menu": "Menú",
     "requests": "Solicitar",
-    "requestsUnseen": "Nuevas subidas en solicitudes"
+    "requestsUnseen": "Nuevas subidas en solicitudes",
+    "settings": "Ajustes"
   },
   "tab": {
     "file": "Archivo",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} descargas restantes",
     "expired": "Expirado",
     "unavailable": "No disponible",
-    "files": "{{count}} archivo(s)",
-    "tabTemplates": "Plantillas"
+    "files": "{{count}} archivo(s)"
   },
   "noteView": {
     "title": "Nota cifrada",
@@ -753,5 +753,19 @@
     "skip": "Omitir",
     "notFound": "Esta plantilla ya no está guardada en este navegador.",
     "duplicated": "Duplicada como “{{name}}”."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "intro": "Solo se aplican en este navegador, y el servidor no sabe nada de ellos.",
+    "tabDefaults": "Valores predeterminados",
+    "tabTemplates": "Plantillas",
+    "files": "Compartir archivos",
+    "notes": "Compartir notas",
+    "requests": "Solicitar",
+    "reset": "Restablecer",
+    "passwordOn": "Empieza activada",
+    "passwordOff": "Empieza desactivada",
+    "sendsHint": "En una solicitud de archivos y una nota, son envíos.",
+    "defaultsHint": "Cada nuevo envío o solicitud empieza con estos valores, y el formulario todavía puede cambiarlos. Un valor que el servidor ya no ofrece vuelve a su valor predeterminado, y una contraseña que exige el servidor siempre está activada."
   }
 }

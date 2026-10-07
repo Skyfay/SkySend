@@ -26,6 +26,7 @@ import { SaveTemplateDialog, type SaveChoice } from "@/components/SaveTemplateDi
 import { TemplateStart, builtInOf, type TemplateStartValue } from "@/components/TemplateStart";
 import type { NewRequestOptions } from "@/hooks/useFileRequests";
 import type { ServerConfig } from "@/lib/api";
+import { requestSizeOptions, requestStart } from "@/lib/defaults";
 import { briefFits } from "@/lib/file-request";
 import { toDrafts, type DraftBlock } from "@/lib/note-editor";
 import {
@@ -36,29 +37,6 @@ import {
   type TemplateFields,
 } from "@/lib/request-templates";
 import { formatBytes, formatDuration } from "@/lib/utils";
-
-const GIB = 1024 ** 3;
-const MIB = 1024 ** 2;
-/** Sizes a requester can pick, as far as the server allows. */
-const SIZE_STEPS = [
-  10 * MIB,
-  50 * MIB,
-  100 * MIB,
-  250 * MIB,
-  500 * MIB,
-  GIB,
-  2 * GIB,
-  5 * GIB,
-  10 * GIB,
-  20 * GIB,
-  50 * GIB,
-  100 * GIB,
-];
-
-/** The size steps below the server maximum, and the maximum itself. */
-function requestSizeOptions(max: number): number[] {
-  return [...SIZE_STEPS.filter((size) => size < max), max];
-}
 
 type Mode = "files" | "note" | "both";
 const ASKS: Record<Mode, RequestAsk[]> = {
@@ -97,25 +75,19 @@ function setupFrom(fields: TemplateFields | null, config: ServerConfig) {
     mode = blocks.length > 0 ? "note" : "files";
   }
   const limits = fields?.limits;
+  // Without limits of its own, the form starts from this browser's defaults.
+  const base = requestStart(config);
   return {
     mode,
     title: fields?.title ?? "",
     template: toDrafts(blocks),
     expireSec: limits
-      ? fitOption(
-          config.fileRequestExpireOptions,
-          limits.expireSec,
-          config.fileRequestDefaultExpire,
-        )
-      : config.fileRequestDefaultExpire,
-    maxUploads: Math.min(limits?.sends ?? 10, config.fileRequestMaxUploads),
+      ? fitOption(config.fileRequestExpireOptions, limits.expireSec, base.expireSec)
+      : base.expireSec,
+    maxUploads: limits ? Math.min(limits.sends, config.fileRequestMaxUploads) : base.sends,
     maxSize: limits
-      ? fitOption(
-          requestSizeOptions(config.fileRequestMaxSize),
-          limits.maxSize,
-          config.fileRequestMaxSize,
-        )
-      : config.fileRequestMaxSize,
+      ? fitOption(requestSizeOptions(config.fileRequestMaxSize), limits.maxSize, base.maxSize)
+      : base.maxSize,
   };
 }
 
@@ -182,7 +154,7 @@ export function RequestForm({
   const [expireSec, setExpireSec] = useState(first.expireSec);
   const [maxUploads, setMaxUploads] = useState(first.maxUploads);
   const [maxSize, setMaxSize] = useState(first.maxSize);
-  const [passwordEnabled, setPasswordEnabled] = useState(config.forceFilePassword);
+  const [passwordEnabled, setPasswordEnabled] = useState(() => requestStart(config).password);
   const [password, setPassword] = useState("");
   const [startedFrom, setStartedFrom] = useState<TemplateStartValue>(
     editing?.id ?? start?.id ?? "blank",

@@ -24,7 +24,8 @@
     "myUploads": "My Links",
     "menu": "Menu",
     "requests": "Request",
-    "requestsUnseen": "New uploads in requests"
+    "requestsUnseen": "New uploads in requests",
+    "settings": "Settings"
   },
   "tab": {
     "file": "File",
@@ -158,8 +159,7 @@
     "remaining": "{{count}} downloads remaining",
     "expired": "Expired",
     "unavailable": "Unavailable",
-    "files": "{{count}} file(s)",
-    "tabTemplates": "Templates"
+    "files": "{{count}} file(s)"
   },
   "noteView": {
     "title": "Encrypted Note",
@@ -748,5 +748,19 @@
     "skip": "Skip",
     "notFound": "This template is no longer kept in this browser.",
     "duplicated": "Duplicated as “{{name}}”."
+  },
+  "settings": {
+    "title": "Settings",
+    "intro": "They apply to this browser only, and the server learns none of them.",
+    "tabDefaults": "Defaults",
+    "tabTemplates": "Templates",
+    "files": "Sharing files",
+    "notes": "Sharing notes",
+    "requests": "Requesting",
+    "reset": "Reset",
+    "passwordOn": "Starts switched on",
+    "passwordOff": "Starts switched off",
+    "sendsHint": "In a request for files and a note, these are submissions.",
+    "defaultsHint": "A new share or request starts with these values, and the form can still change them. A value the server no longer offers falls back to its default, and a password the server asks for is always on."
   }
 }

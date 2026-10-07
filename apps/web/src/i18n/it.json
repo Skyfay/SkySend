@@ -29,7 +29,8 @@
     "myUploads": "I miei link",
     "menu": "Menu",
     "requests": "Richiedi",
-    "requestsUnseen": "Nuovi caricamenti nelle richieste"
+    "requestsUnseen": "Nuovi caricamenti nelle richieste",
+    "settings": "Impostazioni"
   },
   "tab": {
     "file": "File",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} download rimanenti",
     "expired": "Scaduto",
     "unavailable": "Non disponibile",
-    "files": "{{count}} file",
-    "tabTemplates": "Modelli"
+    "files": "{{count}} file"
   },
   "noteView": {
     "title": "Nota crittografata",
@@ -753,5 +753,19 @@
     "skip": "Salta",
     "notFound": "Questo modello non è più salvato in questo browser.",
     "duplicated": "Duplicato come “{{name}}”."
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "intro": "Valgono solo per questo browser, e il server non ne sa nulla.",
+    "tabDefaults": "Valori predefiniti",
+    "tabTemplates": "Modelli",
+    "files": "Condividere file",
+    "notes": "Condividere note",
+    "requests": "Richiedere",
+    "reset": "Reimposta",
+    "passwordOn": "Parte attiva",
+    "passwordOff": "Parte disattivata",
+    "sendsHint": "In una richiesta di file e di una nota, sono invii.",
+    "defaultsHint": "Una nuova condivisione o richiesta parte con questi valori, e nel modulo puoi ancora cambiarli. Un valore che il server non offre più torna al suo predefinito, e una password richiesta dal server è sempre attiva."
   }
 }

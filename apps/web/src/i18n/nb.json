@@ -29,7 +29,8 @@
     "myUploads": "Mine lenker",
     "menu": "Meny",
     "requests": "Be om",
-    "requestsUnseen": "Nye opplastinger i forespørsler"
+    "requestsUnseen": "Nye opplastinger i forespørsler",
+    "settings": "Innstillinger"
   },
   "tab": {
     "file": "Fil",
@@ -163,8 +164,7 @@
     "remaining": "{{count}} nedlastinger igjen",
     "expired": "Utløpt",
     "unavailable": "Utilgjengelig",
-    "files": "{{count}} fil(er)",
-    "tabTemplates": "Maler"
+    "files": "{{count}} fil(er)"
   },
   "noteView": {
     "title": "Kryptert notat",
@@ -753,5 +753,19 @@
     "skip": "Hopp over",
     "notFound": "Denne malen finnes ikke lenger i denne nettleseren.",
     "duplicated": "Duplisert som «{{name}}»."
+  },
+  "settings": {
+    "title": "Innstillinger",
+    "intro": "De gjelder bare i denne nettleseren, og serveren får ikke vite noe om dem.",
+    "tabDefaults": "Standardverdier",
+    "tabTemplates": "Maler",
+    "files": "Dele filer",
+    "notes": "Dele notater",
+    "requests": "Be om",
+    "reset": "Tilbakestill",
+    "passwordOn": "Starter slått på",
+    "passwordOff": "Starter slått av",
+    "sendsHint": "I en forespørsel om filer og et notat er dette innsendinger.",
+    "defaultsHint": "En ny deling eller forespørsel starter med disse verdiene, og skjemaet kan fortsatt endre dem. En verdi serveren ikke lenger tilbyr, faller tilbake til serverens standard, og et passord serveren krever, er alltid på."
   }
 }

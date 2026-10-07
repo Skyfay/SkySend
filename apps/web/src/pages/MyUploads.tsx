@@ -1,9 +1,8 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
-  BookmarkPlus,
   Inbox,
   File,
   FileText,
@@ -20,14 +19,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequestList } from "@/components/RequestList";
-import { TemplateList } from "@/components/TemplateList";
 import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { storedNoteKinds, type NoteKindKey } from "@/lib/note-editor";
-import { peekLinkImport, setLinkImport } from "@/lib/request-templates";
 import { subscribeUnseen, unseenTotal } from "@/lib/unseen-uploads";
 import { toast } from "sonner";
 
@@ -44,17 +41,13 @@ const FILTER_ICONS: Record<Filter, React.ComponentType<{ className?: string }>> 
 };
 
 /**
- * My Links: everything this browser shared, the file requests it made and the templates it
- * keeps for them, each in its own tab when the instance offers requests.
+ * My Links: everything this browser shared, and the file requests it made, each in its own
+ * tab when the instance offers both.
  */
 export function MyUploadsPage() {
   const { t } = useTranslation();
   const { config } = useServerConfig();
   const [params, setParams] = useSearchParams();
-  // The export a templates link brought, to import right away.
-  const [linkImport, setLinkImportShown] = useState(() => peekLinkImport() ?? undefined);
-  // Leaving the page drops it, so it never comes back on a later visit.
-  useEffect(() => () => setLinkImport(null), []);
   const unseen = useSyncExternalStore(subscribeUnseen, unseenTotal);
   const {
     uploads,
@@ -151,10 +144,7 @@ export function MyUploadsPage() {
   // The same rule as the navigation: an instance with only file requests shares nothing.
   const sharing = !config || config.enabledServices.length > 0;
   const requests = config?.fileRequestsEnabled ?? false;
-  const tab = params.get("tab");
-  const firstSection = sharing ? "shared" : "requests";
-  const section =
-    requests && (tab === "requests" || tab === "templates") ? tab : firstSection;
+  const section = !sharing || (requests && params.get("tab") === "requests") ? "requests" : "shared";
   const intro =
     sharing && requests
       ? t("myUploads.intro")
@@ -238,20 +228,18 @@ export function MyUploadsPage() {
   );
 
   let body;
-  if (requests) {
+  if (sharing && requests) {
     body = (
       <Tabs
         value={section}
-        onValueChange={(v) => setParams(v === firstSection ? {} : { tab: v }, { replace: true })}
+        onValueChange={(v) => setParams(v === "requests" ? { tab: "requests" } : {}, { replace: true })}
         className="space-y-6"
       >
         <TabsList aria-label={t("myUploads.title")}>
-          {sharing && (
-            <TabsTrigger value="shared">
-              <Share2 />
-              {t("myUploads.tabShared")}
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="shared">
+            <Share2 />
+            {t("myUploads.tabShared")}
+          </TabsTrigger>
           <TabsTrigger value="requests">
             <Inbox />
             {t("myUploads.tabRequests")}
@@ -262,33 +250,20 @@ export function MyUploadsPage() {
               </>
             )}
           </TabsTrigger>
-          <TabsTrigger value="templates">
-            <BookmarkPlus />
-            {t("myUploads.tabTemplates")}
-          </TabsTrigger>
         </TabsList>
-        {sharing && (
-          <TabsContent value="shared" className="space-y-6">
-            {shared}
-          </TabsContent>
-        )}
-        <TabsContent value="requests">
-          {/* Without sharing, the intro says where the list lives already. */}
-          <RequestList hint={sharing} />
+        <TabsContent value="shared" className="space-y-6">
+          {shared}
         </TabsContent>
-        <TabsContent value="templates">
-          <TemplateList
-            linkImport={linkImport}
-            onLinkImportDone={() => {
-              setLinkImport(null);
-              setLinkImportShown(undefined);
-            }}
-          />
+        <TabsContent value="requests">
+          <RequestList />
         </TabsContent>
       </Tabs>
     );
-  } else {
+  } else if (sharing) {
     body = shared;
+  } else {
+    // The intro says where the list lives already.
+    body = <RequestList hint={false} />;
   }
 
   return (

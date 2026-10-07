@@ -380,7 +380,6 @@
       "inbox.submission",
       "request.asksBothUnavailable",
       "requestUpload.stepDone",
-      "myUploads.tabTemplates",
       "templates.startWith",
       "templates.manage",
       "templates.blank",
@@ -496,7 +495,20 @@
       "password.fieldNumber",
       "tab.fields",
       "template.blockTitle",
-      "note.blockTitle"
+      "note.blockTitle",
+      "nav.settings",
+      "settings.title",
+      "settings.intro",
+      "settings.tabDefaults",
+      "settings.tabTemplates",
+      "settings.files",
+      "settings.notes",
+      "settings.requests",
+      "settings.reset",
+      "settings.passwordOn",
+      "settings.passwordOff",
+      "settings.sendsHint",
+      "settings.defaultsHint"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -525,7 +537,8 @@
     "myUploads": "マイリンク",
     "menu": "メニュー",
     "requests": "リクエスト",
-    "requestsUnseen": "リクエストに新しいアップロードがあります"
+    "requestsUnseen": "リクエストに新しいアップロードがあります",
+    "settings": "設定"
   },
   "tab": {
     "file": "ファイル",
@@ -659,8 +672,7 @@
     "remaining": "残り {{count}} 回ダウンロード可能",
     "expired": "有効期限切れ",
     "unavailable": "利用不可",
-    "files": "{{count}} 件のファイル",
-    "tabTemplates": "テンプレート"
+    "files": "{{count}} 件のファイル"
   },
   "noteView": {
     "title": "暗号化メモ",
@@ -1249,5 +1261,19 @@
     "skip": "スキップ",
     "notFound": "このテンプレートはもうこのブラウザーにありません。",
     "duplicated": "「{{name}}」として複製しました。"
+  },
+  "settings": {
+    "title": "設定",
+    "intro": "このブラウザーだけに適用され、サーバーには一切伝わりません。",
+    "tabDefaults": "既定値",
+    "tabTemplates": "テンプレート",
+    "files": "ファイルの共有",
+    "notes": "メモの共有",
+    "requests": "リクエスト",
+    "reset": "リセット",
+    "passwordOn": "最初からオン",
+    "passwordOff": "最初からオフ",
+    "sendsHint": "ファイルとメモのリクエストでは、これが提出の件数になります。",
+    "defaultsHint": "新しい共有やリクエストはこの値で始まり、フォームで変更することもできます。サーバーが提供しなくなった値はサーバーの既定値に戻り、サーバーが求めるパスワードは常にオンです。"
   }
 }

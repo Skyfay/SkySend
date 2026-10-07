@@ -227,7 +227,6 @@
       "inbox.submission",
       "request.asksBothUnavailable",
       "requestUpload.stepDone",
-      "myUploads.tabTemplates",
       "templates.startWith",
       "templates.manage",
       "templates.blank",
@@ -344,7 +343,20 @@
       "tab.fields",
       "template.blockTitle",
       "note.blockTitle",
-      "note.cardPassword"
+      "note.cardPassword",
+      "nav.settings",
+      "settings.title",
+      "settings.intro",
+      "settings.tabDefaults",
+      "settings.tabTemplates",
+      "settings.files",
+      "settings.notes",
+      "settings.requests",
+      "settings.reset",
+      "settings.passwordOn",
+      "settings.passwordOff",
+      "settings.sendsHint",
+      "settings.defaultsHint"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -373,7 +385,8 @@
     "myUploads": "Meus links",
     "menu": "Menu",
     "requests": "Solicitar",
-    "requestsUnseen": "Novos envios em solicitações"
+    "requestsUnseen": "Novos envios em solicitações",
+    "settings": "Configurações"
   },
   "tab": {
     "file": "Arquivo",
@@ -507,8 +520,7 @@
     "remaining": "{{count}} download(s) restante(s)",
     "expired": "Expirado",
     "unavailable": "Indisponível",
-    "files": "{{count}} arquivo(s)",
-    "tabTemplates": "Modelos"
+    "files": "{{count}} arquivo(s)"
   },
   "noteView": {
     "title": "Nota Criptografada",
@@ -1097,5 +1109,19 @@
     "skip": "Pular",
     "notFound": "Este modelo não está mais guardado neste navegador.",
     "duplicated": "Duplicado como “{{name}}”."
+  },
+  "settings": {
+    "title": "Configurações",
+    "intro": "Elas valem só neste navegador, e o servidor não fica sabendo de nada.",
+    "tabDefaults": "Valores padrão",
+    "tabTemplates": "Modelos",
+    "files": "Compartilhar arquivos",
+    "notes": "Compartilhar notas",
+    "requests": "Solicitar",
+    "reset": "Redefinir",
+    "passwordOn": "Começa ativada",
+    "passwordOff": "Começa desativada",
+    "sendsHint": "Em uma solicitação de arquivos e uma nota, são envios conjuntos.",
+    "defaultsHint": "Um novo compartilhamento ou solicitação começa com estes valores, e o formulário ainda pode alterá-los. Um valor que o servidor não oferece mais volta ao padrão dele, e uma senha exigida pelo servidor fica sempre ativada."
   }
 }

@@ -14,6 +14,7 @@ import { RequestsPage } from "@/pages/Requests";
 import { InboxPage } from "@/pages/Inbox";
 import { RequestUploadPage } from "@/pages/RequestUpload";
 import { TemplatesLinkPage } from "@/pages/TemplatesLink";
+import { SettingsPage } from "@/pages/Settings";
 import { NotFoundPage } from "@/pages/NotFound";
 
 /**
@@ -51,6 +52,7 @@ export function App() {
                 <Route path="/inbox/:id" element={<InboxPage />} />
                 <Route path="/request/:id" element={<RequestUploadPage />} />
                 <Route path="/templates" element={<TemplatesLinkPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/how" element={<HowItWorksPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
