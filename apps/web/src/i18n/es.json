@@ -341,10 +341,8 @@
     "fewer": "Menos",
     "more": "Más",
     "password": "Contraseña",
-    "passwordHint": "El destinatario la necesita para abrirlo",
-    "passwordOff": "Cualquiera con el enlace puede abrirlo",
-    "summary": "Se elimina tras <b>{{expiry}}</b>.",
-    "summaryLimit": "Se elimina tras <b>{{expiry}}</b> o <b>{{limit}}</b>, lo que ocurra primero.",
+    "passwordHint": "El destinatario la necesita para abrirlo.",
+    "passwordForced": "El servidor exige una contraseña.",
     "encryptUpload": "Cifrar y subir",
     "encryptShare": "Cifrar y compartir",
     "signInText": "Este servidor solo permite compartir a quienes han iniciado sesión. Inicie sesión para continuar.",
@@ -366,7 +364,25 @@
     "goneText": "Los elementos compartidos se eliminan solos cuando se agota su tiempo o su límite. Pida al remitente un enlace nuevo.",
     "goneAction": "Compartir un archivo o una nota",
     "fileTabHint": "Hasta {{size}}, cualquier tipo",
-    "noteTabHint": "Texto, contraseñas, código y claves"
+    "noteTabHint": "Texto, contraseñas, código y claves",
+    "settings": "Ajustes",
+    "pill": {
+      "expiry": "Expira después de <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> descarga",
+      "downloads_other": "<b>{{count}}</b> descargas",
+      "views_one": "<b>{{count}}</b> vista",
+      "views_other": "<b>{{count}}</b> vistas",
+      "unlimitedViews": "Vistas <b>ilimitadas</b>",
+      "burnAfterReading": "<b>Destruir</b> tras leer"
+    },
+    "pick": {
+      "expiry": "¿Cuánto tiempo debe funcionar el enlace?",
+      "downloads": "¿Cuántas descargas?",
+      "views": "¿Cuántas vistas?",
+      "burnHint": "Con 1, la nota se elimina en cuanto se lee.",
+      "unlimitedHint": "Con ∞, la nota se conserva hasta que expire.",
+      "viewsHint": "Con 1, la nota se elimina en cuanto se lee. Con ∞, se conserva hasta que expire."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge por diseño",
@@ -497,7 +513,6 @@
     "limitLeft_one": "Queda {{count}} solicitud nueva hoy, de {{limit}}.",
     "limitLeft_other": "Quedan {{count}} solicitudes nuevas hoy, de {{limit}}.",
     "limitReached": "Hoy no quedan solicitudes nuevas. Podrá crear otra en {{time}}.",
-    "settings": "Ajustes",
     "pill": {
       "expiry": "Abierta durante <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> subida",

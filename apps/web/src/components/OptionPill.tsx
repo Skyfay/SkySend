@@ -27,6 +27,8 @@ interface OptionPillProps {
   value: number;
   onChange: (value: number) => void;
   format: (value: number) => string;
+  /** The name of an option for a screen reader, where its chip shows a symbol. */
+  optionLabel?: (value: number) => string | undefined;
   columns: 3 | 4;
   disabled?: boolean;
 }
@@ -44,6 +46,7 @@ export function OptionPill({
   value,
   onChange,
   format,
+  optionLabel,
   columns,
   disabled,
 }: OptionPillProps) {
@@ -74,6 +77,7 @@ export function OptionPill({
         <ToggleGroupItem
           key={option}
           value={String(option)}
+          aria-label={optionLabel?.(option)}
           className={cn("px-2", !wide && "h-11 text-[15px]")}
         >
           {format(option)}

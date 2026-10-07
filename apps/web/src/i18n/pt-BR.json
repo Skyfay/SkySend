@@ -355,7 +355,6 @@
       "request.limitLeft_other",
       "request.limitReached",
       "common.done",
-      "request.settings",
       "request.pill.expiry",
       "request.pill.uploads_one",
       "request.pill.uploads_other",
@@ -372,7 +371,22 @@
       "request.pick.submissionsHint",
       "request.pick.size",
       "request.pick.downloads",
-      "request.pick.views"
+      "request.pick.views",
+      "share.settings",
+      "share.pill.expiry",
+      "share.pill.downloads_one",
+      "share.pill.downloads_other",
+      "share.pill.views_one",
+      "share.pill.views_other",
+      "share.pill.unlimitedViews",
+      "share.pill.burnAfterReading",
+      "share.pick.expiry",
+      "share.pick.downloads",
+      "share.pick.views",
+      "share.pick.burnHint",
+      "share.pick.unlimitedHint",
+      "share.pick.viewsHint",
+      "share.passwordForced"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -713,10 +727,8 @@
     "fewer": "Menos",
     "more": "Mais",
     "password": "Senha",
-    "passwordHint": "O destinatário precisa dela para abrir o compartilhamento",
-    "passwordOff": "Qualquer pessoa com o link pode abrir",
-    "summary": "Excluído após <b>{{expiry}}</b>.",
-    "summaryLimit": "Excluído após <b>{{expiry}}</b> ou <b>{{limit}}</b>, o que ocorrer primeiro.",
+    "passwordHint": "O destinatário precisa dela para abrir o compartilhamento.",
+    "passwordForced": "O servidor exige uma senha.",
     "encryptUpload": "Criptografar e enviar",
     "encryptShare": "Criptografar e compartilhar",
     "signInText": "Este servidor só permite compartilhar a pessoas conectadas. Entre para continuar.",
@@ -738,7 +750,25 @@
     "goneText": "Os compartilhamentos se excluem sozinhos quando o prazo ou o limite acaba. Peça um novo link ao remetente.",
     "goneAction": "Compartilhar um arquivo ou nota",
     "fileTabHint": "Até {{size}}, qualquer tipo",
-    "noteTabHint": "Texto, senhas, código e chaves"
+    "noteTabHint": "Texto, senhas, código e chaves",
+    "settings": "Configurações",
+    "pill": {
+      "expiry": "Expira após <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> download",
+      "downloads_other": "<b>{{count}}</b> downloads",
+      "views_one": "<b>{{count}}</b> visualização",
+      "views_other": "<b>{{count}}</b> visualizações",
+      "unlimitedViews": "Visualizações <b>ilimitadas</b>",
+      "burnAfterReading": "<b>Autodestruir</b> após leitura"
+    },
+    "pick": {
+      "expiry": "Por quanto tempo o link deve funcionar?",
+      "downloads": "Quantos downloads?",
+      "views": "Quantas visualizações?",
+      "burnHint": "Com 1, a nota é apagada assim que for lida.",
+      "unlimitedHint": "Com ∞, a nota fica até expirar.",
+      "viewsHint": "Com 1, a nota é apagada assim que for lida. Com ∞, ela fica até expirar."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge por design",
@@ -869,7 +899,6 @@
     "limitLeft_one": "Resta {{count}} nova solicitação hoje, de {{limit}}.",
     "limitLeft_other": "Restam {{count}} novas solicitações hoje, de {{limit}}.",
     "limitReached": "Não há mais novas solicitações hoje. Você poderá criar outra em {{time}}.",
-    "settings": "Configurações",
     "pill": {
       "expiry": "Aberta por <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> envio",

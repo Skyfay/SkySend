@@ -341,10 +341,8 @@
     "fewer": "Mniej",
     "more": "Więcej",
     "password": "Hasło",
-    "passwordHint": "Odbiorca potrzebuje go, aby to otworzyć",
-    "passwordOff": "Każdy, kto ma link, może to otworzyć",
-    "summary": "Zostanie usunięte za <b>{{expiry}}</b>.",
-    "summaryLimit": "Zostanie usunięte za <b>{{expiry}}</b> lub po osiągnięciu limitu: <b>{{limit}}</b>, zależnie od tego, co nastąpi pierwsze.",
+    "passwordHint": "Odbiorca potrzebuje go, aby to otworzyć.",
+    "passwordForced": "Serwer wymaga hasła.",
     "encryptUpload": "Zaszyfruj i prześlij",
     "encryptShare": "Zaszyfruj i udostępnij",
     "signInText": "Ten serwer pozwala udostępniać tylko zalogowanym osobom. Zaloguj się, aby kontynuować.",
@@ -366,7 +364,29 @@
     "goneText": "Udostępnienia usuwają się same, gdy skończy się czas lub limit. Poproś nadawcę o nowy link.",
     "goneAction": "Udostępnij plik lub notatkę",
     "fileTabHint": "Do {{size}}, dowolny typ",
-    "noteTabHint": "Tekst, hasła, kod i klucze"
+    "noteTabHint": "Tekst, hasła, kod i klucze",
+    "settings": "Ustawienia",
+    "pill": {
+      "expiry": "Wygasa po <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> pobranie",
+      "downloads_few": "<b>{{count}}</b> pobrania",
+      "downloads_many": "<b>{{count}}</b> pobrań",
+      "downloads_other": "<b>{{count}}</b> pobrania",
+      "views_one": "<b>{{count}}</b> wyświetlenie",
+      "views_few": "<b>{{count}}</b> wyświetlenia",
+      "views_many": "<b>{{count}}</b> wyświetleń",
+      "views_other": "<b>{{count}}</b> wyświetlenia",
+      "unlimitedViews": "Wyświetlenia <b>bez limitu</b>",
+      "burnAfterReading": "<b>Zniszcz</b> po odczytaniu"
+    },
+    "pick": {
+      "expiry": "Jak długo link ma działać?",
+      "downloads": "Ile pobrań?",
+      "views": "Ile wyświetleń?",
+      "burnHint": "Przy 1 notatka zostaje usunięta zaraz po odczytaniu.",
+      "unlimitedHint": "Przy ∞ notatka zostaje do wygaśnięcia.",
+      "viewsHint": "Przy 1 notatka zostaje usunięta zaraz po odczytaniu. Przy ∞ zostaje do wygaśnięcia."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge od podstaw",
@@ -497,7 +517,6 @@
     "limitLeft_one": "Pozostałe nowe prośby na dziś: {{count}} z {{limit}}.",
     "limitLeft_other": "Pozostałe nowe prośby na dziś: {{count}} z {{limit}}.",
     "limitReached": "Na dziś nie można utworzyć więcej próśb. Kolejną utworzysz za {{time}}.",
-    "settings": "Ustawienia",
     "pill": {
       "expiry": "Otwarta przez <b>{{time}}</b>",
       "uploads_one": "Przesyłki: <b>{{count}}</b>",

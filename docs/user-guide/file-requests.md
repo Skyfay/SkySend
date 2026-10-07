@@ -10,7 +10,7 @@ Like everything in SkySend, what they send is encrypted before it leaves their b
 2. Choose what to ask for: **Files**, a **Note**, or **Both**
 3. Optionally write what you need, for example "Documents for the tax return". The sender sees this text. It is encrypted, and at most 256 bytes long.
 4. For a note, optionally lay out its fields in the **Note template**, for example a username and a password. Without fields the sender writes freely.
-5. Check the **Settings**. Each pill shows its value, and a click opens its choices, on a phone in a sheet from the bottom:
+5. Check the settings below. Each pill shows its value, and a click opens its choices, on a phone in a sheet from the bottom:
    - **Open for** - How long the request takes uploads, one of the times the instance offers
    - **Uploads** - How many uploads it takes in total, one of the options the instance offers. A note counts as one. For **Both**, these are **Submissions**: one sender's files and note together, which take two uploads of the request.
    - **Per upload** - How large one upload may be, at most the [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) of the instance. Only for files.

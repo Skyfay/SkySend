@@ -341,10 +341,8 @@
     "fewer": "Færre",
     "more": "Flere",
     "password": "Passord",
-    "passwordHint": "Mottakeren trenger det for å åpne delingen",
-    "passwordOff": "Alle med lenken kan åpne den",
-    "summary": "Slettes etter <b>{{expiry}}</b>.",
-    "summaryLimit": "Slettes etter <b>{{expiry}}</b> eller <b>{{limit}}</b>, avhengig av hva som inntreffer først.",
+    "passwordHint": "Mottakeren trenger det for å åpne delingen.",
+    "passwordForced": "Serveren krever et passord.",
     "encryptUpload": "Krypter og last opp",
     "encryptShare": "Krypter og del",
     "signInText": "Denne serveren lar bare innloggede personer dele. Logg inn for å fortsette.",
@@ -366,7 +364,25 @@
     "goneText": "Delinger sletter seg selv når tiden eller grensen går ut. Be avsenderen om en ny lenke.",
     "goneAction": "Del en fil eller et notat",
     "fileTabHint": "Opptil {{size}}, alle typer",
-    "noteTabHint": "Tekst, passord, kode og nøkler"
+    "noteTabHint": "Tekst, passord, kode og nøkler",
+    "settings": "Innstillinger",
+    "pill": {
+      "expiry": "Utløper etter <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> nedlasting",
+      "downloads_other": "<b>{{count}}</b> nedlastinger",
+      "views_one": "<b>{{count}}</b> visning",
+      "views_other": "<b>{{count}}</b> visninger",
+      "unlimitedViews": "<b>Ubegrensede</b> visninger",
+      "burnAfterReading": "<b>Slett</b> etter lesing"
+    },
+    "pick": {
+      "expiry": "Hvor lenge skal lenken virke?",
+      "downloads": "Hvor mange nedlastinger?",
+      "views": "Hvor mange visninger?",
+      "burnHint": "Med 1 slettes notatet så snart det er lest.",
+      "unlimitedHint": "Med ∞ blir notatet liggende til det utløper.",
+      "viewsHint": "Med 1 slettes notatet så snart det er lest. Med ∞ blir det liggende til det utløper."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge fra grunnen av",
@@ -497,7 +513,6 @@
     "limitLeft_one": "{{count}} ny forespørsel igjen i dag, av {{limit}}.",
     "limitLeft_other": "{{count}} nye forespørsler igjen i dag, av {{limit}}.",
     "limitReached": "Ingen nye forespørsler igjen i dag. Du kan opprette en ny om {{time}}.",
-    "settings": "Innstillinger",
     "pill": {
       "expiry": "Åpen i <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> opplasting",

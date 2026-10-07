@@ -341,10 +341,8 @@
     "fewer": "Färre",
     "more": "Fler",
     "password": "Lösenord",
-    "passwordHint": "Mottagaren behöver det för att öppna delningen",
-    "passwordOff": "Alla med länken kan öppna den",
-    "summary": "Raderas efter <b>{{expiry}}</b>.",
-    "summaryLimit": "Raderas efter <b>{{expiry}}</b> eller <b>{{limit}}</b>, beroende på vilket som inträffar först.",
+    "passwordHint": "Mottagaren behöver det för att öppna delningen.",
+    "passwordForced": "Servern kräver ett lösenord.",
     "encryptUpload": "Kryptera och ladda upp",
     "encryptShare": "Kryptera och dela",
     "signInText": "Den här servern tillåter bara inloggade personer att dela. Logga in för att fortsätta.",
@@ -366,7 +364,25 @@
     "goneText": "Delningar raderar sig själva när deras tid eller gräns löper ut. Be avsändaren om en ny länk.",
     "goneAction": "Dela en fil eller anteckning",
     "fileTabHint": "Upp till {{size}}, alla typer",
-    "noteTabHint": "Text, lösenord, kod och nycklar"
+    "noteTabHint": "Text, lösenord, kod och nycklar",
+    "settings": "Inställningar",
+    "pill": {
+      "expiry": "Upphör efter <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> nedladdning",
+      "downloads_other": "<b>{{count}}</b> nedladdningar",
+      "views_one": "<b>{{count}}</b> visning",
+      "views_other": "<b>{{count}}</b> visningar",
+      "unlimitedViews": "<b>Obegränsat</b> med visningar",
+      "burnAfterReading": "<b>Förstör</b> efter läsning"
+    },
+    "pick": {
+      "expiry": "Hur länge ska länken fungera?",
+      "downloads": "Hur många nedladdningar?",
+      "views": "Hur många visningar?",
+      "burnHint": "Med 1 raderas anteckningen så fort den har lästs.",
+      "unlimitedHint": "Med ∞ finns anteckningen kvar tills den upphör.",
+      "viewsHint": "Med 1 raderas anteckningen så fort den har lästs. Med ∞ finns den kvar tills den upphör."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge från grunden",
@@ -497,7 +513,6 @@
     "limitLeft_one": "{{count}} ny förfrågan kvar i dag, av {{limit}}.",
     "limitLeft_other": "{{count}} nya förfrågningar kvar i dag, av {{limit}}.",
     "limitReached": "Inga nya förfrågningar kvar i dag. Du kan skapa en ny om {{time}}.",
-    "settings": "Inställningar",
     "pill": {
       "expiry": "Öppen i <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> uppladdning",

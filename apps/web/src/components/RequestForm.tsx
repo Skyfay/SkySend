@@ -345,7 +345,7 @@ export function RequestForm({
 
       <section className="space-y-3" aria-labelledby={`${id}-settings`}>
         <h3 id={`${id}-settings`} className="text-[13px] font-medium">
-          {t("request.settings")}
+          {t("share.settings")}
         </h3>
         <div className="flex flex-wrap gap-2">
           <OptionPill
@@ -426,6 +426,9 @@ export function RequestForm({
               disabled={creating}
             />
             <p className="text-xs text-muted-foreground">{t("request.passwordHint")}</p>
+            {config.forceRequestPassword && (
+              <p className="text-xs text-muted-foreground">{t("share.passwordForced")}</p>
+            )}
           </div>
         )}
 

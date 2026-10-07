@@ -22,6 +22,7 @@
 
 ### 🐛 Bug Fixes
 
+- **web**: Long file names in the list of an upload are shortened on a phone, so the button to remove a file stays in view.
 - **web**: The download speed no longer shows a negative value after a download falls back to another way of saving the file.
 - **server**: A WebSocket upload keeps its file when recording the upload quota fails.
 - **server**: Expiry options longer than 100 years are refused at startup instead of failing every upload.

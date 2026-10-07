@@ -138,9 +138,6 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
       </div>
 
       <ShareFooter
-        kind="note"
-        expireSec={expireSec}
-        limit={maxViews}
         label={t("share.encryptShare")}
         busyLabel={t("note.creating")}
         icon={<Send />}

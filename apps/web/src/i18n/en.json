@@ -336,10 +336,8 @@
     "fewer": "Fewer",
     "more": "More",
     "password": "Password",
-    "passwordHint": "The recipient needs it to open the share",
-    "passwordOff": "Anyone with the link can open it",
-    "summary": "Deleted after <b>{{expiry}}</b>.",
-    "summaryLimit": "Deleted after <b>{{expiry}}</b> or <b>{{limit}}</b>, whichever comes first.",
+    "passwordHint": "The recipient needs it to open the share.",
+    "passwordForced": "The server requires a password.",
     "encryptUpload": "Encrypt and upload",
     "encryptShare": "Encrypt and share",
     "signInText": "This server only lets signed-in people share. Sign in to continue.",
@@ -361,7 +359,25 @@
     "goneText": "Shares delete themselves when their time or limit runs out. Ask the sender for a new link.",
     "goneAction": "Share a file or note",
     "fileTabHint": "Up to {{size}}, any type",
-    "noteTabHint": "Text, passwords, code and keys"
+    "noteTabHint": "Text, passwords, code and keys",
+    "settings": "Settings",
+    "pill": {
+      "expiry": "Expires after <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> download",
+      "downloads_other": "<b>{{count}}</b> downloads",
+      "views_one": "<b>{{count}}</b> view",
+      "views_other": "<b>{{count}}</b> views",
+      "unlimitedViews": "<b>Unlimited</b> views",
+      "burnAfterReading": "<b>Burn</b> after reading"
+    },
+    "pick": {
+      "expiry": "How long should the link work?",
+      "downloads": "How many downloads?",
+      "views": "How many views?",
+      "burnHint": "With 1, the note is deleted once it is read.",
+      "unlimitedHint": "With ∞, the note stays until it expires.",
+      "viewsHint": "With 1, the note is deleted once it is read. With ∞, it stays until it expires."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge by design",
@@ -492,7 +508,6 @@
     "limitLeft_one": "{{count}} new request left today, of {{limit}}.",
     "limitLeft_other": "{{count}} new requests left today, of {{limit}}.",
     "limitReached": "No new requests left today. You can create one again in {{time}}.",
-    "settings": "Settings",
     "pill": {
       "expiry": "Open for <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> upload",

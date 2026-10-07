@@ -341,10 +341,8 @@
     "fewer": "Minder",
     "more": "Meer",
     "password": "Wachtwoord",
-    "passwordHint": "De ontvanger heeft het nodig om het te openen",
-    "passwordOff": "Iedereen met de link kan het openen",
-    "summary": "Verwijderd na <b>{{expiry}}</b>.",
-    "summaryLimit": "Verwijderd na <b>{{expiry}}</b> of <b>{{limit}}</b>, afhankelijk van wat het eerst gebeurt.",
+    "passwordHint": "De ontvanger heeft het nodig om het te openen.",
+    "passwordForced": "De server vereist een wachtwoord.",
     "encryptUpload": "Versleutelen en uploaden",
     "encryptShare": "Versleutelen en delen",
     "signInText": "Op deze server kunnen alleen ingelogde gebruikers delen. Log in om door te gaan.",
@@ -366,7 +364,25 @@
     "goneText": "Gedeelde items verwijderen zichzelf wanneer hun tijd of limiet verstrijkt. Vraag de afzender om een nieuwe link.",
     "goneAction": "Een bestand of notitie delen",
     "fileTabHint": "Tot {{size}}, elk type",
-    "noteTabHint": "Tekst, wachtwoorden, code en sleutels"
+    "noteTabHint": "Tekst, wachtwoorden, code en sleutels",
+    "settings": "Instellingen",
+    "pill": {
+      "expiry": "Verloopt na <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> download",
+      "downloads_other": "<b>{{count}}</b> downloads",
+      "views_one": "<b>{{count}}</b> weergave",
+      "views_other": "<b>{{count}}</b> weergaven",
+      "unlimitedViews": "<b>Onbeperkte</b> weergaven",
+      "burnAfterReading": "<b>Vernietig</b> na lezen"
+    },
+    "pick": {
+      "expiry": "Hoe lang moet de link werken?",
+      "downloads": "Hoeveel downloads?",
+      "views": "Hoeveel weergaven?",
+      "burnHint": "Bij 1 wordt de notitie verwijderd zodra ze gelezen is.",
+      "unlimitedHint": "Bij ∞ blijft de notitie tot ze verloopt.",
+      "viewsHint": "Bij 1 wordt de notitie verwijderd zodra ze gelezen is. Bij ∞ blijft ze tot ze verloopt."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge door ontwerp",
@@ -497,7 +513,6 @@
     "limitLeft_one": "Vandaag nog {{count}} nieuw verzoek, van {{limit}}.",
     "limitLeft_other": "Vandaag nog {{count}} nieuwe verzoeken, van {{limit}}.",
     "limitReached": "Vandaag kunnen er geen nieuwe verzoeken meer bij. U kunt er weer een maken over {{time}}.",
-    "settings": "Instellingen",
     "pill": {
       "expiry": "Open voor <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> upload",

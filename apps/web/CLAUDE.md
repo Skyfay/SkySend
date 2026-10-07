@@ -147,7 +147,7 @@ The 22 available primitives:
 
 `badge` · `button` · `card` · `checkbox` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `popover` · `progress` · `scroll-area` · `select` · `sheet` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
 
-`popover` holds a choice at its trigger, `sheet` is a dialog that slides up from the bottom on a phone. `OptionPill` combines them: a setting that shows its value and opens its options in a popover, or in a sheet below the `sm` breakpoint, the way the settings of `RequestForm` work. `useMediaQuery` decides which.
+`popover` holds a choice at its trigger, `sheet` is a dialog that slides up from the bottom on a phone. `OptionPill` combines them: a setting that shows its value and opens its options in a popover, or in a sheet below the `sm` breakpoint, the way the settings of `ShareOptions` and `RequestForm` work. `useMediaQuery` decides which.
 
 `toggle-group` has three variants: `chips` for a short list of options like the expiry times, `segmented` for a switch between two or three modes like Plain and Markdown, and `cards` for two or three choices with a line of explanation each that open no panel, like the format of a template export. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
 

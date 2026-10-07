@@ -336,10 +336,8 @@
     "fewer": "Weniger",
     "more": "Mehr",
     "password": "Passwort",
-    "passwordHint": "Der Empfänger braucht es zum Öffnen",
-    "passwordOff": "Jeder mit dem Link kann es öffnen",
-    "summary": "Wird nach <b>{{expiry}}</b> gelöscht.",
-    "summaryLimit": "Wird nach <b>{{expiry}}</b> oder <b>{{limit}}</b> gelöscht, je nachdem, was zuerst eintritt.",
+    "passwordHint": "Der Empfänger braucht es zum Öffnen.",
+    "passwordForced": "Der Server verlangt ein Passwort.",
     "encryptUpload": "Verschlüsseln und hochladen",
     "encryptShare": "Verschlüsseln und teilen",
     "signInText": "Auf diesem Server können nur angemeldete Personen teilen. Melden Sie sich an, um fortzufahren.",
@@ -361,7 +359,25 @@
     "goneText": "Freigaben löschen sich selbst, wenn ihre Zeit oder ihr Limit abläuft. Bitten Sie den Absender um einen neuen Link.",
     "goneAction": "Datei oder Notiz teilen",
     "fileTabHint": "Bis {{size}}, jeder Dateityp",
-    "noteTabHint": "Text, Passwörter, Code und Schlüssel"
+    "noteTabHint": "Text, Passwörter, Code und Schlüssel",
+    "settings": "Einstellungen",
+    "pill": {
+      "expiry": "Läuft ab nach <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> Download",
+      "downloads_other": "<b>{{count}}</b> Downloads",
+      "views_one": "<b>{{count}}</b> Aufruf",
+      "views_other": "<b>{{count}}</b> Aufrufe",
+      "unlimitedViews": "<b>Unbegrenzte</b> Aufrufe",
+      "burnAfterReading": "<b>Nach dem Lesen</b> löschen"
+    },
+    "pick": {
+      "expiry": "Wie lange soll der Link gelten?",
+      "downloads": "Wie viele Downloads?",
+      "views": "Wie viele Aufrufe?",
+      "burnHint": "Bei 1 wird die Notiz gelöscht, sobald sie gelesen ist.",
+      "unlimitedHint": "Bei ∞ bleibt die Notiz, bis sie abläuft.",
+      "viewsHint": "Bei 1 wird die Notiz gelöscht, sobald sie gelesen ist. Bei ∞ bleibt sie, bis sie abläuft."
+    }
   },
   "how": {
     "eyebrow": "Zero Knowledge von Grund auf",
@@ -492,7 +508,6 @@
     "limitLeft_one": "Heute noch {{count}} neue Anfrage von {{limit}}.",
     "limitLeft_other": "Heute noch {{count}} neue Anfragen von {{limit}}.",
     "limitReached": "Für heute sind keine neuen Anfragen mehr möglich. Wieder in {{time}}.",
-    "settings": "Einstellungen",
     "pill": {
       "expiry": "Offen für <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> Upload",

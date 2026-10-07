@@ -341,10 +341,8 @@
     "fewer": "Vähemmän",
     "more": "Enemmän",
     "password": "Salasana",
-    "passwordHint": "Vastaanottaja tarvitsee sen jaon avaamiseen",
-    "passwordOff": "Kuka tahansa, jolla on linkki, voi avata sen",
-    "summary": "Poistetaan <b>{{expiry}}</b> kuluttua.",
-    "summaryLimit": "Poistetaan <b>{{expiry}}</b> kuluttua tai kun <b>{{limit}}</b> on saavutettu, sen mukaan kumpi tulee ensin.",
+    "passwordHint": "Vastaanottaja tarvitsee sen jaon avaamiseen.",
+    "passwordForced": "Palvelin vaatii salasanan.",
     "encryptUpload": "Salaa ja lähetä",
     "encryptShare": "Salaa ja jaa",
     "signInText": "Tällä palvelimella vain kirjautuneet käyttäjät voivat jakaa. Kirjaudu sisään jatkaaksesi.",
@@ -366,7 +364,25 @@
     "goneText": "Jaot poistuvat itsestään, kun niiden aika tai raja täyttyy. Pyydä lähettäjältä uusi linkki.",
     "goneAction": "Jaa tiedosto tai muistiinpano",
     "fileTabHint": "Enintään {{size}}, mikä tahansa tyyppi",
-    "noteTabHint": "Tekstiä, salasanoja, koodia ja avaimia"
+    "noteTabHint": "Tekstiä, salasanoja, koodia ja avaimia",
+    "settings": "Asetukset",
+    "pill": {
+      "expiry": "Vanhenee: <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> lataus",
+      "downloads_other": "<b>{{count}}</b> latausta",
+      "views_one": "<b>{{count}}</b> katselukerta",
+      "views_other": "<b>{{count}}</b> katselukertaa",
+      "unlimitedViews": "<b>Rajattomasti</b> katselukertoja",
+      "burnAfterReading": "<b>Tuhoa</b> lukemisen jälkeen"
+    },
+    "pick": {
+      "expiry": "Kuinka kauan linkin pitää toimia?",
+      "downloads": "Montako latausta?",
+      "views": "Montako katselukertaa?",
+      "burnHint": "Valinnalla 1 muistiinpano poistetaan heti, kun se on luettu.",
+      "unlimitedHint": "Valinnalla ∞ muistiinpano säilyy vanhenemiseen asti.",
+      "viewsHint": "Valinnalla 1 muistiinpano poistetaan heti, kun se on luettu. Valinnalla ∞ se säilyy vanhenemiseen asti."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge jo suunnittelussa",
@@ -497,7 +513,6 @@
     "limitLeft_one": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
     "limitLeft_other": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
     "limitReached": "Tänään ei voi luoda enää uusia pyyntöjä. Seuraavan voi luoda {{time}} kuluttua.",
-    "settings": "Asetukset",
     "pill": {
       "expiry": "Auki <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> lähetys",

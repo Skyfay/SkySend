@@ -341,10 +341,8 @@
     "fewer": "Moins",
     "more": "Plus",
     "password": "Mot de passe",
-    "passwordHint": "Le destinataire en a besoin pour l'ouvrir",
-    "passwordOff": "Toute personne disposant du lien peut l'ouvrir",
-    "summary": "Supprimé après <b>{{expiry}}</b>.",
-    "summaryLimit": "Supprimé après <b>{{expiry}}</b> ou <b>{{limit}}</b>, selon ce qui survient en premier.",
+    "passwordHint": "Le destinataire en a besoin pour l'ouvrir.",
+    "passwordForced": "Le serveur exige un mot de passe.",
     "encryptUpload": "Chiffrer et téléverser",
     "encryptShare": "Chiffrer et partager",
     "signInText": "Ce serveur n'autorise le partage qu'aux personnes connectées. Connectez-vous pour continuer.",
@@ -366,7 +364,25 @@
     "goneText": "Les partages se suppriment d'eux-mêmes lorsque leur délai ou leur limite est atteint. Demandez un nouveau lien à l'expéditeur.",
     "goneAction": "Partager un fichier ou une note",
     "fileTabHint": "Jusqu'à {{size}}, tout type",
-    "noteTabHint": "Texte, mots de passe, code et clés"
+    "noteTabHint": "Texte, mots de passe, code et clés",
+    "settings": "Paramètres",
+    "pill": {
+      "expiry": "Expire après <b>{{time}}</b>",
+      "downloads_one": "<b>{{count}}</b> téléchargement",
+      "downloads_other": "<b>{{count}}</b> téléchargements",
+      "views_one": "<b>{{count}}</b> vue",
+      "views_other": "<b>{{count}}</b> vues",
+      "unlimitedViews": "Vues <b>illimitées</b>",
+      "burnAfterReading": "<b>Détruire</b> après lecture"
+    },
+    "pick": {
+      "expiry": "Combien de temps le lien doit-il fonctionner ?",
+      "downloads": "Combien de téléchargements ?",
+      "views": "Combien de vues ?",
+      "burnHint": "Avec 1, la note est supprimée dès qu'elle est lue.",
+      "unlimitedHint": "Avec ∞, la note reste jusqu'à son expiration.",
+      "viewsHint": "Avec 1, la note est supprimée dès qu'elle est lue. Avec ∞, elle reste jusqu'à son expiration."
+    }
   },
   "how": {
     "eyebrow": "Zero knowledge par conception",
@@ -497,7 +513,6 @@
     "limitLeft_one": "Il vous reste {{count}} nouvelle demande aujourd'hui, sur {{limit}}.",
     "limitLeft_other": "Il vous reste {{count}} nouvelles demandes aujourd'hui, sur {{limit}}.",
     "limitReached": "Plus de nouvelle demande possible aujourd'hui. Vous pourrez en créer une dans {{time}}.",
-    "settings": "Paramètres",
     "pill": {
       "expiry": "Ouverte pendant <b>{{time}}</b>",
       "uploads_one": "<b>{{count}}</b> envoi",
