@@ -3,24 +3,26 @@ import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   BookmarkPlus,
+  Clock,
+  Download,
   File,
+  HardDrive,
   Inbox,
   Layers,
   Loader2,
   Lock,
   NotebookPen,
   Pencil,
+  Upload,
 } from "lucide-react";
 import { REQUEST_TITLE_MAX_BYTES, type RequestAsk } from "@skysend/crypto";
 import { serializeTemplate } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Stepper } from "@/components/ui/stepper";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BlockListEditor } from "@/components/BlockListEditor";
-import { ExpiryPicker, Row } from "@/components/ShareOptions";
+import { OptionPill, SwitchPill } from "@/components/OptionPill";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { SaveTemplateDialog, type SaveChoice } from "@/components/SaveTemplateDialog";
 import { TemplateStart, builtInOf, type TemplateStartValue } from "@/components/TemplateStart";
@@ -184,7 +186,11 @@ export function RequestForm({
   const limitReached = limited && dailyLimit.remaining === 0;
   const canSubmit =
     canSave && !editing && !limitReached && (!passwordEnabled || password.length > 0);
-  const strong = <strong className="font-semibold text-foreground" />;
+  // Trans parses its values as markup, so only numbers and what is formatted from them go
+  // in here, never a title or a name.
+  const pill = (key: string, values: Record<string, string | number>) => (
+    <Trans i18nKey={key} values={values} components={{ b: <strong className="font-semibold" /> }} />
+  );
   const countLabel = (count: number) =>
     both ? t("request.submissionsCount", { count }) : t("request.uploads", { count });
 
@@ -337,172 +343,128 @@ export function RequestForm({
         </section>
       )}
 
-      <div className="space-y-4">
-        <Row label={t("request.openFor")} labelId={`${id}-expiry`}>
-          <ExpiryPicker
+      <section className="space-y-3" aria-labelledby={`${id}-settings`}>
+        <h3 id={`${id}-settings`} className="text-[13px] font-medium">
+          {t("request.settings")}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          <OptionPill
+            icon={Clock}
+            label={pill("request.pill.expiry", { time: formatDuration(expireSec) })}
+            title={t("request.pick.expiry")}
             options={config.fileRequestExpireOptions}
             value={expireSec}
             onChange={limit(setExpireSec)}
-            labelId={`${id}-expiry`}
+            format={formatDuration}
+            columns={3}
             disabled={creating}
           />
-        </Row>
-
-        <Row
-          label={both ? t("request.submissions") : t("request.maxUploads")}
-          labelId={`${id}-uploads`}
-        >
-          <div role="group" aria-labelledby={`${id}-uploads`}>
-            <Stepper
-              options={config.fileRequestUploadOptions}
-              value={sends}
-              onChange={limit(setSends)}
-              format={(v) =>
-                both
-                  ? t("request.submissionsCount", { count: v })
-                  : t("request.uploads", { count: v })
-              }
-              decreaseLabel={t("share.fewer")}
-              increaseLabel={t("share.more")}
-              disabled={creating}
-            />
-          </div>
-        </Row>
-
-        {files && (
-          <Row label={t("request.maxSize")} labelId={`${id}-size`}>
-            <div role="group" aria-labelledby={`${id}-size`}>
-              <Stepper
-                options={sizeOptions}
-                value={maxSize}
-                onChange={limit(setMaxSize)}
-                format={formatBytes}
-                decreaseLabel={t("share.fewer")}
-                increaseLabel={t("share.more")}
-                disabled={creating}
-              />
-            </div>
-          </Row>
-        )}
-
-        {/* How often the requester can open each upload: downloads, or views of a note. */}
-        <Row
-          label={files ? t("request.downloads") : t("request.views")}
-          labelId={`${id}-downloads`}
-        >
-          <div role="group" aria-labelledby={`${id}-downloads`}>
-            <Stepper
-              options={config.fileRequestDownloadOptions}
-              value={downloads}
-              onChange={limit(setDownloads)}
-              format={(count) =>
-                files ? t("share.downloads", { count }) : t("share.views", { count })
-              }
-              decreaseLabel={t("share.fewer")}
-              increaseLabel={t("share.more")}
-              disabled={creating}
-            />
-          </div>
-        </Row>
-
-        {/* A template never keeps a password, so editing one asks for none. */}
-        {!editing && (
-          <>
-            <Row
-              labelId={`${id}-password`}
-              label={
-                <Label
-                  htmlFor={`${id}-password-toggle`}
-                  className="flex items-center gap-2 text-[13px]"
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  {t("share.password")}
-                </Label>
-              }
-            >
-              <div className="flex items-center gap-3">
-                {!config.forceRequestPassword && (
-                  <Switch
-                    id={`${id}-password-toggle`}
-                    checked={passwordEnabled}
-                    onCheckedChange={setPasswordEnabled}
-                    disabled={creating}
-                  />
-                )}
-                <span className="text-[13px] text-muted-foreground">
-                  {passwordEnabled ? t("request.passwordHint") : t("request.passwordOff")}
-                </span>
-              </div>
-            </Row>
-
-            {passwordEnabled && (
-              <div className="sm:pl-40">
-                <PasswordProtectionInput
-                  value={password}
-                  onChange={setPassword}
-                  placeholder={t(
-                    config.forceRequestPassword
-                      ? "upload.passwordPlaceholderRequired"
-                      : "upload.passwordPlaceholder",
-                  )}
-                  disabled={creating}
-                />
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {!editing && (
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {t("request.retention", { time: formatDuration(config.fileRequestRetention) })}
-        </p>
-      )}
-
-      <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
-        <p className="flex-1 text-[13px] leading-snug text-muted-foreground">
-          <Trans
-            i18nKey={
-              both ? "request.summaryBoth" : files ? "request.summary" : "request.summaryNote"
-            }
-            values={{
-              expiry: formatDuration(expireSec),
-              uploads: countLabel(sends),
-              size: formatBytes(maxSize),
-            }}
-            components={{ b: strong }}
+          <OptionPill
+            icon={Upload}
+            label={pill(both ? "request.pill.submissions" : "request.pill.uploads", {
+              count: sends,
+            })}
+            title={both ? t("request.pick.submissions") : t("request.pick.uploads")}
+            hint={both ? t("request.pick.submissionsHint") : undefined}
+            options={config.fileRequestUploadOptions}
+            value={sends}
+            onChange={limit(setSends)}
+            format={String}
+            columns={4}
+            disabled={creating}
           />
-        </p>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
-          {editing ? (
-            <>
-              <Button type="button" size="lg" variant="outline" onClick={onEditDone}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" size="lg" disabled={!canSave}>
-                <BookmarkPlus />
-                {t("templates.saveEdited")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                disabled={!canSave}
-                onClick={() => setSaveOpen(true)}
-              >
-                <BookmarkPlus />
-                {t("templates.saveAs")}
-              </Button>
-              <Button type="submit" size="lg" disabled={!canSubmit}>
-                {creating ? <Loader2 className="animate-spin" /> : <Inbox />}
-                {creating ? t("request.creating") : t("request.create")}
-              </Button>
-            </>
+          {files && (
+            <OptionPill
+              icon={HardDrive}
+              label={pill("request.pill.size", { size: formatBytes(maxSize) })}
+              title={t("request.pick.size")}
+              options={sizeOptions}
+              value={maxSize}
+              onChange={limit(setMaxSize)}
+              format={formatBytes}
+              columns={3}
+              disabled={creating}
+            />
+          )}
+          {/* How often the requester can open each upload: downloads, or views of a note. */}
+          <OptionPill
+            icon={Download}
+            label={pill(files ? "request.pill.downloads" : "request.pill.views", {
+              count: downloads,
+            })}
+            title={files ? t("request.pick.downloads") : t("request.pick.views")}
+            options={config.fileRequestDownloadOptions}
+            value={downloads}
+            onChange={limit(setDownloads)}
+            format={String}
+            columns={4}
+            disabled={creating}
+          />
+          {/* A template never keeps a password, so editing one asks for none. A forced
+              password stays on. */}
+          {!editing && (
+            <SwitchPill
+              icon={Lock}
+              label={t("share.password")}
+              checked={passwordEnabled}
+              onCheckedChange={setPasswordEnabled}
+              disabled={creating || config.forceRequestPassword}
+            />
           )}
         </div>
+
+        {!editing && passwordEnabled && (
+          <div className="space-y-1.5">
+            <PasswordProtectionInput
+              value={password}
+              onChange={setPassword}
+              placeholder={t(
+                config.forceRequestPassword
+                  ? "upload.passwordPlaceholderRequired"
+                  : "upload.passwordPlaceholder",
+              )}
+              disabled={creating}
+            />
+            <p className="text-xs text-muted-foreground">{t("request.passwordHint")}</p>
+          </div>
+        )}
+
+        {!editing && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t("request.retention", { time: formatDuration(config.fileRequestRetention) })}
+          </p>
+        )}
+      </section>
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {editing ? (
+          <>
+            <Button type="button" size="lg" variant="outline" onClick={onEditDone}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" size="lg" disabled={!canSave}>
+              <BookmarkPlus />
+              {t("templates.saveEdited")}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              disabled={!canSave}
+              onClick={() => setSaveOpen(true)}
+            >
+              <BookmarkPlus />
+              {t("templates.saveAs")}
+            </Button>
+            <Button type="submit" size="lg" disabled={!canSubmit}>
+              {creating ? <Loader2 className="animate-spin" /> : <Inbox />}
+              {creating ? t("request.creating") : t("request.create")}
+            </Button>
+          </>
+        )}
       </div>
       {!editing && limited && (
         <p

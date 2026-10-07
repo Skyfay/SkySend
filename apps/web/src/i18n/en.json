@@ -17,7 +17,8 @@
     "save": "Save",
     "close": "Close",
     "back": "Back",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Done"
   },
   "nav": {
     "upload": "Upload",
@@ -460,8 +461,6 @@
     "uploads_other": "{{count}} uploads",
     "maxSize": "Size per upload",
     "passwordHint": "Your inbox opens only with this password.",
-    "passwordOff": "The inbox link alone opens the inbox.",
-    "summary": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b> of at most <b>{{size}}</b> each.",
     "create": "Create request",
     "creating": "Creating…",
     "created": "Request created",
@@ -484,19 +483,37 @@
     "asksFiles": "Files",
     "asksNote": "Note",
     "asksBoth": "Both",
-    "summaryNote": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each one a note.",
     "asksNoteHint": "Lay out fields, for example a password",
     "asksBothHint": "Files and a note in one go",
-    "submissions": "Submissions",
     "submissionsCount_one": "{{count}} submission",
     "submissionsCount_other": "{{count}} submissions",
-    "summaryBoth": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each with files of at most <b>{{size}}</b> and a note.",
     "downloads": "Downloads per upload",
-    "views": "Views per note",
     "retention": "Each upload stays for {{time}} after it arrives.",
     "limitLeft_one": "{{count}} new request left today, of {{limit}}.",
     "limitLeft_other": "{{count}} new requests left today, of {{limit}}.",
-    "limitReached": "No new requests left today. You can create one again in {{time}}."
+    "limitReached": "No new requests left today. You can create one again in {{time}}.",
+    "settings": "Settings",
+    "pill": {
+      "expiry": "Open for <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> upload",
+      "uploads_other": "<b>{{count}}</b> uploads",
+      "submissions_one": "<b>{{count}}</b> submission",
+      "submissions_other": "<b>{{count}}</b> submissions",
+      "size": "<b>{{size}}</b> per upload",
+      "downloads_one": "<b>{{count}}</b> download per upload",
+      "downloads_other": "<b>{{count}}</b> downloads per upload",
+      "views_one": "<b>{{count}}</b> view per note",
+      "views_other": "<b>{{count}}</b> views per note"
+    },
+    "pick": {
+      "expiry": "How long is the request open?",
+      "uploads": "How many uploads?",
+      "submissions": "How many submissions?",
+      "submissionsHint": "A submission is files and a note, sent together.",
+      "size": "How large can each upload be?",
+      "downloads": "How often can you download each upload?",
+      "views": "How often can you open each note?"
+    }
   },
   "template": {
     "title": "Note template",

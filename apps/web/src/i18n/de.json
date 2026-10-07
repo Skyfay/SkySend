@@ -17,7 +17,8 @@
     "save": "Speichern",
     "close": "Schließen",
     "back": "Zurück",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Fertig"
   },
   "nav": {
     "upload": "Hochladen",
@@ -460,8 +461,6 @@
     "uploads_other": "{{count}} Uploads",
     "maxSize": "Größe pro Upload",
     "passwordHint": "Ihre Inbox öffnet sich nur mit diesem Passwort.",
-    "passwordOff": "Der Inbox-Link allein öffnet die Inbox.",
-    "summary": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b> mit je höchstens <b>{{size}}</b>.",
     "create": "Anfrage erstellen",
     "creating": "Wird erstellt…",
     "created": "Anfrage erstellt",
@@ -484,19 +483,37 @@
     "asksFiles": "Dateien",
     "asksNote": "Notiz",
     "asksBoth": "Beides",
-    "summaryNote": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jeder davon eine Notiz.",
     "asksNoteHint": "Felder vorgeben, zum Beispiel ein Passwort",
     "asksBothHint": "Dateien und eine Notiz in einem Schritt",
-    "submissions": "Einsendungen",
     "submissionsCount_one": "{{count}} Einsendung",
     "submissionsCount_other": "{{count}} Einsendungen",
-    "summaryBoth": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jede mit Dateien bis <b>{{size}}</b> und einer Notiz.",
     "downloads": "Downloads pro Upload",
-    "views": "Ansichten pro Notiz",
     "retention": "Jeder Upload bleibt {{time}}, nachdem er angekommen ist.",
     "limitLeft_one": "Heute noch {{count}} neue Anfrage von {{limit}}.",
     "limitLeft_other": "Heute noch {{count}} neue Anfragen von {{limit}}.",
-    "limitReached": "Für heute sind keine neuen Anfragen mehr möglich. Wieder in {{time}}."
+    "limitReached": "Für heute sind keine neuen Anfragen mehr möglich. Wieder in {{time}}.",
+    "settings": "Einstellungen",
+    "pill": {
+      "expiry": "Offen für <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> Upload",
+      "uploads_other": "<b>{{count}}</b> Uploads",
+      "submissions_one": "<b>{{count}}</b> Einsendung",
+      "submissions_other": "<b>{{count}}</b> Einsendungen",
+      "size": "<b>{{size}}</b> pro Upload",
+      "downloads_one": "<b>{{count}}</b> Download pro Upload",
+      "downloads_other": "<b>{{count}}</b> Downloads pro Upload",
+      "views_one": "<b>{{count}}</b> Aufruf pro Notiz",
+      "views_other": "<b>{{count}}</b> Aufrufe pro Notiz"
+    },
+    "pick": {
+      "expiry": "Wie lange ist die Anfrage offen?",
+      "uploads": "Wie viele Uploads?",
+      "submissions": "Wie viele Einsendungen?",
+      "submissionsHint": "Eine Einsendung sind Dateien und eine Notiz, zusammen geschickt.",
+      "size": "Wie groß darf ein Upload sein?",
+      "downloads": "Wie oft können Sie jeden Upload herunterladen?",
+      "views": "Wie oft können Sie jede Notiz öffnen?"
+    }
   },
   "template": {
     "title": "Vorlage für die Notiz",

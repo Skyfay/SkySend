@@ -22,7 +22,8 @@
     "save": "Spara",
     "close": "Stäng",
     "back": "Tillbaka",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Klar"
   },
   "nav": {
     "upload": "Ladda upp",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} uppladdningar",
     "maxSize": "Storlek per uppladdning",
     "passwordHint": "Din inkorg öppnas bara med det här lösenordet.",
-    "passwordOff": "Inkorgslänken räcker för att öppna inkorgen.",
-    "summary": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b> på högst <b>{{size}}</b> var.",
     "create": "Skapa förfrågan",
     "creating": "Skapar…",
     "created": "Förfrågan skapad",
@@ -489,19 +488,37 @@
     "asksFiles": "Filer",
     "asksNote": "Anteckning",
     "asksBoth": "Båda",
-    "summaryNote": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, var och en en anteckning.",
     "asksNoteHint": "Bestäm fält, till exempel ett lösenord",
     "asksBothHint": "Filer och en anteckning på en gång",
-    "submissions": "Inskick",
     "submissionsCount_one": "{{count}} inskick",
     "submissionsCount_other": "{{count}} inskick",
-    "summaryBoth": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, vart och ett med filer på högst <b>{{size}}</b> och en anteckning.",
     "downloads": "Nedladdningar per uppladdning",
-    "views": "Visningar per anteckning",
     "retention": "Varje uppladdning finns kvar i {{time}} efter att den kommit.",
     "limitLeft_one": "{{count}} ny förfrågan kvar i dag, av {{limit}}.",
     "limitLeft_other": "{{count}} nya förfrågningar kvar i dag, av {{limit}}.",
-    "limitReached": "Inga nya förfrågningar kvar i dag. Du kan skapa en ny om {{time}}."
+    "limitReached": "Inga nya förfrågningar kvar i dag. Du kan skapa en ny om {{time}}.",
+    "settings": "Inställningar",
+    "pill": {
+      "expiry": "Öppen i <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> uppladdning",
+      "uploads_other": "<b>{{count}}</b> uppladdningar",
+      "submissions_one": "<b>{{count}}</b> inskick",
+      "submissions_other": "<b>{{count}}</b> inskick",
+      "size": "<b>{{size}}</b> per uppladdning",
+      "downloads_one": "<b>{{count}}</b> nedladdning per uppladdning",
+      "downloads_other": "<b>{{count}}</b> nedladdningar per uppladdning",
+      "views_one": "<b>{{count}}</b> visning per anteckning",
+      "views_other": "<b>{{count}}</b> visningar per anteckning"
+    },
+    "pick": {
+      "expiry": "Hur länge är förfrågan öppen?",
+      "uploads": "Hur många uppladdningar?",
+      "submissions": "Hur många inskick?",
+      "submissionsHint": "Ett inskick är filer och en anteckning, skickade tillsammans.",
+      "size": "Hur stor får varje uppladdning vara?",
+      "downloads": "Hur många gånger kan du ladda ned varje uppladdning?",
+      "views": "Hur många gånger kan du öppna varje anteckning?"
+    }
   },
   "template": {
     "title": "Mall för anteckningen",

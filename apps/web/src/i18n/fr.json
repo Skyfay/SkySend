@@ -22,7 +22,8 @@
     "save": "Enregistrer",
     "close": "Fermer",
     "back": "Retour",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Terminé"
   },
   "nav": {
     "upload": "Téléverser",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} envois",
     "maxSize": "Taille par envoi",
     "passwordHint": "Votre boîte ne s'ouvre qu'avec ce mot de passe.",
-    "passwordOff": "Le lien de la boîte suffit pour l'ouvrir.",
-    "summary": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b> de <b>{{size}}</b> maximum chacun.",
     "create": "Créer la demande",
     "creating": "Création…",
     "created": "Demande créée",
@@ -489,19 +488,37 @@
     "asksFiles": "Fichiers",
     "asksNote": "Note",
     "asksBoth": "Les deux",
-    "summaryNote": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b>, chacun une note.",
     "asksNoteHint": "Définissez des champs, par exemple un mot de passe",
     "asksBothHint": "Des fichiers et une note en une fois",
-    "submissions": "Dépôts",
     "submissionsCount_one": "{{count}} dépôt",
     "submissionsCount_other": "{{count}} dépôts",
-    "summaryBoth": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b>, chacun avec des fichiers de <b>{{size}}</b> maximum et une note.",
     "downloads": "Téléchargements par envoi",
-    "views": "Vues par note",
     "retention": "Chaque envoi reste {{time}} après son arrivée.",
     "limitLeft_one": "Il vous reste {{count}} nouvelle demande aujourd'hui, sur {{limit}}.",
     "limitLeft_other": "Il vous reste {{count}} nouvelles demandes aujourd'hui, sur {{limit}}.",
-    "limitReached": "Plus de nouvelle demande possible aujourd'hui. Vous pourrez en créer une dans {{time}}."
+    "limitReached": "Plus de nouvelle demande possible aujourd'hui. Vous pourrez en créer une dans {{time}}.",
+    "settings": "Paramètres",
+    "pill": {
+      "expiry": "Ouverte pendant <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> envoi",
+      "uploads_other": "<b>{{count}}</b> envois",
+      "submissions_one": "<b>{{count}}</b> dépôt",
+      "submissions_other": "<b>{{count}}</b> dépôts",
+      "size": "<b>{{size}}</b> par envoi",
+      "downloads_one": "<b>{{count}}</b> téléchargement par envoi",
+      "downloads_other": "<b>{{count}}</b> téléchargements par envoi",
+      "views_one": "<b>{{count}}</b> vue par note",
+      "views_other": "<b>{{count}}</b> vues par note"
+    },
+    "pick": {
+      "expiry": "Combien de temps la demande reste-t-elle ouverte ?",
+      "uploads": "Combien d'envois ?",
+      "submissions": "Combien de dépôts ?",
+      "submissionsHint": "Un dépôt, ce sont des fichiers et une note envoyés ensemble.",
+      "size": "Quelle taille peut faire chaque envoi ?",
+      "downloads": "Combien de fois pouvez-vous télécharger chaque envoi ?",
+      "views": "Combien de fois pouvez-vous ouvrir chaque note ?"
+    }
   },
   "template": {
     "title": "Modèle de la note",

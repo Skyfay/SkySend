@@ -22,7 +22,8 @@
     "save": "Salva",
     "close": "Chiudi",
     "back": "Indietro",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Fatto"
   },
   "nav": {
     "upload": "Carica",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} caricamenti",
     "maxSize": "Dimensione per caricamento",
     "passwordHint": "La tua casella si apre solo con questa password.",
-    "passwordOff": "Basta il link della casella per aprirla.",
-    "summary": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b> di massimo <b>{{size}}</b> ciascuno.",
     "create": "Crea richiesta",
     "creating": "Creazione…",
     "created": "Richiesta creata",
@@ -489,19 +488,37 @@
     "asksFiles": "File",
     "asksNote": "Nota",
     "asksBoth": "Entrambi",
-    "summaryNote": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno una nota.",
     "asksNoteHint": "Stabilisci dei campi, per esempio una password",
     "asksBothHint": "File e una nota in un colpo solo",
-    "submissions": "Invii",
     "submissionsCount_one": "{{count}} invio",
     "submissionsCount_other": "{{count}} invii",
-    "summaryBoth": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno con file di massimo <b>{{size}}</b> e una nota.",
     "downloads": "Download per caricamento",
-    "views": "Visualizzazioni per nota",
     "retention": "Ogni caricamento resta {{time}} dopo l'arrivo.",
     "limitLeft_one": "Oggi ti resta {{count}} nuova richiesta su {{limit}}.",
     "limitLeft_other": "Oggi ti restano {{count}} nuove richieste su {{limit}}.",
-    "limitReached": "Oggi non puoi creare altre richieste. Potrai crearne una tra {{time}}."
+    "limitReached": "Oggi non puoi creare altre richieste. Potrai crearne una tra {{time}}.",
+    "settings": "Impostazioni",
+    "pill": {
+      "expiry": "Aperta per <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> caricamento",
+      "uploads_other": "<b>{{count}}</b> caricamenti",
+      "submissions_one": "<b>{{count}}</b> invio",
+      "submissions_other": "<b>{{count}}</b> invii",
+      "size": "<b>{{size}}</b> per caricamento",
+      "downloads_one": "<b>{{count}}</b> download per caricamento",
+      "downloads_other": "<b>{{count}}</b> download per caricamento",
+      "views_one": "<b>{{count}}</b> visualizzazione per nota",
+      "views_other": "<b>{{count}}</b> visualizzazioni per nota"
+    },
+    "pick": {
+      "expiry": "Per quanto tempo resta aperta la richiesta?",
+      "uploads": "Quanti caricamenti?",
+      "submissions": "Quanti invii?",
+      "submissionsHint": "Un invio sono file e una nota, inviati insieme.",
+      "size": "Quanto può essere grande ogni caricamento?",
+      "downloads": "Quante volte puoi scaricare ogni caricamento?",
+      "views": "Quante volte puoi aprire ogni nota?"
+    }
   },
   "template": {
     "title": "Modello della nota",

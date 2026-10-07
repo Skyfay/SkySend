@@ -22,7 +22,8 @@
     "save": "Tallenna",
     "close": "Sulje",
     "back": "Takaisin",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Valmis"
   },
   "nav": {
     "upload": "Lähetä",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} lähetystä",
     "maxSize": "Koko lähetystä kohden",
     "passwordHint": "Saapuneet aukeavat vain tällä salasanalla.",
-    "passwordOff": "Pelkkä saapuneiden linkki avaa saapuneet.",
-    "summary": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kukin enintään <b>{{size}}</b>.",
     "create": "Luo pyyntö",
     "creating": "Luodaan…",
     "created": "Pyyntö luotu",
@@ -489,19 +488,37 @@
     "asksFiles": "Tiedostot",
     "asksNote": "Muistiinpano",
     "asksBoth": "Molemmat",
-    "summaryNote": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kukin muistiinpano.",
     "asksNoteHint": "Määritä kentät, esimerkiksi salasana",
     "asksBothHint": "Tiedostot ja muistiinpano kerralla",
-    "submissions": "Lähetyskerrat",
     "submissionsCount_one": "{{count}} lähetyskerta",
     "submissionsCount_other": "{{count}} lähetyskertaa",
-    "summaryBoth": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kussakin tiedostot enintään <b>{{size}}</b> ja muistiinpano.",
     "downloads": "Latauskerrat lähetystä kohden",
-    "views": "Katselukerrat muistiinpanoa kohden",
     "retention": "Jokainen lähetys säilyy {{time}} saapumisesta.",
     "limitLeft_one": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
     "limitLeft_other": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
-    "limitReached": "Tänään ei voi luoda enää uusia pyyntöjä. Seuraavan voi luoda {{time}} kuluttua."
+    "limitReached": "Tänään ei voi luoda enää uusia pyyntöjä. Seuraavan voi luoda {{time}} kuluttua.",
+    "settings": "Asetukset",
+    "pill": {
+      "expiry": "Auki <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> lähetys",
+      "uploads_other": "<b>{{count}}</b> lähetystä",
+      "submissions_one": "<b>{{count}}</b> lähetyskerta",
+      "submissions_other": "<b>{{count}}</b> lähetyskertaa",
+      "size": "<b>{{size}}</b> lähetystä kohden",
+      "downloads_one": "<b>{{count}}</b> lataus lähetystä kohden",
+      "downloads_other": "<b>{{count}}</b> latausta lähetystä kohden",
+      "views_one": "<b>{{count}}</b> katselukerta muistiinpanoa kohden",
+      "views_other": "<b>{{count}}</b> katselukertaa muistiinpanoa kohden"
+    },
+    "pick": {
+      "expiry": "Kuinka kauan pyyntö on auki?",
+      "uploads": "Montako lähetystä?",
+      "submissions": "Montako lähetyskertaa?",
+      "submissionsHint": "Lähetyskerta on tiedostot ja muistiinpano yhdessä lähetettynä.",
+      "size": "Kuinka suuri yksi lähetys saa olla?",
+      "downloads": "Kuinka monta kertaa voit ladata jokaisen lähetyksen?",
+      "views": "Kuinka monta kertaa voit avata jokaisen muistiinpanon?"
+    }
   },
   "template": {
     "title": "Muistiinpanon pohja",

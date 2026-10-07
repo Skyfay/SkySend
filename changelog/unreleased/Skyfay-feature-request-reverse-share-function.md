@@ -2,7 +2,7 @@
 
 - **crypto**: Encryption for file requests that only the requester can open, notes sent into them included.
 - **server**: File requests with an inbox, where senders upload files that only the requester can decrypt. The requester sets how long a request stays open, how many uploads it takes and how large each may be.
-- **web**: A Request page to create file requests, with an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
+- **web**: A Request page to create file requests, with its settings as a row of pills, an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
 - **web**: An upload page for senders of a file request, which encrypts their files for the requester alone and gives them no link back.
 - **web**: A file request can ask for files, a note with a template of fields the sender fills in, or both as one submission. The inbox opens a note in the page and lists a submission together.
 - **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.

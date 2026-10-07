@@ -22,7 +22,8 @@
     "save": "Lagre",
     "close": "Lukk",
     "back": "Tilbake",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Ferdig"
   },
   "nav": {
     "upload": "Last opp",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} opplastinger",
     "maxSize": "Størrelse per opplasting",
     "passwordHint": "Innboksen din åpnes bare med dette passordet.",
-    "passwordOff": "Innbokslenken alene åpner innboksen.",
-    "summary": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b> på maks <b>{{size}}</b> hver.",
     "create": "Opprett forespørsel",
     "creating": "Oppretter…",
     "created": "Forespørsel opprettet",
@@ -489,19 +488,37 @@
     "asksFiles": "Filer",
     "asksNote": "Notat",
     "asksBoth": "Begge",
-    "summaryNote": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver av dem et notat.",
     "asksNoteHint": "Bestem felt, for eksempel et passord",
     "asksBothHint": "Filer og et notat på én gang",
-    "submissions": "Innsendinger",
     "submissionsCount_one": "{{count}} innsending",
     "submissionsCount_other": "{{count}} innsendinger",
-    "summaryBoth": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver med filer på maks <b>{{size}}</b> og et notat.",
     "downloads": "Nedlastinger per opplasting",
-    "views": "Visninger per notat",
     "retention": "Hver opplasting blir liggende i {{time}} etter at den kom.",
     "limitLeft_one": "{{count}} ny forespørsel igjen i dag, av {{limit}}.",
     "limitLeft_other": "{{count}} nye forespørsler igjen i dag, av {{limit}}.",
-    "limitReached": "Ingen nye forespørsler igjen i dag. Du kan opprette en ny om {{time}}."
+    "limitReached": "Ingen nye forespørsler igjen i dag. Du kan opprette en ny om {{time}}.",
+    "settings": "Innstillinger",
+    "pill": {
+      "expiry": "Åpen i <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> opplasting",
+      "uploads_other": "<b>{{count}}</b> opplastinger",
+      "submissions_one": "<b>{{count}}</b> innsending",
+      "submissions_other": "<b>{{count}}</b> innsendinger",
+      "size": "<b>{{size}}</b> per opplasting",
+      "downloads_one": "<b>{{count}}</b> nedlasting per opplasting",
+      "downloads_other": "<b>{{count}}</b> nedlastinger per opplasting",
+      "views_one": "<b>{{count}}</b> visning per notat",
+      "views_other": "<b>{{count}}</b> visninger per notat"
+    },
+    "pick": {
+      "expiry": "Hvor lenge er forespørselen åpen?",
+      "uploads": "Hvor mange opplastinger?",
+      "submissions": "Hvor mange innsendinger?",
+      "submissionsHint": "En innsending er filer og et notat, sendt sammen.",
+      "size": "Hvor stor kan hver opplasting være?",
+      "downloads": "Hvor mange ganger kan du laste ned hver opplasting?",
+      "views": "Hvor mange ganger kan du åpne hvert notat?"
+    }
   },
   "template": {
     "title": "Mal for notatet",

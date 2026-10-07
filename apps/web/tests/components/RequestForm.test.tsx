@@ -78,6 +78,10 @@ function renderForm(props: Partial<Parameters<typeof RequestForm>[0]> = {}) {
 }
 
 const titleInput = () => screen.getByLabelText("request.titleLabel") as HTMLInputElement;
+const create = () => screen.getByRole("button", { name: /request\.create/ }) as HTMLButtonElement;
+
+// Whether the window is wide enough for popovers, a phone gets sheets instead.
+let wide = true;
 
 beforeAll(() => {
   vi.stubGlobal(
@@ -88,11 +92,83 @@ beforeAll(() => {
       disconnect() {}
     },
   );
+  vi.stubGlobal("matchMedia", (media: string) => ({
+    matches: wide,
+    media,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
 });
 
 afterEach(() => {
   cleanup();
+  wide = true;
   writeDefaults({ file: {}, note: {}, request: {} });
+});
+
+describe("RequestForm settings", () => {
+  it("picks a value in the popover of its pill and closes it again", () => {
+    const handlers = renderForm();
+    fireEvent.click(screen.getByRole("button", { name: /request\.pill\.uploads/ }));
+    expect(screen.getByRole("dialog", { name: "request.pick.uploads" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "20" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(create());
+    expect(handlers.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ maxUploads: 20 }),
+      undefined,
+    );
+  });
+
+  it("opens the options in a sheet on a phone", () => {
+    wide = false;
+    const handlers = renderForm();
+    fireEvent.click(screen.getByRole("button", { name: /request\.pill\.downloads/ }));
+    expect(screen.getByRole("dialog", { name: "request.pick.downloads" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "2" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(create());
+    expect(handlers.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ downloads: 2 }),
+      undefined,
+    );
+  });
+
+  it("counts submissions for both and leaves the size out for a note alone", () => {
+    renderForm({ start: access });
+    expect(screen.getByRole("button", { name: /request\.pill\.submissions/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /request\.pill\.size/ })).toBeTruthy();
+    cleanup();
+    renderForm({ start: wlan });
+    expect(screen.queryByRole("button", { name: /request\.pill\.size/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /request\.pill\.views/ })).toBeTruthy();
+  });
+
+  it("asks for a password once its switch is on", () => {
+    const handlers = renderForm();
+    const password = screen.getByRole("switch", { name: "share.password" });
+    expect(password.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(password);
+    expect(password.getAttribute("aria-checked")).toBe("true");
+    expect(create().disabled).toBe(true);
+    fireEvent.change(screen.getByPlaceholderText("upload.passwordPlaceholder"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.click(create());
+    expect(handlers.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ password: "correct horse" }),
+      undefined,
+    );
+  });
+
+  it("keeps a forced password on, with its field", () => {
+    renderForm({ config: { ...config, forceRequestPassword: true } });
+    const password = screen.getByRole("switch", { name: "share.password" }) as HTMLButtonElement;
+    expect(password.getAttribute("aria-checked")).toBe("true");
+    expect(password.disabled).toBe(true);
+    expect(screen.getByPlaceholderText("upload.passwordPlaceholderRequired")).toBeTruthy();
+    expect(create().disabled).toBe(true);
+  });
 });
 
 describe("RequestForm with templates", () => {
@@ -118,7 +194,7 @@ describe("RequestForm with templates", () => {
   it("starts from this browser's defaults, also from a template that keeps no limits", () => {
     writeDefaults({ file: {}, note: {}, request: { expireSec: 259_200, sends: 3, downloads: 2 } });
     const handlers = renderForm({ start: wlan });
-    fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
+    fireEvent.click(create());
     expect(handlers.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ asks: ["note"], expireSec: 259_200, maxUploads: 3, downloads: 2 }),
       wlan,
@@ -133,9 +209,8 @@ describe("RequestForm with templates", () => {
       dailyLimit: { dailyLimit: 10, remaining: 0, resetsAt: "2099-01-01T00:00:00.000Z" },
     });
     expect(screen.getByText("request.limitReached")).toBeTruthy();
-    const create = screen.getByRole("button", { name: /request\.create/ }) as HTMLButtonElement;
-    expect(create.disabled).toBe(true);
-    fireEvent.click(create);
+    expect(create().disabled).toBe(true);
+    fireEvent.click(create());
     expect(handlers.onSubmit).not.toHaveBeenCalled();
   });
 
@@ -147,7 +222,7 @@ describe("RequestForm with templates", () => {
 
   it("names the template a request is created from, so it counts as used once created", () => {
     const handlers = renderForm({ start: wlan });
-    fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
+    fireEvent.click(create());
     expect(handlers.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ asks: ["note"] }),
       wlan,
@@ -175,7 +250,7 @@ describe("RequestForm with templates", () => {
       config: { ...config, fileRequestUploadOptions: [1, 2], fileRequestMaxSize: GIB },
     });
     expect(screen.getByRole("tab", { selected: true }).textContent).toContain("request.asksBoth");
-    fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
+    fireEvent.click(create());
     // Five submissions fit to the two the server offers, which take four uploads.
     expect(handlers.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ maxUploads: 4, maxSize: GIB, downloads: 5 }),
@@ -229,7 +304,7 @@ describe("RequestForm with templates", () => {
 
   it("edits a template without a password and without taking the name of another one", async () => {
     const handlers = renderForm({ editing: access });
-    expect(screen.queryByText("share.password")).toBeNull();
+    expect(screen.queryByRole("switch", { name: "share.password" })).toBeNull();
     expect(screen.queryByRole("button", { name: /request\.create/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /templates\.saveEdited/ }));
     const name = await screen.findByLabelText("templates.name");

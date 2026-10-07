@@ -22,7 +22,8 @@
     "save": "Opslaan",
     "close": "Sluiten",
     "back": "Terug",
-    "docs": "Docs"
+    "docs": "Docs",
+    "done": "Klaar"
   },
   "nav": {
     "upload": "Uploaden",
@@ -465,8 +466,6 @@
     "uploads_other": "{{count}} uploads",
     "maxSize": "Grootte per upload",
     "passwordHint": "Je inbox opent alleen met dit wachtwoord.",
-    "passwordOff": "De inboxlink alleen opent de inbox.",
-    "summary": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b> van maximaal <b>{{size}}</b> per stuk.",
     "create": "Verzoek maken",
     "creating": "Bezig met maken…",
     "created": "Verzoek gemaakt",
@@ -489,19 +488,37 @@
     "asksFiles": "Bestanden",
     "asksNote": "Notitie",
     "asksBoth": "Beide",
-    "summaryNote": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk een notitie.",
     "asksNoteHint": "Leg velden vast, bijvoorbeeld een wachtwoord",
     "asksBothHint": "Bestanden en een notitie in één keer",
-    "submissions": "Inzendingen",
     "submissionsCount_one": "{{count}} inzending",
     "submissionsCount_other": "{{count}} inzendingen",
-    "summaryBoth": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk met bestanden van maximaal <b>{{size}}</b> en een notitie.",
     "downloads": "Downloads per upload",
-    "views": "Weergaven per notitie",
     "retention": "Elke upload blijft {{time}} na aankomst.",
     "limitLeft_one": "Vandaag nog {{count}} nieuw verzoek, van {{limit}}.",
     "limitLeft_other": "Vandaag nog {{count}} nieuwe verzoeken, van {{limit}}.",
-    "limitReached": "Vandaag kunnen er geen nieuwe verzoeken meer bij. U kunt er weer een maken over {{time}}."
+    "limitReached": "Vandaag kunnen er geen nieuwe verzoeken meer bij. U kunt er weer een maken over {{time}}.",
+    "settings": "Instellingen",
+    "pill": {
+      "expiry": "Open voor <b>{{time}}</b>",
+      "uploads_one": "<b>{{count}}</b> upload",
+      "uploads_other": "<b>{{count}}</b> uploads",
+      "submissions_one": "<b>{{count}}</b> inzending",
+      "submissions_other": "<b>{{count}}</b> inzendingen",
+      "size": "<b>{{size}}</b> per upload",
+      "downloads_one": "<b>{{count}}</b> download per upload",
+      "downloads_other": "<b>{{count}}</b> downloads per upload",
+      "views_one": "<b>{{count}}</b> weergave per notitie",
+      "views_other": "<b>{{count}}</b> weergaven per notitie"
+    },
+    "pick": {
+      "expiry": "Hoe lang staat het verzoek open?",
+      "uploads": "Hoeveel uploads?",
+      "submissions": "Hoeveel inzendingen?",
+      "submissionsHint": "Een inzending bestaat uit bestanden en een notitie, samen verstuurd.",
+      "size": "Hoe groot mag elke upload zijn?",
+      "downloads": "Hoe vaak kun je elke upload downloaden?",
+      "views": "Hoe vaak kun je elke notitie openen?"
+    }
   },
   "template": {
     "title": "Sjabloon voor de notitie",
