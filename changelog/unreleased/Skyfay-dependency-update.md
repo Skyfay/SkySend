@@ -10,7 +10,7 @@
 
 ### 📝 Documentation
 
-- **docs**: The development setup names the Node version and the platforms the server runs on outside Docker.
+- **docs**: The development setup covers the macOS setup script, the Node version and the platforms the server runs on outside Docker.
 
 ### 🧪 Tests
 
@@ -25,4 +25,5 @@
 - **infra**: Updated vitest and `@vitest/coverage-v8` to 5 and jsdom to 30.
 - **website**: Updated eslint to 10, typescript to 6 and `@types/node` to 26, in line with the rest of the repository.
 - **infra**: A `.node-version` file pins Node 24 for local development, the version CI and the Docker image use.
+- **infra**: `scripts/setup-dev-macos.sh` sets up a Mac for development with fnm, the Node of `.node-version`, pnpm and the dependencies.
 - **infra**: pnpm allows ESLint 10 for three lint plugins of Next and `@hono/node-server` 2 for `@hono/node-ws`, so an install runs without peer warnings.
