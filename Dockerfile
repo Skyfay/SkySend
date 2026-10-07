@@ -45,8 +45,12 @@ COPY --from=build /app/packages/crypto/package.json ./packages/crypto/
 COPY --from=build /app/packages/note-format/dist ./packages/note-format/dist
 COPY --from=build /app/packages/note-format/package.json ./packages/note-format/
 
-# Install production dependencies only
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+# Install production dependencies only. better-sqlite3 ships a prebuilt binary for every
+# platform, and the image only needs the one for its own (Alpine is musl). Deleting the
+# rest in the same layer keeps them out of the image.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile && \
+    find /app/node_modules/.pnpm -path "*/better-sqlite3/prebuilds/*" \
+      ! -name "linuxmusl-$(node -p process.arch).node" -delete
 
 # Make CLI available as 'skysend-cli' command
 RUN ln -s /app/apps/cli/dist/index.js /usr/local/bin/skysend-cli && \

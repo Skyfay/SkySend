@@ -64,7 +64,8 @@
     },
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg"
+        "GHSA-mh99-v99m-4gvg",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },
