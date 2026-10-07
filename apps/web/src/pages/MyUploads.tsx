@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
@@ -140,6 +140,9 @@ export function MyUploadsPage() {
     const ct = f.replace("notes-", "");
     return noteTypeCounts[ct] ?? 0;
   };
+
+  // Templates moved to the settings, where an old bookmark of their tab goes on to.
+  if (params.get("tab") === "templates") return <Navigate to="/settings?tab=templates" replace />;
 
   // The same rule as the navigation: an instance with only file requests shares nothing.
   const sharing = !config || config.enabledServices.length > 0;

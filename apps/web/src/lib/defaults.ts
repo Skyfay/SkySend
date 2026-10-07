@@ -40,7 +40,8 @@ export type BrowserDefaults = z.infer<typeof defaultsSchema>;
 
 const EMPTY: BrowserDefaults = { file: {}, note: {}, request: {} };
 
-let cache: BrowserDefaults | null = null;
+/** The last stored text and what it reads as, so a snapshot only changes with the text. */
+let cache: { raw: string | null; value: BrowserDefaults } | null = null;
 const listeners = new Set<() => void>();
 
 /** What a stored text holds, as untrusted as anything a page did not write itself. */
@@ -54,33 +55,42 @@ function parse(text: string | null): BrowserDefaults {
   }
 }
 
-/** The defaults of this browser. A browser that refuses storage keeps none. */
-export function readDefaults(): BrowserDefaults {
-  if (cache) return cache;
+/** The stored text, or null where the browser refuses to read it. */
+function storedText(): string | null | undefined {
   try {
-    cache = parse(localStorage.getItem(STORAGE_KEY));
+    return localStorage.getItem(STORAGE_KEY);
   } catch {
-    cache = EMPTY;
+    return undefined;
   }
-  return cache;
+}
+
+/**
+ * The defaults of this browser. The store is read on every call, so what another tab wrote
+ * counts even when no page listened for it. A browser that refuses storage keeps none.
+ */
+export function readDefaults(): BrowserDefaults {
+  const raw = storedText();
+  if (raw === undefined) return cache?.value ?? EMPTY;
+  if (!cache || cache.raw !== raw) cache = { raw, value: parse(raw) };
+  return cache.value;
 }
 
 export function writeDefaults(next: BrowserDefaults): void {
-  cache = next;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
     // Kept for this page only, where the browser refuses to store it.
   }
+  // Paired with what the store holds now, written or not, so a read keeps what was written.
+  cache = { raw: storedText() ?? null, value: next };
   for (const listener of listeners) listener();
 }
 
 /** Calls back when the defaults change, here or in another tab. */
 export function subscribeDefaults(listener: () => void): () => void {
+  // A null key means another tab cleared the whole store.
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
-    cache = parse(event.newValue);
-    listener();
+    if (event.key === STORAGE_KEY || event.key === null) listener();
   };
   listeners.add(listener);
   window.addEventListener("storage", onStorage);
@@ -140,6 +150,9 @@ export function noteStart(config: ServerConfig, defaults: ShareDefaults = readDe
   };
 }
 
+/** How many sends a request starts with when this browser keeps no number. The server has no default of its own. */
+const DEFAULT_SENDS = 10;
+
 /** How a request starts: the browser's defaults within what the server offers. */
 export function requestStart(
   config: ServerConfig,
@@ -152,7 +165,7 @@ export function requestStart(
       defaults.expireSec,
       config.fileRequestDefaultExpire,
     ),
-    sends: Math.max(1, Math.min(defaults.sends || 10, max)),
+    sends: Math.max(1, Math.min(defaults.sends || DEFAULT_SENDS, max)),
     maxSize: pickOption(
       requestSizeOptions(config.fileRequestMaxSize),
       defaults.maxSize,

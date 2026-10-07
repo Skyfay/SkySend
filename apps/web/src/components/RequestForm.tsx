@@ -116,7 +116,7 @@ interface RequestFormProps {
   onSubmit: (options: NewRequestOptions, template?: RequestTemplate) => void;
   /** The templates kept in this browser. */
   templates: readonly RequestTemplate[];
-  /** The template the form starts from, picked in My Links. */
+  /** The template the form starts from, picked in the settings. */
   start?: RequestTemplate;
   /** The template the form edits, instead of creating a request. */
   editing?: RequestTemplate;

@@ -118,29 +118,45 @@ describe("the store of this browser", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it("reads what another tab wrote", () => {
+  it("tells who listens when another tab writes or clears the store", () => {
     const listener = vi.fn();
     const stop = subscribeDefaults(listener);
-    const written = JSON.stringify({ file: {}, note: { limit: 5 }, request: {} });
-    window.dispatchEvent(new StorageEvent("storage", { key: KEY, newValue: written }));
+    store.set(KEY, JSON.stringify({ file: {}, note: { limit: 5 }, request: {} }));
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
     expect(listener).toHaveBeenCalledOnce();
     expect(readDefaults().note.limit).toBe(5);
-    window.dispatchEvent(new StorageEvent("storage", { key: "other", newValue: "x" }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "other" }));
     expect(listener).toHaveBeenCalledOnce();
+    window.dispatchEvent(new StorageEvent("storage", { key: null }));
+    expect(listener).toHaveBeenCalledTimes(2);
     stop();
   });
 
+  it("never writes over what another tab stored meanwhile, even unheard", () => {
+    // This page read the defaults once, then another tab changed them without anyone listening.
+    expect(readDefaults().note).toEqual({});
+    store.set(KEY, JSON.stringify({ file: {}, note: { limit: 5 }, request: { sends: 3 } }));
+    const current = readDefaults();
+    writeDefaults({ ...current, file: { limit: 10 } });
+    expect(JSON.parse(store.get(KEY)!)).toEqual({
+      file: { limit: 10 },
+      note: { limit: 5 },
+      request: { sends: 3 },
+    });
+  });
+
+  it("keeps the same snapshot while the stored text stays the same", () => {
+    store.set(KEY, JSON.stringify({ file: { limit: 5 }, note: {}, request: {} }));
+    expect(readDefaults()).toBe(readDefaults());
+  });
+
   it("reads a stored text as untrusted and keeps the sections that read", () => {
-    const send = (text: string) =>
-      window.dispatchEvent(new StorageEvent("storage", { key: KEY, newValue: text }));
-    const stop = subscribeDefaults(() => {});
-    send("not json");
+    store.set(KEY, "not json");
     expect(readDefaults()).toEqual({ file: {}, note: {}, request: {} });
-    send(JSON.stringify({ file: { limit: -1 }, note: { password: true }, request: "x" }));
+    store.set(KEY, JSON.stringify({ file: { limit: -1 }, note: { password: true }, request: "x" }));
     expect(readDefaults()).toEqual({ file: {}, note: { password: true }, request: {} });
-    send(JSON.stringify({ file: { limit: 5, password: "yes" }, note: {}, request: {} }));
+    store.set(KEY, JSON.stringify({ file: { limit: 5, password: "yes" }, note: {}, request: {} }));
     expect(readDefaults().file).toEqual({});
-    stop();
   });
 
   it("keeps the defaults for this page where the browser refuses to store them", () => {

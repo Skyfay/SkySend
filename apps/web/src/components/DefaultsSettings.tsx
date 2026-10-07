@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { File, Inbox, Lock, NotebookPen, RotateCcw, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,15 +32,33 @@ function Section({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
   return (
     <Card className="space-y-4 p-4 sm:p-5">
       <div className="flex min-h-9 items-center gap-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
           <Icon className="h-4 w-4" />
         </span>
-        <h2 className="flex-1 text-sm font-semibold">{title}</h2>
+        <h2
+          id={id}
+          ref={heading}
+          tabIndex={-1}
+          className="flex-1 text-sm font-semibold outline-none"
+        >
+          {title}
+        </h2>
         {changed && (
-          <Button variant="ghost" size="sm" onClick={onReset}>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-describedby={id}
+            onClick={() => {
+              onReset();
+              // The button goes once nothing is left to reset, so focus stays in its section.
+              heading.current?.focus();
+            }}
+          >
             <RotateCcw />
             {t("settings.reset")}
           </Button>
@@ -129,7 +147,7 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
                 options={config.fileDownloadOptions}
                 value={file.limit}
                 onChange={(limit) => update("file", { limit })}
-                format={(value) => fileLimit(value)}
+                format={fileLimit}
                 decreaseLabel={t("share.fewer")}
                 increaseLabel={t("share.more")}
               />
@@ -165,7 +183,7 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
                 options={config.noteViewOptions}
                 value={note.limit}
                 onChange={(limit) => update("note", { limit })}
-                format={(value) => noteLimit(value)}
+                format={noteLimit}
                 decreaseLabel={t("share.fewer")}
                 increaseLabel={t("share.more")}
               />

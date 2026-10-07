@@ -170,8 +170,14 @@ export function UploadPage() {
   const sizeExceeded = totalSize > config.fileMaxSize;
   const tooManyFiles = files.length > config.fileMaxFilesPerUpload;
   const quotaExceeded = quota?.enabled && totalSize > quota.remaining;
+  // A password that is switched on has to be typed, or the link would go out without one.
   const canUpload =
-    files.length > 0 && !sizeExceeded && !tooManyFiles && !quotaExceeded && !isUploading;
+    files.length > 0 &&
+    !sizeExceeded &&
+    !tooManyFiles &&
+    !quotaExceeded &&
+    !isUploading &&
+    (!passwordEnabled || password.length > 0);
 
   const handleUpload = () => {
     uploadHook.upload({

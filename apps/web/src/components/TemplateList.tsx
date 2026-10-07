@@ -55,7 +55,7 @@ interface TemplateListProps {
 }
 
 /**
- * The Templates tab of My Links: the templates kept in this browser, the ones that come with
+ * The Templates tab of the settings: the templates kept in this browser, the ones that come with
  * SkySend, and export and import to move them to another browser.
  */
 export function TemplateList({ linkImport, onLinkImportDone }: TemplateListProps) {

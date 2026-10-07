@@ -74,13 +74,14 @@ export function Layout() {
 
   // An instance with only file requests has nothing to share and no uploads to list.
   const sharing = !config || config.enabledServices.length > 0;
+  // What you do first, then the list of what it made, then how it works, which is read once.
   const navItems = [
     ...(sharing ? [{ to: "/", label: t("header.share"), icon: Upload }] : []),
     ...(config?.fileRequestsEnabled ? [{ to: "/requests", label: t("nav.requests"), icon: Inbox }] : []),
-    { to: "/how", label: t("header.howItWorks"), icon: Sparkles },
     ...(sharing || config?.fileRequestsEnabled
       ? [{ to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen }]
       : []),
+    { to: "/how", label: t("header.howItWorks"), icon: Sparkles },
   ];
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);

@@ -35,6 +35,7 @@
 
 ### 🎨 Improvements
 
+- **web**: How it works moves to the end of the navigation, after My Links, so what you do and what it made stand together.
 - **web**: The German message for a file that cannot be read uses the formal address.
 
 ### 🔄 Changed

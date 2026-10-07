@@ -78,7 +78,8 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
   // The size the server checks is the encrypted document, which is this plus a 16-byte tag.
   const bytes = toSend.length > 0 ? new TextEncoder().encode(serializeNote(toSend)).length : 0;
   const tooLarge = bytes > config.noteMaxSize;
-  const canSubmit = toSend.length > 0 && !tooLarge && !busy;
+  // A password that is switched on has to be typed, or the link would go out without one.
+  const canSubmit = toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || password.length > 0);
 
   const add = (type: NoteBlockType) => setDrafts((current) => addDraft(current, type));
 
