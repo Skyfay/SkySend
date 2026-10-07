@@ -36,7 +36,12 @@ import { useServerConfig } from "@/hooks/useServerConfig";
 import { NotFoundPage } from "@/pages/NotFound";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { copyText } from "@/lib/clipboard";
-import { NoteTooLargeError, requestLinks, type OpenedUpload } from "@/lib/file-request";
+import {
+  groupBySubmission,
+  NoteTooLargeError,
+  requestLinks,
+  type OpenedUpload,
+} from "@/lib/file-request";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import {
@@ -139,6 +144,10 @@ export function InboxPage() {
     uploadFragment: opened.uploadFragment,
     inboxFragment: fragment,
   });
+  // A submission of files and a note is two uploads, and counts as one.
+  const both = opened.asks.includes("files") && opened.asks.includes("note");
+  // Uploads a sender sent together, marked in their encrypted metadata, are shown together.
+  const groups = groupBySubmission(opened.uploads);
   const ask = (next: Confirm) => {
     setConfirm(next);
     setDialogOpen(true);
@@ -206,6 +215,20 @@ export function InboxPage() {
     void startDownload(entry);
   };
 
+  const renderRow = (entry: OpenedUpload) => (
+    <InboxFileRow
+      key={entry.upload.id}
+      entry={entry}
+      fresh={inbox.fresh.has(entry.upload.id)}
+      asks={opened.asks}
+      busy={openingNote !== null}
+      progress={inbox.downloads[entry.upload.id]}
+      onDownload={() => requestDownload(entry)}
+      onCancel={() => inbox.cancelDownload(entry.upload.id)}
+      onDelete={() => ask({ kind: "file", entry })}
+    />
+  );
+
   const run = async (action: () => Promise<void>, success: string) => {
     setBusy(true);
     try {
@@ -229,12 +252,19 @@ export function InboxPage() {
     <InboxShell title={opened.title ?? t("inbox.title")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[15px] text-muted-foreground">
-          {t("inbox.usage", {
-            used: status.usedUploads,
-            max: status.maxUploads,
-            size: formatBytes(status.usedBytes),
-            maxSize: formatBytes(status.maxSize),
-          })}
+          {both
+            ? t("inbox.usageSubmissions", {
+                used: Math.ceil(status.usedUploads / 2),
+                max: Math.floor(status.maxUploads / 2),
+                size: formatBytes(status.usedBytes),
+                maxSize: formatBytes(status.maxSize),
+              })
+            : t("inbox.usage", {
+                used: status.usedUploads,
+                max: status.maxUploads,
+                size: formatBytes(status.usedBytes),
+                maxSize: formatBytes(status.maxSize),
+              })}
           {" · "}
           {status.open
             ? t("inbox.closesIn", { time: formatTimeRemaining(status.closesAt) })
@@ -289,19 +319,27 @@ export function InboxPage() {
       ) : (
         <Card data-emphasis="main" className="overflow-hidden">
           <ul className="divide-y divide-border" role="list">
-            {opened.uploads.map((entry) => (
-              <InboxFileRow
-                key={entry.upload.id}
-                entry={entry}
-                fresh={inbox.fresh.has(entry.upload.id)}
-                asks={opened.asks}
-                busy={openingNote !== null}
-                progress={inbox.downloads[entry.upload.id]}
-                onDownload={() => requestDownload(entry)}
-                onCancel={() => inbox.cancelDownload(entry.upload.id)}
-                onDelete={() => ask({ kind: "file", entry })}
-              />
-            ))}
+            {groups.map((group) =>
+              group.length === 1 ? (
+                renderRow(group[0]!)
+              ) : (
+                <li key={group[0]!.upload.id}>
+                  <p
+                    id={`submission-${group[0]!.upload.id}`}
+                    className="px-4 pt-3 text-xs font-medium text-muted-foreground sm:px-5"
+                  >
+                    {t("inbox.submission")}
+                  </p>
+                  <ul
+                    className="divide-y divide-border/60"
+                    role="list"
+                    aria-labelledby={`submission-${group[0]!.upload.id}`}
+                  >
+                    {group.map(renderRow)}
+                  </ul>
+                </li>
+              ),
+            )}
           </ul>
         </Card>
       )}

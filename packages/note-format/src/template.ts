@@ -63,7 +63,11 @@ function blank(block: NoteBlock): NoteBlock {
     case "password":
       return {
         type: "password",
-        entries: block.entries.map((entry) => ({ label: cleanLabel(entry.label), value: "" })),
+        entries: block.entries.map((entry) => ({
+          label: cleanLabel(entry.label),
+          value: "",
+          ...(entry.secret === false ? { secret: false } : {}),
+        })),
       };
     case "code": {
       const language = LANGUAGE.test(block.language) ? block.language : "auto";

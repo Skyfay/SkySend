@@ -161,7 +161,8 @@
     "remaining": "{{count}} nedladdningar kvar",
     "expired": "Upphörd",
     "unavailable": "Ej tillgänglig",
-    "files": "{{count}} fil(er)"
+    "files": "{{count}} fil(er)",
+    "tabTemplates": "Mallar"
   },
   "noteView": {
     "title": "Krypterad anteckning",
@@ -232,7 +233,10 @@
     "enterPassword": "Ange lösenord...",
     "addAnother": "Lägg till ytterligare lösenord",
     "passwordNumber": "Lösenord {{number}}",
-    "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)"
+    "labelPlaceholder": "Etikett för lösenord {{number}} (valfritt)",
+    "makePlain": "Ingen hemlighet, visa i klartext",
+    "makeSecret": "En hemlighet, visa dold",
+    "enterValue": "Ange värde..."
   },
   "code": {
     "titlePlaceholder": "Filnamn (t.ex. docker-compose.yaml, valfritt)",
@@ -484,7 +488,14 @@
     "asksFiles": "Filer",
     "asksNote": "Anteckning",
     "asksBoth": "Båda",
-    "summaryNote": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, var och en en anteckning."
+    "summaryNote": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, var och en en anteckning.",
+    "asksNoteHint": "Bestäm fält, till exempel ett lösenord",
+    "asksBothHint": "Filer och en anteckning på en gång",
+    "submissions": "Inskick",
+    "submissionsCount_one": "{{count}} inskick",
+    "submissionsCount_other": "{{count}} inskick",
+    "summaryBoth": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, vart och ett med filer på högst <b>{{size}}</b> och en anteckning.",
+    "asksBothUnavailable": "Kräver minst två uppladdningar per förfrågan"
   },
   "template": {
     "title": "Mall för anteckningen",
@@ -518,7 +529,9 @@
     "forget": "Ta bort",
     "deleted": "Förfrågan borttagen",
     "forgotten": "Borttagen från listan",
-    "deleteFailed": "Förfrågan kunde inte tas bort."
+    "deleteFailed": "Förfrågan kunde inte tas bort.",
+    "receivedSubmissions_one": "{{count}} inskick mottaget",
+    "receivedSubmissions_other": "{{count}} inskick mottagna"
   },
   "inbox": {
     "title": "Inkorg",
@@ -563,7 +576,9 @@
     "notAsked": "Inte efterfrågad",
     "saveText": "Spara som text",
     "noteTooLarge": "Anteckningen är större än någon anteckning som den här instansen tar emot, så den öppnades inte.",
-    "noteFailed": "Anteckningen kunde inte öppnas."
+    "noteFailed": "Anteckningen kunde inte öppnas.",
+    "usageSubmissions": "{{used}} av {{max}} inskick, {{size}} totalt, filer högst {{maxSize}} var",
+    "submission": "Skickade tillsammans"
   },
   "requestUpload": {
     "title": "Någon ber dig om <a>filer</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Krypterad bara för den som frågar. {{count}} uppladdning kvar, stänger om {{time}}.",
     "limitsNote_other": "Krypterad bara för den som frågar. {{count}} uppladdningar kvar, stänger om {{time}}.",
     "fileTabHint": "Upp till {{size}} per uppladdning",
-    "noteTabHint": "Lösenord, text, kod eller en nyckel"
+    "titleNote": "Någon ber dig om <a>en anteckning</a>",
+    "titleBoth": "Någon ber dig om <a>filer och en anteckning</a>",
+    "introNote": "Allt krypteras i den här webbläsaren innan det lämnar den. Bara den som skapade förfrågan kan öppna det.",
+    "sendAgain": "Skicka mer",
+    "filesSent": "Dina filer har kommit fram. Skicka anteckningen för att bli klar.",
+    "limitsBoth_one": "Filer och anteckning går tillsammans som ett inskick. {{count}} inskick kvar, stänger om {{time}}.",
+    "limitsBoth_other": "Filer och anteckning går tillsammans som ett inskick. {{count}} inskick kvar, stänger om {{time}}.",
+    "stepDone": "klar"
+  },
+  "templates": {
+    "startWith": "Börja med",
+    "manage": "Hantera mallar",
+    "blank": "Tom",
+    "startHint": "Fyller i titeln, fälten och gränserna. Allt kan fortfarande ändras efteråt.",
+    "builtIn": {
+      "title": "Inbyggda",
+      "section": "Inbyggda",
+      "credentials": {
+        "name": "Inloggningsuppgifter",
+        "address": "Adress",
+        "username": "Användarnamn",
+        "password": "Lösenord"
+      },
+      "sshKey": {
+        "name": "SSH-nyckel"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Nätverksnamn",
+        "password": "Lösenord"
+      },
+      "apiKey": {
+        "name": "API-nyckel",
+        "service": "Tjänst",
+        "key": "Nyckel",
+        "expires": "Utgångsdatum"
+      }
+    },
+    "saveAs": "Spara som mall",
+    "saveEdited": "Spara mall",
+    "saveTitle": "Spara som mall",
+    "saveText": "Till nästa förfrågan av samma slag. Mallen stannar i den här webbläsaren.",
+    "name": "Namn",
+    "namePlaceholder": "Till exempel Serveråtkomst",
+    "nameTaken": "Det finns redan en mall med det här namnet. Om du sparar ersätts den.",
+    "nameInUse": "En annan mall har redan det här namnet.",
+    "keepTitle": "Behåll titeln",
+    "noTitle": "Den här förfrågan har ingen titel",
+    "quoted": "”{{text}}”",
+    "keepLimits": "Behåll hur länge den är öppen och dess gränser",
+    "saveSecret": "Fält och inställningar sparas. Ett lösenord till inkorgen sparas aldrig, och inte heller något värde.",
+    "replace": "Ersätt",
+    "saved": "”{{name}}” sparad som mall.",
+    "saveFailed": "Mallen kunde inte sparas.",
+    "editTitle": "Redigera mall",
+    "editIntro": "Ändra vad mallen förbereder. En förfrågan skapas först när du använder den.",
+    "editing": "Du redigerar mallen ”{{name}}”. Om du sparar ersätts den.",
+    "own": "Dina mallar",
+    "import": "Importera",
+    "exportAll": "Exportera alla",
+    "empty": "Inga mallar än",
+    "emptyHint": "Spara en från formuläret för förfrågningar, eller kopiera en av de inbyggda nedan.",
+    "use": "Använd",
+    "edit": "Redigera",
+    "duplicate": "Duplicera",
+    "export": "Exportera",
+    "usedAgo": "senast använd {{time}}",
+    "neverUsed": "aldrig använd",
+    "freeNote": "Fritt skriven anteckning",
+    "uploadsUpTo_one": "{{count}} uppladdning på upp till {{size}}",
+    "uploadsUpTo_other": "{{count}} uppladdningar på upp till {{size}}",
+    "field": {
+      "entry": "Post",
+      "text": "Text",
+      "code": "Kod",
+      "sshKey": "SSH-nyckel"
+    },
+    "copyBuiltIn": "Kopiera som egen",
+    "copied": "Kopierad som ”{{name}}”.",
+    "localHint": "Mallar finns bara i den här webbläsaren, precis som dina länkar. En mall innehåller fält och inställningar, aldrig värden. För att flytta dem exporterar du dem och importerar dem på den andra enheten.",
+    "deleteTitle": "Ta bort mallen?",
+    "deleteText": "”{{name}}” tas bort från den här webbläsaren. Förfrågningar som skapats från den förblir som de är.",
+    "deleted": "Mall borttagen.",
+    "deleteFailed": "Mallen kunde inte tas bort.",
+    "exportTitle": "Exportera mallar",
+    "exportText": "För att flytta dem till en annan enhet eller webbläsare.",
+    "exportWhich": "Mallar att exportera",
+    "exportAs": "Exportera som",
+    "asFile": "Som fil",
+    "asFileHint": ".json, att spara",
+    "asLink": "Som länk",
+    "asLinkHint": "allt efter #",
+    "seal": "Kryptera med ett lösenord",
+    "sealPlaceholder": "Lösenord för exporten",
+    "sealHint": "Fältnamn som ”Bankens PIN” avslöjar vad en förfrågan gäller. Med ett lösenord går exporten inte att läsa utan det.",
+    "exportCount_one": "Exportera {{count}}",
+    "exportCount_other": "Exportera {{count}}",
+    "exported_one": "{{count}} mall exporterad.",
+    "exported_other": "{{count}} mallar exporterade.",
+    "exportFailed": "Mallarna kunde inte exporteras.",
+    "linkLabel": "Mallänk",
+    "linkHint": "Öppna länken på den andra enheten. Allt finns i delen efter #, som ingen server får.",
+    "linkLong": "Den här länken är lång och kan gå sönder i vissa appar. En fil är säkrare.",
+    "importTitle": "Importera mallar",
+    "importFromFile": "Från filen {{name}}.",
+    "importFromLink": "Från en mallänk.",
+    "importPassword": "Exportens lösenord",
+    "importOpen": "Öppna",
+    "importExists": "finns redan",
+    "importNew": "ny",
+    "keepBoth": "Behåll båda",
+    "importChoice": "Vad som händer med {{name}}",
+    "importNone": "Den här exporten innehåller ingen mall som går att läsa.",
+    "importSkipped_one": "{{count}} mall gick inte att läsa och utelämnas.",
+    "importSkipped_other": "{{count}} mallar gick inte att läsa och utelämnas.",
+    "importChecked": "Kontrollerade som alla mallar från andra: fältnamn rensas och värden tas bort.",
+    "importCount_one": "Importera {{count}}",
+    "importCount_other": "Importera {{count}}",
+    "imported_one": "{{count}} mall importerad.",
+    "imported_other": "{{count}} mallar importerade.",
+    "importFailed": "Mallarna kunde inte importeras.",
+    "importError": {
+      "invalid": "Det här innehåller inga SkySend-mallar.",
+      "tooLarge": "Den här exporten är för stor.",
+      "password": "Felaktigt lösenord."
+    },
+    "replacedForm": "Formuläret ersattes.",
+    "undo": "Ångra",
+    "editAdjusted": "Den här servern tillåter mindre än mallen ställer in, så formuläret visar det servern tar emot. Om du inte ändrar dem behåller mallen sina egna värden.",
+    "exportTooLarge": "För mycket för en export. Exportera färre mallar åt gången.",
+    "skip": "Hoppa över",
+    "notFound": "Den här mallen finns inte längre i den här webbläsaren.",
+    "duplicated": "Duplicerad som ”{{name}}”."
   }
 }

@@ -33,6 +33,7 @@ import type { OidcGuardVariables } from "../middleware/oidc-guard.js";
 import type { createUploadQuota } from "../middleware/quota.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
 import { createWsUploadHandler, type WsUploadRefusal } from "../lib/ws-upload.js";
+import { createSlotHolds, SLOT_HOLD_PATTERN, type SlotHold } from "../lib/slot-holds.js";
 import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
 
@@ -42,6 +43,10 @@ interface RequestUploadSession {
   salt: Buffer;
   fileCount: number;
   contentLength: number;
+  /** Two when the upload also reserved the slot of the next part of its submission. */
+  slots: 1 | 2;
+  /** The held slot this upload took. It goes back to its hold when the upload does not finish. */
+  held?: SlotHold;
 }
 
 const createSchema = z
@@ -78,6 +83,10 @@ const initSchema = z.object({
     .default("1")
     .transform(Number)
     .pipe(z.number().int().positive()),
+  // The first part of a submission reserves the slot of its second part as well.
+  reserveNext: z.literal("1").optional(),
+  // The second part brings the slot its first part held for it.
+  hold: z.string().regex(SLOT_HOLD_PATTERN).optional(),
 });
 
 /** The 100 000 base64 characters POST /api/meta accepts, as bytes. */
@@ -97,11 +106,11 @@ function isOpen(request: FileRequest, now = new Date()): boolean {
   return !request.closed && request.closesAt > now;
 }
 
-/** Gives the slot of an upload that did not finish back to its request. */
-function release(requestId: string): void {
+/** Gives the slots of an upload that did not finish back to its request. */
+function release(requestId: string, slots = 1): void {
   getDb()
     .update(fileRequests)
-    .set({ reservedUploads: sql`max(${fileRequests.reservedUploads} - 1, 0)` })
+    .set({ reservedUploads: sql`max(${fileRequests.reservedUploads} - ${slots}, 0)` })
     .where(eq(fileRequests.id, requestId))
     .run();
 }
@@ -129,35 +138,49 @@ function isForeignKeyError(err: unknown): boolean {
   );
 }
 
+type SlotRefusal = { status: 409 | 410 | 413; error: string };
+const CLOSED: SlotRefusal = { status: 410, error: "File request is closed" };
+const FULL: SlotRefusal = { status: 409, error: "File request is full" };
+const TOO_LARGE: SlotRefusal = {
+  status: 413,
+  error: "Upload exceeds the size this file request allows",
+};
+
 /**
- * Reserves a slot of a request for an upload of `contentLength` bytes. One statement, so two
+ * Reserves slots of a request for an upload of `contentLength` bytes. One statement, so two
  * senders can never both take the last slot. Returns why it refused, or null.
  */
-async function reserveSlot(
+async function reserveSlots(
   id: string,
   contentLength: number,
-): Promise<{ status: 409 | 410 | 413; error: string } | null> {
+  slots: 1 | 2,
+): Promise<SlotRefusal | null> {
   const db = getDb();
   const reserved = db
     .update(fileRequests)
-    .set({ reservedUploads: sql`${fileRequests.reservedUploads} + 1` })
+    .set({ reservedUploads: sql`${fileRequests.reservedUploads} + ${slots}` })
     .where(
       and(
         eq(fileRequests.id, id),
         eq(fileRequests.closed, false),
         gt(fileRequests.closesAt, new Date()),
-        sql`${fileRequests.reservedUploads} < ${fileRequests.maxUploads}`,
+        sql`${fileRequests.reservedUploads} + ${slots} <= ${fileRequests.maxUploads}`,
         sql`${contentLength} <= ${fileRequests.maxSize}`,
       ),
     )
     .run();
   if (reserved.changes > 0) return null;
   const current = await db.query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
-  if (!current || !isOpen(current)) return { status: 410, error: "File request is closed" };
-  if (current.reservedUploads >= current.maxUploads) {
-    return { status: 409, error: "File request is full" };
-  }
-  return { status: 413, error: "Upload exceeds the size this file request allows" };
+  if (!current || !isOpen(current)) return CLOSED;
+  if (current.reservedUploads + slots > current.maxUploads) return FULL;
+  return TOO_LARGE;
+}
+
+/** Whether a request still takes an upload into a slot that was held for it. */
+async function checkHeldSlot(id: string, contentLength: number): Promise<SlotRefusal | null> {
+  const current = await getDb().query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
+  if (!current || !isOpen(current)) return CLOSED;
+  return contentLength <= current.maxSize ? null : TOO_LARGE;
 }
 
 /**
@@ -217,6 +240,8 @@ const wsInitSchema = z
         salt: base64urlBytes(SALT_LENGTH),
         contentLength: z.number().int().positive(),
         fileCount: z.number().int().positive().default(1),
+        reserveNext: z.boolean().optional(),
+        hold: z.string().regex(SLOT_HOLD_PATTERN).optional(),
       })
       .strict(),
   })
@@ -274,10 +299,44 @@ export function createRequestRoute({
     .set({ reservedUploads: sql`${fileRequests.finishedUploads}` })
     .run();
 
+  const holds = createSlotHolds((requestId) => release(requestId));
+
+  /** Gives back what an upload that did not finish claimed: its held slot, or its slots. */
+  const giveBack = (meta: RequestUploadSession) => {
+    if (meta.held) holds.giveBack(meta.requestId, meta.held);
+    else release(meta.requestId, meta.slots);
+  };
+
+  /**
+   * Claims what an upload needs: the slot held for it, or one new slot, or two when it is the
+   * first part of a submission. A hold that ran out falls back to a new slot.
+   */
+  const claimSlots = async (
+    id: string,
+    contentLength: number,
+    want: { reserveNext?: boolean; hold?: string },
+  ): Promise<{ refused: SlotRefusal } | { slots: 1 | 2; held?: SlotHold }> => {
+    const held = want.hold ? holds.take(want.hold, id) : null;
+    if (held) {
+      const refused = await checkHeldSlot(id, contentLength);
+      if (!refused) return { slots: 1, held };
+      holds.giveBack(id, held);
+      return { refused };
+    }
+    // A part that came with a hold is a second part, whose submission needs no further slot.
+    const slots = want.reserveNext && !want.hold ? 2 : 1;
+    const refused = await reserveSlots(id, contentLength, slots);
+    return refused ? { refused } : { slots };
+  };
+
+  /** The hold for the second part of a submission, once its first part is stored. */
+  const holdNext = (meta: RequestUploadSession) =>
+    meta.slots === 2 ? { hold: holds.hold(meta.requestId) } : {};
+
   const chunked = createChunkedUploads<RequestUploadSession>(storage, {
     chunkDir,
     maxChunkSize,
-    onAbandon: (_id, session) => release(session.requestId),
+    onAbandon: (_id, session) => giveBack(session),
   });
 
   /**
@@ -385,7 +444,8 @@ export function createRequestRoute({
 
   /**
    * POST /api/request/:id/upload/init
-   * Reserves a slot, then opens an upload session.
+   * Reserves what the upload needs, one slot, two for the first part of a submission, or
+   * the slot held for its second part, then opens an upload session.
    */
   route.post("/:id/upload/init", async (c) => {
     const id = c.req.param("id");
@@ -397,6 +457,8 @@ export function createRequestRoute({
       salt: c.req.header("X-Salt"),
       contentLength: c.req.header("X-Content-Length"),
       fileCount: c.req.header("X-File-Count"),
+      reserveNext: c.req.header("X-Reserve-Next"),
+      hold: c.req.header("X-Slot-Hold"),
     });
     if (!parsed.success) {
       return c.json(
@@ -404,23 +466,26 @@ export function createRequestRoute({
         400,
       );
     }
-    const { salt, contentLength, fileCount } = parsed.data;
+    const { salt, contentLength, fileCount, reserveNext, hold } = parsed.data;
     const sizeError = validateUploadSize(contentLength, fileCount, config);
     if (sizeError) return c.json({ error: sizeError.message }, sizeError.status);
 
-    const refused = await reserveSlot(id, contentLength);
-    if (refused) return c.json({ error: refused.error }, refused.status);
+    const claimed = await claimSlots(id, contentLength, { reserveNext: !!reserveNext, hold });
+    if ("refused" in claimed)
+      return c.json({ error: claimed.refused.error }, claimed.refused.status);
 
+    const meta: RequestUploadSession = {
+      requestId: id,
+      salt,
+      fileCount,
+      contentLength,
+      ...claimed,
+    };
     try {
-      const uploadId = await chunked.open(contentLength, {
-        requestId: id,
-        salt,
-        fileCount,
-        contentLength,
-      });
+      const uploadId = await chunked.open(contentLength, meta);
       return c.json({ id: uploadId }, 201);
     } catch (err) {
-      release(id);
+      giveBack(meta);
       throw err;
     }
   });
@@ -490,7 +555,7 @@ export function createRequestRoute({
 
       if (session.bytesWritten !== meta.contentLength) {
         await storage.abortChunkedUpload(uid).catch(() => {});
-        release(id);
+        giveBack(meta);
         return c.json({ error: "Body size does not match declared content length" }, 400);
       }
 
@@ -498,7 +563,7 @@ export function createRequestRoute({
         await storage.finalizeChunkedUpload(uid);
       } catch (err) {
         await storage.abortChunkedUpload(uid).catch(() => {});
-        release(id);
+        giveBack(meta);
         throw err;
       }
 
@@ -510,7 +575,7 @@ export function createRequestRoute({
         );
       } catch (err) {
         await storage.delete(uid).catch(() => {});
-        release(id);
+        giveBack(meta);
         throw err;
       }
       if (!stored) {
@@ -518,18 +583,21 @@ export function createRequestRoute({
         return notFound(c);
       }
 
+      // The hold comes first, so nothing after the store can leave its slot reserved for good.
+      const next = holdNext(meta);
       const quotaHashedIp = c.get("quotaHashedIp");
       if (quota && quotaHashedIp) quota.recordUsage(quotaHashedIp, session.bytesWritten);
 
-      return c.json({ id: uid }, 200);
+      return c.json({ id: uid, ...next }, 200);
     },
   );
 
   /**
    * GET /api/request/:id/upload/ws
    * The WebSocket transport of normal uploads, into a request: the init frame carries
-   * { request: { uploadToken, salt, contentLength, fileCount } }, the finalize frame the same
-   * fields as the HTTP finalize. Registered when FILE_UPLOAD_WS is on.
+   * { request: { uploadToken, salt, contentLength, fileCount, reserveNext?, hold? } }, the
+   * finalize frame the same fields as the HTTP finalize, and the done frame the hold of a first
+   * part. Registered when FILE_UPLOAD_WS is on.
    */
   if (upgradeWebSocket) {
     const refuse = (status: number, error: string): WsUploadRefusal => ({
@@ -552,7 +620,8 @@ export function createRequestRoute({
             const id = c.req.param("id") ?? "";
             const parsed = wsInitSchema.safeParse(init);
             if (!parsed.success) return refuse(400, "Invalid upload headers");
-            const { uploadToken, salt, contentLength, fileCount } = parsed.data.request;
+            const { uploadToken, salt, contentLength, fileCount, reserveNext, hold } =
+              parsed.data.request;
             const request = UUID_PATTERN.test(id)
               ? await getDb().query.fileRequests.findFirst({ where: eq(fileRequests.id, id) })
               : undefined;
@@ -565,11 +634,11 @@ export function createRequestRoute({
               ? quota.check(ip, contentLength)
               : ({ ok: true, hashedIp: null } as const);
             if (!quotaResult.ok) return refuse(429, quotaResult.reason);
-            const refused = await reserveSlot(id, contentLength);
-            if (refused) return refuse(refused.status, refused.error);
+            const claimed = await claimSlots(id, contentLength, { reserveNext, hold });
+            if ("refused" in claimed) return refuse(claimed.refused.status, claimed.refused.error);
             return {
               contentLength,
-              meta: { requestId: id, salt, fileCount, contentLength },
+              meta: { requestId: id, salt, fileCount, contentLength, ...claimed },
               quotaHashedIp: quotaResult.hashedIp,
             };
           },
@@ -587,9 +656,10 @@ export function createRequestRoute({
             } catch {
               return { error: "Upload could not be stored", code: 1011 };
             }
+            return { reply: holdNext(meta) };
           },
 
-          abandon: (meta) => release(meta.requestId),
+          abandon: giveBack,
         },
       ),
     );

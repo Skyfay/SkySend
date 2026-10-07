@@ -161,7 +161,8 @@
     "remaining": "{{count}} latausta jäljellä",
     "expired": "Vanhentunut",
     "unavailable": "Ei saatavilla",
-    "files": "{{count}} tiedosto(a)"
+    "files": "{{count}} tiedosto(a)",
+    "tabTemplates": "Pohjat"
   },
   "noteView": {
     "title": "Salattu muistiinpano",
@@ -232,7 +233,10 @@
     "enterPassword": "Syötä salasana...",
     "addAnother": "Lisää toinen salasana",
     "passwordNumber": "Salasana {{number}}",
-    "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)"
+    "labelPlaceholder": "Salasanan {{number}} nimi (valinnainen)",
+    "makePlain": "Ei salaisuus, näytä selkokielisenä",
+    "makeSecret": "Salaisuus, näytä peitettynä",
+    "enterValue": "Syötä arvo..."
   },
   "code": {
     "titlePlaceholder": "Tiedostonimi (esim. docker-compose.yaml, valinnainen)",
@@ -484,7 +488,14 @@
     "asksFiles": "Tiedostot",
     "asksNote": "Muistiinpano",
     "asksBoth": "Molemmat",
-    "summaryNote": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kukin muistiinpano."
+    "summaryNote": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kukin muistiinpano.",
+    "asksNoteHint": "Määritä kentät, esimerkiksi salasana",
+    "asksBothHint": "Tiedostot ja muistiinpano kerralla",
+    "submissions": "Lähetyskerrat",
+    "submissionsCount_one": "{{count}} lähetyskerta",
+    "submissionsCount_other": "{{count}} lähetyskertaa",
+    "summaryBoth": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kussakin tiedostot enintään <b>{{size}}</b> ja muistiinpano.",
+    "asksBothUnavailable": "Vaatii vähintään kaksi latausta pyyntöä kohden"
   },
   "template": {
     "title": "Muistiinpanon pohja",
@@ -518,7 +529,9 @@
     "forget": "Poista luettelosta",
     "deleted": "Pyyntö poistettu",
     "forgotten": "Poistettu luettelosta",
-    "deleteFailed": "Pyyntöä ei voitu poistaa."
+    "deleteFailed": "Pyyntöä ei voitu poistaa.",
+    "receivedSubmissions_one": "{{count}} lähetyskerta vastaanotettu",
+    "receivedSubmissions_other": "{{count}} lähetyskertaa vastaanotettu"
   },
   "inbox": {
     "title": "Saapuneet",
@@ -563,7 +576,9 @@
     "notAsked": "Ei pyydetty",
     "saveText": "Tallenna tekstinä",
     "noteTooLarge": "Tämä muistiinpano on suurempi kuin mikään muistiinpano, jonka tämä instanssi ottaa vastaan, joten sitä ei avattu.",
-    "noteFailed": "Muistiinpanoa ei voitu avata."
+    "noteFailed": "Muistiinpanoa ei voitu avata.",
+    "usageSubmissions": "{{used}}/{{max}} lähetyskertaa, yhteensä {{size}}, tiedostot kukin enintään {{maxSize}}",
+    "submission": "Lähetetty yhdessä"
   },
   "requestUpload": {
     "title": "Joku pyytää sinulta <a>tiedostoja</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Salattu vain pyytäjälle. {{count}} lähetys jäljellä, sulkeutuu {{time}} kuluttua.",
     "limitsNote_other": "Salattu vain pyytäjälle. {{count}} lähetystä jäljellä, sulkeutuu {{time}} kuluttua.",
     "fileTabHint": "Enintään {{size}} lähetystä kohden",
-    "noteTabHint": "Salasanoja, tekstiä, koodia tai avain"
+    "titleNote": "Joku pyytää sinulta <a>muistiinpanoa</a>",
+    "titleBoth": "Joku pyytää sinulta <a>tiedostoja ja muistiinpanoa</a>",
+    "introNote": "Kaikki salataan tässä selaimessa ennen kuin se lähtee siitä. Vain tämän pyynnön luoja voi avata sen.",
+    "sendAgain": "Lähetä lisää",
+    "filesSent": "Tiedostosi tulivat perille. Lähetä vielä muistiinpano.",
+    "limitsBoth_one": "Tiedostot ja muistiinpano lähtevät yhtenä lähetyskertana. {{count}} lähetyskerta jäljellä, sulkeutuu {{time}} kuluttua.",
+    "limitsBoth_other": "Tiedostot ja muistiinpano lähtevät yhtenä lähetyskertana. {{count}} lähetyskertaa jäljellä, sulkeutuu {{time}} kuluttua.",
+    "stepDone": "valmis"
+  },
+  "templates": {
+    "startWith": "Aloita",
+    "manage": "Hallitse pohjia",
+    "blank": "Tyhjä",
+    "startHint": "Täyttää otsikon, kentät ja rajat. Kaikkea voi vielä muuttaa jälkeenpäin.",
+    "builtIn": {
+      "title": "Valmiit",
+      "section": "Valmiit",
+      "credentials": {
+        "name": "Kirjautumistiedot",
+        "address": "Osoite",
+        "username": "Käyttäjätunnus",
+        "password": "Salasana"
+      },
+      "sshKey": {
+        "name": "SSH-avain"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Verkon nimi",
+        "password": "Salasana"
+      },
+      "apiKey": {
+        "name": "API-avain",
+        "service": "Palvelu",
+        "key": "Avain",
+        "expires": "Voimassa asti"
+      }
+    },
+    "saveAs": "Tallenna pohjaksi",
+    "saveEdited": "Tallenna pohja",
+    "saveTitle": "Tallenna pohjaksi",
+    "saveText": "Seuraavaa samanlaista pyyntöä varten. Pohja pysyy tässä selaimessa.",
+    "name": "Nimi",
+    "namePlaceholder": "Esimerkiksi Palvelimen käyttö",
+    "nameTaken": "Tämänniminen pohja on jo olemassa. Tallentaminen korvaa sen.",
+    "nameInUse": "Toisella pohjalla on jo tämä nimi.",
+    "keepTitle": "Säilytä otsikko",
+    "noTitle": "Tällä pyynnöllä ei ole otsikkoa",
+    "quoted": "”{{text}}”",
+    "keepLimits": "Säilytä aukioloaika ja rajat",
+    "saveSecret": "Kentät ja asetukset tallennetaan. Saapuneiden salasanaa ei koskaan, eikä mitään arvoa.",
+    "replace": "Korvaa",
+    "saved": "”{{name}}” tallennettu pohjaksi.",
+    "saveFailed": "Pohjaa ei voitu tallentaa.",
+    "editTitle": "Muokkaa pohjaa",
+    "editIntro": "Muuta, mitä pohja valmistelee. Pyyntö luodaan vasta, kun käytät pohjaa.",
+    "editing": "Muokkaat pohjaa ”{{name}}”. Tallentaminen korvaa sen.",
+    "own": "Omat pohjat",
+    "import": "Tuo",
+    "exportAll": "Vie kaikki",
+    "empty": "Ei vielä pohjia",
+    "emptyHint": "Tallenna pohja pyyntölomakkeesta tai kopioi alta jokin valmiista.",
+    "use": "Käytä",
+    "edit": "Muokkaa",
+    "duplicate": "Monista",
+    "export": "Vie",
+    "usedAgo": "käytetty viimeksi {{time}}",
+    "neverUsed": "ei koskaan käytetty",
+    "freeNote": "Vapaasti kirjoitettu muistiinpano",
+    "uploadsUpTo_one": "{{count}} lähetys, enintään {{size}}",
+    "uploadsUpTo_other": "{{count}} lähetystä, kukin enintään {{size}}",
+    "field": {
+      "entry": "Merkintä",
+      "text": "Teksti",
+      "code": "Koodi",
+      "sshKey": "SSH-avain"
+    },
+    "copyBuiltIn": "Kopioi omaksi",
+    "copied": "Kopioitu nimellä ”{{name}}”.",
+    "localHint": "Pohjat ovat vain tässä selaimessa, kuten linkkisi. Pohja sisältää kentät ja asetukset, ei koskaan arvoja. Siirrä ne viemällä ja tuomalla ne toisella laitteella.",
+    "deleteTitle": "Poistetaanko pohja?",
+    "deleteText": "”{{name}}” poistetaan tästä selaimesta. Sen pohjalta luodut pyynnöt pysyvät ennallaan.",
+    "deleted": "Pohja poistettu.",
+    "deleteFailed": "Pohjaa ei voitu poistaa.",
+    "exportTitle": "Vie pohjia",
+    "exportText": "Siirtoon toiselle laitteelle tai toiseen selaimeen.",
+    "exportWhich": "Vietävät pohjat",
+    "exportAs": "Vientitapa",
+    "asFile": "Tiedostona",
+    "asFileHint": ".json, säilytettäväksi",
+    "asLink": "Linkkinä",
+    "asLinkHint": "kaikki #-merkin jälkeen",
+    "seal": "Salaa salasanalla",
+    "sealPlaceholder": "Viennin salasana",
+    "sealHint": "Kenttien nimet, kuten ”Pankin PIN”, kertovat, mistä pyynnössä on kyse. Salasanalla suojattua vientiä ei voi lukea ilman salasanaa.",
+    "exportCount_one": "Vie {{count}}",
+    "exportCount_other": "Vie {{count}}",
+    "exported_one": "{{count}} pohja viety.",
+    "exported_other": "{{count}} pohjaa viety.",
+    "exportFailed": "Pohjia ei voitu viedä.",
+    "linkLabel": "Pohjien linkki",
+    "linkHint": "Avaa linkki toisella laitteella. Kaikki on #-merkin jälkeisessä osassa, jota mikään palvelin ei saa.",
+    "linkLong": "Tämä linkki on pitkä ja voi rikkoutua joissakin sovelluksissa. Tiedosto on varmempi.",
+    "importTitle": "Tuo pohjia",
+    "importFromFile": "Tiedostosta {{name}}.",
+    "importFromLink": "Pohjien linkistä.",
+    "importPassword": "Viennin salasana",
+    "importOpen": "Avaa",
+    "importExists": "jo olemassa",
+    "importNew": "uusi",
+    "keepBoth": "Säilytä molemmat",
+    "importChoice": "Mitä pohjalle {{name}} tehdään",
+    "importNone": "Tämä vienti ei sisällä yhtään luettavaa pohjaa.",
+    "importSkipped_one": "{{count}} pohja jätettiin pois, koska sitä ei voitu lukea.",
+    "importSkipped_other": "{{count}} pohjaa jätettiin pois, koska niitä ei voitu lukea.",
+    "importChecked": "Tarkistettu kuten mikä tahansa muilta saatu pohja: kenttien nimet siistitään ja arvot hylätään.",
+    "importCount_one": "Tuo {{count}}",
+    "importCount_other": "Tuo {{count}}",
+    "imported_one": "{{count}} pohja tuotu.",
+    "imported_other": "{{count}} pohjaa tuotu.",
+    "importFailed": "Pohjia ei voitu tuoda.",
+    "importError": {
+      "invalid": "Tämä ei sisällä SkySend-pohjia.",
+      "tooLarge": "Tämä vienti on liian suuri.",
+      "password": "Väärä salasana."
+    },
+    "replacedForm": "Lomake korvattiin.",
+    "undo": "Kumoa",
+    "editAdjusted": "Tämä palvelin sallii vähemmän kuin pohja määrittää, joten lomake näyttää sen, minkä palvelin sallii. Jos et muuta niitä, pohja säilyttää omat arvonsa.",
+    "exportTooLarge": "Liian paljon yhteen vientiin. Vie vähemmän pohjia kerralla.",
+    "skip": "Ohita",
+    "notFound": "Tätä pohjaa ei enää ole tässä selaimessa.",
+    "duplicated": "Kopioitu nimellä ”{{name}}”."
   }
 }

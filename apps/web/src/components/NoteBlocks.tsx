@@ -157,7 +157,9 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
     <BlockFrame icon={KeyRound} title={t("tab.password")}>
       <div className="space-y-3 p-3">
         {block.entries.map((entry, index) => {
-          const shown = revealed.has(index);
+          // An entry that is no secret, like a username, needs no reveal.
+          const plain = entry.secret === false;
+          const shown = plain || revealed.has(index);
           return (
             <div key={index}>
               <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
@@ -167,9 +169,11 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
                 <div className="min-h-10 min-w-0 flex-1 break-all rounded-xl border border-border bg-card px-4 py-2 font-mono text-sm leading-6">
                   {shown ? entry.value : "•".repeat(Math.min(entry.value.length, 40))}
                 </div>
-                <IconAction label={shown ? t("noteView.hide") : t("noteView.reveal")} onClick={() => toggle(index)}>
-                  {shown ? <EyeOff /> : <Eye />}
-                </IconAction>
+                {!plain && (
+                  <IconAction label={shown ? t("noteView.hide") : t("noteView.reveal")} onClick={() => toggle(index)}>
+                    {shown ? <EyeOff /> : <Eye />}
+                  </IconAction>
+                )}
                 <CopyAction copied={copied === `entry-${index}`} onClick={() => void copy(`entry-${index}`, entry.value)} />
               </div>
             </div>

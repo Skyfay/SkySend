@@ -161,7 +161,8 @@
     "remaining": "{{count}} nedlastinger igjen",
     "expired": "Utløpt",
     "unavailable": "Utilgjengelig",
-    "files": "{{count}} fil(er)"
+    "files": "{{count}} fil(er)",
+    "tabTemplates": "Maler"
   },
   "noteView": {
     "title": "Kryptert notat",
@@ -232,7 +233,10 @@
     "enterPassword": "Skriv inn passord...",
     "addAnother": "Legg til et nytt passord",
     "passwordNumber": "Passord {{number}}",
-    "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)"
+    "labelPlaceholder": "Etikett for passord {{number}} (valgfritt)",
+    "makePlain": "Ikke en hemmelighet, vis i klartekst",
+    "makeSecret": "En hemmelighet, vis skjult",
+    "enterValue": "Skriv inn verdi..."
   },
   "code": {
     "titlePlaceholder": "Filnavn (f.eks. docker-compose.yaml, valgfritt)",
@@ -484,7 +488,14 @@
     "asksFiles": "Filer",
     "asksNote": "Notat",
     "asksBoth": "Begge",
-    "summaryNote": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver av dem et notat."
+    "summaryNote": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver av dem et notat.",
+    "asksNoteHint": "Bestem felt, for eksempel et passord",
+    "asksBothHint": "Filer og et notat på én gang",
+    "submissions": "Innsendinger",
+    "submissionsCount_one": "{{count}} innsending",
+    "submissionsCount_other": "{{count}} innsendinger",
+    "summaryBoth": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver med filer på maks <b>{{size}}</b> og et notat.",
+    "asksBothUnavailable": "Krever minst to opplastinger per forespørsel"
   },
   "template": {
     "title": "Mal for notatet",
@@ -518,7 +529,9 @@
     "forget": "Fjern",
     "deleted": "Forespørsel slettet",
     "forgotten": "Fjernet fra listen",
-    "deleteFailed": "Forespørselen kunne ikke slettes."
+    "deleteFailed": "Forespørselen kunne ikke slettes.",
+    "receivedSubmissions_one": "{{count}} innsending mottatt",
+    "receivedSubmissions_other": "{{count}} innsendinger mottatt"
   },
   "inbox": {
     "title": "Innboks",
@@ -563,7 +576,9 @@
     "notAsked": "Ikke bedt om",
     "saveText": "Lagre som tekst",
     "noteTooLarge": "Dette notatet er større enn noe notat denne instansen tar imot, så det ble ikke åpnet.",
-    "noteFailed": "Notatet kunne ikke åpnes."
+    "noteFailed": "Notatet kunne ikke åpnes.",
+    "usageSubmissions": "{{used}} av {{max}} innsendinger, {{size}} totalt, filer maks {{maxSize}} hver",
+    "submission": "Sendt sammen"
   },
   "requestUpload": {
     "title": "Noen ber deg om <a>filer</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Kryptert bare for den som spør. {{count}} opplasting igjen, stenger om {{time}}.",
     "limitsNote_other": "Kryptert bare for den som spør. {{count}} opplastinger igjen, stenger om {{time}}.",
     "fileTabHint": "Opptil {{size}} per opplasting",
-    "noteTabHint": "Passord, tekst, kode eller en nøkkel"
+    "titleNote": "Noen ber deg om <a>et notat</a>",
+    "titleBoth": "Noen ber deg om <a>filer og et notat</a>",
+    "introNote": "Alt krypteres i denne nettleseren før det forlater den. Bare den som opprettet denne forespørselen, kan åpne det.",
+    "sendAgain": "Send mer",
+    "filesSent": "Filene dine er kommet frem. Send notatet for å bli ferdig.",
+    "limitsBoth_one": "Filer og notat går sammen som én innsending. {{count}} innsending igjen, stenger om {{time}}.",
+    "limitsBoth_other": "Filer og notat går sammen som én innsending. {{count}} innsendinger igjen, stenger om {{time}}.",
+    "stepDone": "klar"
+  },
+  "templates": {
+    "startWith": "Start med",
+    "manage": "Administrer maler",
+    "blank": "Tom",
+    "startHint": "Fyller ut tittelen, feltene og grensene. Alt kan fortsatt endres etterpå.",
+    "builtIn": {
+      "title": "Innebygde",
+      "section": "Innebygde",
+      "credentials": {
+        "name": "Innlogging",
+        "address": "Adresse",
+        "username": "Brukernavn",
+        "password": "Passord"
+      },
+      "sshKey": {
+        "name": "SSH-nøkkel"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Nettverksnavn",
+        "password": "Passord"
+      },
+      "apiKey": {
+        "name": "API-nøkkel",
+        "service": "Tjeneste",
+        "key": "Nøkkel",
+        "expires": "Utløpsdato"
+      }
+    },
+    "saveAs": "Lagre som mal",
+    "saveEdited": "Lagre mal",
+    "saveTitle": "Lagre som mal",
+    "saveText": "Til neste forespørsel av samme slag. Malen blir værende i denne nettleseren.",
+    "name": "Navn",
+    "namePlaceholder": "For eksempel Servertilgang",
+    "nameTaken": "Det finnes allerede en mal med dette navnet. Hvis du lagrer, erstattes den.",
+    "nameInUse": "En annen mal har allerede dette navnet.",
+    "keepTitle": "Behold tittelen",
+    "noTitle": "Denne forespørselen har ingen tittel",
+    "quoted": "«{{text}}»",
+    "keepLimits": "Behold hvor lenge den er åpen og grensene",
+    "saveSecret": "Felt og innstillinger lagres. Et passord til innboksen lagres aldri, og heller ingen verdier.",
+    "replace": "Erstatt",
+    "saved": "«{{name}}» lagret som mal.",
+    "saveFailed": "Malen kunne ikke lagres.",
+    "editTitle": "Rediger mal",
+    "editIntro": "Endre hva malen setter opp. En forespørsel opprettes først når du bruker den.",
+    "editing": "Du redigerer malen «{{name}}». Hvis du lagrer, erstattes den.",
+    "own": "Dine maler",
+    "import": "Importer",
+    "exportAll": "Eksporter alle",
+    "empty": "Ingen maler ennå",
+    "emptyHint": "Lagre en fra forespørselsskjemaet, eller kopier en av de innebygde nedenfor.",
+    "use": "Bruk",
+    "edit": "Rediger",
+    "duplicate": "Dupliser",
+    "export": "Eksporter",
+    "usedAgo": "sist brukt {{time}}",
+    "neverUsed": "aldri brukt",
+    "freeNote": "Fritt skrevet notat",
+    "uploadsUpTo_one": "{{count}} opplasting på opptil {{size}}",
+    "uploadsUpTo_other": "{{count}} opplastinger på opptil {{size}}",
+    "field": {
+      "entry": "Oppføring",
+      "text": "Tekst",
+      "code": "Kode",
+      "sshKey": "SSH-nøkkel"
+    },
+    "copyBuiltIn": "Kopier som egen",
+    "copied": "Kopiert som «{{name}}».",
+    "localHint": "Maler finnes bare i denne nettleseren, som lenkene dine. En mal inneholder felt og innstillinger, aldri verdier. For å flytte dem eksporterer du dem og importerer dem på den andre enheten.",
+    "deleteTitle": "Slette malen?",
+    "deleteText": "«{{name}}» fjernes fra denne nettleseren. Forespørsler som er opprettet fra den, forblir som de er.",
+    "deleted": "Mal slettet.",
+    "deleteFailed": "Malen kunne ikke slettes.",
+    "exportTitle": "Eksporter maler",
+    "exportText": "For å flytte dem til en annen enhet eller nettleser.",
+    "exportWhich": "Maler som skal eksporteres",
+    "exportAs": "Eksporter som",
+    "asFile": "Som fil",
+    "asFileHint": ".json, til å ta vare på",
+    "asLink": "Som lenke",
+    "asLinkHint": "alt etter #",
+    "seal": "Krypter med et passord",
+    "sealPlaceholder": "Passord for eksporten",
+    "sealHint": "Feltnavn som «Bank-PIN» avslører hva en forespørsel gjelder. Med et passord kan eksporten ikke leses uten det.",
+    "exportCount_one": "Eksporter {{count}}",
+    "exportCount_other": "Eksporter {{count}}",
+    "exported_one": "{{count}} mal eksportert.",
+    "exported_other": "{{count}} maler eksportert.",
+    "exportFailed": "Malene kunne ikke eksporteres.",
+    "linkLabel": "Mallenke",
+    "linkHint": "Åpne lenken på den andre enheten. Alt ligger i delen etter #, som ingen server får.",
+    "linkLong": "Denne lenken er lang og kan brytes i noen apper. En fil er tryggere.",
+    "importTitle": "Importer maler",
+    "importFromFile": "Fra filen {{name}}.",
+    "importFromLink": "Fra en mallenke.",
+    "importPassword": "Passordet til eksporten",
+    "importOpen": "Åpne",
+    "importExists": "finnes allerede",
+    "importNew": "ny",
+    "keepBoth": "Behold begge",
+    "importChoice": "Hva som skjer med {{name}}",
+    "importNone": "Denne eksporten inneholder ingen mal som kan leses.",
+    "importSkipped_one": "{{count}} mal kunne ikke leses og utelates.",
+    "importSkipped_other": "{{count}} maler kunne ikke leses og utelates.",
+    "importChecked": "Kontrollert som alle maler fra andre: feltnavn renses og verdier forkastes.",
+    "importCount_one": "Importer {{count}}",
+    "importCount_other": "Importer {{count}}",
+    "imported_one": "{{count}} mal importert.",
+    "imported_other": "{{count}} maler importert.",
+    "importFailed": "Malene kunne ikke importeres.",
+    "importError": {
+      "invalid": "Dette inneholder ingen SkySend-maler.",
+      "tooLarge": "Denne eksporten er for stor.",
+      "password": "Feil passord."
+    },
+    "replacedForm": "Skjemaet ble erstattet.",
+    "undo": "Angre",
+    "editAdjusted": "Denne serveren tillater mindre enn malen setter opp, så skjemaet viser det serveren tar imot. Hvis du ikke endrer dem, beholder malen sine egne verdier.",
+    "exportTooLarge": "For mye for én eksport. Eksporter færre maler om gangen.",
+    "skip": "Hopp over",
+    "notFound": "Denne malen finnes ikke lenger i denne nettleseren.",
+    "duplicated": "Duplisert som «{{name}}»."
   }
 }

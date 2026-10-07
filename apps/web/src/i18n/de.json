@@ -156,7 +156,8 @@
     "remaining": "{{count}} Downloads verbleibend",
     "expired": "Abgelaufen",
     "unavailable": "Nicht verfügbar",
-    "files": "{{count}} Datei(en)"
+    "files": "{{count}} Datei(en)",
+    "tabTemplates": "Vorlagen"
   },
   "noteView": {
     "title": "Verschlüsselte Notiz",
@@ -227,7 +228,10 @@
     "enterPassword": "Passwort eingeben...",
     "addAnother": "Weiteres Passwort hinzufügen",
     "passwordNumber": "Passwort {{number}}",
-    "labelPlaceholder": "Bezeichnung für Passwort {{number}} (optional)"
+    "labelPlaceholder": "Bezeichnung für Passwort {{number}} (optional)",
+    "makePlain": "Kein Geheimnis, im Klartext zeigen",
+    "makeSecret": "Geheim, verdeckt zeigen",
+    "enterValue": "Wert eingeben..."
   },
   "code": {
     "titlePlaceholder": "Dateiname (z.B. docker-compose.yaml, optional)",
@@ -479,7 +483,14 @@
     "asksFiles": "Dateien",
     "asksNote": "Notiz",
     "asksBoth": "Beides",
-    "summaryNote": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jeder davon eine Notiz."
+    "summaryNote": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jeder davon eine Notiz.",
+    "asksNoteHint": "Felder vorgeben, zum Beispiel ein Passwort",
+    "asksBothHint": "Dateien und eine Notiz in einem Schritt",
+    "submissions": "Einsendungen",
+    "submissionsCount_one": "{{count}} Einsendung",
+    "submissionsCount_other": "{{count}} Einsendungen",
+    "summaryBoth": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jede mit Dateien bis <b>{{size}}</b> und einer Notiz.",
+    "asksBothUnavailable": "Braucht mindestens zwei Uploads pro Anfrage"
   },
   "template": {
     "title": "Vorlage für die Notiz",
@@ -513,7 +524,9 @@
     "forget": "Entfernen",
     "deleted": "Anfrage gelöscht",
     "forgotten": "Aus der Liste entfernt",
-    "deleteFailed": "Die Anfrage konnte nicht gelöscht werden."
+    "deleteFailed": "Die Anfrage konnte nicht gelöscht werden.",
+    "receivedSubmissions_one": "{{count}} Einsendung erhalten",
+    "receivedSubmissions_other": "{{count}} Einsendungen erhalten"
   },
   "inbox": {
     "title": "Inbox",
@@ -558,7 +571,9 @@
     "notAsked": "Nicht angefragt",
     "saveText": "Als Text speichern",
     "noteTooLarge": "Diese Notiz ist größer als jede Notiz, die diese Instanz annimmt. Sie wurde deshalb nicht geöffnet.",
-    "noteFailed": "Die Notiz ließ sich nicht öffnen."
+    "noteFailed": "Die Notiz ließ sich nicht öffnen.",
+    "usageSubmissions": "{{used}} von {{max}} Einsendungen, {{size}} insgesamt, Dateien je höchstens {{maxSize}}",
+    "submission": "Zusammen gesendet"
   },
   "requestUpload": {
     "title": "Jemand bittet Sie um <a>Dateien</a>",
@@ -596,6 +611,138 @@
     "limitsNote_one": "Nur für die anfragende Person verschlüsselt. Noch {{count}} Upload, schließt in {{time}}.",
     "limitsNote_other": "Nur für die anfragende Person verschlüsselt. Noch {{count}} Uploads, schließt in {{time}}.",
     "fileTabHint": "Bis zu {{size}} pro Upload",
-    "noteTabHint": "Passwörter, Text, Code oder ein Schlüssel"
+    "titleNote": "Jemand bittet Sie um <a>eine Notiz</a>",
+    "titleBoth": "Jemand bittet Sie um <a>Dateien und eine Notiz</a>",
+    "introNote": "Alles wird in diesem Browser verschlüsselt, bevor es ihn verlässt. Nur die Person, die diese Anfrage erstellt hat, kann es öffnen.",
+    "sendAgain": "Weitere senden",
+    "filesSent": "Ihre Dateien sind angekommen. Senden Sie noch die Notiz.",
+    "limitsBoth_one": "Dateien und Notiz gehen zusammen als eine Einsendung. Noch {{count}} Einsendung, schließt in {{time}}.",
+    "limitsBoth_other": "Dateien und Notiz gehen zusammen als eine Einsendung. Noch {{count}} Einsendungen, schließt in {{time}}.",
+    "stepDone": "bereit"
+  },
+  "templates": {
+    "startWith": "Starten mit",
+    "manage": "Vorlagen verwalten",
+    "blank": "Leer",
+    "startHint": "Füllt Titel, Felder und Grenzen aus. Danach lässt sich alles noch ändern.",
+    "builtIn": {
+      "title": "Mitgelieferte",
+      "section": "Mitgeliefert",
+      "credentials": {
+        "name": "Zugangsdaten",
+        "address": "Adresse",
+        "username": "Benutzername",
+        "password": "Passwort"
+      },
+      "sshKey": {
+        "name": "SSH-Schlüssel"
+      },
+      "wifi": {
+        "name": "WLAN",
+        "network": "Netzwerkname",
+        "password": "Passwort"
+      },
+      "apiKey": {
+        "name": "API-Schlüssel",
+        "service": "Dienst",
+        "key": "Schlüssel",
+        "expires": "Ablaufdatum"
+      }
+    },
+    "saveAs": "Als Vorlage speichern",
+    "saveEdited": "Vorlage speichern",
+    "saveTitle": "Als Vorlage speichern",
+    "saveText": "Für die nächste Anfrage dieser Art. Die Vorlage bleibt in diesem Browser.",
+    "name": "Name",
+    "namePlaceholder": "Zum Beispiel Server-Zugang",
+    "nameTaken": "Eine Vorlage mit diesem Namen gibt es schon. Speichern ersetzt sie.",
+    "nameInUse": "Eine andere Vorlage hat diesen Namen schon.",
+    "keepTitle": "Titel mitspeichern",
+    "noTitle": "Diese Anfrage hat keinen Titel",
+    "quoted": "„{{text}}“",
+    "keepLimits": "Laufzeit und Grenzen mitspeichern",
+    "saveSecret": "Gespeichert werden Felder und Einstellungen. Ein Passwort für die Inbox nie, und auch kein Wert.",
+    "replace": "Ersetzen",
+    "saved": "„{{name}}“ als Vorlage gespeichert.",
+    "saveFailed": "Die Vorlage konnte nicht gespeichert werden.",
+    "editTitle": "Vorlage bearbeiten",
+    "editIntro": "Ändern Sie, was die Vorlage einrichtet. Eine Anfrage entsteht erst, wenn Sie sie verwenden.",
+    "editing": "Sie bearbeiten die Vorlage „{{name}}“. Speichern ersetzt sie.",
+    "own": "Eigene Vorlagen",
+    "import": "Importieren",
+    "exportAll": "Alle exportieren",
+    "empty": "Noch keine Vorlagen",
+    "emptyHint": "Speichern Sie eine im Anfrage-Formular, oder kopieren Sie unten eine mitgelieferte.",
+    "use": "Verwenden",
+    "edit": "Bearbeiten",
+    "duplicate": "Duplizieren",
+    "export": "Exportieren",
+    "usedAgo": "zuletzt genutzt {{time}}",
+    "neverUsed": "noch nie genutzt",
+    "freeNote": "Notiz frei geschrieben",
+    "uploadsUpTo_one": "{{count}} Upload bis {{size}}",
+    "uploadsUpTo_other": "{{count}} Uploads bis {{size}}",
+    "field": {
+      "entry": "Eintrag",
+      "text": "Text",
+      "code": "Code",
+      "sshKey": "SSH-Schlüssel"
+    },
+    "copyBuiltIn": "Als eigene kopieren",
+    "copied": "Als „{{name}}“ kopiert.",
+    "localHint": "Vorlagen liegen nur in diesem Browser, wie Ihre Links. Eine Vorlage enthält Felder und Einstellungen, nie Werte. Zum Umziehen exportieren und auf dem anderen Gerät importieren.",
+    "deleteTitle": "Vorlage löschen?",
+    "deleteText": "„{{name}}“ wird aus diesem Browser entfernt. Anfragen, die daraus entstanden sind, bleiben, wie sie sind.",
+    "deleted": "Vorlage gelöscht.",
+    "deleteFailed": "Die Vorlage konnte nicht gelöscht werden.",
+    "exportTitle": "Vorlagen exportieren",
+    "exportText": "Zum Umziehen auf ein anderes Gerät oder in einen anderen Browser.",
+    "exportWhich": "Zu exportierende Vorlagen",
+    "exportAs": "Exportieren als",
+    "asFile": "Als Datei",
+    "asFileHint": ".json, zum Ablegen",
+    "asLink": "Als Link",
+    "asLinkHint": "alles nach dem #",
+    "seal": "Mit Passwort verschlüsseln",
+    "sealPlaceholder": "Passwort für den Export",
+    "sealHint": "Feldnamen wie „Bank-PIN“ verraten, worum es geht. Mit Passwort bleibt der Export ohne das Passwort unlesbar.",
+    "exportCount_one": "{{count}} exportieren",
+    "exportCount_other": "{{count}} exportieren",
+    "exported_one": "{{count}} Vorlage exportiert.",
+    "exported_other": "{{count}} Vorlagen exportiert.",
+    "exportFailed": "Die Vorlagen konnten nicht exportiert werden.",
+    "linkLabel": "Vorlagen-Link",
+    "linkHint": "Öffnen Sie den Link auf dem anderen Gerät. Alles steckt im Teil nach dem #, den kein Server erhält.",
+    "linkLong": "Dieser Link ist lang und kann in manchen Apps brechen. Eine Datei ist sicherer.",
+    "importTitle": "Vorlagen importieren",
+    "importFromFile": "Aus der Datei {{name}}.",
+    "importFromLink": "Aus einem Vorlagen-Link.",
+    "importPassword": "Passwort des Exports",
+    "importOpen": "Öffnen",
+    "importExists": "gibt es schon",
+    "importNew": "neu",
+    "keepBoth": "Beide behalten",
+    "importChoice": "Was mit {{name}} passiert",
+    "importNone": "Dieser Export enthält keine Vorlage, die sich lesen lässt.",
+    "importSkipped_one": "{{count}} Vorlage ließ sich nicht lesen und fehlt.",
+    "importSkipped_other": "{{count}} Vorlagen ließen sich nicht lesen und fehlen.",
+    "importChecked": "Geprüft wie jede fremde Vorlage: Feldnamen werden bereinigt, Werte verworfen.",
+    "importCount_one": "{{count}} importieren",
+    "importCount_other": "{{count}} importieren",
+    "imported_one": "{{count}} Vorlage importiert.",
+    "imported_other": "{{count}} Vorlagen importiert.",
+    "importFailed": "Die Vorlagen konnten nicht importiert werden.",
+    "importError": {
+      "invalid": "Das enthält keine SkySend-Vorlagen.",
+      "tooLarge": "Dieser Export ist zu groß.",
+      "password": "Falsches Passwort."
+    },
+    "replacedForm": "Das Formular wurde ersetzt.",
+    "undo": "Rückgängig",
+    "editAdjusted": "Dieser Server erlaubt weniger, als die Vorlage einrichtet, darum zeigt das Formular, was er zulässt. Solange Sie nichts daran ändern, behält die Vorlage ihre eigenen Werte.",
+    "exportTooLarge": "Zu viel für einen Export. Exportieren Sie weniger Vorlagen auf einmal.",
+    "skip": "Überspringen",
+    "notFound": "Diese Vorlage liegt nicht mehr in diesem Browser.",
+    "duplicated": "Als „{{name}}“ dupliziert."
   }
 }

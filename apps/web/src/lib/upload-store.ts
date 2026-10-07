@@ -1,6 +1,8 @@
 import { get, set, del, keys } from "idb-keyval";
+import type { RequestAsk } from "@skysend/crypto";
 import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
 import type { NoteKindKey } from "@/lib/note-editor";
+import { readStoredTemplate, type RequestTemplate } from "@/lib/request-templates";
 
 export interface StoredUpload {
   id: string;
@@ -160,6 +162,8 @@ export interface StoredRequest {
   createdAt: string;
   /** IDs of the uploads the inbox listed when it was last open here. Any other one is new. */
   seenUploads?: string[];
+  /** What the request asks for, so a submission of files and a note counts as one. */
+  asks?: RequestAsk[];
 }
 
 const REQUEST_PREFIX = "request:";
@@ -206,4 +210,36 @@ export async function getAllRequests(): Promise<StoredRequest[]> {
   }
   requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   return requests;
+}
+
+// ── Request Template Storage ───────────────────────────
+
+const TEMPLATE_PREFIX = "template:";
+
+function templateKey(id: string): string {
+  return `${TEMPLATE_PREFIX}${id}`;
+}
+
+export async function saveTemplate(template: RequestTemplate): Promise<void> {
+  await set(templateKey(template.id), template);
+}
+
+export async function removeTemplate(id: string): Promise<void> {
+  await del(templateKey(id));
+}
+
+/**
+ * The templates kept in this browser, by name. Each one is read like a template from
+ * elsewhere, so one that does not read is left out instead of breaking the list.
+ */
+export async function getAllTemplates(): Promise<RequestTemplate[]> {
+  const allKeys = await keys();
+  const templates: RequestTemplate[] = [];
+  for (const k of allKeys) {
+    if (typeof k !== "string" || !k.startsWith(TEMPLATE_PREFIX)) continue;
+    const template = readStoredTemplate(await get(k));
+    if (template) templates.push(template);
+  }
+  templates.sort((a, b) => a.name.localeCompare(b.name));
+  return templates;
 }

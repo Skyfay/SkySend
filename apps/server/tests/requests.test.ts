@@ -77,7 +77,10 @@ function createBody(request: NewFileRequest, overrides: Record<string, unknown> 
     inboxAuthToken: toBase64url(server.inboxAuthToken),
     inboxOwnerToken: toBase64url(server.inboxOwnerToken),
     uploadToken: toBase64url(server.uploadToken),
-    brief: { ciphertext: toBase64url(server.brief.ciphertext), nonce: toBase64url(server.brief.nonce) },
+    brief: {
+      ciphertext: toBase64url(server.brief.ciphertext),
+      nonce: toBase64url(server.brief.nonce),
+    },
     expireSec: 86400,
     maxUploads: 3,
     maxSize: 4096,
@@ -535,6 +538,107 @@ describe("file requests", () => {
       const statuses = results.map((r) => r.status).sort();
       expect(statuses).toEqual([201, 201, 409, 409]);
       expect(requestRow(id).reservedUploads).toBe(2);
+    });
+
+    describe("submissions", () => {
+      /** Uploads one part of a submission and returns what finalize answered. */
+      async function sendPart(
+        app: Hono,
+        created: Awaited<ReturnType<typeof createRequest>>,
+        extra: Record<string, string>,
+      ) {
+        const opened = await init(app, created.id, { ...created.headers.upload, ...extra }, 10);
+        expect(opened.status).toBe(201);
+        const { id: uid } = (await opened.json()) as { id: string };
+        await app.request(`/api/request/${created.id}/upload/${uid}/chunk?index=0`, {
+          method: "POST",
+          headers: { ...created.headers.upload, "Content-Length": "10" },
+          body: new Uint8Array(10),
+        });
+        const body = await finalizeBody(
+          created.request.local.publicKey,
+          created.id,
+          uid,
+          generateSecret(),
+        );
+        const done = await app.request(
+          `/api/request/${created.id}/upload/${uid}/finalize`,
+          json(body),
+        );
+        expect(done.status).toBe(200);
+        return (await done.json()) as { id: string; hold?: string };
+      }
+
+      it("reserves both slots of a submission and holds the second for its note", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2 });
+        const files = await sendPart(app, created, { "X-Reserve-Next": "1" });
+        expect(files.hold).toMatch(/^[A-Za-z0-9_-]{22}$/);
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+        // Another sender finds the request full, and the note still finds its slot.
+        expect((await init(app, created.id, created.headers.upload, 10)).status).toBe(409);
+        const note = await sendPart(app, created, { "X-Slot-Hold": files.hold! });
+        expect(note.hold).toBeUndefined();
+        expect(requestRow(created.id)).toMatchObject({ reservedUploads: 2, finishedUploads: 2 });
+      });
+
+      it("refuses the first part when the request has no room for its second", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2 });
+        expect((await init(app, created.id, created.headers.upload, 10)).status).toBe(201);
+        const both = { ...created.headers.upload, "X-Reserve-Next": "1" };
+        expect((await init(app, created.id, both, 10)).status).toBe(409);
+        expect(requestRow(created.id).reservedUploads).toBe(1);
+      });
+
+      it("takes a hold once and only for its own request", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2 });
+        const other = await createRequest(app, { maxUploads: 2 });
+        const { hold } = await sendPart(app, created, { "X-Reserve-Next": "1" });
+        // Another request does not know the hold, so it takes a slot of its own.
+        const foreign = { ...other.headers.upload, "X-Slot-Hold": hold! };
+        expect((await init(app, other.id, foreign, 10)).status).toBe(201);
+        expect(requestRow(other.id).reservedUploads).toBe(1);
+        const withHold = { ...created.headers.upload, "X-Slot-Hold": hold! };
+        expect((await init(app, created.id, withHold, 10)).status).toBe(201);
+        expect((await init(app, created.id, withHold, 10)).status).toBe(409);
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+      });
+
+      it("gives the held slot back to its hold when the note is cancelled", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2 });
+        const { hold } = await sendPart(app, created, { "X-Reserve-Next": "1" });
+        const withHold = { ...created.headers.upload, "X-Slot-Hold": hold! };
+        const opened = await init(app, created.id, withHold, 10);
+        const { id: uid } = (await opened.json()) as { id: string };
+        await app.request(`/api/request/${created.id}/upload/${uid}`, { method: "DELETE" });
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+        await sendPart(app, created, { "X-Slot-Hold": hold! });
+        expect(requestRow(created.id)).toMatchObject({ reservedUploads: 2, finishedUploads: 2 });
+      });
+
+      it("gives both slots back when the first part is cancelled", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2 });
+        const both = { ...created.headers.upload, "X-Reserve-Next": "1" };
+        const opened = await init(app, created.id, both, 10);
+        const { id: uid } = (await opened.json()) as { id: string };
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+        await app.request(`/api/request/${created.id}/upload/${uid}`, { method: "DELETE" });
+        expect(requestRow(created.id).reservedUploads).toBe(0);
+      });
+
+      it("refuses a malformed hold or reservation header", async () => {
+        const app = createApp();
+        const created = await createRequest(app);
+        for (const extra of [{ "X-Slot-Hold": "short" }, { "X-Reserve-Next": "2" }]) {
+          const res = await init(app, created.id, { ...created.headers.upload, ...extra }, 10);
+          expect(res.status).toBe(400);
+        }
+        expect(requestRow(created.id).reservedUploads).toBe(0);
+      });
     });
 
     it("lets every upload take the size the request allows", async () => {
@@ -1102,6 +1206,42 @@ describe("file requests", () => {
         headers: created.headers.inbox,
       });
       expect(new Uint8Array(await file.arrayBuffer())).toEqual(data);
+    });
+
+    it("holds the second slot of a submission and hands it over in the done frame", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app, { maxUploads: 2 });
+      const token = created.headers.upload["X-Upload-Token"];
+      const send = async (extra: Record<string, unknown>) => {
+        const events = await connect(app, created.id, mock);
+        const fake = createFakeWs();
+        const frame = JSON.parse(wsInit(token, 8)) as { request: Record<string, unknown> };
+        Object.assign(frame.request, extra);
+        await events.onMessage!(msgEvent(JSON.stringify(frame)), fake.ws);
+        const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+        await events.onMessage!(msgEvent(new Uint8Array(8).buffer), fake.ws);
+        await events.onMessage!(
+          msgEvent(
+            await wsFinalize(
+              created.request.local.publicKey,
+              created.id,
+              ready.id,
+              generateSecret(),
+            ),
+          ),
+          fake.ws,
+        );
+        return fake.lastJson() as { type: string; hold?: string };
+      };
+
+      const files = await send({ reserveNext: true });
+      expect(files).toMatchObject({ type: "done", hold: expect.stringMatching(/^[\w-]{22}$/) });
+      expect(requestRow(created.id).reservedUploads).toBe(2);
+      const note = await send({ hold: files.hold });
+      expect(note.type).toBe("done");
+      expect(note.hold).toBeUndefined();
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 2, finishedUploads: 2 });
     });
 
     it("refuses a wrong upload token like the HTTP init and reserves nothing", async () => {

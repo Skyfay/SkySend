@@ -1,4 +1,12 @@
-import { NOTE_KIND, type LegacyNoteKind, type NoteBlock, type NoteBlockType } from "@skysend/note-format";
+import { calculateEncryptedSize } from "@skysend/crypto";
+import {
+  NOTE_KIND,
+  padNote,
+  serializeNote,
+  type LegacyNoteKind,
+  type NoteBlock,
+  type NoteBlockType,
+} from "@skysend/note-format";
 
 /** What a block is called in the interface and in "My Links". Markdown counts on its own. */
 export type NoteKindKey = "text" | "markdown" | "password" | "code" | "sshkey";
@@ -47,7 +55,11 @@ export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
       case "password": {
         const entries = block.entries
           .filter((entry) => entry.value.length > 0)
-          .map((entry) => ({ label: entry.label, value: entry.value }));
+          .map((entry) => ({
+            label: entry.label,
+            value: entry.value,
+            ...(entry.secret === false ? { secret: false } : {}),
+          }));
         return entries.length > 0 ? [{ type: "password", entries }] : [];
       }
       case "code":
@@ -63,6 +75,40 @@ export function blocksToSend(drafts: readonly NoteBlock[]): NoteBlock[] {
       }
     }
   });
+}
+
+/** A note for a file request, measured: the blocks that go out, their size, and whether they fit. */
+export interface MeasuredNote {
+  toSend: NoteBlock[];
+  bytes: number;
+  limit: number;
+  tooLarge: boolean;
+  ready: boolean;
+}
+
+/**
+ * Measures a note for a file request. `maxSize` is the largest note the instance takes,
+ * `maxUploadSize` the largest upload the request takes, which the padded and encrypted note
+ * has to fit as well.
+ */
+export function measureRequestNote(
+  drafts: readonly NoteBlock[],
+  maxSize: number,
+  maxUploadSize: number,
+): MeasuredNote {
+  const toSend = blocksToSend(drafts);
+  const document = toSend.length > 0 ? serializeNote(toSend) : "";
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(document).length;
+  const sent = document ? calculateEncryptedSize(encoder.encode(padNote(document)).length) : 0;
+  const tooLarge = bytes > maxSize || sent > maxUploadSize;
+  return {
+    toSend,
+    bytes,
+    limit: Math.min(maxSize, maxUploadSize),
+    tooLarge,
+    ready: toSend.length > 0 && !tooLarge,
+  };
 }
 
 /** Which kinds of blocks a note holds, each once, in the order they first appear. */

@@ -22,7 +22,7 @@ The encryption never sees blocks, only a string. This package never sees a key. 
 
 ## Templates
 
-`template.ts` holds the templates of file requests: a note document without values, which a requester lays out and a sender fills in. `parseTemplate` treats one as untrusted input like a note, throws every value away and cleans every label with `cleanLabel`. `padNote` pads a note sent into a request to whole 1 KiB blocks. A template is shaped like a note, so a filled-in template is a note and needs no format of its own.
+`template.ts` holds the templates of file requests: a note document without values, which a requester lays out and a sender fills in. `parseTemplate` treats one as untrusted input like a note, throws every value away and cleans every label with `cleanLabel`. It keeps `secret: false` on a password entry, the requester's say that a value like a username is shown in clear, and a sender cannot change it. `padNote` pads a note sent into a request to whole 1 KiB blocks. A template is shaped like a note, so a filled-in template is a note and needs no format of its own.
 
 ## Legacy notes
 

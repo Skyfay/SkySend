@@ -32,6 +32,9 @@ export function RequestCard({ request, onDelete }: RequestCardProps) {
   const { uploadLink, inboxLink } = requestLinks(request);
   const inbox = request.inbox;
   const unseen = useSyncExternalStore(subscribeUnseen, () => unseenFor(request.id));
+  // A submission of files and a note is two uploads, and counts as one here.
+  const both = request.asks?.includes("files") === true && request.asks.includes("note");
+  const sends = (uploads: number) => (both ? Math.ceil(uploads / 2) : uploads);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -60,11 +63,13 @@ export function RequestCard({ request, onDelete }: RequestCardProps) {
       <>
         {unseen > 0 && (
           <Badge variant="accent" className="h-5 px-2">
-            {t("requests.new", { count: unseen })}
+            {t("requests.new", { count: sends(unseen) })}
           </Badge>
         )}
         <HistoryStat icon={Upload}>
-          {t("requests.received", { count: inbox.usedUploads })}
+          {both
+            ? t("requests.receivedSubmissions", { count: sends(inbox.usedUploads) })
+            : t("requests.received", { count: inbox.usedUploads })}
         </HistoryStat>
         <HistoryStat icon={Clock}>
           {inbox.open ? formatTimeRemaining(inbox.closesAt) : t("requests.closed")}

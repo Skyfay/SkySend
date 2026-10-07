@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import type { UploadResult } from "../../src/hooks/useUpload";
 
 // ── Worker mock ───────────────────────────────────────────────────────────────
 
@@ -119,6 +120,68 @@ describe("useUpload", () => {
     expect(sent.files).toBeUndefined();
     expect(sent.fileCount).toBe(1);
     expect(await sent.file.text()).toBe(note);
+  });
+
+  it("tells its caller how an upload ended, also a cancelled one, and marks a submission", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    const request = { id: "req-1", uploadToken: "token", publicKey: new Uint8Array(65) };
+    const submission = "0123456789abcdef0123456789abcdef";
+
+    const hold = "AbCdEfGhIjKlMnOpQrStUv";
+    let done: Promise<UploadResult | null> = Promise.resolve(null);
+    act(() => {
+      done = result.current.upload({ files: [makeFile()], submission, reserveNext: true, request });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    const sent = MockWorker.lastInstance!.postMessage.mock.calls[0]![0] as {
+      metadata: unknown;
+      request: Record<string, unknown>;
+    };
+    expect(sent.metadata).toMatchObject({ type: "single", submission });
+    expect(sent.request).toMatchObject({ reserveNext: true, hold: undefined });
+    act(() => MockWorker.lastInstance!.emit({ type: "delivered", id: "upload-1", hold }));
+    expect(await done).toEqual({ hold });
+
+    let failed: Promise<UploadResult | null> = Promise.resolve({});
+    act(() => {
+      failed = result.current.upload({ files: [makeFile()], request });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => MockWorker.lastInstance!.emit({ type: "error", message: "full" }));
+    expect(await failed).toBeNull();
+
+    // A cancel ends the promise too, so nobody waits for a worker that is gone.
+    let cancelled: Promise<UploadResult | null> = Promise.resolve({});
+    act(() => {
+      cancelled = result.current.upload({ files: [makeFile()], request });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => result.current.cancel());
+    expect(await cancelled).toBeNull();
+    expect(result.current.phase).toBe("idle");
+  });
+
+  it("starts no worker when the upload was cancelled while its files were read", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    let readable: () => void = () => {};
+    const file = makeFile();
+    vi.spyOn(file, "slice").mockReturnValue({
+      arrayBuffer: () => new Promise<ArrayBuffer>((resolve) => (readable = () => resolve(new ArrayBuffer(1)))),
+    } as unknown as Blob);
+    let pending: Promise<UploadResult | null> = Promise.resolve({});
+    act(() => {
+      pending = result.current.upload({
+        files: [file],
+        request: { id: "req-1", uploadToken: "token", publicKey: new Uint8Array(65) },
+      });
+    });
+    act(() => result.current.cancel());
+    readable();
+    expect(await pending).toBeNull();
+    expect(MockWorker.lastInstance).toBeNull();
+    expect(result.current.phase).toBe("idle");
   });
 
   it("ends the session of a cancelled upload into a request on the server", async () => {

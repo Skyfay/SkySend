@@ -42,7 +42,7 @@ interface TextBlock {
 
 interface PasswordBlock {
   type: "password"
-  entries: Array<{ label: string; value: string }> // at most 100, label may be empty
+  entries: Array<{ label: string; value: string; secret?: false }> // at most 100, label may be empty
 }
 
 interface CodeBlock {
@@ -60,7 +60,7 @@ interface SshKeyBlock {
 }
 ```
 
-Every field but `label` is required. A writer that has nothing for a field writes an empty string.
+Every field but `label` and `secret` is required. A writer that has nothing for a field writes an empty string. `secret: false` marks a password entry whose value is no secret, like a username or an address. Readers show it in clear, and an entry without it is a secret, as every entry was before the field existed.
 
 ## Writing
 

@@ -50,8 +50,22 @@ interface ShareUploadOptions {
 interface RequestUploadOptions {
   files: File[];
   note?: string;
+  /** Ties the uploads a sender sends together, files and a note, see Submission in the crypto package. */
+  submission?: string;
+  /** The first part of a submission, which reserves the slot of its second part too. */
+  reserveNext?: boolean;
+  /** The slot the first part of a submission held for this one. */
+  hold?: string;
   request: { id: string; uploadToken: string; publicKey: Uint8Array };
 }
+
+/** What a finished upload hands back: the slot held for the next part of its submission. */
+export interface UploadResult {
+  hold?: string;
+}
+
+/** How a cancelled upload ends its promise. Cancel already reset the state. */
+class UploadCancelled extends Error {}
 
 type UploadOptions = ShareUploadOptions | RequestUploadOptions;
 
@@ -79,8 +93,12 @@ export function useUpload() {
     debugInfo: null,
   });
   const workerRef = useRef<Worker | null>(null);
+  /** Ends the promise of a running upload when it is cancelled, so no caller waits forever. */
+  const abortRef = useRef<((err: Error) => void) | null>(null);
   /** The open session of an upload into a request, so a cancel can give its slot back. */
   const requestSessionRef = useRef<{ requestId: string; uploadId: string } | null>(null);
+  /** Counts cancels, so a cancel before the worker exists still ends the upload. */
+  const cancelsRef = useRef(0);
 
   /** Ends the session on the server, best effort. Its reservation is free again at once. */
   const endRequestSession = useCallback(() => {
@@ -107,8 +125,11 @@ export function useUpload() {
   }, []);
 
   const cancel = useCallback(() => {
+    cancelsRef.current += 1;
     workerRef.current?.terminate();
     workerRef.current = null;
+    abortRef.current?.(new UploadCancelled());
+    abortRef.current = null;
     endRequestSession();
     setState({
       phase: "idle",
@@ -122,8 +143,12 @@ export function useUpload() {
     });
   }, [endRequestSession]);
 
-  const upload = useCallback(async (options: UploadOptions) => {
+  /** Resolves once the upload is done, with null when it failed or was cancelled. */
+  const upload = useCallback(async (options: UploadOptions): Promise<UploadResult | null> => {
     const { request } = options;
+    const cancels = cancelsRef.current;
+    const submission = request ? options.submission : undefined;
+    const slot = request ? { reserveNext: options.reserveNext, hold: options.hold } : {};
     const note = request ? options.note : undefined;
     // A note travels like a single file, with metadata that names it a note.
     const files = note === undefined ? options.files : [new File([note], "note")];
@@ -140,6 +165,8 @@ export function useUpload() {
           throw new Error("fileNotReadable");
         }
       }
+      // A cancel during the reads above found no worker to stop.
+      if (cancelsRef.current !== cancels) throw new UploadCancelled();
 
       // Generate secret + salt on main thread (fast, just random bytes)
       const secret = generateSecret();
@@ -173,6 +200,8 @@ export function useUpload() {
           fileNames.push(f.webkitRelativePath || f.name);
         }
       }
+
+      if (submission) metadata = { ...metadata, submission };
 
       // Spawn upload worker - zipping (if multi-file), encryption + upload
       // all run off the main thread.
@@ -212,7 +241,9 @@ export function useUpload() {
         id: string;
         ownerToken?: string;
         effectiveSecret?: string;
+        hold?: string;
       }>((resolve, reject) => {
+        abortRef.current = reject;
         worker.onmessage = (e: MessageEvent<UploadWorkerMessage>) => {
           const msg = e.data;
           switch (msg.type) {
@@ -284,7 +315,7 @@ export function useUpload() {
               break;
             case "delivered":
               requestSessionRef.current = null;
-              resolve({ id: msg.id });
+              resolve({ id: msg.id, hold: msg.hold });
               break;
             case "transport": {
               const event = msg.fallback
@@ -342,6 +373,7 @@ export function useUpload() {
               id: request.id,
               uploadToken: request.uploadToken,
               publicKey: request.publicKey.slice().buffer,
+              ...slot,
             },
           },
           transferable,
@@ -349,6 +381,7 @@ export function useUpload() {
       });
 
       // Worker is done - terminate it
+      abortRef.current = null;
       worker.terminate();
       workerRef.current = null;
 
@@ -390,7 +423,10 @@ export function useUpload() {
           /* v8 ignore next */
           : null,
       }));
+      return result.hold ? { hold: result.hold } : {};
     } catch (err) {
+      abortRef.current = null;
+      if (err instanceof UploadCancelled) return null;
       workerRef.current?.terminate();
       workerRef.current = null;
       endRequestSession();
@@ -399,6 +435,7 @@ export function useUpload() {
         phase: "error",
         error: err instanceof Error ? err.message : "Upload failed",
       }));
+      return null;
     }
   }, [endRequestSession]);
 

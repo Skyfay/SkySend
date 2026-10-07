@@ -41,6 +41,9 @@ const {
   removeRequest,
   getAllRequests,
   markUploadsSeen,
+  saveTemplate,
+  removeTemplate,
+  getAllTemplates,
 } = await import("../../src/lib/upload-store.js");
 
 function makeUpload(overrides: Partial<StoredUpload> = {}): StoredUpload {
@@ -315,5 +318,37 @@ describe("file request storage", () => {
     expect(await markUploadsSeen("a", "made-up", ["u1"])).toBeNull();
     expect(await markUploadsSeen("missing", "inbox-missing", ["u1"])).toBeNull();
     expect((await getRequest("a"))?.seenUploads).toBeUndefined();
+  });
+});
+
+describe("request template storage", () => {
+  const template = (id: string, name: string) => ({
+    id,
+    name,
+    asks: ["files" as const],
+    createdAt: "2026-10-01T00:00:00.000Z",
+  });
+
+  it("lists the kept templates by name and removes one", async () => {
+    await saveTemplate(template("00000000-0000-4000-8000-000000000002", "WLAN"));
+    await saveTemplate(template("00000000-0000-4000-8000-000000000001", "Access"));
+    expect((await getAllTemplates()).map((t) => t.name)).toEqual(["Access", "WLAN"]);
+    await removeTemplate("00000000-0000-4000-8000-000000000001");
+    expect((await getAllTemplates()).map((t) => t.name)).toEqual(["WLAN"]);
+  });
+
+  it("reads the store like a template from elsewhere and leaves out what does not read", async () => {
+    store.set("template:broken", { id: "broken", name: "", asks: [] });
+    store.set("template:00000000-0000-4000-8000-000000000003", {
+      ...template("00000000-0000-4000-8000-000000000003", "Dirty\u202Ename"),
+      note: { v: 1, blocks: [{ type: "password", entries: [{ label: "PIN", value: "4711" }] }] },
+      asks: ["note"],
+    });
+    const [only] = await getAllTemplates();
+    expect(only?.name).toBe("Dirtyname");
+    expect(only?.note).toEqual({
+      v: 1,
+      blocks: [{ type: "password", entries: [{ label: "PIN", value: "" }] }],
+    });
   });
 });

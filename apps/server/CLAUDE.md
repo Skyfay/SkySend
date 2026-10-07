@@ -29,6 +29,7 @@ src/lib/chunked-upload.ts     Session layer of chunked HTTP uploads, shared by u
 src/lib/ws-upload.ts          Session layer of WebSocket uploads, shared by uploads and file requests
 src/lib/request-validation.ts Strict base64url fields and token headers of the file request routes
 src/lib/request-limit.ts      In-memory daily limit for creating file requests
+src/lib/slot-holds.ts         In-memory hold of the second slot of a submission of files and a note
 src/db/               Drizzle schema, connection, generated migrations
 src/routes/           One file per endpoint group
 src/middleware/       auth, oidc-guard, quota, rate-limit, branding
@@ -97,7 +98,7 @@ Adding a variable means four edits: `config.ts`, `.env.example`, `docs/user-guid
 
 Drizzle over better-sqlite3. Tables: `uploads`, `notes`, `quota_usage`, `quota_state`, `file_requests`, `request_uploads` (`src/db/schema.ts`).
 
-Files uploaded into a request live in `request_uploads`, never in `uploads`, so no route of a normal upload can serve one. `file_requests` keeps two pairs of counters: `reserved_*` counts running and finished uploads and is set back to `finished_*` at startup, because no session survives a restart. `finished_*` never goes down, so a deleted upload keeps its slot. Deleting a request goes through `deleteFileRequest` in `lib/cleanup.ts`, which removes the rows before the blobs so a finishing upload cannot leave one behind.
+Files uploaded into a request live in `request_uploads`, never in `uploads`, so no route of a normal upload can serve one. `file_requests` keeps two pairs of counters: `reserved_*` counts running and finished uploads and is set back to `finished_*` at startup, because no session survives a restart. The first part of a submission of files and a note reserves two slots, and `lib/slot-holds.ts` keeps the second one in memory for 30 minutes under a token its finalize returns, so the note always finds its slot. `finished_*` never goes down, so a deleted upload keeps its slot. Deleting a request goes through `deleteFileRequest` in `lib/cleanup.ts`, which removes the rows before the blobs so a finishing upload cannot leave one behind.
 
 `initDatabase(dataDir)` creates `<dataDir>/db/skysend.db`, applies the WAL, `busy_timeout`, `synchronous=NORMAL`, and `foreign_keys` pragmas, then runs pending migrations automatically. WAL mode is verified and a failure throws - do not soften that check.
 

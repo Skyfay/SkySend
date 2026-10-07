@@ -18,8 +18,26 @@ import { randomBytes, asBytes } from "./util.js";
 /** IV length for metadata encryption (12 bytes for AES-GCM). */
 export const META_IV_LENGTH = 12;
 
+/**
+ * Marks the uploads a sender of a file request sent together, files and a note. 32 hex
+ * characters, random per send. Every upload into a request carries one, so the metadata of a
+ * note sent alone is as long as the one of a note sent with files.
+ */
+export interface Submission {
+  submission?: string;
+}
+
+const SUBMISSION = /^[0-9a-f]{32}$/;
+
+/** The submission of parsed metadata, when it has one of the right form. Anything else is left out. */
+function submissionOf(obj: Record<string, unknown>): Submission {
+  return typeof obj.submission === "string" && SUBMISSION.test(obj.submission)
+    ? { submission: obj.submission }
+    : {};
+}
+
 /** Metadata for a single-file upload. */
-export interface SingleFileMetadata {
+export interface SingleFileMetadata extends Submission {
   type: "single";
   name: string;
   size: number;
@@ -27,7 +45,7 @@ export interface SingleFileMetadata {
 }
 
 /** Metadata for a multi-file/folder upload (archived as zip). */
-export interface ArchiveMetadata {
+export interface ArchiveMetadata extends Submission {
   type: "archive";
   files: Array<{
     name: string;
@@ -49,7 +67,7 @@ export type FileMetadata = SingleFileMetadata | ArchiveMetadata;
  * and `size` is its byte length. Only an inbox reads it: decryptMetadata refuses it, so a
  * crafted normal upload never sends a download page down the path of a note.
  */
-export interface NoteUploadMetadata {
+export interface NoteUploadMetadata extends Submission {
   type: "note";
   size: number;
 }
@@ -122,7 +140,7 @@ export async function decryptRequestMetadata(
     if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) {
       throw new Error("Invalid metadata: invalid note size");
     }
-    return { type: "note", size };
+    return { type: "note", size, ...submissionOf(data as Record<string, unknown>) };
   }
   return validateMetadata(data);
 }
@@ -192,6 +210,7 @@ function validateMetadata(data: unknown): FileMetadata {
       name: obj.name,
       size: obj.size,
       mimeType: obj.mimeType,
+      ...submissionOf(obj),
     };
   }
 
@@ -229,6 +248,7 @@ function validateMetadata(data: unknown): FileMetadata {
       files,
       totalSize: obj.totalSize,
       ...(obj.archiveSize !== undefined ? { archiveSize: obj.archiveSize } : {}),
+      ...submissionOf(obj),
     };
   }
 

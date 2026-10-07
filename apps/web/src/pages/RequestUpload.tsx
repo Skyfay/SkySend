@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import {
   AlertCircle,
   Ban,
+  Check,
   CheckCircle2,
   Clock,
   File as FileIcon,
@@ -19,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequestNoteForm } from "@/components/RequestNoteForm";
 import { Glow } from "@/components/Glow";
 import { LinkGone } from "@/components/LinkGone";
@@ -30,8 +30,8 @@ import { useServerConfig } from "@/hooks/useServerConfig";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { NotFoundPage } from "@/pages/NotFound";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
-import { toDrafts, type DraftBlock } from "@/lib/note-editor";
-import { formatBytes, formatTimeRemaining } from "@/lib/utils";
+import { measureRequestNote, toDrafts, type DraftBlock } from "@/lib/note-editor";
+import { cn, formatBytes, formatTimeRemaining } from "@/lib/utils";
 
 /**
  * What a sender sees: who runs the instance, what the requester wrote, and an upload zone,
@@ -108,9 +108,13 @@ export function RequestUploadPage() {
   }
 
   const { status, brief } = sender;
+  const asksFiles = brief.asks.includes("files");
+  const asksNote = brief.asks.includes("note");
+  const both = asksFiles && asksNote;
+  const { sendsLeft } = sender;
   // A delivered upload stays delivered, even when the request closed meanwhile.
   const delivered = sender.phase === "delivered";
-  const room = status.open && status.uploadsLeft > 0 && status.maxUploadSize > 0;
+  const room = status.open && sendsLeft > 0 && status.maxUploadSize > 0;
   if (!delivered && !status.open) {
     return (
       <LinkGone
@@ -126,10 +130,25 @@ export function RequestUploadPage() {
     );
   }
 
+  const ready = sender.phase === "ready";
+  const time = formatTimeRemaining(status.closesAt);
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
   const tooLarge = totalSize > status.maxUploadSize;
   const tooMany = files.length > status.maxFilesPerUpload;
-  const canSend = files.length > 0 && !tooLarge && !tooMany && sender.phase === "ready";
+  const filesReady = sender.filesSent || (files.length > 0 && !tooLarge && !tooMany);
+  const firstDrafts = () => (brief.template ? toDrafts(brief.template) : []);
+  const drafts = noteDrafts ?? firstDrafts();
+  const note = measureRequestNote(drafts, config?.noteMaxSize ?? 0, status.maxUploadSize);
+
+  const sendRow = (limits: string, canSend: boolean, onSend: () => void) => (
+    <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
+      <p className="flex-1 text-[13px] leading-snug text-muted-foreground">{limits}</p>
+      <Button size="lg" disabled={!canSend || !ready} onClick={onSend} className="w-full sm:w-auto">
+        <Lock />
+        {t("requestUpload.send")}
+      </Button>
+    </div>
+  );
 
   let body;
   if (delivered) {
@@ -154,7 +173,7 @@ export function RequestUploadPage() {
             }}
           >
             <Upload />
-            {t("requestUpload.sendMore")}
+            {asksNote ? t("requestUpload.sendAgain") : t("requestUpload.sendMore")}
           </Button>
         )}
       </div>
@@ -174,7 +193,16 @@ export function RequestUploadPage() {
       </div>
     );
   } else {
-    const filesBody = (
+    // Once the files of a submission arrived, only its note is left to send.
+    const filesSection = sender.filesSent ? (
+      <p
+        role="status"
+        className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm text-success"
+      >
+        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        {t("requestUpload.filesSent")}
+      </p>
+    ) : (
       <div className="space-y-4">
         <UploadZone
           files={files}
@@ -192,75 +220,89 @@ export function RequestUploadPage() {
             {t("upload.tooManyFiles", { count: status.maxFilesPerUpload })}
           </p>
         )}
-        <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
-          <p className="flex-1 text-[13px] leading-snug text-muted-foreground">
-            {t("requestUpload.limits", {
-              size: formatBytes(status.maxUploadSize),
-              count: status.uploadsLeft,
-              time: formatTimeRemaining(status.closesAt),
-            })}
-          </p>
-          <Button
-            size="lg"
-            disabled={!canSend}
-            onClick={() => void sender.send({ files })}
-            className="w-full sm:w-auto"
-          >
-            <Lock />
-            {t("requestUpload.send")}
-          </Button>
-        </div>
       </div>
     );
-    const firstDrafts = () => (brief.template ? toDrafts(brief.template) : []);
-    const noteBody = (
+    const noteSection = (
       <RequestNoteForm
         template={brief.template !== null}
-        drafts={noteDrafts ?? firstDrafts()}
+        drafts={drafts}
         onChange={(update) => setNoteDrafts((current) => update(current ?? firstDrafts()))}
-        maxSize={config?.noteMaxSize ?? 0}
-        maxUploadSize={status.maxUploadSize}
-        limits={t("requestUpload.limitsNote", {
-          count: status.uploadsLeft,
-          time: formatTimeRemaining(status.closesAt),
-        })}
-        disabled={sender.phase !== "ready"}
-        onSend={(note) => void sender.send({ note })}
+        note={note}
+        disabled={!ready}
+        footer={
+          both
+            ? undefined
+            : {
+                limits: t("requestUpload.limitsNote", { count: sendsLeft, time }),
+                onSend: (blocks) => void sender.send({ note: blocks }),
+              }
+        }
       />
     );
-    const asksFiles = brief.asks.includes("files");
-    const asksNote = brief.asks.includes("note");
-    body =
-      asksFiles && asksNote ? (
-        <Tabs defaultValue="file" className="space-y-4">
-          <TabsList variant="cards" aria-label={t("share.what")}>
-            <TabsTrigger value="file">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <FileIcon />
-                {t("tab.file")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {t("requestUpload.fileTabHint", { size: formatBytes(status.maxUploadSize) })}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="note">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <NotebookPen />
-                {t("tab.note")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {t("requestUpload.noteTabHint")}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="file">{filesBody}</TabsContent>
-          <TabsContent value="note">{noteBody}</TabsContent>
-        </Tabs>
-      ) : asksNote ? (
-        noteBody
-      ) : (
-        filesBody
+    const step = (done: boolean, number: number) => (
+      <>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+            done ? "bg-primary-soft text-primary-text" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {done ? <Check className="h-3.5 w-3.5" /> : number}
+        </span>
+        {done && <span className="sr-only">{t("requestUpload.stepDone")}</span>}
+      </>
+    );
+
+    if (both) {
+      body = (
+        <div className="space-y-6">
+          <section className="space-y-3" aria-labelledby="request-files">
+            <h2 id="request-files" className="flex items-center gap-2.5 text-sm font-semibold">
+              {step(filesReady, 1)}
+              <FileIcon className="h-4 w-4 text-muted-foreground" />
+              {t("tab.file")}
+            </h2>
+            {filesSection}
+          </section>
+          <div className="h-px bg-border" />
+          <section className="space-y-3" aria-labelledby="request-note">
+            <h2 id="request-note" className="flex items-center gap-2.5 text-sm font-semibold">
+              {step(note.ready, 2)}
+              <NotebookPen className="h-4 w-4 text-muted-foreground" />
+              {t("tab.note")}
+            </h2>
+            {noteSection}
+          </section>
+          {sendRow(
+            t("requestUpload.limitsBoth", { count: sendsLeft, time }),
+            filesReady && note.ready,
+            () =>
+              void sender.send({
+                files: sender.filesSent ? undefined : files,
+                note: note.toSend,
+              }),
+          )}
+        </div>
       );
+    } else if (asksNote) {
+      body = noteSection;
+    } else {
+      body = (
+        <div className="space-y-4">
+          {filesSection}
+          {sendRow(
+            t("requestUpload.limits", {
+              size: formatBytes(status.maxUploadSize),
+              count: sendsLeft,
+              time,
+            }),
+            filesReady,
+            () => void sender.send({ files }),
+          )}
+        </div>
+      );
+    }
   }
 
   return (
@@ -273,12 +315,18 @@ export function RequestUploadPage() {
             className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[38px]"
           >
             <Trans
-              i18nKey="requestUpload.title"
+              i18nKey={
+                both
+                  ? "requestUpload.titleBoth"
+                  : asksNote
+                    ? "requestUpload.titleNote"
+                    : "requestUpload.title"
+              }
               components={{ a: <span data-slot="accent" className="text-primary-text" /> }}
             />
           </h1>
           <p className="mx-auto mt-2.5 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-            {t("requestUpload.intro")}
+            {asksNote ? t("requestUpload.introNote") : t("requestUpload.intro")}
           </p>
         </header>
 

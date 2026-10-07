@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { serializeNote, type NoteBlock } from "@skysend/note-format";
-import { blocksToSend, emptyBlock, noteKinds, storedNoteKinds, toDrafts } from "../../src/lib/note-editor";
+import {
+  blocksToSend,
+  emptyBlock,
+  measureRequestNote,
+  noteKinds,
+  storedNoteKinds,
+  toDrafts,
+} from "../../src/lib/note-editor";
 
 describe("emptyBlock", () => {
   it("starts each type the way its editor expects it", () => {
@@ -106,5 +113,54 @@ describe("storedNoteKinds", () => {
   it("uses the content type of a note from before v3 as its only kind", () => {
     expect(storedNoteKinds({ contentType: "markdown" })).toEqual(["markdown"]);
     expect(storedNoteKinds({ contentType: "sshkey" })).toEqual(["sshkey"]);
+  });
+});
+
+describe("blocksToSend and entries that are no secret", () => {
+  it("keeps which entries are no secret", () => {
+    const sent = blocksToSend([
+      {
+        type: "password",
+        entries: [
+          { label: "User", value: "alice", secret: false },
+          { label: "Password", value: "pw", secret: true },
+        ],
+      },
+    ]);
+    expect(sent).toEqual([
+      {
+        type: "password",
+        entries: [
+          { label: "User", value: "alice", secret: false },
+          { label: "Password", value: "pw" },
+        ],
+      },
+    ]);
+  });
+});
+
+describe("measureRequestNote", () => {
+  const note: NoteBlock[] = [{ type: "text", format: "plain", text: "hello" }];
+
+  it("is not ready while nothing would go out", () => {
+    const measured = measureRequestNote([{ type: "text", format: "plain", text: "" }], 4096, 1 << 20);
+    expect(measured).toMatchObject({ toSend: [], bytes: 0, tooLarge: false, ready: false });
+  });
+
+  it("measures the document and is ready when it fits both limits", () => {
+    const measured = measureRequestNote(note, 4096, 1 << 20);
+    expect(measured.bytes).toBe(new TextEncoder().encode(serializeNote(note)).length);
+    expect(measured).toMatchObject({ limit: 4096, tooLarge: false, ready: true });
+  });
+
+  it("is too large when the note is larger than the instance takes", () => {
+    const measured = measureRequestNote(note, 10, 1 << 20);
+    expect(measured).toMatchObject({ limit: 10, tooLarge: true, ready: false });
+  });
+
+  it("is too large when the padded and encrypted note is larger than the request takes", () => {
+    // The document is far below 1024 bytes, but padding takes it to 1024 before encryption.
+    const measured = measureRequestNote(note, 4096, 1024);
+    expect(measured).toMatchObject({ limit: 1024, tooLarge: true, ready: false });
   });
 });

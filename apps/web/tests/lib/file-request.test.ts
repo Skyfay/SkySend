@@ -16,6 +16,7 @@ import {
 } from "@skysend/crypto";
 import { padNote, parseTemplate, serializeNote, type NoteBlock } from "@skysend/note-format";
 import {
+  groupBySubmission,
   inboxNeedsPassword,
   noteTooLarge,
   openInbox,
@@ -25,6 +26,7 @@ import {
   sanitizeFilename,
   sanitizeTitle,
   NoteTooLargeError,
+  type OpenedUpload,
 } from "../../src/lib/file-request.js";
 import type { Inbox, InboxUpload } from "../../src/lib/api.js";
 
@@ -418,5 +420,37 @@ describe("sanitizeTitle", () => {
     expect(sanitizeTitle("Unterlagen für die Steuererklärung 2026")).toBe(
       "Unterlagen für die Steuererklärung 2026",
     );
+  });
+});
+
+describe("groupBySubmission", () => {
+  const A = "a".repeat(32);
+  const B = "b".repeat(32);
+  /** An opened upload with just what the grouping reads. */
+  function entry(id: string, submission?: string, damaged = false): OpenedUpload {
+    return {
+      upload: { id } as InboxUpload,
+      file: damaged
+        ? null
+        : ({
+            metadata: { type: "note", size: 1024, ...(submission ? { submission } : {}) },
+          } as unknown as OpenedUpload["file"]),
+    };
+  }
+  const ids = (groups: OpenedUpload[][]) => groups.map((g) => g.map((e) => e.upload.id));
+
+  it("puts the parts of one submission together, in the order the first one arrived", () => {
+    const groups = groupBySubmission([entry("1", A), entry("2", B), entry("3", A)]);
+    expect(ids(groups)).toEqual([["1", "3"], ["2"]]);
+  });
+
+  it("lets an upload without a mark and a damaged one stand alone", () => {
+    const groups = groupBySubmission([entry("1"), entry("2", A, true), entry("3"), entry("4", A)]);
+    expect(ids(groups)).toEqual([["1"], ["2"], ["3"], ["4"]]);
+  });
+
+  it("keeps every part a sender marked alike, a repeated note included", () => {
+    const groups = groupBySubmission([entry("1", A), entry("2", A), entry("3", A)]);
+    expect(ids(groups)).toEqual([["1", "2", "3"]]);
   });
 });

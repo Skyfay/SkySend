@@ -43,6 +43,7 @@ export type {
   ArchiveMetadata,
   NoteUploadMetadata,
   RequestUploadMetadata,
+  Submission,
   EncryptedMetadata,
 } from "./metadata.js";
 
@@ -56,6 +57,15 @@ export {
   ARGON2_PARAMS,
 } from "./password.js";
 export type { Argon2idHashFn } from "./password.js";
+
+// Bytes sealed with a password, for exports that leave the browser
+export {
+  sealWithPassword,
+  openWithPassword,
+  PASSWORD_BOX_ARGON2,
+  PASSWORD_BOX_NONCE_LENGTH,
+} from "./password-box.js";
+export type { PasswordBox } from "./password-box.js";
 
 // Utility helpers
 export {

@@ -424,6 +424,32 @@ describe("metadata of uploads into a file request", () => {
     });
   });
 
+  it("should keep the submission that ties uploads together, and only one of the right form", async () => {
+    const metaKey = await getMetaKey();
+    const submission = "0123456789abcdef0123456789abcdef";
+    const read = async (data: unknown) => {
+      const raw = await encryptRawJson(data, metaKey);
+      return decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey);
+    };
+    expect(await read({ type: "note", size: 1024, submission })).toEqual({
+      type: "note",
+      size: 1024,
+      submission,
+    });
+    expect(
+      await read({ type: "single", name: "a", size: 1, mimeType: "text/plain", submission }),
+    ).toMatchObject({ submission });
+    expect(
+      await read({ type: "archive", files: [], totalSize: 0, archiveSize: 22, submission }),
+    ).toMatchObject({ submission });
+    for (const wrong of ["", "XYZ", submission.toUpperCase(), 42, `${submission}0`]) {
+      expect(await read({ type: "note", size: 1, submission: wrong })).toEqual({
+        type: "note",
+        size: 1,
+      });
+    }
+  });
+
   it("should fail like decryptMetadata on a wrong key or broken JSON", async () => {
     const metaKey = await getMetaKey();
     const raw = await encryptRawBytes(new TextEncoder().encode("{"), metaKey);

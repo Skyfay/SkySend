@@ -18,7 +18,8 @@ import type { StorageBackend } from "../storage/types.js";
  *      WebSocket preserves ordering so no per-frame index is needed.
  *   4. Client sends a JSON text frame {"type":"finalize", ...}.
  *   5. Server verifies bytesWritten === contentLength, finalizes storage, lets the target
- *      store the row, records quota, replies {"type":"done", id} and closes with code 1000.
+ *      store the row, records quota, replies {"type":"done", id} plus what the target adds
+ *      and closes with code 1000.
  *
  * Errors close the socket with code 1011 and an {"type":"error", message} frame. Abnormal
  * closes before finalize abort the storage entry and hand the target its claim back.
@@ -52,11 +53,14 @@ export interface WsUploadTarget<M> {
     init: Record<string, unknown>,
     ctx: { c: Context; ip: string },
   ): Promise<WsUploadRefusal | { contentLength: number; meta: M; quotaHashedIp: string | null }>;
-  /** Stores the upload once all its bytes are in storage. A refusal deletes the blob. */
+  /**
+   * Stores the upload once all its bytes are in storage. A refusal deletes the blob, a reply
+   * travels in the done frame.
+   */
   commit(
     session: { id: string; bytesReceived: number; meta: M },
     finalize: Record<string, unknown>,
-  ): Promise<WsUploadRefusal | void>;
+  ): Promise<WsUploadRefusal | { reply?: Record<string, unknown> } | void>;
   /** Gives back what open claimed, when the session ends without a commit. */
   abandon?(meta: M): void;
 }
@@ -511,20 +515,20 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             }
 
             // Persist the row.
-            let refusal: WsUploadRefusal | void;
+            let outcome: WsUploadRefusal | { reply?: Record<string, unknown> } | void;
             try {
-              refusal = await target.commit(
+              outcome = await target.commit(
                 { id: session.id, bytesReceived: session.bytesReceived, meta: session.meta },
                 envelope,
               );
             } catch (err) {
               console.error("[upload-ws] Storing the upload failed:", err);
-              refusal = { error: "DB insert failed", code: 1011 };
+              outcome = { error: "DB insert failed", code: 1011 };
             }
-            if (refusal) {
+            if (isRefusal(outcome)) {
               clearInterval(keepaliveTimer);
               await storage.delete(session.id).catch(() => {});
-              fail(ws, session, refusal.error, refusal.code, refusal.status);
+              fail(ws, session, outcome.error, outcome.code, outcome.status);
               return;
             }
 
@@ -539,7 +543,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
                 console.error("[upload-ws] Recording the quota failed:", err);
               }
             }
-            sendJson(ws, { type: "done", id: session.id });
+            sendJson(ws, { ...outcome?.reply, type: "done", id: session.id });
             try {
               ws.close(1000, "done");
             } catch {

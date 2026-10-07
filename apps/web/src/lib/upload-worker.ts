@@ -32,6 +32,7 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import { argon2id } from "hash-wasm";
+import { z } from "zod";
 import { streamingZip } from "./zip";
 
 const hashWasmArgon2: Argon2idHashFn = async (
@@ -59,6 +60,16 @@ const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024;
 
 /** Upload IDs come from randomUUID() on the server, and the wrap binds this one. */
 const UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** The token of a slot the server holds for the second part of a submission. */
+const SLOT_HOLD = /^[A-Za-z0-9_-]{22}$/;
+
+const holdAnswer = z.object({ hold: z.string().regex(SLOT_HOLD) });
+
+/** The held slot a finalize answer hands over, if it is a well-formed one. */
+function holdOf(answer: unknown): string | undefined {
+  const parsed = holdAnswer.safeParse(answer);
+  return parsed.success ? parsed.data.hold : undefined;
+}
 
 // ── Message Types ──────────────────────────────────────
 
@@ -88,7 +99,15 @@ export interface UploadWorkerRequest {
    * the upload link, and travels with the metadata at finalize. Same transports as a
    * normal upload: WebSocket first, chunked HTTP as the fallback.
    */
-  request?: { id: string; uploadToken: string; publicKey: ArrayBuffer };
+  request?: {
+    id: string;
+    uploadToken: string;
+    publicKey: ArrayBuffer;
+    /** The first part of a submission, which reserves the slot of its second part too. */
+    reserveNext?: boolean;
+    /** The slot the first part of a submission held for this one. */
+    hold?: string;
+  };
 }
 
 export type UploadWorkerMessage =
@@ -105,8 +124,11 @@ export type UploadWorkerMessage =
     }
   /** An upload into a file request opened its session, so a cancel can end it. */
   | { type: "session"; id: string }
-  /** An upload into a file request arrived. The sender gets nothing back to share. */
-  | { type: "delivered"; id: string }
+  /**
+   * An upload into a file request arrived. The sender gets nothing back to share, only the
+   * slot held for the next part of its submission.
+   */
+  | { type: "delivered"; id: string; hold?: string }
   | { type: "error"; message: string };
 
 // ── Worker Logic ───────────────────────────────────────
@@ -215,7 +237,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         : msg.metadata;
 
     if (msg.request) {
-      const uploadId = await uploadIntoRequest({
+      const delivered = await uploadIntoRequest({
         apiBase,
         request: msg.request,
         secret,
@@ -230,7 +252,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         speedLimit,
         post,
       });
-      post({ type: "delivered", id: uploadId });
+      post({ type: "delivered", ...delivered });
       return;
     }
 
@@ -401,7 +423,7 @@ interface HttpUploadOpts {
   post: (m: UploadWorkerMessage) => void;
 }
 
-async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }> {
+async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string; hold?: string }> {
   const {
     paths,
     headers,
@@ -509,8 +531,9 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
     const message = (data as { error?: string }).error ?? "Upload finalize failed";
     throw new Error(httpError ? httpError(finalizeRes.status, message) : message);
   }
+  const hold = holdOf(await finalizeRes.json().catch(() => null));
 
-  return { id: uploadId };
+  return hold ? { id: uploadId, hold } : { id: uploadId };
 }
 
 // ── Upload Into a File Request ────────────────────────
@@ -551,12 +574,13 @@ function requestHttpError(status: number, message: string): string {
  * cannot be moved to another upload or request. Finalize carries the box and the encrypted
  * metadata together.
  */
-async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
+async function uploadIntoRequest(opts: RequestUploadOpts): Promise<{ id: string; hold?: string }> {
   const { apiBase, request, secret, salt, metadata, metaKey, fileCount, encryptedSize, post } =
     opts;
   const base = `/api/request/${encodeURIComponent(request.id)}/upload`;
   const publicKey = new Uint8Array(request.publicKey);
   const encMeta = await encryptMetadata(metadata, metaKey);
+  const { reserveNext, hold } = request;
 
   /** What finalize sends over either transport. */
   const finalizeFields = async (uploadId: string) => {
@@ -585,7 +609,7 @@ async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
   if (ws) {
     console.info("[upload-worker] transport=ws");
     post({ type: "transport", transport: "ws", fallback: false });
-    const { id } = await uploadViaWebSocket({
+    return uploadViaWebSocket({
       ws,
       init: {
         request: {
@@ -593,6 +617,8 @@ async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
           salt: toBase64url(salt),
           contentLength: encryptedSize,
           fileCount,
+          ...(reserveNext ? { reserveNext: true } : {}),
+          ...(hold ? { hold } : {}),
         },
       },
       finalize: finalizeFields,
@@ -602,12 +628,11 @@ async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
       speedLimit: opts.speedLimit,
       post,
     });
-    return id;
   }
 
   console.info("[upload-worker] transport=http");
   post({ type: "transport", transport: "http", fallback: opts.wsEnabled });
-  const { id } = await uploadViaHttpChunks({
+  return uploadViaHttpChunks({
     paths: {
       init: `${apiBase}${base}/init`,
       chunk: (uploadId, index) =>
@@ -619,6 +644,8 @@ async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
       "X-Salt": toBase64url(salt),
       "X-Content-Length": String(encryptedSize),
       "X-File-Count": String(fileCount),
+      ...(reserveNext ? { "X-Reserve-Next": "1" } : {}),
+      ...(hold ? { "X-Slot-Hold": hold } : {}),
     },
     finalizeRequest: async (uploadId) => ({
       method: "POST",
@@ -633,7 +660,6 @@ async function uploadIntoRequest(opts: RequestUploadOpts): Promise<string> {
     chunkSize: CHUNK_UPLOAD_SIZE,
     post,
   });
-  return id;
 }
 
 // ── WebSocket Upload (primary transport) ──────────────
@@ -717,7 +743,7 @@ interface WsUploadOpts {
   post: (m: UploadWorkerMessage) => void;
 }
 
-async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
+async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string; hold?: string }> {
   const { ws, init, finalize, wsError, encryptedStream, encryptedSize, speedLimit, post } = opts;
 
   const FRAME_SIZE = 256 * 1024; // 256 KB per WebSocket frame
@@ -728,6 +754,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
 
   let fatalError: Error | null = null;
   let doneId: string | null = null;
+  let doneHold: string | undefined;
   let readyId: string | null = null;
   const readyWaiters: Array<() => void> = [];
   const doneWaiters: Array<() => void> = [];
@@ -748,6 +775,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
       notifyReady();
     } else if (msg.type === "done" && typeof msg.id === "string") {
       doneId = msg.id;
+      doneHold = holdOf(msg);
       notifyReady();
       notifyDone();
     } else if (msg.type === "error") {
@@ -876,7 +904,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
     if (fatalError) throw fatalError;
     if (!doneId) throw new Error("Server did not confirm upload completion");
     if (doneId !== readyId) throw new Error("Server confirmed a different upload");
-    return { id: doneId };
+    return doneHold ? { id: doneId, hold: doneHold } : { id: doneId };
   } finally {
     if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
       try { ws.close(); } catch { /* ignore */ }

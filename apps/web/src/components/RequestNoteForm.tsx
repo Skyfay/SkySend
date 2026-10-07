@@ -1,11 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { Lock, ShieldQuestion } from "lucide-react";
-import { calculateEncryptedSize } from "@skysend/crypto";
-import { padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
+import type { NoteBlock } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { BlockListEditor, addDraft } from "@/components/BlockListEditor";
 import { BlockCards } from "@/components/NoteComposer";
-import { blocksToSend, type DraftBlock } from "@/lib/note-editor";
+import type { DraftBlock, MeasuredNote } from "@/lib/note-editor";
 import { cn, formatBytes } from "@/lib/utils";
 
 interface RequestNoteFormProps {
@@ -14,14 +13,14 @@ interface RequestNoteFormProps {
   /** Kept by the page, so a send that fails or is cancelled keeps what was typed. */
   drafts: DraftBlock[];
   onChange: (update: (current: DraftBlock[]) => DraftBlock[]) => void;
-  /** The largest note the instance takes. */
-  maxSize: number;
-  /** The largest upload the request takes. The padded and encrypted note has to fit as well. */
-  maxUploadSize: number;
-  /** What the request still takes, shown beside the button. */
-  limits: string;
+  /** The drafts measured against what the instance and the request take, by the page. */
+  note: MeasuredNote;
   disabled: boolean;
-  onSend: (blocks: NoteBlock[]) => void;
+  /**
+   * The send row: what the request still takes, and what the button does. Left out when the
+   * note goes with files, whose page has one send row for both.
+   */
+  footer?: { limits: string; onSend: (blocks: NoteBlock[]) => void };
 }
 
 /**
@@ -32,22 +31,11 @@ export function RequestNoteForm({
   template,
   drafts,
   onChange,
-  maxSize,
-  maxUploadSize,
-  limits,
+  note,
   disabled,
-  onSend,
+  footer,
 }: RequestNoteFormProps) {
   const { t } = useTranslation();
-  const toSend = blocksToSend(drafts);
-  const document = toSend.length > 0 ? serializeNote(toSend) : "";
-  const bytes = new TextEncoder().encode(document).length;
-  const sent = document
-    ? calculateEncryptedSize(new TextEncoder().encode(padNote(document)).length)
-    : 0;
-  const limit = Math.min(maxSize, maxUploadSize);
-  const tooLarge = bytes > maxSize || sent > maxUploadSize;
-  const canSend = toSend.length > 0 && !tooLarge && !disabled;
 
   if (!template && drafts.length === 0) {
     return (
@@ -75,30 +63,32 @@ export function RequestNoteForm({
           <span
             className={cn(
               "ml-auto text-xs tabular-nums",
-              tooLarge ? "text-destructive-text" : "text-muted-foreground",
+              note.tooLarge ? "text-destructive-text" : "text-muted-foreground",
             )}
           >
-            {formatBytes(bytes)} / {formatBytes(limit)}
+            {formatBytes(note.bytes)} / {formatBytes(note.limit)}
           </span>
         }
       />
-      {tooLarge && (
+      {note.tooLarge && (
         <p className="px-2 text-sm text-destructive-text" role="alert">
-          {t("note.tooLarge", { size: formatBytes(limit) })}
+          {t("note.tooLarge", { size: formatBytes(note.limit) })}
         </p>
       )}
-      <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
-        <p className="flex-1 text-[13px] leading-snug text-muted-foreground">{limits}</p>
-        <Button
-          size="lg"
-          disabled={!canSend}
-          onClick={() => onSend(toSend)}
-          className="w-full sm:w-auto"
-        >
-          <Lock />
-          {t("requestUpload.send")}
-        </Button>
-      </div>
+      {footer && (
+        <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
+          <p className="flex-1 text-[13px] leading-snug text-muted-foreground">{footer.limits}</p>
+          <Button
+            size="lg"
+            disabled={!note.ready || disabled}
+            onClick={() => footer.onSend(note.toSend)}
+            className="w-full sm:w-auto"
+          >
+            <Lock />
+            {t("requestUpload.send")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

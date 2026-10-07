@@ -12,7 +12,7 @@ Like everything in SkySend, what they send is encrypted before it leaves their b
 4. For a note, optionally lay out its fields in the **Note template**, for example a username and a password. Without fields the sender writes freely.
 5. Choose:
    - **Open for** - How long the request takes uploads, one of the times the instance offers
-   - **Uploads** - How many uploads it takes in total. A note counts as one.
+   - **Uploads** - How many uploads it takes in total. A note counts as one. For **Both**, this is **Submissions**: one sender's files and note together, which take two uploads of the request.
    - **Size per upload** - How many bytes one upload may have, at most the [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) of the instance. Only for files.
    - **Password** - Optional. The inbox then opens only with the link and the password together.
 6. Click **Create request**
@@ -30,15 +30,33 @@ The inbox link is the key to every file sent to the request and the only way in.
 
 **My Links**, tab **Requests**, lists the requests made in this browser, with how many uploads arrived and how long each one stays open. **Go to my requests** under the two links of a new request leads there. The list lives in this browser only. The server does not know which requests are yours. A request with a password shows no status there, since that needs the password.
 
+## Templates
+
+A template keeps the setup of a request for the next one of its kind: what it asks for, the fields of the note and, if you choose, the title and the limits. It never keeps an inbox password, and it never holds a value, only the fields a sender fills in.
+
+- **Start with** above the form fills it in from a template, and **Undo** in the message that follows brings back what you had typed. **Blank** empties it again, and **Built-in** offers templates that come with SkySend, for credentials, an SSH key, a Wi-Fi network and an API key. Everything stays open to change afterwards.
+- **Save as template** under the form keeps the current setup. Choose a name, and whether the title and the limits go with it. A name you used before replaces that template.
+- **My Links**, tab **Templates**, lists your templates. **Use** starts a request from one, the menu edits, duplicates, exports or deletes it, and **Copy as your own** turns a built-in one into yours.
+
+Templates live in this browser only, like the list of your requests. To move them to another device or browser, **Export** them:
+
+- **As a file** - A `.json` file to keep or carry over
+- **As a link** - Everything sits after the `#` of the link, so it never reaches a server. Open it on the other device to import.
+- **Encrypt with a password** - Field names like "Bank PIN" tell what a request is about. With a password, the export cannot be read without it.
+
+**Import** reads a file or a link and lists what it found, with what each template asks for. A template with the name of one you have goes in beside it unless you choose to replace it or skip it, since a link can come from anyone. Every imported template is checked like one from a stranger: names and labels are cleaned, values are dropped, and a template that does not fit a request is left out.
+
 ## Send Into a Request
 
 The sender opens the upload link and sees:
 
 - What you wrote, marked as written by the requester and not checked by anyone
 - The host the files go to
-- An upload zone with the size one upload may have, a note to fill in, or both as two tabs
+- An upload zone with the size one upload may have, a note to fill in, or both one above the other
 
 A note follows your template: the sender sees your fields with their labels fixed and fills in the values, with a reminder that nobody checked the fields. Without a template the sender writes the note freely, with the same blocks as a normal note. A note can be as large as [`NOTE_MAX_SIZE`](/user-guide/configuration/environment-variables#notes) allows.
+
+For **Both** they have to add files and fill in the note before **Encrypt and send** works, and the two go out as one submission. When the files arrived but the note did not, for example because the connection dropped, the next try only sends the note, as long as the page stays open.
 
 They drop their files or fill in the note, click **Encrypt and send** and see **Delivered** when it is done. There is no share link for them and nothing to keep. When a sender cancels, the slot is given back. An upload that breaks off without a cancel, for example when the connection drops, holds its slot for a while: over WebSocket until it delivered less than 1 MB in 10 minutes, over chunked HTTP for up to about an hour. One upload may hold several files, which arrive as one zip archive, like a normal multi-file upload.
 
@@ -54,7 +72,7 @@ Open the inbox link, and enter the password if the request has one. The inbox li
 - **Close request** stops new uploads. Uploads already running still finish.
 - **Delete request** removes the request and every file in it.
 
-Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
+Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. The files and the note of one submission are listed together under **Sent together**. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
 
 ## New Uploads
 

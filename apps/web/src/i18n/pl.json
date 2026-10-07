@@ -161,7 +161,8 @@
     "remaining": "Pozostało {{count}} pobrań",
     "expired": "Wygasło",
     "unavailable": "Niedostępne",
-    "files": "{{count}} plik(ów)"
+    "files": "{{count}} plik(ów)",
+    "tabTemplates": "Szablony"
   },
   "noteView": {
     "title": "Zaszyfrowana notatka",
@@ -232,7 +233,10 @@
     "enterPassword": "Wpisz hasło...",
     "addAnother": "Dodaj kolejne hasło",
     "passwordNumber": "Hasło {{number}}",
-    "labelPlaceholder": "Etykieta hasła {{number}} (opcjonalnie)"
+    "labelPlaceholder": "Etykieta hasła {{number}} (opcjonalnie)",
+    "makePlain": "Nie jest tajne, pokaż jawnie",
+    "makeSecret": "Tajne, pokaż zakryte",
+    "enterValue": "Wpisz wartość..."
   },
   "code": {
     "titlePlaceholder": "Nazwa pliku (np. docker-compose.yaml, opcjonalnie)",
@@ -484,7 +488,14 @@
     "asksFiles": "Pliki",
     "asksNote": "Notatkę",
     "asksBoth": "Oba",
-    "summaryNote": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b>, każda to notatka."
+    "summaryNote": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b>, każda to notatka.",
+    "asksNoteHint": "Ustal pola, na przykład hasło",
+    "asksBothHint": "Pliki i notatka za jednym razem",
+    "submissions": "Zgłoszenia",
+    "submissionsCount_one": "Zgłoszenia: {{count}}",
+    "submissionsCount_other": "Zgłoszenia: {{count}}",
+    "summaryBoth": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b>, każde z plikami do <b>{{size}}</b> i notatką.",
+    "asksBothUnavailable": "Wymaga co najmniej dwóch przesłań na prośbę"
   },
   "template": {
     "title": "Szablon notatki",
@@ -518,7 +529,9 @@
     "forget": "Usuń z listy",
     "deleted": "Prośba usunięta",
     "forgotten": "Usunięto z listy",
-    "deleteFailed": "Nie udało się usunąć prośby."
+    "deleteFailed": "Nie udało się usunąć prośby.",
+    "receivedSubmissions_one": "Otrzymane zgłoszenia: {{count}}",
+    "receivedSubmissions_other": "Otrzymane zgłoszenia: {{count}}"
   },
   "inbox": {
     "title": "Skrzynka",
@@ -563,7 +576,9 @@
     "notAsked": "Bez prośby",
     "saveText": "Zapisz jako tekst",
     "noteTooLarge": "Ta notatka jest większa niż każda notatka, którą przyjmuje ta instancja, więc nie została otwarta.",
-    "noteFailed": "Nie udało się otworzyć notatki."
+    "noteFailed": "Nie udało się otworzyć notatki.",
+    "usageSubmissions": "{{used}} z {{max}} zgłoszeń, łącznie {{size}}, pliki każdy do {{maxSize}}",
+    "submission": "Wysłane razem"
   },
   "requestUpload": {
     "title": "Ktoś prosi cię o <a>pliki</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Zaszyfrowane tylko dla osoby proszącej. Pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
     "limitsNote_other": "Zaszyfrowane tylko dla osoby proszącej. Pozostało przesyłek: {{count}}, zamyka się za {{time}}.",
     "fileTabHint": "Do {{size}} na przesyłkę",
-    "noteTabHint": "Hasła, tekst, kod lub klucz"
+    "titleNote": "Ktoś prosi cię o <a>notatkę</a>",
+    "titleBoth": "Ktoś prosi cię o <a>pliki i notatkę</a>",
+    "introNote": "Wszystko jest szyfrowane w tej przeglądarce, zanim ją opuści. Otworzyć to może tylko osoba, która utworzyła tę prośbę.",
+    "sendAgain": "Wyślij więcej",
+    "filesSent": "Twoje pliki dotarły. Wyślij jeszcze notatkę.",
+    "limitsBoth_one": "Pliki i notatka idą razem jako jedno zgłoszenie. Pozostało zgłoszeń: {{count}}, zamyka się za {{time}}.",
+    "limitsBoth_other": "Pliki i notatka idą razem jako jedno zgłoszenie. Pozostało zgłoszeń: {{count}}, zamyka się za {{time}}.",
+    "stepDone": "gotowe"
+  },
+  "templates": {
+    "startWith": "Zacznij od",
+    "manage": "Zarządzaj szablonami",
+    "blank": "Bez szablonu",
+    "startHint": "Wypełnia tytuł, pola i limity. Potem wszystko można jeszcze zmienić.",
+    "builtIn": {
+      "title": "Wbudowane",
+      "section": "Wbudowane",
+      "credentials": {
+        "name": "Dane logowania",
+        "address": "Adres",
+        "username": "Nazwa użytkownika",
+        "password": "Hasło"
+      },
+      "sshKey": {
+        "name": "Klucz SSH"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Nazwa sieci",
+        "password": "Hasło"
+      },
+      "apiKey": {
+        "name": "Klucz API",
+        "service": "Usługa",
+        "key": "Klucz",
+        "expires": "Data wygaśnięcia"
+      }
+    },
+    "saveAs": "Zapisz jako szablon",
+    "saveEdited": "Zapisz szablon",
+    "saveTitle": "Zapisz jako szablon",
+    "saveText": "Na następną prośbę tego rodzaju. Szablon zostaje w tej przeglądarce.",
+    "name": "Nazwa",
+    "namePlaceholder": "Na przykład Dostęp do serwera",
+    "nameTaken": "Szablon o tej nazwie już istnieje. Zapisanie go zastąpi.",
+    "nameInUse": "Inny szablon ma już tę nazwę.",
+    "keepTitle": "Zachowaj tytuł",
+    "noTitle": "Ta prośba nie ma tytułu",
+    "quoted": "„{{text}}”",
+    "keepLimits": "Zachowaj czas otwarcia i limity",
+    "saveSecret": "Zapisywane są pola i ustawienia. Nigdy hasło do skrzynki ani żadna wartość.",
+    "replace": "Zastąp",
+    "saved": "Zapisano „{{name}}” jako szablon.",
+    "saveFailed": "Nie udało się zapisać szablonu.",
+    "editTitle": "Edytuj szablon",
+    "editIntro": "Zmień, co przygotowuje szablon. Prośba powstaje dopiero wtedy, gdy go użyjesz.",
+    "editing": "Edytujesz szablon „{{name}}”. Zapisanie go zastąpi.",
+    "own": "Twoje szablony",
+    "import": "Importuj",
+    "exportAll": "Eksportuj wszystkie",
+    "empty": "Brak szablonów",
+    "emptyHint": "Zapisz szablon w formularzu prośby albo skopiuj poniżej jeden z wbudowanych.",
+    "use": "Użyj",
+    "edit": "Edytuj",
+    "duplicate": "Duplikuj",
+    "export": "Eksportuj",
+    "usedAgo": "ostatnio użyty {{time}}",
+    "neverUsed": "nigdy nieużyty",
+    "freeNote": "Notatka pisana swobodnie",
+    "uploadsUpTo_one": "{{count}} przesyłka do {{size}}",
+    "uploadsUpTo_other": "Przesyłki: {{count}}, każda do {{size}}",
+    "field": {
+      "entry": "Wpis",
+      "text": "Tekst",
+      "code": "Kod",
+      "sshKey": "Klucz SSH"
+    },
+    "copyBuiltIn": "Skopiuj jako własny",
+    "copied": "Skopiowano jako „{{name}}”.",
+    "localHint": "Szablony są tylko w tej przeglądarce, tak jak twoje linki. Szablon zawiera pola i ustawienia, nigdy wartości. Aby je przenieść, wyeksportuj je i zaimportuj na drugim urządzeniu.",
+    "deleteTitle": "Usunąć szablon?",
+    "deleteText": "„{{name}}” zostanie usunięty z tej przeglądarki. Prośby utworzone z tego szablonu pozostaną bez zmian.",
+    "deleted": "Szablon usunięty.",
+    "deleteFailed": "Nie udało się usunąć szablonu.",
+    "exportTitle": "Eksportuj szablony",
+    "exportText": "Aby przenieść je na inne urządzenie lub do innej przeglądarki.",
+    "exportWhich": "Szablony do eksportu",
+    "exportAs": "Eksportuj jako",
+    "asFile": "Jako plik",
+    "asFileHint": ".json, do zachowania",
+    "asLink": "Jako link",
+    "asLinkHint": "wszystko po znaku #",
+    "seal": "Zaszyfruj hasłem",
+    "sealPlaceholder": "Hasło do eksportu",
+    "sealHint": "Nazwy pól, takie jak „PIN do banku”, zdradzają, czego dotyczy prośba. Z hasłem eksportu nie da się odczytać bez niego.",
+    "exportCount_one": "Eksportuj {{count}}",
+    "exportCount_other": "Eksportuj {{count}}",
+    "exported_one": "Wyeksportowano {{count}} szablon.",
+    "exported_other": "Wyeksportowane szablony: {{count}}.",
+    "exportFailed": "Nie udało się wyeksportować szablonów.",
+    "linkLabel": "Link do szablonów",
+    "linkHint": "Otwórz link na drugim urządzeniu. Wszystko jest w części po znaku #, której nie dostaje żaden serwer.",
+    "linkLong": "Ten link jest długi i w niektórych aplikacjach może się zepsuć. Plik jest bezpieczniejszy.",
+    "importTitle": "Importuj szablony",
+    "importFromFile": "Z pliku {{name}}.",
+    "importFromLink": "Z linku do szablonów.",
+    "importPassword": "Hasło eksportu",
+    "importOpen": "Otwórz",
+    "importExists": "już istnieje",
+    "importNew": "nowy",
+    "keepBoth": "Zachowaj oba",
+    "importChoice": "Co zrobić z {{name}}",
+    "importNone": "Ten eksport nie zawiera żadnego czytelnego szablonu.",
+    "importSkipped_one": "Pominięto {{count}} nieczytelny szablon.",
+    "importSkipped_other": "Pominięte nieczytelne szablony: {{count}}.",
+    "importChecked": "Sprawdzone jak każdy cudzy szablon: nazwy pól są oczyszczane, a wartości odrzucane.",
+    "importCount_one": "Importuj {{count}}",
+    "importCount_other": "Importuj {{count}}",
+    "imported_one": "Zaimportowano {{count}} szablon.",
+    "imported_other": "Zaimportowane szablony: {{count}}.",
+    "importFailed": "Nie udało się zaimportować szablonów.",
+    "importError": {
+      "invalid": "To nie zawiera szablonów SkySend.",
+      "tooLarge": "Ten eksport jest za duży.",
+      "password": "Nieprawidłowe hasło."
+    },
+    "replacedForm": "Formularz został zastąpiony.",
+    "undo": "Cofnij",
+    "editAdjusted": "Ten serwer pozwala na mniej, niż ustawia szablon, więc formularz pokazuje to, co przyjmuje. Jeśli tego nie zmienisz, szablon zachowa własne wartości.",
+    "exportTooLarge": "Za dużo na jeden eksport. Eksportuj mniej szablonów naraz.",
+    "skip": "Pomiń",
+    "notFound": "Tego szablonu nie ma już w tej przeglądarce.",
+    "duplicated": "Zduplikowano jako „{{name}}”."
   }
 }

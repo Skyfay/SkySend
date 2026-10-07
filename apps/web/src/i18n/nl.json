@@ -161,7 +161,8 @@
     "remaining": "{{count}} downloads resterend",
     "expired": "Verlopen",
     "unavailable": "Niet beschikbaar",
-    "files": "{{count}} bestand(en)"
+    "files": "{{count}} bestand(en)",
+    "tabTemplates": "Sjablonen"
   },
   "noteView": {
     "title": "Versleutelde notitie",
@@ -232,7 +233,10 @@
     "enterPassword": "Wachtwoord invoeren...",
     "addAnother": "Nog een wachtwoord toevoegen",
     "passwordNumber": "Wachtwoord {{number}}",
-    "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)"
+    "labelPlaceholder": "Label voor wachtwoord {{number}} (optioneel)",
+    "makePlain": "Geen geheim, leesbaar tonen",
+    "makeSecret": "Een geheim, verborgen tonen",
+    "enterValue": "Waarde invoeren..."
   },
   "code": {
     "titlePlaceholder": "Bestandsnaam (bijv. docker-compose.yaml, optioneel)",
@@ -484,7 +488,14 @@
     "asksFiles": "Bestanden",
     "asksNote": "Notitie",
     "asksBoth": "Beide",
-    "summaryNote": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk een notitie."
+    "summaryNote": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk een notitie.",
+    "asksNoteHint": "Leg velden vast, bijvoorbeeld een wachtwoord",
+    "asksBothHint": "Bestanden en een notitie in één keer",
+    "submissions": "Inzendingen",
+    "submissionsCount_one": "{{count}} inzending",
+    "submissionsCount_other": "{{count}} inzendingen",
+    "summaryBoth": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk met bestanden van maximaal <b>{{size}}</b> en een notitie.",
+    "asksBothUnavailable": "Vraagt minstens twee uploads per verzoek"
   },
   "template": {
     "title": "Sjabloon voor de notitie",
@@ -518,7 +529,9 @@
     "forget": "Weghalen",
     "deleted": "Verzoek verwijderd",
     "forgotten": "Uit de lijst gehaald",
-    "deleteFailed": "Het verzoek kon niet worden verwijderd."
+    "deleteFailed": "Het verzoek kon niet worden verwijderd.",
+    "receivedSubmissions_one": "{{count}} inzending ontvangen",
+    "receivedSubmissions_other": "{{count}} inzendingen ontvangen"
   },
   "inbox": {
     "title": "Inbox",
@@ -563,7 +576,9 @@
     "notAsked": "Niet gevraagd",
     "saveText": "Opslaan als tekst",
     "noteTooLarge": "Deze notitie is groter dan elke notitie die deze instantie aanneemt en is daarom niet geopend.",
-    "noteFailed": "De notitie kon niet worden geopend."
+    "noteFailed": "De notitie kon niet worden geopend.",
+    "usageSubmissions": "{{used}} van {{max}} inzendingen, {{size}} in totaal, bestanden maximaal {{maxSize}} per stuk",
+    "submission": "Samen verstuurd"
   },
   "requestUpload": {
     "title": "Iemand vraagt je om <a>bestanden</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Alleen voor de aanvrager versleuteld. Nog {{count}} upload, sluit over {{time}}.",
     "limitsNote_other": "Alleen voor de aanvrager versleuteld. Nog {{count}} uploads, sluit over {{time}}.",
     "fileTabHint": "Tot {{size}} per upload",
-    "noteTabHint": "Wachtwoorden, tekst, code of een sleutel"
+    "titleNote": "Iemand vraagt je om <a>een notitie</a>",
+    "titleBoth": "Iemand vraagt je om <a>bestanden en een notitie</a>",
+    "introNote": "Alles wordt in deze browser versleuteld voordat het hem verlaat. Alleen degene die dit verzoek maakte, kan het openen.",
+    "sendAgain": "Meer sturen",
+    "filesSent": "Uw bestanden zijn aangekomen. Stuur nog de notitie.",
+    "limitsBoth_one": "Bestanden en notitie gaan samen als één inzending. Nog {{count}} inzending, sluit over {{time}}.",
+    "limitsBoth_other": "Bestanden en notitie gaan samen als één inzending. Nog {{count}} inzendingen, sluit over {{time}}.",
+    "stepDone": "klaar"
+  },
+  "templates": {
+    "startWith": "Beginnen met",
+    "manage": "Sjablonen beheren",
+    "blank": "Leeg",
+    "startHint": "Vult de titel, de velden en de limieten in. Daarna kunt u alles nog wijzigen.",
+    "builtIn": {
+      "title": "Standaard",
+      "section": "Standaard",
+      "credentials": {
+        "name": "Inloggegevens",
+        "address": "Adres",
+        "username": "Gebruikersnaam",
+        "password": "Wachtwoord"
+      },
+      "sshKey": {
+        "name": "SSH-sleutel"
+      },
+      "wifi": {
+        "name": "Wifi",
+        "network": "Netwerknaam",
+        "password": "Wachtwoord"
+      },
+      "apiKey": {
+        "name": "API-sleutel",
+        "service": "Dienst",
+        "key": "Sleutel",
+        "expires": "Verloopt op"
+      }
+    },
+    "saveAs": "Opslaan als sjabloon",
+    "saveEdited": "Sjabloon opslaan",
+    "saveTitle": "Opslaan als sjabloon",
+    "saveText": "Voor het volgende verzoek van deze soort. Het sjabloon blijft in deze browser.",
+    "name": "Naam",
+    "namePlaceholder": "Bijvoorbeeld Servertoegang",
+    "nameTaken": "Er bestaat al een sjabloon met deze naam. Opslaan vervangt het.",
+    "nameInUse": "Een ander sjabloon heeft deze naam al.",
+    "keepTitle": "Titel bewaren",
+    "noTitle": "Dit verzoek heeft geen titel",
+    "quoted": "“{{text}}”",
+    "keepLimits": "Looptijd en limieten bewaren",
+    "saveSecret": "Velden en instellingen worden opgeslagen. Een wachtwoord voor de inbox nooit, en ook geen enkele waarde.",
+    "replace": "Vervangen",
+    "saved": "“{{name}}” opgeslagen als sjabloon.",
+    "saveFailed": "Het sjabloon kon niet worden opgeslagen.",
+    "editTitle": "Sjabloon bewerken",
+    "editIntro": "Wijzig wat het sjabloon klaarzet. Een verzoek ontstaat pas als u het gebruikt.",
+    "editing": "U bewerkt het sjabloon “{{name}}”. Opslaan vervangt het.",
+    "own": "Uw sjablonen",
+    "import": "Importeren",
+    "exportAll": "Alles exporteren",
+    "empty": "Nog geen sjablonen",
+    "emptyHint": "Sla er een op vanuit het verzoekformulier, of kopieer hieronder een van de standaardsjablonen.",
+    "use": "Gebruiken",
+    "edit": "Bewerken",
+    "duplicate": "Dupliceren",
+    "export": "Exporteren",
+    "usedAgo": "laatst gebruikt {{time}}",
+    "neverUsed": "nooit gebruikt",
+    "freeNote": "Vrij geschreven notitie",
+    "uploadsUpTo_one": "{{count}} upload tot {{size}}",
+    "uploadsUpTo_other": "{{count}} uploads tot {{size}}",
+    "field": {
+      "entry": "Item",
+      "text": "Tekst",
+      "code": "Code",
+      "sshKey": "SSH-sleutel"
+    },
+    "copyBuiltIn": "Kopiëren als eigen sjabloon",
+    "copied": "Gekopieerd als “{{name}}”.",
+    "localHint": "Sjablonen staan alleen in deze browser, net als uw links. Een sjabloon bevat velden en instellingen, nooit waarden. Om ze te verhuizen, exporteert u ze en importeert u ze op het andere apparaat.",
+    "deleteTitle": "Sjabloon verwijderen?",
+    "deleteText": "“{{name}}” wordt uit deze browser verwijderd. Verzoeken die ermee zijn gemaakt, blijven zoals ze zijn.",
+    "deleted": "Sjabloon verwijderd.",
+    "deleteFailed": "Het sjabloon kon niet worden verwijderd.",
+    "exportTitle": "Sjablonen exporteren",
+    "exportText": "Om ze naar een ander apparaat of een andere browser te verhuizen.",
+    "exportWhich": "Te exporteren sjablonen",
+    "exportAs": "Exporteren als",
+    "asFile": "Als bestand",
+    "asFileHint": ".json, om te bewaren",
+    "asLink": "Als link",
+    "asLinkHint": "alles na de #",
+    "seal": "Versleutelen met een wachtwoord",
+    "sealPlaceholder": "Wachtwoord voor de export",
+    "sealHint": "Veldnamen als “Bank-PIN” verraden waar een verzoek over gaat. Met een wachtwoord is de export zonder dat wachtwoord onleesbaar.",
+    "exportCount_one": "{{count}} exporteren",
+    "exportCount_other": "{{count}} exporteren",
+    "exported_one": "{{count}} sjabloon geëxporteerd.",
+    "exported_other": "{{count}} sjablonen geëxporteerd.",
+    "exportFailed": "De sjablonen konden niet worden geëxporteerd.",
+    "linkLabel": "Sjablonenlink",
+    "linkHint": "Open de link op het andere apparaat. Alles zit in het deel na de #, dat geen enkele server ontvangt.",
+    "linkLong": "Deze link is lang en kan in sommige apps breken. Een bestand is veiliger.",
+    "importTitle": "Sjablonen importeren",
+    "importFromFile": "Uit het bestand {{name}}.",
+    "importFromLink": "Uit een sjablonenlink.",
+    "importPassword": "Wachtwoord van de export",
+    "importOpen": "Openen",
+    "importExists": "bestaat al",
+    "importNew": "nieuw",
+    "keepBoth": "Beide behouden",
+    "importChoice": "Wat er met {{name}} gebeurt",
+    "importNone": "Deze export bevat geen leesbaar sjabloon.",
+    "importSkipped_one": "{{count}} sjabloon kon niet worden gelezen en wordt overgeslagen.",
+    "importSkipped_other": "{{count}} sjablonen konden niet worden gelezen en worden overgeslagen.",
+    "importChecked": "Gecontroleerd zoals elk sjabloon van een ander: veldnamen worden opgeschoond en waarden weggelaten.",
+    "importCount_one": "{{count}} importeren",
+    "importCount_other": "{{count}} importeren",
+    "imported_one": "{{count}} sjabloon geïmporteerd.",
+    "imported_other": "{{count}} sjablonen geïmporteerd.",
+    "importFailed": "De sjablonen konden niet worden geïmporteerd.",
+    "importError": {
+      "invalid": "Dit bevat geen SkySend-sjablonen.",
+      "tooLarge": "Deze export is te groot.",
+      "password": "Onjuist wachtwoord."
+    },
+    "replacedForm": "Het formulier is vervangen.",
+    "undo": "Ongedaan maken",
+    "editAdjusted": "Deze server staat minder toe dan het sjabloon instelt, dus het formulier toont wat hij toestaat. Zolang u niets wijzigt, houdt het sjabloon zijn eigen waarden.",
+    "exportTooLarge": "Te veel voor één export. Exporteer minder sjablonen tegelijk.",
+    "skip": "Overslaan",
+    "notFound": "Dit sjabloon staat niet meer in deze browser.",
+    "duplicated": "Gedupliceerd als “{{name}}”."
   }
 }

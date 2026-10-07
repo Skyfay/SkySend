@@ -18,6 +18,7 @@ import {
   toBase64url,
   unwrapFileSecret,
   PASSWORD_SALT_LENGTH,
+  REQUEST_BRIEF_MAX_BYTES,
   type Argon2idHashFn,
   type DerivedKeys,
   type InboxKeys,
@@ -34,6 +35,25 @@ import {
   type ReadBlock,
 } from "@skysend/note-format";
 import type { CreateRequestBody, Inbox, InboxUpload } from "@/lib/api";
+
+/**
+ * Whether the brief would fit: the title, what is asked for and the template, as the brief
+ * carries them. A template the format refuses does not fit either.
+ */
+export function briefFits(
+  title: string,
+  asks: readonly RequestAsk[],
+  template: readonly NoteBlock[],
+): boolean {
+  try {
+    const blocks =
+      asks.includes("note") && template.length > 0 ? serializeTemplate(template) : null;
+    const json = JSON.stringify({ v: 1, title: title || null, asks, template: blocks });
+    return new TextEncoder().encode(json).length <= REQUEST_BRIEF_MAX_BYTES;
+  } catch {
+    return false;
+  }
+}
 
 /** What creating a request gives back: the body for the server and the fragments of both links. */
 export interface PreparedRequest {
@@ -176,6 +196,28 @@ export interface OpenedInbox {
   /** The upload link, rebuilt from the vault so it can be copied again. */
   uploadFragment: string;
   uploads: OpenedUpload[];
+}
+
+/**
+ * The uploads of an inbox, those a sender sent together in one group, in the order the first
+ * of each group arrived. The mark comes from the sender's encrypted metadata, so a sender can
+ * only group uploads of their own. A damaged upload stands alone.
+ */
+export function groupBySubmission(uploads: readonly OpenedUpload[]): OpenedUpload[][] {
+  const groups: OpenedUpload[][] = [];
+  const bySubmission = new Map<string, OpenedUpload[]>();
+  for (const entry of uploads) {
+    const submission = entry.file?.metadata.submission;
+    const group = submission ? bySubmission.get(submission) : undefined;
+    if (group) {
+      group.push(entry);
+      continue;
+    }
+    const fresh = [entry];
+    if (submission) bySubmission.set(submission, fresh);
+    groups.push(fresh);
+  }
+  return groups;
 }
 
 /**

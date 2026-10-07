@@ -4,8 +4,12 @@
 - **server**: File requests with an inbox, where senders upload files that only the requester can decrypt. The requester sets how long a request stays open, how many uploads it takes and how large each may be.
 - **web**: A Request page to create file requests, with an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
 - **web**: An upload page for senders of a file request, which encrypts their files for the requester alone and gives them no link back.
-- **web**: A file request can ask for a note as well as files, with a template of fields the sender fills in. The inbox opens such a note in the page.
+- **web**: A file request can ask for files, a note with a template of fields the sender fills in, or both as one submission. The inbox opens a note in the page and lists a submission together.
 - **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.
+- **web**: Templates keep the setup of a request for the next one, with built-in ones for credentials, an SSH key, Wi-Fi and an API key. They live in this browser and move to another one as a file or a link, sealed with a password if wanted.
+- **crypto**: `sealWithPassword` and `openWithPassword` encrypt an export with a key Argon2id derives from a password.
+- **web**: A field of a password block can be marked as no secret, like a username or an address. It is then typed and shown in clear, without a generator.
+- **client**: Fields of a password block that are no secret show in clear in the terminal view of a note.
 - **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.
 - **website**: The report form accepts links to file requests.
 - **infra**: The report worker accepts links to file requests.
@@ -41,7 +45,7 @@
 
 - **docs**: Environment variables for file requests.
 - **docs**: The download modes page covers downloads from the inbox of a file request.
-- **docs**: Pages for file requests in the user guide, the API reference and the cryptography section.
+- **docs**: Pages for file requests in the user guide, the API reference and the cryptography section, request templates included.
 - **docs**: The admin CLI commands page matches what the commands print.
 
 ### 🧪 Tests
@@ -51,4 +55,5 @@
 - **server**: Tests for WebSocket uploads that send a `null` frame, close during setup or finalize, or go silent.
 - **web**: Tests for creating file requests, opening their inbox with and without a password, downloading from it and uploading into a request.
 - **web**: Component tests for the note editors, a template filled in and the note viewer.
+- **web**: Tests for request templates, their storage, their export with and without a password, and every way an import is refused.
 - **infra**: The tests of `@skysend/crypto` and `@skysend/note-format` are typechecked along with their code.

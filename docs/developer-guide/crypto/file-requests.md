@@ -99,11 +99,21 @@ blob     = ECE(fileKey, note document padded with spaces to a multiple of 1024 b
 metadata = AES-256-GCM(metaKey, {"type":"note","size":<padded bytes>})
 ```
 
+When a request asks for both, a sender sends files and a note as two uploads of one submission. Each one's metadata carries the same `submission`, 32 random hex characters, so the inbox lists them together. Every other upload into a request carries a random one of its own, so the length of its metadata does not tell a note sent alone from a note sent with files.
+
+The files reserve both slots of the submission at init, with `X-Reserve-Next: 1` or `reserveNext` in the WebSocket init frame. Their finalize answers with a `hold`, a random token for the second slot, which the server keeps in memory for 30 minutes. The note brings it back in `X-Slot-Hold` or `hold`, so it finds its slot even when other senders filled the request meanwhile. A note that does not finish gives the slot back to its hold with the time it had left, and a hold nobody takes gives it back to the request. A restart of the server drops every hold, like every running upload, and the note then needs a free slot. The hold tells the server which two uploads form one submission, which the order and timing of the two uploads would tell it as well. It learns nothing about what they hold.
+
 `decryptRequestMetadata` reads it, `decryptMetadata` refuses it, so a crafted normal upload never sends a download page down the path of a note. Before the inbox fetches a note, it checks that the size is padded, that the stored bytes are exactly the encrypted size, and that it is no larger than `NOTE_MAX_SIZE` plus one block. The server learns that an upload is a note from its short metadata and its padded size, never what it holds.
 
 ## Password
 
 With a password the inbox link carries the secret after [password protection](/developer-guide/crypto/password-protection), the same Argon2id and XOR scheme a file uses, plus the 16-byte password salt. A wrong password yields wrong tokens, which the server answers like a wrong link, and the lockout counts it.
+
+## Templates
+
+A request template is kept in the browser that made it, in IndexedDB, and never reaches the server. It holds the asks, the note template, and optionally the title and the limits. Its note template goes through `parseTemplate` from `@skysend/note-format` on every read, from the store, a file or a link alike, so a template can never carry a value or an unclean label. A template whose brief would not fit a request is refused.
+
+An export is JSON, `{ "kind": "skysend-request-templates", "v": 1, "templates": [...] }`, at most 512 KiB and 200 templates, sealed or not, and the export refuses to make a larger one. A link carries it base64url-encoded in the fragment of `/templates#...`, which the page takes out of the address bar at once and hands to the import in memory, never through the history. With a password the export becomes `{ "kind", "v", "sealed": { salt, nonce, ciphertext } }`: `sealWithPassword` in `@skysend/crypto` derives an AES-256-GCM key with Argon2id from the password and a random 16-byte salt, with `PASSWORD_BOX_ARGON2`, frozen parameters that match an upload password, and encrypts under a random 12-byte nonce with the AAD `skysend-request-templates-v1`. A wrong password and a changed box both fail the GCM tag and read the same.
 
 ## Why the Public Key Stays Out of the Server
 

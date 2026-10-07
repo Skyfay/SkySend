@@ -161,7 +161,8 @@
     "remaining": "{{count}} download rimanenti",
     "expired": "Scaduto",
     "unavailable": "Non disponibile",
-    "files": "{{count}} file"
+    "files": "{{count}} file",
+    "tabTemplates": "Modelli"
   },
   "noteView": {
     "title": "Nota crittografata",
@@ -232,7 +233,10 @@
     "enterPassword": "Inserisci la password...",
     "addAnother": "Aggiungi un'altra password",
     "passwordNumber": "Password {{number}}",
-    "labelPlaceholder": "Etichetta per la password {{number}} (opzionale)"
+    "labelPlaceholder": "Etichetta per la password {{number}} (opzionale)",
+    "makePlain": "Non è un segreto, mostra in chiaro",
+    "makeSecret": "È un segreto, mostra nascosto",
+    "enterValue": "Inserisci il valore..."
   },
   "code": {
     "titlePlaceholder": "Nome file (es. docker-compose.yaml, opzionale)",
@@ -484,7 +488,14 @@
     "asksFiles": "File",
     "asksNote": "Nota",
     "asksBoth": "Entrambi",
-    "summaryNote": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno una nota."
+    "summaryNote": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno una nota.",
+    "asksNoteHint": "Stabilisci dei campi, per esempio una password",
+    "asksBothHint": "File e una nota in un colpo solo",
+    "submissions": "Invii",
+    "submissionsCount_one": "{{count}} invio",
+    "submissionsCount_other": "{{count}} invii",
+    "summaryBoth": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno con file di massimo <b>{{size}}</b> e una nota.",
+    "asksBothUnavailable": "Servono almeno due caricamenti per richiesta"
   },
   "template": {
     "title": "Modello della nota",
@@ -518,7 +529,9 @@
     "forget": "Rimuovi",
     "deleted": "Richiesta eliminata",
     "forgotten": "Rimossa dall'elenco",
-    "deleteFailed": "Impossibile eliminare la richiesta."
+    "deleteFailed": "Impossibile eliminare la richiesta.",
+    "receivedSubmissions_one": "{{count}} invio ricevuto",
+    "receivedSubmissions_other": "{{count}} invii ricevuti"
   },
   "inbox": {
     "title": "Casella",
@@ -563,7 +576,9 @@
     "notAsked": "Non richiesto",
     "saveText": "Salva come testo",
     "noteTooLarge": "Questa nota è più grande di qualsiasi nota accettata da questa istanza, quindi non è stata aperta.",
-    "noteFailed": "Impossibile aprire la nota."
+    "noteFailed": "Impossibile aprire la nota.",
+    "usageSubmissions": "{{used}} di {{max}} invii, {{size}} in totale, file di massimo {{maxSize}} ciascuno",
+    "submission": "Inviati insieme"
   },
   "requestUpload": {
     "title": "Qualcuno ti chiede dei <a>file</a>",
@@ -601,6 +616,138 @@
     "limitsNote_one": "Cifrato solo per chi richiede. Resta {{count}} caricamento, chiude tra {{time}}.",
     "limitsNote_other": "Cifrato solo per chi richiede. Restano {{count}} caricamenti, chiude tra {{time}}.",
     "fileTabHint": "Fino a {{size}} per caricamento",
-    "noteTabHint": "Password, testo, codice o una chiave"
+    "titleNote": "Qualcuno ti chiede <a>una nota</a>",
+    "titleBoth": "Qualcuno ti chiede <a>file e una nota</a>",
+    "introNote": "Tutto viene cifrato in questo browser prima di lasciarlo. Solo chi ha creato questa richiesta può aprirlo.",
+    "sendAgain": "Invia ancora",
+    "filesSent": "I tuoi file sono arrivati. Invia la nota per finire.",
+    "limitsBoth_one": "File e nota partono insieme come un invio. Resta {{count}} invio, chiude tra {{time}}.",
+    "limitsBoth_other": "File e nota partono insieme come un invio. Restano {{count}} invii, chiude tra {{time}}.",
+    "stepDone": "pronto"
+  },
+  "templates": {
+    "startWith": "Inizia con",
+    "manage": "Gestisci modelli",
+    "blank": "Da zero",
+    "startHint": "Compila titolo, campi e limiti. Dopo puoi ancora cambiare tutto.",
+    "builtIn": {
+      "title": "Predefiniti",
+      "section": "Predefiniti",
+      "credentials": {
+        "name": "Credenziali",
+        "address": "Indirizzo",
+        "username": "Nome utente",
+        "password": "Password"
+      },
+      "sshKey": {
+        "name": "Chiave SSH"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Nome della rete",
+        "password": "Password"
+      },
+      "apiKey": {
+        "name": "Chiave API",
+        "service": "Servizio",
+        "key": "Chiave",
+        "expires": "Scade il"
+      }
+    },
+    "saveAs": "Salva come modello",
+    "saveEdited": "Salva modello",
+    "saveTitle": "Salva come modello",
+    "saveText": "Per la prossima richiesta di questo tipo. Il modello resta in questo browser.",
+    "name": "Nome",
+    "namePlaceholder": "Per esempio Accesso al server",
+    "nameTaken": "Esiste già un modello con questo nome. Salvando lo sostituisci.",
+    "nameInUse": "Un altro modello ha già questo nome.",
+    "keepTitle": "Mantieni il titolo",
+    "noTitle": "Questa richiesta non ha un titolo",
+    "quoted": "“{{text}}”",
+    "keepLimits": "Mantieni per quanto resta aperta e i suoi limiti",
+    "saveSecret": "Vengono salvati campi e impostazioni. Mai una password della casella, e nessun valore.",
+    "replace": "Sostituisci",
+    "saved": "“{{name}}” salvato come modello.",
+    "saveFailed": "Impossibile salvare il modello.",
+    "editTitle": "Modifica modello",
+    "editIntro": "Cambia ciò che il modello prepara. Una richiesta viene creata solo quando lo usi.",
+    "editing": "Stai modificando il modello “{{name}}”. Salvando lo sostituisci.",
+    "own": "I tuoi modelli",
+    "import": "Importa",
+    "exportAll": "Esporta tutti",
+    "empty": "Ancora nessun modello",
+    "emptyHint": "Salvane uno dal modulo di richiesta, oppure copia qui sotto uno di quelli predefiniti.",
+    "use": "Usa",
+    "edit": "Modifica",
+    "duplicate": "Duplica",
+    "export": "Esporta",
+    "usedAgo": "ultimo uso {{time}}",
+    "neverUsed": "mai usato",
+    "freeNote": "Nota a testo libero",
+    "uploadsUpTo_one": "{{count}} caricamento fino a {{size}}",
+    "uploadsUpTo_other": "{{count}} caricamenti fino a {{size}}",
+    "field": {
+      "entry": "Voce",
+      "text": "Testo",
+      "code": "Codice",
+      "sshKey": "Chiave SSH"
+    },
+    "copyBuiltIn": "Copia come tuo",
+    "copied": "Copiato come “{{name}}”.",
+    "localHint": "I modelli esistono solo in questo browser, come i tuoi link. Un modello contiene campi e impostazioni, mai valori. Per spostarli, esportali e importali sull'altro dispositivo.",
+    "deleteTitle": "Eliminare il modello?",
+    "deleteText": "“{{name}}” viene rimosso da questo browser. Le richieste create da esso restano come sono.",
+    "deleted": "Modello eliminato.",
+    "deleteFailed": "Impossibile eliminare il modello.",
+    "exportTitle": "Esporta modelli",
+    "exportText": "Per spostarli su un altro dispositivo o browser.",
+    "exportWhich": "Modelli da esportare",
+    "exportAs": "Esporta come",
+    "asFile": "Come file",
+    "asFileHint": ".json, da conservare",
+    "asLink": "Come link",
+    "asLinkHint": "tutto dopo il #",
+    "seal": "Cifra con una password",
+    "sealPlaceholder": "Password per l'esportazione",
+    "sealHint": "Nomi di campo come “PIN della banca” rivelano di cosa tratta una richiesta. Con una password, l'esportazione non si può leggere senza di essa.",
+    "exportCount_one": "Esporta {{count}}",
+    "exportCount_other": "Esporta {{count}}",
+    "exported_one": "{{count}} modello esportato.",
+    "exported_other": "{{count}} modelli esportati.",
+    "exportFailed": "Impossibile esportare i modelli.",
+    "linkLabel": "Link dei modelli",
+    "linkHint": "Apri il link sull'altro dispositivo. Tutto è nella parte dopo il #, che nessun server riceve.",
+    "linkLong": "Questo link è lungo e in alcune app potrebbe rompersi. Un file è più sicuro.",
+    "importTitle": "Importa modelli",
+    "importFromFile": "Dal file {{name}}.",
+    "importFromLink": "Da un link dei modelli.",
+    "importPassword": "Password dell'esportazione",
+    "importOpen": "Apri",
+    "importExists": "esiste già",
+    "importNew": "nuovo",
+    "keepBoth": "Mantieni entrambi",
+    "importChoice": "Cosa succede a {{name}}",
+    "importNone": "Questa esportazione non contiene alcun modello leggibile.",
+    "importSkipped_one": "{{count}} modello non è leggibile e viene escluso.",
+    "importSkipped_other": "{{count}} modelli non sono leggibili e vengono esclusi.",
+    "importChecked": "Controllati come ogni modello altrui: i nomi dei campi vengono ripuliti e i valori scartati.",
+    "importCount_one": "Importa {{count}}",
+    "importCount_other": "Importa {{count}}",
+    "imported_one": "{{count}} modello importato.",
+    "imported_other": "{{count}} modelli importati.",
+    "importFailed": "Impossibile importare i modelli.",
+    "importError": {
+      "invalid": "Questo non contiene modelli SkySend.",
+      "tooLarge": "Questa esportazione è troppo grande.",
+      "password": "Password errata."
+    },
+    "replacedForm": "Il modulo è stato sostituito.",
+    "undo": "Annulla",
+    "editAdjusted": "Questo server consente meno di quanto imposta il modello, quindi il modulo mostra ciò che accetta. Se non li modifichi, il modello mantiene i propri valori.",
+    "exportTooLarge": "Troppo per una sola esportazione. Esporta meno modelli alla volta.",
+    "skip": "Salta",
+    "notFound": "Questo modello non è più salvato in questo browser.",
+    "duplicated": "Duplicato come “{{name}}”."
   }
 }

@@ -31,6 +31,8 @@ let initStatus = 201;
 let initError = "File request is full";
 let initId: string = UPLOAD_ID;
 let finalizeStatus = 200;
+/** What the fake server adds to its finalize answer, over HTTP and WebSocket. */
+let finalizeExtra: Record<string, unknown> = {};
 let wsEnabled = false;
 /** What the fake server answers to an init frame, when not ready. */
 let wsInitReply: Record<string, unknown> | null = null;
@@ -65,7 +67,7 @@ class FakeWebSocket extends EventTarget {
     if (typeof data !== "string") return;
     const frame = JSON.parse(data) as { type: string };
     if (frame.type === "init") this.reply(wsInitReply ?? { type: "ready", id: UPLOAD_ID });
-    if (frame.type === "finalize") this.reply({ type: "done", id: UPLOAD_ID });
+    if (frame.type === "finalize") this.reply({ ...finalizeExtra, type: "done", id: UPLOAD_ID });
   }
 
   close() {
@@ -99,6 +101,7 @@ beforeEach(() => {
   initError = "File request is full";
   initId = UPLOAD_ID;
   finalizeStatus = 200;
+  finalizeExtra = {};
   wsEnabled = false;
   wsInitReply = null;
   wsHandshakeFails = false;
@@ -118,7 +121,7 @@ beforeEach(() => {
       if (url.includes("/chunk")) return json({ bytesWritten: 0 });
       if (url.endsWith("/finalize")) {
         return finalizeStatus === 200
-          ? json({ id: UPLOAD_ID })
+          ? json({ ...finalizeExtra, id: UPLOAD_ID })
           : json({ error: "File request not found" }, finalizeStatus);
       }
       if (url.includes("/api/meta/")) return json({ ok: true });
@@ -238,6 +241,46 @@ describe("upload worker", () => {
     expect(posted.at(-1)).toEqual({ type: "error", message: code });
   });
 
+  it("reserves the slot of the note with the files and hands the hold on", async () => {
+    const created = await createFileRequest();
+    const hold = "AbCdEfGhIjKlMnOpQrStUv";
+    finalizeExtra = { hold };
+    const request = {
+      id: REQUEST_ID,
+      uploadToken: "t",
+      publicKey: created.local.publicKey.slice().buffer,
+    };
+    await onmessage(message({ request: { ...request, reserveNext: true } }));
+    expect(posted.at(-1)).toEqual({ type: "delivered", id: UPLOAD_ID, hold });
+    const init = requests.find((r) => r.url.endsWith("/upload/init"))!;
+    expect((init.init!.headers as Record<string, string>)["X-Reserve-Next"]).toBe("1");
+
+    requests.length = 0;
+    finalizeExtra = {};
+    await onmessage(message({ request: { ...request, hold } }));
+    const second = requests.find((r) => r.url.endsWith("/upload/init"))!;
+    const headers = second.init!.headers as Record<string, string>;
+    expect(headers["X-Slot-Hold"]).toBe(hold);
+    expect(headers["X-Reserve-Next"]).toBeUndefined();
+    expect(posted.at(-1)).toEqual({ type: "delivered", id: UPLOAD_ID });
+  });
+
+  it("drops a hold that does not look like one the server makes", async () => {
+    const created = await createFileRequest();
+    finalizeExtra = { hold: "../../etc" };
+    await onmessage(
+      message({
+        request: {
+          id: REQUEST_ID,
+          uploadToken: "t",
+          publicKey: created.local.publicKey.slice().buffer,
+          reserveNext: true,
+        },
+      }),
+    );
+    expect(posted.at(-1)).toEqual({ type: "delivered", id: UPLOAD_ID });
+  });
+
   it("names a request deleted during the upload at finalize", async () => {
     const created = await createFileRequest();
     finalizeStatus = 404;
@@ -337,6 +380,28 @@ describe("upload worker", () => {
       expect(unwrapped).toEqual(secret);
       // Nothing went over HTTP, and nothing of the normal path ran.
       expect(requests.map((r) => r.url)).toEqual([`${API}/api/config`]);
+    });
+
+    it("asks for the slot of the note in the init frame and reads the hold from done", async () => {
+      wsEnabled = true;
+      const hold = "AbCdEfGhIjKlMnOpQrStUv";
+      finalizeExtra = { hold };
+      const created = await createFileRequest();
+      await onmessage(
+        message({
+          apiBase: API,
+          request: {
+            id: REQUEST_ID,
+            uploadToken: "t",
+            publicKey: created.local.publicKey.slice().buffer,
+            reserveNext: true,
+          },
+        }),
+      );
+      expect(posted.at(-1)).toEqual({ type: "delivered", id: UPLOAD_ID, hold });
+      const [init] = FakeWebSocket.instances[0]!.json() as [{ request: Record<string, unknown> }];
+      expect(init.request.reserveNext).toBe(true);
+      expect(init.request.hold).toBeUndefined();
     });
 
     it("falls back to HTTP chunks when the handshake fails", async () => {

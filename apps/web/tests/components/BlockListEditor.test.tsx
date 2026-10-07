@@ -75,7 +75,7 @@ describe("BlockListEditor", () => {
     expect(screen.queryByLabelText("note.removeBlock")).toBeNull();
     expect(screen.queryByText("password.addAnother")).toBeNull();
     expect(screen.getByText("PIN").tagName).toBe("SPAN");
-    fireEvent.change(screen.getByLabelText("password.passwordNumber"), {
+    fireEvent.change(screen.getByLabelText("PIN"), {
       target: { value: "4711" },
     });
     expect(latest[0]).toEqual({
@@ -103,6 +103,68 @@ describe("BlockListEditor", () => {
         { label: "", value: "" },
       ],
     });
+  });
+});
+
+describe("entries that are no secret", () => {
+  it("lets a template mark an entry as no secret and back", () => {
+    render(
+      createElement(Harness, {
+        mode: "template",
+        start: [{ id: 1, type: "password", entries: [{ label: "User", value: "" }] }],
+      }),
+    );
+    fireEvent.click(screen.getByLabelText("password.makePlain"));
+    expect(latest[0]).toMatchObject({ entries: [{ label: "User", value: "", secret: false }] });
+    fireEvent.click(screen.getByLabelText("password.makeSecret"));
+    expect(latest[0]).toMatchObject({ entries: [{ label: "User", value: "" }] });
+    expect((latest[0] as { entries: object[] }).entries[0]).not.toHaveProperty("secret");
+  });
+
+  it("fills in an entry that is no secret in clear, without a generator or a toggle", () => {
+    render(
+      createElement(Harness, {
+        mode: "fill",
+        start: [
+          {
+            id: 1,
+            type: "password",
+            entries: [
+              { label: "User", value: "", secret: false },
+              { label: "Password", value: "" },
+            ],
+          },
+        ],
+      }),
+    );
+    expect((screen.getByLabelText("User") as HTMLInputElement).type).toBe("text");
+    expect((screen.getByLabelText("Password") as HTMLInputElement).type).toBe("password");
+    expect(screen.getAllByLabelText("passwordGenerator.title")).toHaveLength(1);
+    expect(screen.queryByLabelText("password.makeSecret")).toBeNull();
+    expect(screen.queryByLabelText("password.makePlain")).toBeNull();
+    fireEvent.change(screen.getByLabelText("User"), { target: { value: "alice" } });
+    expect(latest[0]).toMatchObject({
+      entries: [
+        { label: "User", value: "alice", secret: false },
+        { label: "Password", value: "" },
+      ],
+    });
+  });
+
+  it("shows an entry that is no secret in clear, and masks the others", () => {
+    const blocks: ReadBlock[] = [
+      {
+        type: "password",
+        entries: [
+          { label: "User", value: "alice", secret: false },
+          { label: "Password", value: "hunter2" },
+        ],
+      },
+    ];
+    render(createElement(TooltipProvider, null, createElement(NoteBlocks, { blocks })));
+    expect(screen.getByText("alice")).toBeTruthy();
+    expect(screen.queryByText("hunter2")).toBeNull();
+    expect(screen.getAllByLabelText("noteView.reveal")).toHaveLength(1);
   });
 });
 

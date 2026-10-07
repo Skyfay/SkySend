@@ -69,6 +69,36 @@ describe("serializeTemplate", () => {
   });
 });
 
+describe("entries that are no secret", () => {
+  const block: NoteBlock = {
+    type: "password",
+    entries: [
+      { label: "Username", value: "alice", secret: false },
+      { label: "Password", value: "tR7#kq2Lm9x!" },
+      { label: "Pin", value: "4711", secret: true },
+    ],
+  };
+
+  it("keeps which entries are no secret, and drops their values too", () => {
+    const expected = [
+      {
+        type: "password",
+        entries: [
+          { label: "Username", value: "", secret: false },
+          { label: "Password", value: "" },
+          { label: "Pin", value: "" },
+        ],
+      },
+    ];
+    expect(serializeTemplate([block]).blocks).toEqual(expected);
+    expect(parseTemplate({ v: 1, blocks: [block] })).toEqual(expected);
+  });
+
+  it("round-trips a note with an entry that is no secret", () => {
+    expect(parseNote(serializeNote([block]))).toEqual([block]);
+  });
+});
+
 describe("parseTemplate", () => {
   it("reads what serializeTemplate wrote", () => {
     expect(parseTemplate(serializeTemplate(filled))).toEqual(blanked);

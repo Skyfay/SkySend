@@ -156,7 +156,8 @@
     "remaining": "{{count}} downloads remaining",
     "expired": "Expired",
     "unavailable": "Unavailable",
-    "files": "{{count}} file(s)"
+    "files": "{{count}} file(s)",
+    "tabTemplates": "Templates"
   },
   "noteView": {
     "title": "Encrypted Note",
@@ -227,7 +228,10 @@
     "enterPassword": "Enter password...",
     "addAnother": "Add another password",
     "passwordNumber": "Password {{number}}",
-    "labelPlaceholder": "Label for password {{number}} (optional)"
+    "labelPlaceholder": "Label for password {{number}} (optional)",
+    "makePlain": "Not a secret, show in clear",
+    "makeSecret": "A secret, show masked",
+    "enterValue": "Enter value..."
   },
   "code": {
     "titlePlaceholder": "Filename (e.g. docker-compose.yaml, optional)",
@@ -479,7 +483,14 @@
     "asksFiles": "Files",
     "asksNote": "Note",
     "asksBoth": "Both",
-    "summaryNote": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each one a note."
+    "summaryNote": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each one a note.",
+    "asksNoteHint": "Lay out fields, for example a password",
+    "asksBothHint": "Files and a note in one go",
+    "submissions": "Submissions",
+    "submissionsCount_one": "{{count}} submission",
+    "submissionsCount_other": "{{count}} submissions",
+    "summaryBoth": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each with files of at most <b>{{size}}</b> and a note.",
+    "asksBothUnavailable": "Needs at least two uploads per request"
   },
   "template": {
     "title": "Note template",
@@ -513,7 +524,9 @@
     "forget": "Remove",
     "deleted": "Request deleted",
     "forgotten": "Removed from the list",
-    "deleteFailed": "The request could not be deleted."
+    "deleteFailed": "The request could not be deleted.",
+    "receivedSubmissions_one": "{{count}} submission received",
+    "receivedSubmissions_other": "{{count}} submissions received"
   },
   "inbox": {
     "title": "Inbox",
@@ -558,7 +571,9 @@
     "notAsked": "Not asked for",
     "saveText": "Save as text",
     "noteTooLarge": "This note is larger than any note this instance takes, so it was not opened.",
-    "noteFailed": "The note could not be opened."
+    "noteFailed": "The note could not be opened.",
+    "usageSubmissions": "{{used}} of {{max}} submissions, {{size}} in total, files at most {{maxSize}} each",
+    "submission": "Sent together"
   },
   "requestUpload": {
     "title": "Someone asks you for <a>files</a>",
@@ -596,6 +611,138 @@
     "limitsNote_one": "Encrypted for the requester alone. {{count}} upload left, closes in {{time}}.",
     "limitsNote_other": "Encrypted for the requester alone. {{count}} uploads left, closes in {{time}}.",
     "fileTabHint": "Up to {{size}} per upload",
-    "noteTabHint": "Passwords, text, code or a key"
+    "titleNote": "Someone asks you for <a>a note</a>",
+    "titleBoth": "Someone asks you for <a>files and a note</a>",
+    "introNote": "Everything is encrypted in this browser before it leaves it. Only the person who created this request can open it.",
+    "sendAgain": "Send more",
+    "filesSent": "Your files arrived. Send the note to finish.",
+    "limitsBoth_one": "Files and note go together as one submission. {{count}} submission left, closes in {{time}}.",
+    "limitsBoth_other": "Files and note go together as one submission. {{count}} submissions left, closes in {{time}}.",
+    "stepDone": "ready"
+  },
+  "templates": {
+    "startWith": "Start with",
+    "manage": "Manage templates",
+    "blank": "Blank",
+    "startHint": "Fills in the title, the fields and the limits. Everything can still be changed afterwards.",
+    "builtIn": {
+      "title": "Built-in",
+      "section": "Built-in",
+      "credentials": {
+        "name": "Credentials",
+        "address": "Address",
+        "username": "Username",
+        "password": "Password"
+      },
+      "sshKey": {
+        "name": "SSH key"
+      },
+      "wifi": {
+        "name": "Wi-Fi",
+        "network": "Network name",
+        "password": "Password"
+      },
+      "apiKey": {
+        "name": "API key",
+        "service": "Service",
+        "key": "Key",
+        "expires": "Expires on"
+      }
+    },
+    "saveAs": "Save as template",
+    "saveEdited": "Save template",
+    "saveTitle": "Save as template",
+    "saveText": "For the next request of this kind. The template stays in this browser.",
+    "name": "Name",
+    "namePlaceholder": "For example Server access",
+    "nameTaken": "A template with this name exists. Saving replaces it.",
+    "nameInUse": "Another template has this name already.",
+    "keepTitle": "Keep the title",
+    "noTitle": "This request has no title",
+    "quoted": "“{{text}}”",
+    "keepLimits": "Keep how long it stays open and its limits",
+    "saveSecret": "Fields and settings are saved. An inbox password never is, and neither is any value.",
+    "replace": "Replace",
+    "saved": "“{{name}}” saved as a template.",
+    "saveFailed": "The template could not be saved.",
+    "editTitle": "Edit template",
+    "editIntro": "Change what the template sets up. A request is only created when you use it.",
+    "editing": "You are editing the template “{{name}}”. Saving replaces it.",
+    "own": "Your templates",
+    "import": "Import",
+    "exportAll": "Export all",
+    "empty": "No templates yet",
+    "emptyHint": "Save one from the request form, or copy one of the built-in ones below.",
+    "use": "Use",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "export": "Export",
+    "usedAgo": "last used {{time}}",
+    "neverUsed": "never used",
+    "freeNote": "Note written freely",
+    "uploadsUpTo_one": "{{count}} upload up to {{size}}",
+    "uploadsUpTo_other": "{{count}} uploads up to {{size}}",
+    "field": {
+      "entry": "Entry",
+      "text": "Text",
+      "code": "Code",
+      "sshKey": "SSH key"
+    },
+    "copyBuiltIn": "Copy as your own",
+    "copied": "Copied as “{{name}}”.",
+    "localHint": "Templates live only in this browser, like your links. A template holds fields and settings, never values. To move them, export them and import them on the other device.",
+    "deleteTitle": "Delete template?",
+    "deleteText": "“{{name}}” is removed from this browser. Requests created from it stay as they are.",
+    "deleted": "Template deleted.",
+    "deleteFailed": "The template could not be deleted.",
+    "exportTitle": "Export templates",
+    "exportText": "To move them to another device or browser.",
+    "exportWhich": "Templates to export",
+    "exportAs": "Export as",
+    "asFile": "As a file",
+    "asFileHint": ".json, to keep",
+    "asLink": "As a link",
+    "asLinkHint": "everything after the #",
+    "seal": "Encrypt with a password",
+    "sealPlaceholder": "Password for the export",
+    "sealHint": "Field names like “Bank PIN” tell what a request is about. With a password, the export cannot be read without it.",
+    "exportCount_one": "Export {{count}}",
+    "exportCount_other": "Export {{count}}",
+    "exported_one": "{{count}} template exported.",
+    "exported_other": "{{count}} templates exported.",
+    "exportFailed": "The templates could not be exported.",
+    "linkLabel": "Templates link",
+    "linkHint": "Open the link on the other device. Everything is in the part after the #, which no server gets.",
+    "linkLong": "This link is long and may break in some apps. A file is safer.",
+    "importTitle": "Import templates",
+    "importFromFile": "From the file {{name}}.",
+    "importFromLink": "From a templates link.",
+    "importPassword": "Password of the export",
+    "importOpen": "Open",
+    "importExists": "exists already",
+    "importNew": "new",
+    "keepBoth": "Keep both",
+    "importChoice": "What happens to {{name}}",
+    "importNone": "This export holds no template that could be read.",
+    "importSkipped_one": "{{count}} template could not be read and is left out.",
+    "importSkipped_other": "{{count}} templates could not be read and are left out.",
+    "importChecked": "Checked like any template from someone else: field names are cleaned and values dropped.",
+    "importCount_one": "Import {{count}}",
+    "importCount_other": "Import {{count}}",
+    "imported_one": "{{count}} template imported.",
+    "imported_other": "{{count}} templates imported.",
+    "importFailed": "The templates could not be imported.",
+    "importError": {
+      "invalid": "This holds no SkySend templates.",
+      "tooLarge": "This export is too large.",
+      "password": "Wrong password."
+    },
+    "replacedForm": "The form was replaced.",
+    "undo": "Undo",
+    "editAdjusted": "This server allows less than the template sets up, so the form shows what it takes. Unless you change them, the template keeps its own values.",
+    "exportTooLarge": "Too much for one export. Export fewer templates at once.",
+    "skip": "Skip",
+    "notFound": "This template is no longer kept in this browser.",
+    "duplicated": "Duplicated as “{{name}}”."
   }
 }

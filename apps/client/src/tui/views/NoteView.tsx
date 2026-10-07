@@ -50,12 +50,14 @@ function renderBlocks(blocks: readonly ReadBlock[], revealed: ReadonlySet<number
               <Box key={i} flexDirection="column" gap={1}>
                 {block.entries.map((entry, j) => {
                   const number = firstEntry[i]! + j + 1;
-                  const shown = revealed.has(number);
+                  // An entry that is no secret, like a username, is shown without a reveal.
+                  const plain = entry.secret === false;
+                  const shown = plain || revealed.has(number);
                   return (
                     <Box key={j} borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
                       <Box justifyContent="space-between">
                         <Text bold color={accent}>{entry.label ? forTerminal(entry.label) : `Password ${number}`}</Text>
-                        <Text dimColor>[{number}] {shown ? "visible" : "hidden"}</Text>
+                        <Text dimColor>{plain ? "" : `[${number}] ${shown ? "visible" : "hidden"}`}</Text>
                       </Box>
                       <Text>{shown ? forTerminal(entry.value) : "•".repeat(Math.min(entry.value.length, 32))}</Text>
                     </Box>

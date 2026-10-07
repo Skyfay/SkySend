@@ -57,6 +57,7 @@ export function useCreateRequest(argon2id: Argon2idHashFn) {
           closesAt,
           createdAt: new Date().toISOString(),
           seenUploads: [],
+          asks: options.asks,
         };
         // The request exists on the server now. If this browser cannot keep it, the two
         // links are still shown, so they can be saved by hand.

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Eye, EyeOff, KeyRound, Plus, Wand2, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Lock, LockOpen, Plus, Wand2, X } from "lucide-react";
 import { MAX_LABEL_LENGTH, MAX_PASSWORD_ENTRIES, type PasswordBlock, type PasswordEntry } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,10 @@ interface PasswordBlockEditorProps {
 }
 
 /**
- * One or more passwords with an optional label each, and a generator per entry. A template
- * lays out only the labels, and filling it in keeps them as they are.
+ * One or more passwords with an optional label each, and a generator per entry. An entry
+ * that is no secret, like a username, is typed and shown in clear and gets no generator. A
+ * template lays out only the labels and which entries are secret, and filling it in keeps
+ * both as they are.
  */
 export function PasswordBlockEditor({ block, onChange, controls, disabled, mode = "compose" }: PasswordBlockEditorProps) {
   const { t } = useTranslation();
@@ -30,6 +32,29 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
 
   const update = (index: number, patch: Partial<PasswordEntry>) =>
     onChange({ ...block, entries: entries.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)) });
+
+  /** Marks an entry as a secret, shown masked, or as a value shown in clear. */
+  const setSecret = (index: number, secret: boolean) => {
+    onChange({
+      ...block,
+      entries: entries.map((entry, i) => {
+        if (i !== index) return entry;
+        const { secret: _secret, ...rest } = entry;
+        return secret ? rest : { ...rest, secret: false };
+      }),
+    });
+    if (!secret) setGeneratorIndex((current) => (current === index ? null : current));
+  };
+
+  const secretToggle = (index: number, plain: boolean) => (
+    <IconButton
+      label={plain ? t("password.makeSecret") : t("password.makePlain")}
+      onClick={() => setSecret(index, plain)}
+      disabled={disabled}
+    >
+      {plain ? <LockOpen /> : <Lock />}
+    </IconButton>
+  );
 
   const remove = (index: number) => {
     onChange({ ...block, entries: entries.filter((_, i) => i !== index) });
@@ -57,7 +82,9 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
   return (
     <BlockEditorFrame icon={KeyRound} title={t("tab.password")} controls={controls}>
       <div className="space-y-3 p-3">
-        {entries.map((entry, index) => (
+        {entries.map((entry, index) => {
+          const plain = entry.secret === false;
+          return (
           <div key={index} className="space-y-2.5">
             <div className="flex flex-wrap gap-2">
               {mode === "fill" ? (
@@ -78,20 +105,35 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
                 />
               )}
               {mode === "template" ? (
-                entries.length > 1 && (
-                  <IconButton label={t("common.delete")} onClick={() => remove(index)} disabled={disabled} className="hover:text-destructive-text">
-                    <X />
-                  </IconButton>
-                )
+                <div className="flex items-center gap-2">
+                  {secretToggle(index, plain)}
+                  {entries.length > 1 && (
+                    <IconButton label={t("common.delete")} onClick={() => remove(index)} disabled={disabled} className="hover:text-destructive-text">
+                      <X />
+                    </IconButton>
+                  )}
+                </div>
               ) : (
               <div className="flex min-w-0 flex-[2] basis-60 items-center gap-2">
+                {plain ? (
+                  <Input
+                    type="text"
+                    value={entry.value}
+                    onChange={(e) => update(index, { value: e.target.value })}
+                    placeholder={t("password.enterValue")}
+                    aria-label={entry.label || t("password.passwordNumber", { number: index + 1 })}
+                    className="min-w-0 flex-1 font-mono placeholder:font-sans"
+                    disabled={disabled}
+                    autoComplete="off"
+                  />
+                ) : (
                 <div className="relative min-w-0 flex-1">
                   <Input
                     type={shown.has(index) ? "text" : "password"}
                     value={entry.value}
                     onChange={(e) => update(index, { value: e.target.value })}
                     placeholder={t("password.enterPassword")}
-                    aria-label={t("password.passwordNumber", { number: index + 1 })}
+                    aria-label={entry.label || t("password.passwordNumber", { number: index + 1 })}
                     className="pr-10 font-mono placeholder:font-sans"
                     disabled={disabled}
                     autoComplete="off"
@@ -105,6 +147,7 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
                     {shown.has(index) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                )}
                 <IconButton
                   label={copiedIndex === index ? t("common.copied") : t("common.copy")}
                   onClick={() => void copy(index)}
@@ -112,14 +155,18 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
                 >
                   {copiedIndex === index ? <Check className="text-primary-text" /> : <Copy />}
                 </IconButton>
-                <IconButton
-                  label={t("passwordGenerator.title")}
-                  onClick={() => setGeneratorIndex(generatorIndex === index ? null : index)}
-                  disabled={disabled}
-                  expanded={generatorIndex === index}
-                >
-                  <Wand2 />
-                </IconButton>
+                {!plain && (
+                  <IconButton
+                    label={t("passwordGenerator.title")}
+                    onClick={() => setGeneratorIndex(generatorIndex === index ? null : index)}
+                    disabled={disabled}
+                    expanded={generatorIndex === index}
+                  >
+                    <Wand2 />
+                  </IconButton>
+                )}
+                {/* The requester decides this in a template, so filling it in cannot change it. */}
+                {mode === "compose" && secretToggle(index, plain)}
                 {mode === "compose" && entries.length > 1 && (
                   <IconButton label={t("common.delete")} onClick={() => remove(index)} disabled={disabled} className="hover:text-destructive-text">
                     <X />
@@ -138,7 +185,8 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
               />
             )}
           </div>
-        ))}
+          );
+        })}
 
         {mode !== "fill" && (
           <Button

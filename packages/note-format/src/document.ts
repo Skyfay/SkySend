@@ -43,6 +43,11 @@ const textBlockSchema = z.object({
 const passwordEntrySchema = z.object({
   label: z.string(),
   value: z.string(),
+  /**
+   * False for a value that is no secret, like a username or an address, which is shown in
+   * clear. Missing means a secret, so a document written before it reads as it did.
+   */
+  secret: z.boolean().optional(),
 });
 
 const passwordBlockSchema = z.object({
