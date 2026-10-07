@@ -240,11 +240,13 @@ File Request Settings
 ---------------------
 Open For Options:   1d, 3d, 7d
 Default Open For:   3d
-Max Uploads:        10
+Upload Options:     1, 2, 3, 5, 10, 20, 50, 100
+Default Uploads:    10
 Max Size/Upload:    2.0 GB
 Retention:          7d
-Downloads per File: 5
-Daily Limit:        10
+Download Options:   1, 2, 3, 5, 10, 20
+Default Downloads:  5
+Daily Limit:        100
 
 General
 -------

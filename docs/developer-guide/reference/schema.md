@@ -82,6 +82,7 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether the inbox link is password protected |
 | `maxUploads` | INTEGER NOT NULL | - | Uploads the request takes |
 | `maxSize` | INTEGER NOT NULL | - | Most bytes one upload may have |
+| `downloads` | INTEGER NOT NULL | 5 | How often the requester can download each upload. Rows from before migration 0005 got 5. |
 | `reservedUploads` | INTEGER NOT NULL | 0 | Uploads running or finished. Set back to `finishedUploads` at startup. |
 | `finishedUploads` | INTEGER NOT NULL | 0 | Uploads that finished. Never goes down, so a deleted upload keeps its slot. |
 | `finishedBytes` | INTEGER NOT NULL | 0 | Bytes of uploads that finished |
@@ -104,7 +105,7 @@ The public key of a request is never stored. It only exists in the upload link a
 | `wrapCiphertext` | BLOB NOT NULL | - | The file secret sealed to the request's public key (48 bytes) |
 | `encryptedMeta` | BLOB NOT NULL | - | AES-256-GCM encrypted metadata |
 | `metaNonce` | BLOB NOT NULL | - | Metadata IV (12 bytes) |
-| `maxDownloads` | INTEGER NOT NULL | - | `FILE_REQUEST_DOWNLOADS` at the time of the upload |
+| `maxDownloads` | INTEGER NOT NULL | - | The `downloads` of its request at the time of the upload |
 | `downloadCount` | INTEGER NOT NULL | 0 | Current download count |
 | `expiresAt` | TIMESTAMP NOT NULL | - | `FILE_REQUEST_RETENTION_SEC` after the upload arrived |
 | `createdAt` | TIMESTAMP NOT NULL | `current_unix_time` | Creation timestamp |

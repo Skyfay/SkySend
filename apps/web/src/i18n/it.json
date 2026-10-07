@@ -485,8 +485,6 @@
       "dailyLimit": "Hai creato tutte le richieste che questo server consente al giorno. Riprova domani.",
       "failed": "Impossibile creare la richiesta."
     },
-    "retentionHint_one": "Ogni file resta {{time}} dopo l'arrivo e si può scaricare {{count}} volta.",
-    "retentionHint_other": "Ogni file resta {{time}} dopo l'arrivo e si può scaricare {{count}} volte.",
     "asks": "Richiedi",
     "asksFiles": "File",
     "asksNote": "Nota",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} invio",
     "submissionsCount_other": "{{count}} invii",
     "summaryBoth": "Aperta per <b>{{expiry}}</b>, fino a <b>{{uploads}}</b>, ognuno con file di massimo <b>{{size}}</b> e una nota.",
-    "asksBothUnavailable": "Servono almeno due caricamenti per richiesta"
+    "downloads": "Download per caricamento",
+    "views": "Visualizzazioni per nota",
+    "retention": "Ogni caricamento resta {{time}} dopo l'arrivo.",
+    "limitLeft_one": "Oggi ti resta {{count}} nuova richiesta su {{limit}}.",
+    "limitLeft_other": "Oggi ti restano {{count}} nuove richieste su {{limit}}.",
+    "limitReached": "Oggi non puoi creare altre richieste. Potrai crearne una tra {{time}}."
   },
   "template": {
     "title": "Modello della nota",

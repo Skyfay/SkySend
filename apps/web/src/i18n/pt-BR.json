@@ -161,8 +161,6 @@
       "inbox.passwordRequired",
       "inbox.deleteFileTitle",
       "inbox.deleteFileText",
-      "request.retentionHint_one",
-      "request.retentionHint_other",
       "requestUpload.errorText",
       "errors.linkRewrittenInboxDesc",
       "errors.linkRewrittenUploadDesc",
@@ -225,7 +223,6 @@
       "requests.receivedSubmissions_other",
       "inbox.usageSubmissions",
       "inbox.submission",
-      "request.asksBothUnavailable",
       "requestUpload.stepDone",
       "templates.startWith",
       "templates.manage",
@@ -356,7 +353,13 @@
       "settings.passwordOn",
       "settings.passwordOff",
       "settings.sendsHint",
-      "settings.defaultsHint"
+      "settings.defaultsHint",
+      "request.downloads",
+      "request.views",
+      "request.retention",
+      "request.limitLeft_one",
+      "request.limitLeft_other",
+      "request.limitReached"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -841,8 +844,6 @@
       "dailyLimit": "Você criou tantas solicitações quanto este servidor permite por dia. Tente amanhã.",
       "failed": "Não foi possível criar a solicitação."
     },
-    "retentionHint_one": "Cada arquivo fica {{time}} após chegar e pode ser baixado {{count}} vez.",
-    "retentionHint_other": "Cada arquivo fica {{time}} após chegar e pode ser baixado {{count}} vezes.",
     "asks": "Solicitar",
     "asksFiles": "Arquivos",
     "asksNote": "Nota",
@@ -854,7 +855,12 @@
     "submissionsCount_one": "{{count}} envio conjunto",
     "submissionsCount_other": "{{count}} envios conjuntos",
     "summaryBoth": "Aberta por <b>{{expiry}}</b>, até <b>{{uploads}}</b>, cada um com arquivos de no máximo <b>{{size}}</b> e uma nota.",
-    "asksBothUnavailable": "Exige pelo menos dois envios por solicitação"
+    "downloads": "Downloads por envio",
+    "views": "Visualizações por nota",
+    "retention": "Cada envio fica {{time}} após chegar.",
+    "limitLeft_one": "Resta {{count}} nova solicitação hoje, de {{limit}}.",
+    "limitLeft_other": "Restam {{count}} novas solicitações hoje, de {{limit}}.",
+    "limitReached": "Não há mais novas solicitações hoje. Você poderá criar outra em {{time}}."
   },
   "template": {
     "title": "Modelo da nota",

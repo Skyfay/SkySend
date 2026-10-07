@@ -480,8 +480,6 @@
       "dailyLimit": "Sie haben so viele Anfragen erstellt, wie dieser Server pro Tag erlaubt. Versuchen Sie es morgen wieder.",
       "failed": "Die Anfrage konnte nicht erstellt werden."
     },
-    "retentionHint_one": "Jede Datei bleibt {{time}} nach dem Eingang und lässt sich {{count}} Mal herunterladen.",
-    "retentionHint_other": "Jede Datei bleibt {{time}} nach dem Eingang und lässt sich {{count}} Mal herunterladen.",
     "asks": "Anfordern",
     "asksFiles": "Dateien",
     "asksNote": "Notiz",
@@ -493,7 +491,12 @@
     "submissionsCount_one": "{{count}} Einsendung",
     "submissionsCount_other": "{{count}} Einsendungen",
     "summaryBoth": "Offen für <b>{{expiry}}</b>, bis zu <b>{{uploads}}</b>, jede mit Dateien bis <b>{{size}}</b> und einer Notiz.",
-    "asksBothUnavailable": "Braucht mindestens zwei Uploads pro Anfrage"
+    "downloads": "Downloads pro Upload",
+    "views": "Ansichten pro Notiz",
+    "retention": "Jeder Upload bleibt {{time}}, nachdem er angekommen ist.",
+    "limitLeft_one": "Heute noch {{count}} neue Anfrage von {{limit}}.",
+    "limitLeft_other": "Heute noch {{count}} neue Anfragen von {{limit}}.",
+    "limitReached": "Für heute sind keine neuen Anfragen mehr möglich. Wieder in {{time}}."
   },
   "template": {
     "title": "Vorlage für die Notiz",

@@ -480,8 +480,6 @@
       "dailyLimit": "You created as many requests as this server allows per day. Try again tomorrow.",
       "failed": "The request could not be created."
     },
-    "retentionHint_one": "Each file stays for {{time}} after it arrives and can be downloaded {{count}} time.",
-    "retentionHint_other": "Each file stays for {{time}} after it arrives and can be downloaded {{count}} times.",
     "asks": "Ask for",
     "asksFiles": "Files",
     "asksNote": "Note",
@@ -493,7 +491,12 @@
     "submissionsCount_one": "{{count}} submission",
     "submissionsCount_other": "{{count}} submissions",
     "summaryBoth": "Open for <b>{{expiry}}</b>, up to <b>{{uploads}}</b>, each with files of at most <b>{{size}}</b> and a note.",
-    "asksBothUnavailable": "Needs at least two uploads per request"
+    "downloads": "Downloads per upload",
+    "views": "Views per note",
+    "retention": "Each upload stays for {{time}} after it arrives.",
+    "limitLeft_one": "{{count}} new request left today, of {{limit}}.",
+    "limitLeft_other": "{{count}} new requests left today, of {{limit}}.",
+    "limitReached": "No new requests left today. You can create one again in {{time}}."
   },
   "template": {
     "title": "Note template",

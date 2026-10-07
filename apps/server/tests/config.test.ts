@@ -496,11 +496,14 @@ describe("config", () => {
       const config = await loadFreshConfig();
       expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 259200, 604800]);
       expect(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC).toBe(259200);
-      expect(config.FILE_REQUEST_MAX_UPLOADS).toBe(10);
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(10);
       expect(config.FILE_REQUEST_MAX_SIZE).toBe(config.FILE_MAX_SIZE);
       expect(config.FILE_REQUEST_RETENTION_SEC).toBe(604800);
-      expect(config.FILE_REQUEST_DOWNLOADS).toBe(5);
-      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(10);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(5);
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(100);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(false);
     });
 
     it("should parse FILE_REQUEST_MAX_SIZE with units", async () => {
@@ -545,13 +548,39 @@ describe("config", () => {
       await expect(loadFreshConfig()).rejects.toThrow("must not exceed FILE_MAX_SIZE");
     });
 
-    it("should reject limits out of range", async () => {
-      process.env.FILE_REQUEST_MAX_UPLOADS = "0";
+    it("should reject options out of range", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "0,10";
       await expect(loadFreshConfig()).rejects.toThrow();
       vi.resetModules();
-      process.env.FILE_REQUEST_MAX_UPLOADS = "10";
-      process.env.FILE_REQUEST_DOWNLOADS = "101";
-      await expect(loadFreshConfig()).rejects.toThrow();
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "10,1001";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 1000");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_UPLOAD_OPTIONS;
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "5,101";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 100");
+    });
+
+    it("should reject a default number of uploads or downloads that is not an option", async () => {
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "7";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_UPLOAD_OPTIONS");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_DEFAULT_UPLOADS;
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "4";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_DOWNLOAD_OPTIONS");
+    });
+
+    it("should parse custom options and a forced password", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "5, 25, 250";
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "25";
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "1,3";
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "3";
+      process.env.FORCE_REQUEST_PASSWORD = "true";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([5, 25, 250]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(25);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 3]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(3);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(true);
     });
 
     it("should turn the daily limit off at 0", async () => {

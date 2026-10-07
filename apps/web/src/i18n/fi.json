@@ -485,8 +485,6 @@
       "dailyLimit": "Olet luonut niin monta pyyntöä kuin tämä palvelin sallii päivässä. Yritä huomenna uudelleen.",
       "failed": "Pyyntöä ei voitu luoda."
     },
-    "retentionHint_one": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kerran.",
-    "retentionHint_other": "Jokainen tiedosto säilyy {{time}} saapumisesta, ja sen voi ladata {{count}} kertaa.",
     "asks": "Pyydä",
     "asksFiles": "Tiedostot",
     "asksNote": "Muistiinpano",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} lähetyskerta",
     "submissionsCount_other": "{{count}} lähetyskertaa",
     "summaryBoth": "Auki <b>{{expiry}}</b>, enintään <b>{{uploads}}</b>, kussakin tiedostot enintään <b>{{size}}</b> ja muistiinpano.",
-    "asksBothUnavailable": "Vaatii vähintään kaksi latausta pyyntöä kohden"
+    "downloads": "Latauskerrat lähetystä kohden",
+    "views": "Katselukerrat muistiinpanoa kohden",
+    "retention": "Jokainen lähetys säilyy {{time}} saapumisesta.",
+    "limitLeft_one": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
+    "limitLeft_other": "Tänään jäljellä {{count}}/{{limit}} uutta pyyntöä.",
+    "limitReached": "Tänään ei voi luoda enää uusia pyyntöjä. Seuraavan voi luoda {{time}} kuluttua."
   },
   "template": {
     "title": "Muistiinpanon pohja",

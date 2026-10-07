@@ -47,6 +47,8 @@ interface RequestUploadSession {
   slots: 1 | 2;
   /** The held slot this upload took. It goes back to its hold when the upload does not finish. */
   held?: SlotHold;
+  /** How often the requester can download the upload, as the request set it. */
+  downloads: number;
 }
 
 const createSchema = z
@@ -70,9 +72,28 @@ const createSchema = z
     expireSec: z.number().int().positive(),
     maxUploads: z.number().int().positive(),
     maxSize: z.number().int().positive(),
+    downloads: z.number().int().positive(),
     hasPassword: z.boolean().default(false),
   })
   .strict();
+
+/**
+ * Whether a request may take this many uploads. The server cannot tell a request for files
+ * and a note from one for one thing, so an option counts as it is or twice, the submissions
+ * of a request for both taking two uploads each.
+ */
+function uploadsOffered(maxUploads: number, options: readonly number[]): boolean {
+  return options.includes(maxUploads) || (maxUploads % 2 === 0 && options.includes(maxUploads / 2));
+}
+
+/** Who the daily limit counts: the signed-in user where there is one, the IP otherwise. */
+function limitIdentity(
+  c: Context<{ Variables: Partial<OidcGuardVariables> }>,
+  trustProxy: boolean,
+): string {
+  const user = c.get("oidcUser");
+  return user ? `oidc:${user.sub}` : `ip:${getClientIp(c, trustProxy)}`;
+}
 
 const initSchema = z.object({
   salt: base64urlBytes(SALT_LENGTH),
@@ -207,7 +228,7 @@ function storeRequestUpload(
           wrapCiphertext: body.wrapCiphertext,
           encryptedMeta: body.encryptedMeta,
           metaNonce: body.metaNonce,
-          maxDownloads: config.FILE_REQUEST_DOWNLOADS,
+          maxDownloads: upload.session.downloads,
           downloadCount: 0,
           expiresAt: new Date(now.getTime() + config.FILE_REQUEST_RETENTION_SEC * 1000),
           createdAt: now,
@@ -372,11 +393,11 @@ export function createRequestRoute({
       if (!config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.includes(data.expireSec)) {
         return c.json({ error: "Invalid expiry time" }, 400);
       }
-      if (data.maxUploads > config.FILE_REQUEST_MAX_UPLOADS) {
-        return c.json(
-          { error: `A request accepts at most ${config.FILE_REQUEST_MAX_UPLOADS} uploads` },
-          400,
-        );
+      if (!uploadsOffered(data.maxUploads, config.FILE_REQUEST_UPLOAD_OPTIONS)) {
+        return c.json({ error: "Invalid number of uploads" }, 400);
+      }
+      if (!config.FILE_REQUEST_DOWNLOAD_OPTIONS.includes(data.downloads)) {
+        return c.json({ error: "Invalid number of downloads" }, 400);
       }
       if (data.maxSize > config.FILE_REQUEST_MAX_SIZE) {
         return c.json(
@@ -384,15 +405,12 @@ export function createRequestRoute({
           400,
         );
       }
-      if (config.FORCE_FILE_PASSWORD && !data.hasPassword) {
+      if (config.FORCE_REQUEST_PASSWORD && !data.hasPassword) {
         return c.json({ error: "A password is required for file requests on this server" }, 400);
       }
 
-      // The daily limit counts the signed-in user where there is one, the IP otherwise.
-      // Neither is stored with the request.
-      const user = c.get("oidcUser");
-      const identity = user ? `oidc:${user.sub}` : `ip:${getClientIp(c, config.TRUST_PROXY)}`;
-      if (!limiter.take(identity)) {
+      // Neither the user nor the IP is stored with the request.
+      if (!limiter.take(limitIdentity(c, config.TRUST_PROXY))) {
         return c.json({ error: "Too many file requests today. Try again tomorrow." }, 429);
       }
 
@@ -414,6 +432,7 @@ export function createRequestRoute({
           hasPassword: data.hasPassword,
           maxUploads: data.maxUploads,
           maxSize: data.maxSize,
+          downloads: data.downloads,
           closesAt,
           createdAt: now,
         })
@@ -422,6 +441,24 @@ export function createRequestRoute({
       return c.json({ id, closesAt: closesAt.toISOString() }, 201);
     },
   );
+
+  /**
+   * GET /api/request/limit
+   * How many new requests the caller has left today, counted as creating one counts them.
+   * Before /:id, which would take "limit" for an ID.
+   */
+  route.get("/limit", createGuard ?? ((_c, next) => next()), (c) => {
+    const config = getConfig();
+    const left = limiter.peek(limitIdentity(c, config.TRUST_PROXY));
+    // The end of the day only once it matters. People behind one IP share a count, and the
+    // time of the first request of the day would tell one of them when another made it.
+    const resetsAt = left?.remaining === 0 && left.resetsAt ? left.resetsAt : null;
+    return c.json({
+      dailyLimit: config.FILE_REQUEST_DAILY_LIMIT,
+      remaining: left?.remaining ?? null,
+      resetsAt: resetsAt ? new Date(resetsAt).toISOString() : null,
+    });
+  });
 
   /**
    * GET /api/request/:id
@@ -479,6 +516,7 @@ export function createRequestRoute({
       salt,
       fileCount,
       contentLength,
+      downloads: request.downloads,
       ...claimed,
     };
     try {
@@ -638,7 +676,14 @@ export function createRequestRoute({
             if ("refused" in claimed) return refuse(claimed.refused.status, claimed.refused.error);
             return {
               contentLength,
-              meta: { requestId: id, salt, fileCount, contentLength, ...claimed },
+              meta: {
+                requestId: id,
+                salt,
+                fileCount,
+                contentLength,
+                downloads: request.downloads,
+                ...claimed,
+              },
               quotaHashedIp: quotaResult.hashedIp,
             };
           },

@@ -13,6 +13,7 @@ import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateRequest } from "@/hooks/useFileRequests";
 import { useRequestTemplates } from "@/hooks/useRequestTemplates";
+import { useRequestLimit } from "@/hooks/useRequestLimit";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import type { NewRequestOptions } from "@/hooks/useFileRequests";
 import type { RequestTemplate } from "@/lib/request-templates";
@@ -30,6 +31,12 @@ export function RequestsPage() {
   const { isLoggedIn, loading: authLoading } = useAuth(config);
   const creator = useCreateRequest(hashWasmArgon2);
   const kept = useRequestTemplates();
+  // Asked again once a request was created, which counts one, or creating failed, which may
+  // be the limit another tab used up.
+  const dailyLimit = useRequestLimit(
+    !!config?.fileRequestsEnabled,
+    `${creator.created?.request.id ?? ""}:${creator.error ?? ""}`,
+  );
   const editId = params.get("edit");
   const startId = params.get("template");
   const editing = editId ? kept.templates.find((template) => template.id === editId) : undefined;
@@ -101,6 +108,7 @@ export function RequestsPage() {
         start={start}
         editing={editing}
         onSaveTemplate={kept.save}
+        dailyLimit={dailyLimit}
         onEditDone={() => navigate("/settings?tab=templates", { replace: true })}
       />
     );

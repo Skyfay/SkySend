@@ -81,6 +81,8 @@ export const fileRequests = sqliteTable(
     maxUploads: integer("max_uploads").notNull(),
     /** Most bytes one upload may have. */
     maxSize: integer("max_size").notNull(),
+    /** How often the requester can download each upload. Rows from before it was chosen get 5. */
+    downloads: integer("downloads").default(5).notNull(),
     /** Uploads started or finished. An upload that is abandoned gives its slot back. */
     reservedUploads: integer("reserved_uploads").default(0).notNull(),
     /**

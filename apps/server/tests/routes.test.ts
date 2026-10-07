@@ -141,10 +141,13 @@ describe("routes", () => {
         ...DEFAULT_CONFIG,
         FILE_REQUEST_EXPIRE_OPTIONS_SEC: [86400, 259200],
         FILE_REQUEST_DEFAULT_EXPIRE_SEC: 86400,
-        FILE_REQUEST_MAX_UPLOADS: 4,
+        FILE_REQUEST_UPLOAD_OPTIONS: [1, 4],
+        FILE_REQUEST_DEFAULT_UPLOADS: 4,
         FILE_REQUEST_MAX_SIZE: 1024,
         FILE_REQUEST_RETENTION_SEC: 3600,
-        FILE_REQUEST_DOWNLOADS: 2,
+        FILE_REQUEST_DOWNLOAD_OPTIONS: [2, 3],
+        FILE_REQUEST_DEFAULT_DOWNLOADS: 2,
+        FORCE_REQUEST_PASSWORD: true,
       });
       const app = new Hono();
       app.route("/api/config", configRoute);
@@ -152,10 +155,13 @@ describe("routes", () => {
       expect(body).toMatchObject({
         fileRequestExpireOptions: [86400, 259200],
         fileRequestDefaultExpire: 86400,
-        fileRequestMaxUploads: 4,
+        fileRequestUploadOptions: [1, 4],
+        fileRequestDefaultUploads: 4,
         fileRequestMaxSize: 1024,
         fileRequestRetention: 3600,
-        fileRequestDownloads: 2,
+        fileRequestDownloadOptions: [2, 3],
+        fileRequestDefaultDownloads: 2,
+        forceRequestPassword: true,
       });
     });
 

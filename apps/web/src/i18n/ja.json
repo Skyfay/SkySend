@@ -315,8 +315,6 @@
       "inbox.passwordRequired",
       "inbox.deleteFileTitle",
       "inbox.deleteFileText",
-      "request.retentionHint_one",
-      "request.retentionHint_other",
       "requestUpload.errorText",
       "errors.linkRewrittenInboxDesc",
       "errors.linkRewrittenUploadDesc",
@@ -378,7 +376,6 @@
       "requests.receivedSubmissions_other",
       "inbox.usageSubmissions",
       "inbox.submission",
-      "request.asksBothUnavailable",
       "requestUpload.stepDone",
       "templates.startWith",
       "templates.manage",
@@ -508,7 +505,13 @@
       "settings.passwordOn",
       "settings.passwordOff",
       "settings.sendsHint",
-      "settings.defaultsHint"
+      "settings.defaultsHint",
+      "request.downloads",
+      "request.views",
+      "request.retention",
+      "request.limitLeft_one",
+      "request.limitLeft_other",
+      "request.limitReached"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -993,8 +996,6 @@
       "dailyLimit": "このサーバーで 1 日に作成できる上限に達しました。明日もう一度お試しください。",
       "failed": "リクエストを作成できませんでした。"
     },
-    "retentionHint_one": "各ファイルは届いてから {{time}} 保持され、{{count}} 回ダウンロードできます。",
-    "retentionHint_other": "各ファイルは届いてから {{time}} 保持され、{{count}} 回ダウンロードできます。",
     "asks": "依頼する内容",
     "asksFiles": "ファイル",
     "asksNote": "メモ",
@@ -1006,7 +1007,12 @@
     "submissionsCount_one": "{{count}} 件の提出",
     "submissionsCount_other": "{{count}} 件の提出",
     "summaryBoth": "<b>{{expiry}}</b> 受付、最大 <b>{{uploads}}</b>、それぞれ最大 <b>{{size}}</b> のファイルとメモ 1 件。",
-    "asksBothUnavailable": "1 件のリクエストにアップロードが 2 件以上必要です"
+    "downloads": "アップロードごとのダウンロード数",
+    "views": "メモごとの閲覧回数",
+    "retention": "各アップロードは届いてから {{time}} 保持されます。",
+    "limitLeft_one": "本日あと {{count}} 件の新しいリクエストを作成できます（上限 {{limit}} 件）。",
+    "limitLeft_other": "本日あと {{count}} 件の新しいリクエストを作成できます（上限 {{limit}} 件）。",
+    "limitReached": "本日はこれ以上リクエストを作成できません。{{time}} 後に再び作成できます。"
   },
   "template": {
     "title": "メモのテンプレート",

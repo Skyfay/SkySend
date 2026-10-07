@@ -485,8 +485,6 @@
       "dailyLimit": "Utworzono tyle próśb, ile ten serwer pozwala dziennie. Spróbuj jutro.",
       "failed": "Nie udało się utworzyć prośby."
     },
-    "retentionHint_one": "Każdy plik zostaje przez {{time}} od dotarcia, a pobrać go można {{count}} raz.",
-    "retentionHint_other": "Każdy plik zostaje przez {{time}} od dotarcia, a liczba pobrań wynosi: {{count}}.",
     "asks": "Poproś o",
     "asksFiles": "Pliki",
     "asksNote": "Notatkę",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "Zgłoszenia: {{count}}",
     "submissionsCount_other": "Zgłoszenia: {{count}}",
     "summaryBoth": "Otwarta przez <b>{{expiry}}</b>, maksymalnie <b>{{uploads}}</b>, każde z plikami do <b>{{size}}</b> i notatką.",
-    "asksBothUnavailable": "Wymaga co najmniej dwóch przesłań na prośbę"
+    "downloads": "Pobrania na przesyłkę",
+    "views": "Wyświetlenia na notatkę",
+    "retention": "Każda przesyłka zostaje przez {{time}} od dotarcia.",
+    "limitLeft_one": "Pozostałe nowe prośby na dziś: {{count}} z {{limit}}.",
+    "limitLeft_other": "Pozostałe nowe prośby na dziś: {{count}} z {{limit}}.",
+    "limitReached": "Na dziś nie można utworzyć więcej próśb. Kolejną utworzysz za {{time}}."
   },
   "template": {
     "title": "Szablon notatki",

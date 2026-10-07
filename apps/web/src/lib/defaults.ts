@@ -25,6 +25,8 @@ const requestSchema = z
     /** Submissions in a request for files and a note, uploads otherwise. */
     sends: count.optional(),
     maxSize: count.optional(),
+    /** How often the requester can download each upload. */
+    downloads: count.optional(),
     password: z.boolean().optional(),
   })
   .catch({});
@@ -150,27 +152,32 @@ export function noteStart(config: ServerConfig, defaults: ShareDefaults = readDe
   };
 }
 
-/** How many sends a request starts with when this browser keeps no number. The server has no default of its own. */
-const DEFAULT_SENDS = 10;
-
 /** How a request starts: the browser's defaults within what the server offers. */
 export function requestStart(
   config: ServerConfig,
   defaults: RequestDefaults = readDefaults().request,
 ) {
-  const max = config.fileRequestMaxUploads;
   return {
     expireSec: pickOption(
       config.fileRequestExpireOptions,
       defaults.expireSec,
       config.fileRequestDefaultExpire,
     ),
-    sends: Math.max(1, Math.min(defaults.sends || DEFAULT_SENDS, max)),
+    sends: pickOption(
+      config.fileRequestUploadOptions,
+      defaults.sends,
+      config.fileRequestDefaultUploads,
+    ),
     maxSize: pickOption(
       requestSizeOptions(config.fileRequestMaxSize),
       defaults.maxSize,
       config.fileRequestMaxSize,
     ),
-    password: config.forceFilePassword || defaults.password === true,
+    downloads: pickOption(
+      config.fileRequestDownloadOptions,
+      defaults.downloads,
+      config.fileRequestDefaultDownloads,
+    ),
+    password: config.forceRequestPassword || defaults.password === true,
   };
 }

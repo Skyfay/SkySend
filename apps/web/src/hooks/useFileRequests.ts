@@ -14,6 +14,8 @@ export interface NewRequestOptions {
   expireSec: number;
   maxUploads: number;
   maxSize: number;
+  /** How often the requester can download each upload. */
+  downloads: number;
   password: string;
 }
 
@@ -47,6 +49,7 @@ export function useCreateRequest(argon2id: Argon2idHashFn) {
           expireSec: options.expireSec,
           maxUploads: options.maxUploads,
           maxSize: options.maxSize,
+          downloads: options.downloads,
         });
         const request: StoredRequest = {
           id,

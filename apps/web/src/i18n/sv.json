@@ -485,8 +485,6 @@
       "dailyLimit": "Du har skapat så många förfrågningar som servern tillåter per dag. Försök igen i morgon.",
       "failed": "Förfrågan kunde inte skapas."
     },
-    "retentionHint_one": "Varje fil finns kvar i {{time}} efter att den kommit och kan laddas ner {{count}} gång.",
-    "retentionHint_other": "Varje fil finns kvar i {{time}} efter att den kommit och kan laddas ner {{count}} gånger.",
     "asks": "Begär",
     "asksFiles": "Filer",
     "asksNote": "Anteckning",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} inskick",
     "submissionsCount_other": "{{count}} inskick",
     "summaryBoth": "Öppen i <b>{{expiry}}</b>, upp till <b>{{uploads}}</b>, vart och ett med filer på högst <b>{{size}}</b> och en anteckning.",
-    "asksBothUnavailable": "Kräver minst två uppladdningar per förfrågan"
+    "downloads": "Nedladdningar per uppladdning",
+    "views": "Visningar per anteckning",
+    "retention": "Varje uppladdning finns kvar i {{time}} efter att den kommit.",
+    "limitLeft_one": "{{count}} ny förfrågan kvar i dag, av {{limit}}.",
+    "limitLeft_other": "{{count}} nya förfrågningar kvar i dag, av {{limit}}.",
+    "limitReached": "Inga nya förfrågningar kvar i dag. Du kan skapa en ny om {{time}}."
   },
   "template": {
     "title": "Mall för anteckningen",

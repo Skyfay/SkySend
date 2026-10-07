@@ -12,8 +12,9 @@ Like everything in SkySend, what they send is encrypted before it leaves their b
 4. For a note, optionally lay out its fields in the **Note template**, for example a username and a password. Without fields the sender writes freely.
 5. Choose:
    - **Open for** - How long the request takes uploads, one of the times the instance offers
-   - **Uploads** - How many uploads it takes in total. A note counts as one. For **Both**, this is **Submissions**: one sender's files and note together, which take two uploads of the request.
+   - **Uploads** - How many uploads it takes in total, one of the options the instance offers. A note counts as one. For **Both**, this is **Submissions**: one sender's files and note together, which take two uploads of the request.
    - **Size per upload** - How many bytes one upload may have, at most the [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) of the instance. Only for files.
+   - **Downloads per upload** - How often you can download each upload, or open each note.
    - **Password** - Optional. The inbox then opens only with the link and the password together.
 6. Click **Create request**
 
@@ -92,7 +93,7 @@ While a SkySend page is visible, the browser checks up to 20 of the newest reque
 | An upload is deleted | [`FILE_REQUEST_RETENTION_SEC`](/user-guide/configuration/environment-variables#file-requests) after it arrived, or once its downloads are used up |
 | The request itself is deleted | About 75 minutes after the time you chose ran out, once no upload is left in it. Closing it by hand does not bring this forward, deleting it does. |
 
-Each upload can be downloaded [`FILE_REQUEST_DOWNLOADS`](/user-guide/configuration/environment-variables#file-requests) times.
+Each upload can be downloaded as often as the request set, one of the [`FILE_REQUEST_DOWNLOAD_OPTIONS`](/user-guide/configuration/environment-variables#file-requests).
 
 ## What the Server Knows
 
@@ -114,12 +115,12 @@ File requests are on by default. Leave `request` out of [`ENABLED_SERVICES`](/us
 
 - With [`OIDC_PROTECT_FILES`](/user-guide/configuration/environment-variables#sso-oidc-authentication), creating a request needs a login. Uploading into one never does, the upload link is enough.
 - A request for a note is part of the `request` service and works when `note` is left out of `ENABLED_SERVICES` too. Its size still follows [`NOTE_MAX_SIZE`](/user-guide/configuration/environment-variables#notes), and the size per upload of the request.
-- With [`FORCE_FILE_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization), the app asks for a password for every inbox, the same as for every file.
-- [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. The count lives in memory and resets on a restart.
+- With [`FORCE_REQUEST_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization), the app asks for a password for every inbox. [`FORCE_FILE_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization) covers shared files only.
+- [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. The count lives in memory and resets on a restart. The request form shows how many are left today.
 - An abuse report for a file request takes its upload link. The report form refuses inbox links, since their key would open every file sent to the request.
 - A wrong inbox password counts toward the same lockout as a wrong file password, [`PASSWORD_MAX_ATTEMPTS`](/user-guide/configuration/environment-variables#password-lockout) per IP. An inbox without a password never locks, since nobody can guess its 256-bit key.
-- One request can take its number of uploads times its size per upload, for example 1000 × 2 GB with the largest settings. Choose [`FILE_REQUEST_MAX_UPLOADS`](/user-guide/configuration/environment-variables#file-requests) and [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) with that product in mind.
-- With `FORCE_FILE_PASSWORD`, the server refuses a request that does not say it has a password. It cannot check the password itself, which never reaches it.
+- One request can take its number of uploads times its size per upload. Any request may take up to twice the largest of the [`FILE_REQUEST_UPLOAD_OPTIONS`](/user-guide/configuration/environment-variables#file-requests), since a submission of files and a note takes two uploads and the server cannot tell what a request asks for, for example 200 × 2 GB with the defaults. Choose the options and [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) with that product in mind.
+- With `FORCE_REQUEST_PASSWORD`, the server refuses a request that does not say it has a password. It cannot check the password itself, which never reaches it.
 - Uploads into a request take the same transports as normal uploads: WebSocket when [`FILE_UPLOAD_WS`](/user-guide/configuration/environment-variables#file) is on, chunked HTTP otherwise and whenever the WebSocket cannot connect.
 - The [admin CLI](/user-guide/admin-cli/commands) lists, counts and deletes requests like uploads and notes.
 

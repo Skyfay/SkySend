@@ -39,10 +39,12 @@ configRoute.get("/", (c) => {
     // File request configuration
     fileRequestExpireOptions: config.FILE_REQUEST_EXPIRE_OPTIONS_SEC,
     fileRequestDefaultExpire: config.FILE_REQUEST_DEFAULT_EXPIRE_SEC,
-    fileRequestMaxUploads: config.FILE_REQUEST_MAX_UPLOADS,
+    fileRequestUploadOptions: config.FILE_REQUEST_UPLOAD_OPTIONS,
+    fileRequestDefaultUploads: config.FILE_REQUEST_DEFAULT_UPLOADS,
     fileRequestMaxSize: config.FILE_REQUEST_MAX_SIZE,
     fileRequestRetention: config.FILE_REQUEST_RETENTION_SEC,
-    fileRequestDownloads: config.FILE_REQUEST_DOWNLOADS,
+    fileRequestDownloadOptions: config.FILE_REQUEST_DOWNLOAD_OPTIONS,
+    fileRequestDefaultDownloads: config.FILE_REQUEST_DEFAULT_DOWNLOADS,
     // General
     customTitle: config.CUSTOM_TITLE,
     customColor: config.CUSTOM_COLOR ?? null,
@@ -58,6 +60,7 @@ configRoute.get("/", (c) => {
     defaultTab: config.DEFAULT_TAB,
     forceFilePassword: config.FORCE_FILE_PASSWORD,
     forceNotePassword: config.FORCE_NOTE_PASSWORD,
+    forceRequestPassword: config.FORCE_REQUEST_PASSWORD,
     // OIDC auth
     oidcEnabled: config.OIDC_ENABLED,
     oidcProtectFiles: config.OIDC_ENABLED && config.OIDC_PROTECT_FILES,

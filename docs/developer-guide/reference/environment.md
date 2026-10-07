@@ -272,15 +272,24 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | `259200` |
 | Description | Default for new file requests. Must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`. |
 
-### FILE_REQUEST_MAX_UPLOADS
+### FILE_REQUEST_UPLOAD_OPTIONS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `1,2,3,5,10,20,50,100` |
+| Range | Each `1` to `1000` |
+| Description | How many uploads a file request takes, as options for the requester. A request for files and a note counts submissions with them, which take two uploads each, so the server accepts an option or twice an option. |
+
+### FILE_REQUEST_DEFAULT_UPLOADS
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Integer |
 | Default | `10` |
-| Range | `1` to `1000` |
-| Description | Most uploads one file request takes. |
+| Description | Default for new file requests. Must be one of `FILE_REQUEST_UPLOAD_OPTIONS`. |
 
 ### FILE_REQUEST_MAX_SIZE
 
@@ -300,15 +309,24 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Default | `604800` |
 | Description | How long an uploaded file stays in the inbox after it arrived. |
 
-### FILE_REQUEST_DOWNLOADS
+### FILE_REQUEST_DOWNLOAD_OPTIONS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `1,2,3,5,10,20` |
+| Range | Each `1` to `100` |
+| Description | How often the requester can download each upload of a file request, as options chosen per request. |
+
+### FILE_REQUEST_DEFAULT_DOWNLOADS
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Integer |
 | Default | `5` |
-| Range | `1` to `100` |
-| Description | How often the requester can download each uploaded file. |
+| Description | Default for new file requests. Must be one of `FILE_REQUEST_DOWNLOAD_OPTIONS`. |
 
 ### FILE_REQUEST_DAILY_LIMIT
 
@@ -316,8 +334,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Integer |
-| Default | `10` |
-| Description | New file requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by HMAC-hashed IP otherwise. `0` turns the limit off. In memory, a restart resets it. |
+| Default | `100` |
+| Description | New file requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by HMAC-hashed IP otherwise. The day starts with the first request of that user or IP. `0` turns the limit off. In memory, a restart resets it. Behind a reverse proxy, `TRUST_PROXY` has to be on, or every user counts as the proxy's IP. |
 
 ### ENABLED_SERVICES
 

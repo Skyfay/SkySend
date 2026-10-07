@@ -32,6 +32,8 @@ export interface TemplateLimits {
   /** Submissions in a request for files and a note, uploads otherwise. */
   sends: number;
   maxSize: number;
+  /** How often each upload can be downloaded. Missing in a template made before it was chosen. */
+  downloads?: number;
 }
 
 /**
@@ -77,6 +79,7 @@ const fieldsSchema = z.object({
       expireSec: z.number().int().positive().max(MAX_SECONDS),
       sends: z.number().int().positive().max(1_000_000),
       maxSize: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+      downloads: z.number().int().positive().max(1000).optional(),
     })
     .optional(),
 });

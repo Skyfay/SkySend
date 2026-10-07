@@ -485,8 +485,6 @@
       "dailyLimit": "Du har opprettet så mange forespørsler som serveren tillater per dag. Prøv igjen i morgen.",
       "failed": "Forespørselen kunne ikke opprettes."
     },
-    "retentionHint_one": "Hver fil blir liggende i {{time}} etter at den kom, og kan lastes ned {{count}} gang.",
-    "retentionHint_other": "Hver fil blir liggende i {{time}} etter at den kom, og kan lastes ned {{count}} ganger.",
     "asks": "Be om",
     "asksFiles": "Filer",
     "asksNote": "Notat",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} innsending",
     "submissionsCount_other": "{{count}} innsendinger",
     "summaryBoth": "Åpen i <b>{{expiry}}</b>, opptil <b>{{uploads}}</b>, hver med filer på maks <b>{{size}}</b> og et notat.",
-    "asksBothUnavailable": "Krever minst to opplastinger per forespørsel"
+    "downloads": "Nedlastinger per opplasting",
+    "views": "Visninger per notat",
+    "retention": "Hver opplasting blir liggende i {{time}} etter at den kom.",
+    "limitLeft_one": "{{count}} ny forespørsel igjen i dag, av {{limit}}.",
+    "limitLeft_other": "{{count}} nye forespørsler igjen i dag, av {{limit}}.",
+    "limitReached": "Ingen nye forespørsler igjen i dag. Du kan opprette en ny om {{time}}."
   },
   "template": {
     "title": "Mal for notatet",

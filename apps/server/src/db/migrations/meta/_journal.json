@@ -36,6 +36,13 @@
       "when": 1791361713655,
       "tag": "0004_request_brief",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791375297509,
+      "tag": "0005_request_downloads",
+      "breakpoints": true
     }
   ]
 }

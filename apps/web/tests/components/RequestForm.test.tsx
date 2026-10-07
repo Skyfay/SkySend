@@ -20,13 +20,15 @@ import { writeDefaults } from "../../src/lib/defaults.js";
 const GIB = 1024 ** 3;
 const config = {
   fileRequestMaxSize: 10 * GIB,
-  fileRequestMaxUploads: 20,
+  fileRequestUploadOptions: [1, 2, 3, 5, 10, 20],
+  fileRequestDefaultUploads: 10,
+  fileRequestDownloadOptions: [1, 2, 5],
+  fileRequestDefaultDownloads: 5,
   fileRequestExpireOptions: [86_400, 259_200, 604_800],
   fileRequestDefaultExpire: 86_400,
   fileRequestRetention: 604_800,
-  fileRequestDownloads: 5,
   noteMaxSize: 1024 * 1024,
-  forceFilePassword: false,
+  forceRequestPassword: false,
 } as ServerConfig;
 
 const access: RequestTemplate = {
@@ -114,13 +116,33 @@ describe("RequestForm with templates", () => {
   });
 
   it("starts from this browser's defaults, also from a template that keeps no limits", () => {
-    writeDefaults({ file: {}, note: {}, request: { expireSec: 259_200, sends: 3 } });
+    writeDefaults({ file: {}, note: {}, request: { expireSec: 259_200, sends: 3, downloads: 2 } });
     const handlers = renderForm({ start: wlan });
     fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
     expect(handlers.onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ asks: ["note"], expireSec: 259_200, maxUploads: 3 }),
+      expect.objectContaining({ asks: ["note"], expireSec: 259_200, maxUploads: 3, downloads: 2 }),
       wlan,
     );
+  });
+
+  it("says how many new requests are left today, and stops at none", () => {
+    renderForm({ dailyLimit: { dailyLimit: 10, remaining: 3, resetsAt: null } });
+    expect(screen.getByText("request.limitLeft")).toBeTruthy();
+    cleanup();
+    const handlers = renderForm({
+      dailyLimit: { dailyLimit: 10, remaining: 0, resetsAt: "2099-01-01T00:00:00.000Z" },
+    });
+    expect(screen.getByText("request.limitReached")).toBeTruthy();
+    const create = screen.getByRole("button", { name: /request\.create/ }) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    fireEvent.click(create);
+    expect(handlers.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("says nothing of a limit where the server sets none", () => {
+    renderForm({ dailyLimit: { dailyLimit: 0, remaining: null, resetsAt: null } });
+    expect(screen.queryByText("request.limitLeft")).toBeNull();
+    expect(screen.queryByText("request.limitReached")).toBeNull();
   });
 
   it("names the template a request is created from, so it counts as used once created", () => {
@@ -147,21 +169,24 @@ describe("RequestForm with templates", () => {
     expect(screen.getByRole("tab", { selected: true }).textContent).toContain("request.asksBoth");
   });
 
-  it("falls back from both to the note and fits the limits on a smaller server", () => {
-    renderForm({
+  it("fits the limits of a template to a smaller server, and counts submissions twice", () => {
+    const handlers = renderForm({
       start: access,
-      config: { ...config, fileRequestMaxUploads: 1, fileRequestMaxSize: GIB },
+      config: { ...config, fileRequestUploadOptions: [1, 2], fileRequestMaxSize: GIB },
     });
-    expect(screen.getByRole("tab", { selected: true }).textContent).toContain("request.asksNote");
-    expect(
-      (screen.getByRole("tab", { name: /request\.asksBoth/ }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(screen.getByRole("tab", { selected: true }).textContent).toContain("request.asksBoth");
+    fireEvent.click(screen.getByRole("button", { name: /request\.create/ }));
+    // Five submissions fit to the two the server offers, which take four uploads.
+    expect(handlers.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ maxUploads: 4, maxSize: GIB, downloads: 5 }),
+      access,
+    );
   });
 
   it("keeps the template's own values when an edit on a smaller server leaves them alone", async () => {
     const handlers = renderForm({
       editing: access,
-      config: { ...config, fileRequestMaxUploads: 1, fileRequestMaxSize: GIB },
+      config: { ...config, fileRequestUploadOptions: [1, 2], fileRequestMaxSize: GIB },
     });
     expect(screen.getByText(/templates\.editAdjusted/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /templates\.saveEdited/ }));
@@ -185,7 +210,7 @@ describe("RequestForm with templates", () => {
       name: "Mine",
       asks: ["files", "note"],
       note: access.note,
-      limits: { expireSec: 259_200, sends: 5, maxSize: 2 * GIB },
+      limits: { expireSec: 259_200, sends: 5, maxSize: 2 * GIB, downloads: 5 },
     });
     expect(replace).toBeUndefined();
   });

@@ -57,6 +57,7 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | `GET /api/quota` | none | Remaining upload quota for the caller |
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
 | `POST /api/request` | OIDC when `OIDC_PROTECT_FILES` | Create a file request, daily limit per user or IP |
+| `GET /api/request/limit` | OIDC when `OIDC_PROTECT_FILES` | How many new requests the caller has left today, without counting one |
 | `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, uploads left, size of one upload |
 | `GET /api/request/:id/upload/ws` | upload token in the init frame | WebSocket upload into a request, primary path when `FILE_UPLOAD_WS=true` |
 | `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, the fallback |

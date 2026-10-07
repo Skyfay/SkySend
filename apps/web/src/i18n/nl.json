@@ -485,8 +485,6 @@
       "dailyLimit": "Je hebt zoveel verzoeken gemaakt als deze server per dag toestaat. Probeer het morgen opnieuw.",
       "failed": "Het verzoek kon niet worden gemaakt."
     },
-    "retentionHint_one": "Elk bestand blijft {{time}} na aankomst en kan {{count}} keer worden gedownload.",
-    "retentionHint_other": "Elk bestand blijft {{time}} na aankomst en kan {{count}} keer worden gedownload.",
     "asks": "Aanvragen",
     "asksFiles": "Bestanden",
     "asksNote": "Notitie",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} inzending",
     "submissionsCount_other": "{{count}} inzendingen",
     "summaryBoth": "Open voor <b>{{expiry}}</b>, tot <b>{{uploads}}</b>, elk met bestanden van maximaal <b>{{size}}</b> en een notitie.",
-    "asksBothUnavailable": "Vraagt minstens twee uploads per verzoek"
+    "downloads": "Downloads per upload",
+    "views": "Weergaven per notitie",
+    "retention": "Elke upload blijft {{time}} na aankomst.",
+    "limitLeft_one": "Vandaag nog {{count}} nieuw verzoek, van {{limit}}.",
+    "limitLeft_other": "Vandaag nog {{count}} nieuwe verzoeken, van {{limit}}.",
+    "limitReached": "Vandaag kunnen er geen nieuwe verzoeken meer bij. U kunt er weer een maken over {{time}}."
   },
   "template": {
     "title": "Sjabloon voor de notitie",

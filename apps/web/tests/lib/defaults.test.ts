@@ -24,9 +24,13 @@ const config = {
   noteDefaultViews: 1,
   fileRequestExpireOptions: [86_400, 259_200],
   fileRequestDefaultExpire: 86_400,
-  fileRequestMaxUploads: 20,
+  fileRequestUploadOptions: [1, 2, 3, 5, 10, 20],
+  fileRequestDefaultUploads: 10,
+  fileRequestDownloadOptions: [1, 2, 5],
+  fileRequestDefaultDownloads: 5,
   fileRequestMaxSize: 10 * GIB,
   forceFilePassword: false,
+  forceRequestPassword: false,
   forceNotePassword: false,
 } as ServerConfig;
 
@@ -66,6 +70,7 @@ describe("the starts of the forms", () => {
     expect(requestStart(config, {})).toEqual({
       expireSec: 86_400,
       sends: 10,
+      downloads: 5,
       maxSize: 10 * GIB,
       password: false,
     });
@@ -80,15 +85,21 @@ describe("the starts of the forms", () => {
     // Unlimited views stay unlimited, never turn into the next smaller option.
     expect(noteStart(config, { limit: 0 }).limit).toBe(0);
     expect(noteStart({ ...config, noteViewOptions: [1, 5] }, { limit: 0 }).limit).toBe(1);
-    expect(requestStart(config, { sends: 50, maxSize: 2 * GIB })).toMatchObject({
-      sends: 20,
+    expect(requestStart(config, { sends: 50, maxSize: 2 * GIB, downloads: 2 })).toMatchObject({
+      sends: 10,
+      downloads: 2,
       maxSize: 2 * GIB,
     });
     expect(requestStart(config, { maxSize: 3 * GIB }).maxSize).toBe(10 * GIB);
   });
 
   it("keep a password the server asks for on, whatever this browser says", () => {
-    const forced = { ...config, forceFilePassword: true, forceNotePassword: true };
+    const forced = {
+      ...config,
+      forceFilePassword: true,
+      forceNotePassword: true,
+      forceRequestPassword: true,
+    };
     expect(fileStart(forced, { password: false }).password).toBe(true);
     expect(noteStart(forced, { password: false }).password).toBe(true);
     expect(requestStart(forced, { password: false }).password).toBe(true);

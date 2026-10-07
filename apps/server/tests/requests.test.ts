@@ -49,12 +49,15 @@ const DEFAULT_CONFIG = {
   FILE_UPLOAD_SPEED_LIMIT: 0,
   FILE_REQUEST_EXPIRE_OPTIONS_SEC: [86400, 259200, 604800],
   FILE_REQUEST_DEFAULT_EXPIRE_SEC: 259200,
-  FILE_REQUEST_MAX_UPLOADS: 10,
+  FILE_REQUEST_UPLOAD_OPTIONS: [1, 2, 3, 5, 10],
+  FILE_REQUEST_DEFAULT_UPLOADS: 10,
   FILE_REQUEST_MAX_SIZE: 10 * 1024 * 1024,
   FILE_REQUEST_RETENTION_SEC: 604800,
-  FILE_REQUEST_DOWNLOADS: 5,
+  FILE_REQUEST_DOWNLOAD_OPTIONS: [1, 2, 5],
+  FILE_REQUEST_DEFAULT_DOWNLOADS: 5,
   FILE_REQUEST_DAILY_LIMIT: 10,
   FORCE_FILE_PASSWORD: false,
+  FORCE_REQUEST_PASSWORD: false,
   TRUST_PROXY: false,
   ENABLED_SERVICES: ["file", "note", "request"],
   BASE_URL: "http://localhost:3000",
@@ -84,6 +87,7 @@ function createBody(request: NewFileRequest, overrides: Record<string, unknown> 
     expireSec: 86400,
     maxUploads: 3,
     maxSize: 4096,
+    downloads: 5,
     ...overrides,
   };
 }
@@ -299,14 +303,19 @@ describe("file requests", () => {
       expect(res.status).toBe(400);
     });
 
-    it("rejects more uploads or bytes than the server allows", async () => {
+    it("takes only the uploads and downloads the server offers, and refuses more bytes", async () => {
       const app = createApp();
       const request = await createFileRequest();
-      const tooMany = await app.request(
-        "/api/request",
-        json(createBody(request, { maxUploads: 11 })),
-      );
-      expect(tooMany.status).toBe(400);
+      const create = (overrides: Record<string, unknown>) =>
+        app.request("/api/request", json(createBody(request, overrides)));
+      for (const maxUploads of [11, 4 + 3, 0]) {
+        expect((await create({ maxUploads })).status).toBe(400);
+      }
+      // An option counts twice as well: the submissions of a request for files and a note.
+      expect((await create({ maxUploads: 20 })).status).toBe(201);
+      expect((await create({ maxUploads: 6 })).status).toBe(201);
+      expect((await create({ downloads: 3 })).status).toBe(400);
+      expect((await create({ downloads: undefined })).status).toBe(400);
       const tooLarge = await app.request(
         "/api/request",
         json(createBody(request, { maxSize: DEFAULT_CONFIG.FILE_REQUEST_MAX_SIZE + 1 })),
@@ -314,10 +323,12 @@ describe("file requests", () => {
       expect(tooLarge.status).toBe(400);
     });
 
-    it("requires a password when FORCE_FILE_PASSWORD is set", async () => {
+    it("requires a password when FORCE_REQUEST_PASSWORD is set, not FORCE_FILE_PASSWORD", async () => {
       vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FORCE_FILE_PASSWORD: true });
       const app = createApp();
       const request = await createFileRequest();
+      expect((await app.request("/api/request", json(createBody(request)))).status).toBe(201);
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FORCE_REQUEST_PASSWORD: true });
       const without = await app.request("/api/request", json(createBody(request)));
       expect(without.status).toBe(400);
       const withPassword = await app.request(
@@ -334,6 +345,47 @@ describe("file requests", () => {
       expect((await app.request("/api/request", json(createBody(request)))).status).toBe(201);
       expect((await app.request("/api/request", json(createBody(request)))).status).toBe(201);
       expect((await app.request("/api/request", json(createBody(request)))).status).toBe(429);
+    });
+
+    it("tells the caller how many new requests are left today", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_REQUEST_DAILY_LIMIT: 2 });
+      limiter = createRequestLimiter(2);
+      const app = createApp();
+      const left = async () => (await (await app.request("/api/request/limit")).json()) as object;
+      expect(await left()).toEqual({ dailyLimit: 2, remaining: 2, resetsAt: null });
+      const request = await createFileRequest();
+      await app.request("/api/request", json(createBody(request)));
+      // The end of the day stays hidden while some are left, so it tells nobody behind the
+      // same IP when another made a request.
+      expect(await left()).toEqual({ dailyLimit: 2, remaining: 1, resetsAt: null });
+      // Asking counts nothing.
+      expect(await left()).toMatchObject({ remaining: 1 });
+      await app.request("/api/request", json(createBody(request)));
+      expect(await left()).toMatchObject({
+        remaining: 0,
+        resetsAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
+      });
+    });
+
+    it("needs the login for the daily limit too, when creating needs it", async () => {
+      const guard: MiddlewareHandler = async (c, next) => {
+        if (c.req.header("Authorization") !== "Bearer ok")
+          return c.json({ error: "Authentication required" }, 401);
+        await next();
+      };
+      const app = createApp({ createGuard: guard });
+      expect((await app.request("/api/request/limit")).status).toBe(401);
+      const res = await app.request("/api/request/limit", {
+        headers: { Authorization: "Bearer ok" },
+      });
+      expect(res.status).toBe(200);
+    });
+
+    it("tells the caller there is no limit when it is off", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_REQUEST_DAILY_LIMIT: 0 });
+      limiter = createRequestLimiter(0);
+      const res = await createApp().request("/api/request/limit");
+      expect(await res.json()).toEqual({ dailyLimit: 0, remaining: null, resetsAt: null });
     });
 
     it("needs the login only for creating, when a guard is set", async () => {
@@ -511,10 +563,9 @@ describe("file requests", () => {
       expect(recorded).toEqual([["hashed-ip", 1000]]);
     });
 
-    it("counts downloads but never a listing", async () => {
-      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_REQUEST_DOWNLOADS: 1 });
+    it("counts downloads as the request set them, but never a listing", async () => {
       const app = createApp();
-      const created = await createRequest(app);
+      const created = await createRequest(app, { downloads: 1 });
       const uid = await uploadInto(app, created, new Uint8Array(10));
 
       for (let i = 0; i < 3; i++) {
@@ -1208,6 +1259,32 @@ describe("file requests", () => {
       expect(new Uint8Array(await file.arrayBuffer())).toEqual(data);
     });
 
+    it("stores an upload with the downloads of its request", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app, { downloads: 2 });
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 8)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      await events.onMessage!(msgEvent(new Uint8Array(8).buffer), fake.ws);
+      await events.onMessage!(
+        msgEvent(
+          await wsFinalize(created.request.local.publicKey, created.id, ready.id, generateSecret()),
+        ),
+        fake.ws,
+      );
+      const row = dbCtx.db
+        .select()
+        .from(requestUploads)
+        .where(eq(requestUploads.id, ready.id))
+        .get()!;
+      expect(row.maxDownloads).toBe(2);
+    });
+
     it("holds the second slot of a submission and hands it over in the done frame", async () => {
       const mock = createMockUpgrade();
       const app = createApp({ upgradeWebSocket: mock.upgrade });
@@ -1550,5 +1627,19 @@ describe("createRequestLimiter", () => {
   it("is unlimited at 0", () => {
     const limiter = createRequestLimiter(0);
     for (let i = 0; i < 100; i++) expect(limiter.take("ip:1")).toBe(true);
+    expect(limiter.peek("ip:1")).toBeNull();
+  });
+
+  it("tells what is left without counting, and when the day ends", () => {
+    vi.useFakeTimers();
+    const limiter = createRequestLimiter(2);
+    expect(limiter.peek("ip:1")).toEqual({ remaining: 2, resetsAt: null });
+    limiter.take("ip:1");
+    expect(limiter.peek("ip:1")).toEqual({ remaining: 1, resetsAt: Date.now() + 86_400_000 });
+    limiter.take("ip:1");
+    limiter.take("ip:1");
+    expect(limiter.peek("ip:1")?.remaining).toBe(0);
+    vi.advanceTimersByTime(86_400_000);
+    expect(limiter.peek("ip:1")).toEqual({ remaining: 2, resetsAt: null });
   });
 });

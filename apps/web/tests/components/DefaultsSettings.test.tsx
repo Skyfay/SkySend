@@ -25,9 +25,13 @@ const config = {
   fileRequestsEnabled: true,
   fileRequestExpireOptions: [86_400],
   fileRequestDefaultExpire: 86_400,
-  fileRequestMaxUploads: 5,
+  fileRequestUploadOptions: [1, 2, 3, 5, 10, 20],
+  fileRequestDefaultUploads: 10,
+  fileRequestDownloadOptions: [1, 2, 5],
+  fileRequestDefaultDownloads: 5,
   fileRequestMaxSize: 1024 ** 3,
   forceFilePassword: false,
+  forceRequestPassword: false,
   forceNotePassword: true,
 } as ServerConfig;
 

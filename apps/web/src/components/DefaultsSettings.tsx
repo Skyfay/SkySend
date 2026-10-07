@@ -121,7 +121,6 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
   const file = fileStart(config, defaults.file);
   const note = noteStart(config, defaults.note);
   const request = requestStart(config, defaults.request);
-  const sendOptions = Array.from({ length: config.fileRequestMaxUploads }, (_, i) => i + 1);
 
   return (
     <div className="space-y-4">
@@ -216,7 +215,7 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
           <Row label={t("request.maxUploads")} labelId={`${id}-request-sends`}>
             <div role="group" aria-labelledby={`${id}-request-sends`} className="space-y-1.5">
               <Stepper
-                options={sendOptions}
+                options={config.fileRequestUploadOptions}
                 value={request.sends}
                 onChange={(sends) => update("request", { sends })}
                 format={(count) => t("request.uploads", { count })}
@@ -238,8 +237,20 @@ export function DefaultsSettings({ config }: { config: ServerConfig }) {
               />
             </div>
           </Row>
+          <Row label={t("request.downloads")} labelId={`${id}-request-downloads`}>
+            <div role="group" aria-labelledby={`${id}-request-downloads`}>
+              <Stepper
+                options={config.fileRequestDownloadOptions}
+                value={request.downloads}
+                onChange={(downloads) => update("request", { downloads })}
+                format={fileLimit}
+                decreaseLabel={t("share.fewer")}
+                increaseLabel={t("share.more")}
+              />
+            </div>
+          </Row>
           <PasswordRow
-            forced={config.forceFilePassword}
+            forced={config.forceRequestPassword}
             checked={request.password}
             onChange={(password) => update("request", { password })}
           />

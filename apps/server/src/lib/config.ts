@@ -184,12 +184,21 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive()),
 
-  /** Most uploads one request accepts. */
-  FILE_REQUEST_MAX_UPLOADS: z
+  /**
+   * How many uploads a request takes, as options for the requester. A request for files and
+   * a note counts submissions with them, and each submission takes two uploads.
+   */
+  FILE_REQUEST_UPLOAD_OPTIONS: commaSeparatedInts
+    .refine((list) => list.every((count) => count <= 1000), {
+      message: "Each option must be at most 1000",
+    })
+    .default(() => [1, 2, 3, 5, 10, 20, 50, 100]),
+
+  FILE_REQUEST_DEFAULT_UPLOADS: z
     .string()
     .default("10")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().min(1).max(1000)),
+    .pipe(z.number().int().positive()),
 
   /** Most bytes one upload into a request may have. Unset means FILE_MAX_SIZE. */
   FILE_REQUEST_MAX_SIZE: z
@@ -205,17 +214,23 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().positive().max(MAX_DURATION_SEC)),
 
-  /** How often the requester can download each uploaded file. */
-  FILE_REQUEST_DOWNLOADS: z
+  /** How often the requester can download each upload of a request, as options for the requester. */
+  FILE_REQUEST_DOWNLOAD_OPTIONS: commaSeparatedInts
+    .refine((list) => list.every((count) => count <= 100), {
+      message: "Each option must be at most 100",
+    })
+    .default(() => [1, 2, 3, 5, 10, 20]),
+
+  FILE_REQUEST_DEFAULT_DOWNLOADS: z
     .string()
     .default("5")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().min(1).max(100)),
+    .pipe(z.number().int().positive()),
 
   /** New requests per day and person, counted by OIDC user or IP. 0 turns the limit off. */
   FILE_REQUEST_DAILY_LIMIT: z
     .string()
-    .default("10")
+    .default("100")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().min(0)),
 
@@ -348,6 +363,11 @@ const configSchema = z.object({
     .transform((v) => v === "true"),
 
   FORCE_NOTE_PASSWORD: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+
+  FORCE_REQUEST_PASSWORD: z
     .string()
     .default("false")
     .transform((v) => v === "true"),
@@ -503,6 +523,16 @@ export function loadConfig(): Config {
     if (!_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.includes(_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)) {
       throw new Error(
         `FILE_REQUEST_DEFAULT_EXPIRE_SEC (${_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC}) must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC (${_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.join(", ")})`,
+      );
+    }
+    if (!_config.FILE_REQUEST_UPLOAD_OPTIONS.includes(_config.FILE_REQUEST_DEFAULT_UPLOADS)) {
+      throw new Error(
+        `FILE_REQUEST_DEFAULT_UPLOADS (${_config.FILE_REQUEST_DEFAULT_UPLOADS}) must be one of FILE_REQUEST_UPLOAD_OPTIONS (${_config.FILE_REQUEST_UPLOAD_OPTIONS.join(", ")})`,
+      );
+    }
+    if (!_config.FILE_REQUEST_DOWNLOAD_OPTIONS.includes(_config.FILE_REQUEST_DEFAULT_DOWNLOADS)) {
+      throw new Error(
+        `FILE_REQUEST_DEFAULT_DOWNLOADS (${_config.FILE_REQUEST_DEFAULT_DOWNLOADS}) must be one of FILE_REQUEST_DOWNLOAD_OPTIONS (${_config.FILE_REQUEST_DOWNLOAD_OPTIONS.join(", ")})`,
       );
     }
     // Every upload passes the FILE_MAX_SIZE check as well, so a larger value could never be used.

@@ -13,6 +13,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface RequestLimiter {
   /** Counts one new request for this identity. False when the daily limit is used up. */
   take(identity: string): boolean;
+  /**
+   * How many this identity has left, and when its day ends, without counting one. The end is
+   * null while it made none yet, and all of it is null while the limit is off.
+   */
+  peek(identity: string): { remaining: number; resetsAt: number | null } | null;
 }
 
 export function createRequestLimiter(dailyLimit: number): RequestLimiter {
@@ -29,10 +34,12 @@ export function createRequestLimiter(dailyLimit: number): RequestLimiter {
     60 * 60 * 1000,
   ).unref();
 
+  const keyOf = (identity: string) => createHmac("sha256", hmacKey).update(identity).digest("hex");
+
   return {
     take(identity) {
       if (dailyLimit <= 0) return true;
-      const key = createHmac("sha256", hmacKey).update(identity).digest("hex");
+      const key = keyOf(identity);
       const now = Date.now();
       let entry = store.get(key);
       if (!entry || now >= entry.resetAt) {
@@ -42,6 +49,13 @@ export function createRequestLimiter(dailyLimit: number): RequestLimiter {
       if (entry.count >= dailyLimit) return false;
       entry.count++;
       return true;
+    },
+
+    peek(identity) {
+      if (dailyLimit <= 0) return null;
+      const entry = store.get(keyOf(identity));
+      if (!entry || Date.now() >= entry.resetAt) return { remaining: dailyLimit, resetsAt: null };
+      return { remaining: Math.max(0, dailyLimit - entry.count), resetsAt: entry.resetAt };
     },
   };
 }

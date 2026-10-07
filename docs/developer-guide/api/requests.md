@@ -31,6 +31,7 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
   "expireSec": 259200,
   "maxUploads": 10,
   "maxSize": 2147483648,
+  "downloads": 5,
   "hasPassword": false
 }
 ```
@@ -39,9 +40,10 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
 | --- | --- |
 | `brief` | Required. The ciphertext is 16 bytes longer than a multiple of 1024, see [the brief](/developer-guide/crypto/file-requests#the-brief) |
 | `expireSec` | One of `FILE_REQUEST_EXPIRE_OPTIONS_SEC` |
-| `maxUploads` | At most `FILE_REQUEST_MAX_UPLOADS` |
+| `maxUploads` | One of `FILE_REQUEST_UPLOAD_OPTIONS`, or twice one. A request for files and a note counts submissions with the options, and each takes two uploads. The server cannot tell what a request asks for, so any request may take up to twice the largest option. |
 | `maxSize` | Most bytes one upload may have, at most `FILE_REQUEST_MAX_SIZE` |
-| `hasPassword` | Must be `true` when `FORCE_FILE_PASSWORD` is on. The server takes the client's word for it, since the password never reaches it. |
+| `downloads` | How often the requester can download each upload, one of `FILE_REQUEST_DOWNLOAD_OPTIONS` |
+| `hasPassword` | Must be `true` when `FORCE_REQUEST_PASSWORD` is on. The server takes the client's word for it, since the password never reaches it. |
 
 Unknown fields are refused, and the body may be at most 16 KB.
 
@@ -52,6 +54,16 @@ Unknown fields are refused, and the body may be at most 16 KB.
 | `401` | Login required |
 | `413` | Body too large |
 | `429` | `FILE_REQUEST_DAILY_LIMIT` used up for this user or IP |
+
+## GET /api/request/limit
+
+How many new requests the caller has left today, counted the way creating one counts them: by OIDC user where creating needs a login, by IP otherwise. Asking counts nothing. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
+
+```json
+{ "dailyLimit": 100, "remaining": 97, "resetsAt": null }
+```
+
+`resetsAt` is set only once `remaining` is `0`, since people behind one IP share a count, and the end of the day would tell one of them when another created a request. With `FILE_REQUEST_DAILY_LIMIT` at `0`, `dailyLimit` is `0` and the other two are `null`.
 
 ## GET /api/request/:id
 
@@ -134,7 +146,7 @@ Ends an upload the sender cancelled, so its slot is free again at once instead o
 }
 ```
 
-The body is checked before the session ends, so a broken body can be sent again. Then the upload is stored with `FILE_REQUEST_DOWNLOADS` downloads and deleted `FILE_REQUEST_RETENTION_SEC` after it arrived.
+The body is checked before the session ends, so a broken body can be sent again. Then the upload is stored with the `downloads` of its request and deleted `FILE_REQUEST_RETENTION_SEC` after it arrived.
 
 | Status | Meaning |
 | --- | --- |

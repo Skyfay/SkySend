@@ -20,10 +20,12 @@ const configResponseSchema = z.object({
   fileRequestsEnabled: z.boolean().optional().default(false),
   fileRequestExpireOptions: z.array(z.number()).optional().default([]),
   fileRequestDefaultExpire: z.number().optional().default(0),
-  fileRequestMaxUploads: z.number().optional().default(0),
+  fileRequestUploadOptions: z.array(z.number()).optional().default([]),
+  fileRequestDefaultUploads: z.number().optional().default(0),
   fileRequestMaxSize: z.number().optional().default(0),
   fileRequestRetention: z.number().optional().default(0),
-  fileRequestDownloads: z.number().optional().default(0),
+  fileRequestDownloadOptions: z.array(z.number()).optional().default([]),
+  fileRequestDefaultDownloads: z.number().optional().default(0),
   // Note configuration
   noteMaxSize: z.number(),
   noteExpireOptions: z.array(z.number()),
@@ -46,6 +48,7 @@ const configResponseSchema = z.object({
   defaultTab: z.enum(["file", "note", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
+  forceRequestPassword: z.boolean().optional().default(false),
   // OIDC auth
   oidcEnabled: z.boolean().optional().default(false),
   oidcProtectFiles: z.boolean().optional().default(false),
@@ -116,6 +119,21 @@ export async function fetchConfig(): Promise<ServerConfig> {
 export async function fetchQuota(): Promise<QuotaStatus> {
   const res = await fetch("/api/quota");
   return handleResponse(res, quotaResponseSchema);
+}
+
+const requestLimitSchema = z.object({
+  /** New requests per day, 0 while there is no limit. */
+  dailyLimit: z.number().int().nonnegative(),
+  remaining: z.number().int().nonnegative().nullable(),
+  resetsAt: z.string().datetime().nullable(),
+});
+
+export type RequestLimit = z.infer<typeof requestLimitSchema>;
+
+/** How many new file requests the caller has left today. */
+export async function fetchRequestLimit(): Promise<RequestLimit> {
+  const res = await fetch("/api/request/limit");
+  return handleResponse(res, requestLimitSchema);
 }
 
 export async function fetchInfo(id: string): Promise<UploadInfo> {
@@ -418,6 +436,8 @@ export interface CreateRequestBody {
   expireSec: number;
   maxUploads: number;
   maxSize: number;
+  /** How often the requester can download each upload. */
+  downloads: number;
   hasPassword: boolean;
 }
 
@@ -482,8 +502,9 @@ const inboxResponseSchema = z.object({
   maxSize: z.number(),
   usedUploads: z.number(),
   usedBytes: z.number(),
-  // FILE_REQUEST_MAX_UPLOADS is at most 1000, so a longer list did not come from SkySend.
-  uploads: z.array(inboxUploadSchema).max(1000),
+  // A request takes at most twice the largest FILE_REQUEST_UPLOAD_OPTIONS, which is at most
+  // 1000, so a longer list did not come from SkySend.
+  uploads: z.array(inboxUploadSchema).max(2000),
 });
 
 export type Inbox = z.infer<typeof inboxResponseSchema>;

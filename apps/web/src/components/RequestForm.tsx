@@ -25,7 +25,7 @@ import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { SaveTemplateDialog, type SaveChoice } from "@/components/SaveTemplateDialog";
 import { TemplateStart, builtInOf, type TemplateStartValue } from "@/components/TemplateStart";
 import type { NewRequestOptions } from "@/hooks/useFileRequests";
-import type { ServerConfig } from "@/lib/api";
+import type { RequestLimit, ServerConfig } from "@/lib/api";
 import { requestSizeOptions, requestStart } from "@/lib/defaults";
 import { briefFits } from "@/lib/file-request";
 import { toDrafts, type DraftBlock } from "@/lib/note-editor";
@@ -36,7 +36,7 @@ import {
   type RequestTemplate,
   type TemplateFields,
 } from "@/lib/request-templates";
-import { formatBytes, formatDuration } from "@/lib/utils";
+import { cn, formatBytes, formatDuration, formatTimeRemaining } from "@/lib/utils";
 
 type Mode = "files" | "note" | "both";
 const ASKS: Record<Mode, RequestAsk[]> = {
@@ -56,24 +56,13 @@ function modeOf(asks: readonly RequestAsk[]): Mode {
   return asks.includes("files") ? (asks.includes("note") ? "both" : "files") : "note";
 }
 
-/** How many sends a mode takes, a submission of files and a note as one. */
-function maxSendsOf(mode: Mode, config: ServerConfig): number {
-  return mode === "both"
-    ? Math.floor(config.fileRequestMaxUploads / 2)
-    : config.fileRequestMaxUploads;
-}
-
 /**
  * The form as a template sets it up, within what this server offers. Without a template, the
- * form as it starts. A request for both falls back to one thing when the server takes too few
- * uploads for both.
+ * form as it starts.
  */
 function setupFrom(fields: TemplateFields | null, config: ServerConfig) {
   const blocks = fields ? templateBlocks(fields) : [];
-  let mode = modeOf(fields?.asks ?? ["files"]);
-  if (mode === "both" && config.fileRequestMaxUploads < 2) {
-    mode = blocks.length > 0 ? "note" : "files";
-  }
+  const mode = modeOf(fields?.asks ?? ["files"]);
   const limits = fields?.limits;
   // Without limits of its own, the form starts from this browser's defaults.
   const base = requestStart(config);
@@ -84,10 +73,16 @@ function setupFrom(fields: TemplateFields | null, config: ServerConfig) {
     expireSec: limits
       ? fitOption(config.fileRequestExpireOptions, limits.expireSec, base.expireSec)
       : base.expireSec,
-    maxUploads: limits ? Math.min(limits.sends, config.fileRequestMaxUploads) : base.sends,
+    sends: limits
+      ? fitOption(config.fileRequestUploadOptions, limits.sends, base.sends)
+      : base.sends,
     maxSize: limits
       ? fitOption(requestSizeOptions(config.fileRequestMaxSize), limits.maxSize, base.maxSize)
       : base.maxSize,
+    // A template from before downloads were chosen takes the defaults as well.
+    downloads: limits?.downloads
+      ? fitOption(config.fileRequestDownloadOptions, limits.downloads, base.downloads)
+      : base.downloads,
   };
 }
 
@@ -97,15 +92,14 @@ type Setup = ReturnType<typeof setupFrom>;
  * Whether the server offers less than the edited template sets up, so the form shows its own
  * values instead.
  */
-function adjustedFrom(template: RequestTemplate, first: Setup, config: ServerConfig): boolean {
+function adjustedFrom(template: RequestTemplate, first: Setup): boolean {
   const { limits } = template;
-  if (first.mode !== modeOf(template.asks)) return true;
   if (!limits) return false;
-  const sends = Math.min(first.maxUploads, maxSendsOf(first.mode, config));
   return (
     first.expireSec !== limits.expireSec ||
-    sends !== limits.sends ||
-    first.maxSize !== limits.maxSize
+    first.sends !== limits.sends ||
+    first.maxSize !== limits.maxSize ||
+    (limits.downloads !== undefined && first.downloads !== limits.downloads)
   );
 }
 
@@ -123,6 +117,8 @@ interface RequestFormProps {
   onSaveTemplate: (fields: TemplateFields, replace?: RequestTemplate) => Promise<RequestTemplate>;
   /** The edited template was saved, or the editing was cancelled. */
   onEditDone: () => void;
+  /** How many new requests the caller has left today, once the server said. */
+  dailyLimit?: RequestLimit | null;
 }
 
 /**
@@ -139,6 +135,7 @@ export function RequestForm({
   editing,
   onSaveTemplate,
   onEditDone,
+  dailyLimit,
 }: RequestFormProps) {
   const { t } = useTranslation();
   const id = useId();
@@ -152,8 +149,9 @@ export function RequestForm({
   const [template, setTemplate] = useState<DraftBlock[]>(first.template);
   const [title, setTitle] = useState(first.title);
   const [expireSec, setExpireSec] = useState(first.expireSec);
-  const [maxUploads, setMaxUploads] = useState(first.maxUploads);
+  const [sends, setSends] = useState(first.sends);
   const [maxSize, setMaxSize] = useState(first.maxSize);
+  const [downloads, setDownloads] = useState(first.downloads);
   const [passwordEnabled, setPasswordEnabled] = useState(() => requestStart(config).password);
   const [password, setPassword] = useState("");
   const [startedFrom, setStartedFrom] = useState<TemplateStartValue>(
@@ -164,7 +162,7 @@ export function RequestForm({
   // server offers less and the form shows less.
   const [touched, setTouched] = useState({ mode: false, limits: false });
   const ownStart = templates.find((kept) => kept.id === startedFrom);
-  const adjusted = !!editing && adjustedFrom(editing, first, config);
+  const adjusted = !!editing && adjustedFrom(editing, first);
   const limit =
     <T,>(set: (value: T) => void) =>
     (value: T) => {
@@ -175,16 +173,17 @@ export function RequestForm({
   const asks = ASKS[mode];
   const files = asks.includes("files");
   const note = asks.includes("note");
-  // Files and a note go as one submission, which takes two uploads of the request.
+  // Files and a note go as one submission, which takes two uploads of the request. The
+  // options count submissions then, which the server takes as they are or twice.
   const both = files && note;
-  const bothOffered = config.fileRequestMaxUploads >= 2;
-  const maxSends = maxSendsOf(mode, config);
-  const sends = Math.min(maxUploads, maxSends);
-  const sendOptions = Array.from({ length: maxSends }, (_, i) => i + 1);
   const titleTooLong = new TextEncoder().encode(title).length > REQUEST_TITLE_MAX_BYTES;
   const templateTooLarge = !titleTooLong && !briefFits(title, asks, template);
   const canSave = !creating && !titleTooLong && !templateTooLarge;
-  const canSubmit = canSave && !editing && (!passwordEnabled || password.length > 0);
+  // The server says how many new requests are left today, where it limits them.
+  const limited = !!dailyLimit && dailyLimit.dailyLimit > 0 && dailyLimit.remaining !== null;
+  const limitReached = limited && dailyLimit.remaining === 0;
+  const canSubmit =
+    canSave && !editing && !limitReached && (!passwordEnabled || password.length > 0);
   const strong = <strong className="font-semibold text-foreground" />;
   const countLabel = (count: number) =>
     both ? t("request.submissionsCount", { count }) : t("request.uploads", { count });
@@ -198,6 +197,7 @@ export function RequestForm({
         expireSec,
         maxUploads: both ? sends * 2 : sends,
         maxSize: files ? maxSize : noteOnlySize,
+        downloads,
         password: passwordEnabled ? password : "",
       },
       ownStart,
@@ -208,7 +208,8 @@ export function RequestForm({
     setTitle(setup.title);
     setTemplate(setup.template);
     setExpireSec(setup.expireSec);
-    setMaxUploads(setup.maxUploads);
+    setSends(setup.sends);
+    setDownloads(setup.downloads);
     setMaxSize(setup.maxSize);
     setStartedFrom(setup.startedFrom);
   };
@@ -222,7 +223,7 @@ export function RequestForm({
     const fields = builtIn
       ? builtInTemplate(builtIn, (key) => t(key))
       : (templates.find((kept) => kept.id === value) ?? null);
-    const before = { mode, title, template, expireSec, maxUploads, maxSize, startedFrom };
+    const before = { mode, title, template, expireSec, sends, maxSize, downloads, startedFrom };
     apply({ ...setupFrom(fields, config), startedFrom: value });
     if (title.trim() || template.length > 0) {
       toast(t("templates.replacedForm"), {
@@ -241,7 +242,9 @@ export function RequestForm({
       asks: editing && !touched.mode ? editing.asks : asks,
       ...(choice.keepTitle && kept ? { title: kept } : {}),
       ...(note && template.length > 0 ? { note: serializeTemplate(template) } : {}),
-      ...(choice.keepLimits ? { limits: ownLimits ?? { expireSec, sends, maxSize } } : {}),
+      ...(choice.keepLimits
+        ? { limits: ownLimits ?? { expireSec, sends, maxSize, downloads } }
+        : {}),
     });
     if (!fields) {
       toast.error(t("templates.saveFailed"));
@@ -351,9 +354,9 @@ export function RequestForm({
         >
           <div role="group" aria-labelledby={`${id}-uploads`}>
             <Stepper
-              options={sendOptions}
+              options={config.fileRequestUploadOptions}
               value={sends}
-              onChange={limit(setMaxUploads)}
+              onChange={limit(setSends)}
               format={(v) =>
                 both
                   ? t("request.submissionsCount", { count: v })
@@ -382,6 +385,26 @@ export function RequestForm({
           </Row>
         )}
 
+        {/* How often the requester can open each upload: downloads, or views of a note. */}
+        <Row
+          label={files ? t("request.downloads") : t("request.views")}
+          labelId={`${id}-downloads`}
+        >
+          <div role="group" aria-labelledby={`${id}-downloads`}>
+            <Stepper
+              options={config.fileRequestDownloadOptions}
+              value={downloads}
+              onChange={limit(setDownloads)}
+              format={(count) =>
+                files ? t("share.downloads", { count }) : t("share.views", { count })
+              }
+              decreaseLabel={t("share.fewer")}
+              increaseLabel={t("share.more")}
+              disabled={creating}
+            />
+          </div>
+        </Row>
+
         {/* A template never keeps a password, so editing one asks for none. */}
         {!editing && (
           <>
@@ -398,7 +421,7 @@ export function RequestForm({
               }
             >
               <div className="flex items-center gap-3">
-                {!config.forceFilePassword && (
+                {!config.forceRequestPassword && (
                   <Switch
                     id={`${id}-password-toggle`}
                     checked={passwordEnabled}
@@ -418,7 +441,7 @@ export function RequestForm({
                   value={password}
                   onChange={setPassword}
                   placeholder={t(
-                    config.forceFilePassword
+                    config.forceRequestPassword
                       ? "upload.passwordPlaceholderRequired"
                       : "upload.passwordPlaceholder",
                   )}
@@ -432,10 +455,7 @@ export function RequestForm({
 
       {!editing && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          {t("request.retentionHint", {
-            time: formatDuration(config.fileRequestRetention),
-            count: config.fileRequestDownloads,
-          })}
+          {t("request.retention", { time: formatDuration(config.fileRequestRetention) })}
         </p>
       )}
 
@@ -484,6 +504,24 @@ export function RequestForm({
           )}
         </div>
       </div>
+      {!editing && limited && (
+        <p
+          role="status"
+          className={cn(
+            "px-1 text-xs",
+            limitReached ? "text-destructive-text" : "text-muted-foreground",
+          )}
+        >
+          {limitReached
+            ? t("request.limitReached", {
+                time: dailyLimit.resetsAt ? formatTimeRemaining(dailyLimit.resetsAt) : "",
+              })
+            : t("request.limitLeft", {
+                count: dailyLimit.remaining ?? 0,
+                limit: dailyLimit.dailyLimit,
+              })}
+        </p>
+      )}
     </form>
   );
 
@@ -491,6 +529,7 @@ export function RequestForm({
     formatDuration(expireSec),
     countLabel(sends),
     ...(files ? [formatBytes(maxSize)] : []),
+    files ? t("share.downloads", { count: downloads }) : t("share.views", { count: downloads }),
   ].join(" · ");
   const keep = editing ?? ownStart;
 
@@ -519,15 +558,12 @@ export function RequestForm({
           </span>
           <span className="text-xs text-muted-foreground">{t("request.asksNoteHint")}</span>
         </TabsTrigger>
-        {/* One submission of both takes two uploads, so it needs room for two. */}
-        <TabsTrigger value="both" disabled={creating || !bothOffered}>
+        <TabsTrigger value="both" disabled={creating}>
           <span className="flex items-center gap-2 text-sm font-semibold">
             <Layers />
             {t("request.asksBoth")}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {bothOffered ? t("request.asksBothHint") : t("request.asksBothUnavailable")}
-          </span>
+          <span className="text-xs text-muted-foreground">{t("request.asksBothHint")}</span>
         </TabsTrigger>
       </TabsList>
       {/* One panel for every tab, since the form is the same and only what it asks for changes. */}

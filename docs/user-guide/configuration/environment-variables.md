@@ -60,11 +60,13 @@ A file request is a link you send to someone so they can upload files to you, en
 | :--- | :---: | :--- | :--- |
 | `FILE_REQUEST_EXPIRE_OPTIONS_SEC` | ❌ | `86400,259200,604800` | Comma-separated list of how long a request accepts uploads, in seconds. |
 | `FILE_REQUEST_DEFAULT_EXPIRE_SEC` | ❌ | `259200` | Default for new requests (must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`). |
-| `FILE_REQUEST_MAX_UPLOADS` | ❌ | `10` | Most uploads one request accepts, from `1` to `1000`. |
+| `FILE_REQUEST_UPLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | How many uploads a request takes, as options for the requester, each from `1` to `1000`. A request for files and a note counts submissions with them, which take two uploads each. The server cannot tell what a request asks for, so any request may take up to twice the largest option. |
+| `FILE_REQUEST_DEFAULT_UPLOADS` | ❌ | `10` | Default for new requests. Must be one of `FILE_REQUEST_UPLOAD_OPTIONS`. |
 | `FILE_REQUEST_MAX_SIZE` | ❌ | `FILE_MAX_SIZE` | Most bytes one upload into a request may have. The requester picks a size up to this. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. |
-| `FILE_REQUEST_DOWNLOADS` | ❌ | `5` | How often the requester can download each uploaded file, from `1` to `100`. |
-| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `10` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. `0` turns the limit off. The count lives in memory and resets on restart. |
+| `FILE_REQUEST_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20` | How often the requester can download each upload, as options chosen per request, each from `1` to `100`. |
+| `FILE_REQUEST_DEFAULT_DOWNLOADS` | ❌ | `5` | Default for new requests. Must be one of `FILE_REQUEST_DOWNLOAD_OPTIONS`. |
+| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `100` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. The day starts with the first request. `0` turns the limit off. The count lives in memory and resets on restart. The request form shows how many are left. Behind a reverse proxy, set `TRUST_PROXY`, or everyone shares the count of the proxy's IP. |
 
 ## Services
 
@@ -126,8 +128,9 @@ A file request is a link you send to someone so they can upload files to you, en
 | `DEFAULT_THEME` | ❌ | `graphite` | Visual theme of the web app. One of `graphite`, `aurora`, or `midnight`. Every theme works with `CUSTOM_COLOR` and with both color schemes. Before v3 this variable held the color scheme, which now lives in `DEFAULT_COLOR_SCHEME`. |
 | `DEFAULT_COLOR_SCHEME` | ❌ | `system` | Color scheme for visitors who have not picked one. One of `dark`, `light`, or `system`. Visitors can still switch in the UI. |
 | `DEFAULT_TAB` | ❌ | `file` | Tab shown when opening the app. `file` or `note`. `text`, `password`, `code` or `sshkey` open the note tab with that block already added. Falls back to the first available tab if the configured one is not enabled via `ENABLED_SERVICES`. |
-| `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected, and so must the inbox of every file request. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
+| `FORCE_FILE_PASSWORD` | ❌ | `false` | When `true`, all file uploads must be password-protected. The password toggle is hidden and the field is always visible. Enforced on both frontend and server. |
 | `FORCE_NOTE_PASSWORD` | ❌ | `false` | When `true`, all note uploads (text, password, code, SSH key) must be password-protected. Enforced on both frontend and server. |
+| `FORCE_REQUEST_PASSWORD` | ❌ | `false` | When `true`, the inbox of every file request must be password-protected. The server refuses a request that does not say it has one, and cannot check the password itself, which never reaches it. |
 
 ::: tip Example
 ```yaml

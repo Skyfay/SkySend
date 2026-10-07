@@ -57,7 +57,7 @@ export function briefFits(
 
 /** What creating a request gives back: the body for the server and the fragments of both links. */
 export interface PreparedRequest {
-  body: Omit<CreateRequestBody, "expireSec" | "maxUploads" | "maxSize">;
+  body: Omit<CreateRequestBody, "expireSec" | "maxUploads" | "maxSize" | "downloads">;
   inboxFragment: string;
   uploadFragment: string;
 }

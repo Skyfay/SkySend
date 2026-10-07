@@ -8,9 +8,9 @@ A new share or request starts with these values instead of the ones the instance
 
 - **Sharing files** - How long a file stays available, how often it can be downloaded, and whether a password starts switched on
 - **Sharing notes** - The same for notes, with views instead of downloads
-- **Requesting** - How long a request stays open, how many uploads it takes, how large each may be, and whether a password starts switched on. For a request that asks for files and a note, the number counts submissions.
+- **Requesting** - How long a request stays open, how many uploads it takes, how large each may be, how often each can be downloaded, and whether a password starts switched on. For a request that asks for files and a note, the number counts submissions.
 
-Every value is one the instance offers. When the operator later removes an option you chose, the form falls back to the default of the instance. The number of uploads of a request is capped at the largest the instance allows instead, since the instance sets no default for it. A password the instance enforces is always on, whatever the default says. **Reset** gives a section back to the defaults of the instance.
+Every value is one the instance offers. When the operator later removes an option you chose, the form falls back to the default of the instance. A password the instance enforces is always on, whatever the default says. **Reset** gives a section back to the defaults of the instance.
 
 A default never holds a password itself, only whether the switch starts on.
 

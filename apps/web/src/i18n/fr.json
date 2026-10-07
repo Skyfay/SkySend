@@ -485,8 +485,6 @@
       "dailyLimit": "Vous avez créé autant de demandes que ce serveur en autorise par jour. Réessayez demain.",
       "failed": "La demande n'a pas pu être créée."
     },
-    "retentionHint_one": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois.",
-    "retentionHint_other": "Chaque fichier reste {{time}} après son arrivée et peut être téléchargé {{count}} fois.",
     "asks": "Demander",
     "asksFiles": "Fichiers",
     "asksNote": "Note",
@@ -498,7 +496,12 @@
     "submissionsCount_one": "{{count}} dépôt",
     "submissionsCount_other": "{{count}} dépôts",
     "summaryBoth": "Ouverte pendant <b>{{expiry}}</b>, jusqu'à <b>{{uploads}}</b>, chacun avec des fichiers de <b>{{size}}</b> maximum et une note.",
-    "asksBothUnavailable": "Demande au moins deux envois par demande"
+    "downloads": "Téléchargements par envoi",
+    "views": "Vues par note",
+    "retention": "Chaque envoi reste {{time}} après son arrivée.",
+    "limitLeft_one": "Il vous reste {{count}} nouvelle demande aujourd'hui, sur {{limit}}.",
+    "limitLeft_other": "Il vous reste {{count}} nouvelles demandes aujourd'hui, sur {{limit}}.",
+    "limitReached": "Plus de nouvelle demande possible aujourd'hui. Vous pourrez en créer une dans {{time}}."
   },
   "template": {
     "title": "Modèle de la note",
