@@ -502,7 +502,7 @@ describe("config", () => {
       expect(config.FILE_REQUEST_RETENTION_SEC).toBe(604800);
       expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20]);
       expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(5);
-      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(100);
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
       expect(config.FORCE_REQUEST_PASSWORD).toBe(false);
     });
 

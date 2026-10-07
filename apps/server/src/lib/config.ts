@@ -230,7 +230,7 @@ const configSchema = z.object({
   /** New requests per day and person, counted by OIDC user or IP. 0 turns the limit off. */
   FILE_REQUEST_DAILY_LIMIT: z
     .string()
-    .default("100")
+    .default("0")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().min(0)),
 

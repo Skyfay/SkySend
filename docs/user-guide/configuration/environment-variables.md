@@ -66,7 +66,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. |
 | `FILE_REQUEST_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20` | How often the requester can download each upload, as options chosen per request, each from `1` to `100`. |
 | `FILE_REQUEST_DEFAULT_DOWNLOADS` | ❌ | `5` | Default for new requests. Must be one of `FILE_REQUEST_DOWNLOAD_OPTIONS`. |
-| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `100` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. The day starts with the first request. `0` turns the limit off. The count lives in memory and resets on restart. The request form shows how many are left. Behind a reverse proxy, set `TRUST_PROXY`, or everyone shares the count of the proxy's IP. |
+| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `0` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. The day starts with the first request. `0`, the default, turns the limit off. The count lives in memory and resets on restart. The request form shows how many are left. Behind a reverse proxy, set `TRUST_PROXY`, or everyone shares the count of the proxy's IP. A public instance should set it, for example to `100`, together with `FILE_UPLOAD_QUOTA_BYTES`. |
 
 ## Services
 

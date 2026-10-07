@@ -246,7 +246,7 @@ Max Size/Upload:    2.0 GB
 Retention:          7d
 Download Options:   1, 2, 3, 5, 10, 20
 Default Downloads:  5
-Daily Limit:        100
+Daily Limit:        ∞
 
 General
 -------

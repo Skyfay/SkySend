@@ -334,8 +334,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Integer |
-| Default | `100` |
-| Description | New file requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by HMAC-hashed IP otherwise. The day starts with the first request of that user or IP. `0` turns the limit off. In memory, a restart resets it. Behind a reverse proxy, `TRUST_PROXY` has to be on, or every user counts as the proxy's IP. |
+| Default | `0` |
+| Description | New file requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by HMAC-hashed IP otherwise. The day starts with the first request of that user or IP. `0`, the default, turns the limit off. In memory, a restart resets it. Behind a reverse proxy, `TRUST_PROXY` has to be on, or every user counts as the proxy's IP. A public instance should set it, for example to `100`, together with `FILE_UPLOAD_QUOTA_BYTES`. |
 
 ### ENABLED_SERVICES
 

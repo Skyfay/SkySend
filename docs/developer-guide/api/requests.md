@@ -59,6 +59,8 @@ Unknown fields are refused, and the body may be at most 16 KB.
 
 How many new requests the caller has left today, counted the way creating one counts them: by OIDC user where creating needs a login, by IP otherwise. Asking counts nothing. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
 
+With `FILE_REQUEST_DAILY_LIMIT=100`:
+
 ```json
 { "dailyLimit": 100, "remaining": 97, "resetsAt": null }
 ```

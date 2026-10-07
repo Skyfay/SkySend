@@ -54,6 +54,7 @@
 - **docs**: The download modes page covers downloads from the inbox of a file request.
 - **docs**: Pages for file requests in the user guide, the API reference and the cryptography section, request templates included.
 - **docs**: A page for the settings of a browser in the user guide.
+- **docs**: The rate limiting page covers the daily limit of file requests, with a recommendation for public instances.
 - **docs**: The admin CLI commands page matches what the commands print.
 
 ### 🧪 Tests

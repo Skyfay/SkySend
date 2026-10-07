@@ -115,6 +115,9 @@ const GIB = 1024 ** 3;
 const MIB = 1024 ** 2;
 /** Sizes a requester can pick, as far as the server allows. */
 const SIZE_STEPS = [
+  MIB,
+  2 * MIB,
+  5 * MIB,
   10 * MIB,
   50 * MIB,
   100 * MIB,
