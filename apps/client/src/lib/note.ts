@@ -106,16 +106,6 @@ export function readReceivedNote(kind: string, plaintext: string): { blocks: Rea
   }
 }
 
-/**
- * Note text as the terminal may show it. A crafted note can carry escape sequences that hide
- * text, fake a link or move the cursor, and bidirectional overrides that reorder what is
- * shown. Each of them becomes a visible replacement character. Saving keeps the text as it is.
- */
-export function forTerminal(text: string): string {
-  // eslint-disable-next-line no-control-regex
-  return text.replace(/\r\n/g, "\n").replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F\u202A-\u202E\u2066-\u2069]/g, "\uFFFD");
-}
-
 /** The file name the TUI suggests when a note is saved. A lone SSH key keeps its own. */
 export function noteFileName(blocks: readonly ReadBlock[]): string {
   return blocks.length === 1 && blocks[0]?.type === "sshkey" ? "note-sshkey.key" : "note.txt";

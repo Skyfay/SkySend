@@ -10,7 +10,8 @@ import {
   validateUploadHeaders,
   type UploadHeaders,
 } from "../lib/upload-validation.js";
-import { createWsUploadHandler, type WsQuotaAdapter } from "../lib/ws-upload.js";
+import { createWsUploadHandler } from "../lib/ws-upload.js";
+import type { createUploadQuota } from "../middleware/quota.js";
 
 /**
  * WebSocket upload transport for normal uploads, on top of lib/ws-upload.ts.
@@ -25,7 +26,8 @@ import { createWsUploadHandler, type WsQuotaAdapter } from "../lib/ws-upload.js"
 export interface UploadWsRouteDeps {
   storage: StorageBackend;
   upgradeWebSocket: UpgradeWebSocket;
-  quota: WsQuotaAdapter;
+  /** Reserves the bytes of an upload in its init. The session layer commits or releases them. */
+  quota: Pick<ReturnType<typeof createUploadQuota>, "reserve">;
 }
 
 export function createUploadWsRoute(deps: UploadWsRouteDeps) {
@@ -58,16 +60,16 @@ export function createUploadWsRoute(deps: UploadWsRouteDeps) {
           return { error: validationError.message, code: 1008 };
         }
 
-        // Quota
-        const quotaResult = deps.quota.check(ip, headers.contentLength);
+        // Quota: reserves the declared size until the upload is stored or ends.
+        const quotaResult = deps.quota.reserve(ip, headers.contentLength);
         if (!quotaResult.ok) {
-          return { error: quotaResult.reason, code: 1008 };
+          return { error: quotaResult.reason, code: 1008, status: quotaResult.status };
         }
 
         return {
           contentLength: headers.contentLength,
           meta: headers,
-          quotaHashedIp: quotaResult.hashedIp,
+          quotaReservation: quotaResult.reservation,
         };
       },
 

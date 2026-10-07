@@ -7,6 +7,13 @@
 - **infra**: Updated wrangler to 4.148.0 and refreshed the lockfile, so undici in the local worker runtime and source-map-js in the build tooling resolve to patched versions (GHSA-rfgv-xxqx-mfg5, GHSA-w293-vg96-wgc3, GHSA-3wwx-pv8p-q78v, GHSA-pmjh-fq2x-6v4x, GHSA-3xpg-4rpp-hhhm, GHSA-2jfj-6hjv-fm6j, GHSA-rx4f-c7p8-82vq, GHSA-r53p-7pc4-xj5r, GHSA-2gqq-gqf2-x968, GHSA-8436-99hf-9mmv, GHSA-68fv-2mgg-jv7q).
 - **infra**: `pnpm audit` ignores the braces advisory GHSA-vfj7-8cjw-p6xm, which has no patched release and only reaches the lint tooling of the website.
 - **infra**: Raised the pnpm overrides for `sharp` and `brace-expansion` and added overrides for `postcss-selector-parser` under `@tailwindcss/typography` and `argparse` under `js-yaml` to clear transitive advisories (GHSA-wq5f-xc86-pv6w, GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p, GHSA-rj75-hqrm-r3gf, GHSA-hp3w-g68c-fv3c).
+- **client**: The CLI and the TUI save a download under a cleaned file name inside the chosen folder and add a number instead of replacing an existing file, so a crafted name can no longer write elsewhere on disk.
+- **client**: File names, error messages and the server title are shown with their control characters made visible, so a sender or a server can no longer rewrite terminal output or the clipboard through escape sequences.
+- **client**: The TUI packs a multi-file upload into a temporary file only the current user can read and removes it even when the TUI is closed with Ctrl+C.
+- **server**: An upload reserves its size in the upload quota when it starts, so uploads running side by side can no longer store more than the quota allows.
+- **server**: The single-request upload requires the OIDC login when `OIDC_PROTECT_FILES` is on, like every other way to upload a file.
+- **server**: The single-request upload stops at the size it declared, so a client can no longer fill the disk with a body that never ends.
+- **server**: A chunked HTTP upload that receives less than 1 MiB in 10 minutes is ended like a WebSocket upload, so a stalled upload no longer holds its share of the quota or a slot of a request.
 
 ### 📝 Documentation
 

@@ -91,7 +91,7 @@ skysend download <url> [options]
 
 | Option | Description |
 | --- | --- |
-| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. |
+| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. The filename is cleaned of path separators, control characters and leading dots, and a file that already exists keeps its place while the download gets a number, such as `report (1).pdf`. Only an explicit file path replaces an existing file. |
 | `-p, --password [password]` | Password for protected uploads. Prompts interactively if no value is given. |
 | `--json` | Output result as JSON |
 

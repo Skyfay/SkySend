@@ -27,6 +27,18 @@ const MAX_PENDING_CHUNKS = 64;
 /** The longest a session can stay open: its TTL plus the wait for the next sweep. */
 export const SESSION_MAX_LIFETIME_MS = SESSION_TTL_MS + SWEEP_INTERVAL_MS;
 
+/**
+ * A session has to receive MIN_PROGRESS_BYTES, or the rest of its upload, in every window of
+ * this length, over HTTP chunks as over the WebSocket. A sender that trickles a byte now and
+ * then, or a client that went away, would otherwise hold its claim until the session times
+ * out: a slot of a request and the bytes it reserved in the quota among them. All bytes in
+ * and no finalize counts as no progress.
+ */
+export const PROGRESS_WINDOW_MS = 10 * 60 * 1000;
+export const MIN_PROGRESS_BYTES = 1024 * 1024;
+/** How often sessions are checked for progress. */
+const PROGRESS_CHECK_MS = 60 * 1000;
+
 export interface ChunkedUploadOptions<M> {
   /**
    * Where chunk bodies wait until they are appended in order. Emptied when the
@@ -66,6 +78,9 @@ interface UploadSession<M> {
   firstChunkAt: number;
   /** Chunk requests of this session that are currently being handled. */
   activeRequests: number;
+  /** Start of the current progress window and the bytes received when it began. */
+  windowStart: number;
+  windowBytes: number;
 }
 
 /**
@@ -119,6 +134,22 @@ export function createChunkedUploads<M>(
     }
   }, SWEEP_INTERVAL_MS).unref();
 
+  // Drop sessions that stopped making progress, see PROGRESS_WINDOW_MS.
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (now - session.windowStart < PROGRESS_WINDOW_MS) continue;
+      const remaining = session.contentLength - session.windowBytes;
+      const needed = Math.max(1, Math.min(MIN_PROGRESS_BYTES, remaining));
+      if (session.bytesReceived - session.windowBytes < needed) {
+        void abandon(id, session);
+        continue;
+      }
+      session.windowStart = now;
+      session.windowBytes = session.bytesReceived;
+    }
+  }, PROGRESS_CHECK_MS).unref();
+
   return {
     /** Opens a session for an upload of `contentLength` bytes and returns its new ID. */
     async open(contentLength: number, meta: M): Promise<string> {
@@ -136,6 +167,8 @@ export function createChunkedUploads<M>(
         writePromise: Promise.resolve(),
         firstChunkAt: 0,
         activeRequests: 0,
+        windowStart: Date.now(),
+        windowBytes: 0,
       });
       return id;
     },

@@ -14,6 +14,7 @@ import {
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
 import { CLI_NOTE_TYPES, isCliNoteType, prepareNote, textToBlock } from "../lib/note.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface NoteOptions {
   server?: string;
@@ -160,7 +161,7 @@ export function registerNoteCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

@@ -11,6 +11,8 @@ import {
 import { fetchInfo, downloadFile, verifyPassword } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
 import { parseShareUrl } from "../../lib/url.js";
+import { availablePath, sanitizeFilename } from "../../lib/filename.js";
+import { forTerminal } from "../../lib/terminal.js";
 import { formatBytes, formatSpeed } from "../../lib/progress.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import { ProgressBar } from "../components/ProgressBar.js";
@@ -66,8 +68,8 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
       }
       setMetadata(meta);
-      const name = meta?.type === "single" ? meta.name : meta?.type === "archive" ? "archive.zip" : `download-${parsed.id}`;
-      setSavePath(path.join(process.cwd(), name));
+      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsed.id}`;
+      setSavePath(availablePath(process.cwd(), name));
       setPhase("save-path");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -95,8 +97,8 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
       }
       setMetadata(meta);
-      const name = meta?.type === "single" ? meta.name : meta?.type === "archive" ? "archive.zip" : `download-${parsedUrl.id}`;
-      setSavePath(path.join(process.cwd(), name));
+      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsedUrl.id}`;
+      setSavePath(availablePath(process.cwd(), name));
       setPhase("save-path");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -236,7 +238,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       <Box flexDirection="column" paddingX={1}>
         <Text bold color="green">Download complete!</Text>
         <Box flexDirection="column" marginLeft={2} marginTop={1}>
-          <Text><Text dimColor>Saved: </Text>{resultPath}</Text>
+          <Text><Text dimColor>Saved: </Text>{forTerminal(resultPath)}</Text>
           <Text><Text dimColor>Size:  </Text>{formatBytes(resultSize)}</Text>
           {avgSpeed && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
           {metadata?.type === "archive" && (
@@ -254,7 +256,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
     return (
       <Box flexDirection="column" paddingX={1}>
         <Text color="red" bold>Download failed</Text>
-        <Text color="red">{errorMsg}</Text>
+        <Text color="red">{forTerminal(errorMsg)}</Text>
         <Box marginTop={1}>
           <Text dimColor>Press Enter or Esc to go back</Text>
         </Box>

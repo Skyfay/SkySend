@@ -4,6 +4,9 @@ import type { UpgradeWebSocket, WSContext } from "hono/ws";
 import { getConfig } from "./config.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 import type { StorageBackend } from "../storage/types.js";
+import type { QuotaReservation } from "../middleware/quota.js";
+// The same progress rule as chunked HTTP sessions.
+import { MIN_PROGRESS_BYTES, PROGRESS_WINDOW_MS } from "./chunked-upload.js";
 
 /**
  * The session layer of WebSocket uploads, shared by normal uploads and uploads into a file
@@ -18,23 +21,13 @@ import type { StorageBackend } from "../storage/types.js";
  *      WebSocket preserves ordering so no per-frame index is needed.
  *   4. Client sends a JSON text frame {"type":"finalize", ...}.
  *   5. Server verifies bytesWritten === contentLength, finalizes storage, lets the target
- *      store the row, records quota, replies {"type":"done", id} plus what the target adds
+ *      store the row, commits the quota, replies {"type":"done", id} plus what the target adds
  *      and closes with code 1000.
  *
  * Errors close the socket with code 1011 and an {"type":"error", message} frame. Abnormal
- * closes before finalize abort the storage entry and hand the target its claim back.
+ * closes before finalize abort the storage entry and hand the target its claim back and the
+ * quota its reservation.
  */
-
-type QuotaRecorder = (hashedIp: string, bytes: number) => void;
-
-export interface WsQuotaAdapter {
-  /** If non-null, upload must not proceed. Returns rejection reason. */
-  check(
-    ip: string,
-    contentLength: number,
-  ): { ok: true; hashedIp: string | null } | { ok: false; reason: string };
-  record: QuotaRecorder;
-}
 
 /** Why a target refused. `status` is the HTTP status the same refusal has over HTTP. */
 export interface WsUploadRefusal {
@@ -47,12 +40,15 @@ export interface WsUploadRefusal {
 export interface WsUploadTarget<M> {
   /**
    * Checks the init message and claims what the upload needs. Returns the refusal, or the
-   * declared size, what the session keeps until finalize and the hashed IP for the quota.
+   * declared size, what the session keeps until finalize and the quota reservation. A target
+   * that refuses after it reserved gives the reservation back itself.
    */
   open(
     init: Record<string, unknown>,
     ctx: { c: Context; ip: string },
-  ): Promise<WsUploadRefusal | { contentLength: number; meta: M; quotaHashedIp: string | null }>;
+  ): Promise<
+    WsUploadRefusal | { contentLength: number; meta: M; quotaReservation: QuotaReservation | null }
+  >;
   /**
    * Stores the upload once all its bytes are in storage. A refusal deletes the blob, a reply
    * travels in the done frame.
@@ -75,7 +71,7 @@ interface Session<M> {
   stage: Stage;
   meta: M;
   contentLength: number;
-  quotaHashedIp: string | null;
+  quotaReservation: QuotaReservation | null;
   bytesReceived: number;
   firstFrameAt: number;
   /** Buffered frames waiting to be flushed to storage. */
@@ -109,14 +105,6 @@ interface PendingInit {
 }
 
 /**
- * A session has to receive MIN_PROGRESS_BYTES, or the rest of its upload, in every window of
- * this length. A sender that trickles a byte now and then would otherwise hold its claim, a
- * slot of a request among them, for as long as it likes. All bytes in and no finalize counts
- * as no progress.
- */
-const PROGRESS_WINDOW_MS = 10 * 60 * 1000;
-const MIN_PROGRESS_BYTES = 1024 * 1024;
-/**
  * A buffer below the flush threshold is written out this long after its first frame at the
  * latest, so a sender that stops short of the threshold cannot keep it in memory.
  */
@@ -125,7 +113,6 @@ const FLUSH_DELAY_MS = 1000;
 export interface WsUploadDeps {
   storage: StorageBackend;
   upgradeWebSocket: UpgradeWebSocket;
-  quota: WsQuotaAdapter;
 }
 
 function isRefusal(value: unknown): value is WsUploadRefusal {
@@ -134,7 +121,7 @@ function isRefusal(value: unknown): value is WsUploadRefusal {
 
 /** Builds the WebSocket handler of one kind of upload. */
 export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTarget<M>) {
-  const { storage, upgradeWebSocket, quota } = deps;
+  const { storage, upgradeWebSocket } = deps;
 
   /** Threshold above which buffered frames are flushed to storage. */
   const FLUSH_THRESHOLD = 4 * 1024 * 1024; // 4 MB
@@ -226,6 +213,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
     session.stage = "closed";
     stopTimers(session);
     target.abandon?.(session.meta);
+    session.quotaReservation?.release();
     return session.writePromise
       .catch(() => {})
       .then(() => storage.abortChunkedUpload(session.id))
@@ -377,6 +365,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
           }
           if (pending.gone) {
             target.abandon?.(opened.meta);
+            opened.quotaReservation?.release();
             return;
           }
 
@@ -386,12 +375,14 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
           } catch (err) {
             console.error("[upload-ws] Storage init failed:", err);
             target.abandon?.(opened.meta);
+            opened.quotaReservation?.release();
             sessions.delete(ws);
             fail(ws, undefined, "Storage init failed");
             return;
           }
           if (pending.gone) {
             target.abandon?.(opened.meta);
+            opened.quotaReservation?.release();
             await storage.abortChunkedUpload(id).catch(() => {});
             return;
           }
@@ -401,7 +392,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             stage: "receiving",
             meta: opened.meta,
             contentLength: opened.contentLength,
-            quotaHashedIp: opened.quotaHashedIp,
+            quotaReservation: opened.quotaReservation,
             bytesReceived: 0,
             firstFrameAt: 0,
             buffer: [],
@@ -536,12 +527,10 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             session.stage = "closed";
             stopTimers(session);
             clearInterval(keepaliveTimer);
-            if (session.quotaHashedIp) {
-              try {
-                quota.record(session.quotaHashedIp, session.bytesReceived);
-              } catch (err) {
-                console.error("[upload-ws] Recording the quota failed:", err);
-              }
+            try {
+              session.quotaReservation?.commit(session.bytesReceived);
+            } catch (err) {
+              console.error("[upload-ws] Recording the quota failed:", err);
             }
             sendJson(ws, { ...outcome?.reply, type: "done", id: session.id });
             try {

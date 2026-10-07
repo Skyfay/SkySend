@@ -82,6 +82,9 @@ export async function uploadWsTransport(
     ws.addEventListener("error", () => { clearTimeout(timer); reject(new Error("WebSocket handshake failed")); });
   });
 
+  // Read until the upload is done. On a failure it is cancelled in the finally block, which
+  // stops the source, so the caller can read the file again for a fallback.
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
     ws.send(JSON.stringify({
       type: "init",
@@ -109,7 +112,7 @@ export async function uploadWsTransport(
     if (!readyId) throw new Error("Server did not return an upload id");
 
     // Stream frames
-    const reader = encryptedStream.getReader();
+    reader = encryptedStream.getReader();
     let loaded = 0;
     let carry: Uint8Array | null = null;
     const sendStartedAt = Date.now();
@@ -189,5 +192,6 @@ export async function uploadWsTransport(
     return { id: doneId };
   } finally {
     try { ws.close(); } catch { /* ignore */ }
+    if (!doneId) await (reader ?? encryptedStream).cancel().catch(() => {});
   }
 }

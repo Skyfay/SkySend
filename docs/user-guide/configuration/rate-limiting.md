@@ -20,14 +20,17 @@ When the limit is exceeded, the server returns `429 Too Many Requests`.
 
 Upload quotas limit the total volume of data a single user can upload within a time window, preventing a single user from filling up the server's storage. Controlled via `FILE_UPLOAD_QUOTA_BYTES` and `FILE_UPLOAD_QUOTA_WINDOW`. Set `FILE_UPLOAD_QUOTA_BYTES=0` to disable quotas (default).
 
-When a quota is exceeded, the server returns `429 Too Many Requests`:
+An upload reserves its size in the quota when it starts and keeps it until it is stored or ends, so uploads running side by side cannot add up to more than the quota. An upload that fails or is cancelled gives its share back. Uploads into a [file request](/user-guide/file-requests) count against the quota of the sender.
+
+When the quota is used up, the server returns `429 Too Many Requests`:
 
 ```json
 {
-  "error": "Upload quota exceeded",
-  "retryAfter": 3600
+  "error": "Upload quota exceeded. Try again later."
 }
 ```
+
+An upload that would not fit into what is left of the quota gets `413 Content Too Large` with `"File size exceeds remaining quota."`.
 
 ### Privacy
 

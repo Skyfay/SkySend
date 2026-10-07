@@ -6,7 +6,8 @@ import { decryptNoteContent } from "@skysend/crypto";
 import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { fetchNoteInfo, viewNote, verifyNotePassword } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
-import { forTerminal, noteFileName, readReceivedNote } from "../../lib/note.js";
+import { noteFileName, readReceivedNote } from "../../lib/note.js";
+import { forTerminal } from "../../lib/terminal.js";
 import { parseShareUrl } from "../../lib/url.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import type { AppState } from "../types.js";
@@ -329,7 +330,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     return (
       <Box flexDirection="column" paddingX={1}>
         <Text color="red" bold>Error</Text>
-        <Text color="red">{errorMsg}</Text>
+        <Text color="red">{forTerminal(errorMsg)}</Text>
         <Box marginTop={1}><Text dimColor>Press Enter or Esc to go back</Text></Box>
       </Box>
     );

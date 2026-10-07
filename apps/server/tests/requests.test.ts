@@ -99,6 +99,28 @@ describe("file requests", () => {
   let limiter: RequestLimiter;
   let lockout: PasswordLockout;
   let recorded: Array<[string, number]>;
+  /** How often the quota middleware ran and how many reservations went back. */
+  let quotaCalls: number;
+  let released: number;
+
+  /**
+   * A reservation of the quota that records what it commits. Every release call counts, also
+   * one after the reservation ended, so a test sees when two owners give it back.
+   */
+  const reservation = () => {
+    let open = true;
+    return {
+      commit: (bytes: number) => {
+        if (!open) return;
+        open = false;
+        recorded.push(["hashed-ip", bytes]);
+      },
+      release: () => {
+        released++;
+        open = false;
+      },
+    };
+  };
 
   /** The two request routes the way src/index.ts mounts them, plus the routes of normal uploads. */
   function createApp(
@@ -120,14 +142,14 @@ describe("file requests", () => {
         quota: options.quota
           ? {
               middleware: async (c, next) => {
-                c.set("quotaHashedIp", "hashed-ip");
+                quotaCalls++;
+                c.set("quotaReservation", reservation());
                 await next();
               },
-              recordUsage: (ip, bytes) => recorded.push([ip, bytes]),
-              check: () =>
+              reserve: () =>
                 options.quotaRefusal
-                  ? { ok: false as const, reason: options.quotaRefusal }
-                  : { ok: true as const, hashedIp: "hashed-ip" },
+                  ? { ok: false as const, status: 429 as const, reason: options.quotaRefusal }
+                  : { ok: true as const, reservation: reservation() },
             }
           : undefined,
         upgradeWebSocket: options.upgradeWebSocket,
@@ -213,6 +235,8 @@ describe("file requests", () => {
     limiter = createRequestLimiter(10);
     lockout = createPasswordLockout(3, 60_000);
     recorded = [];
+    quotaCalls = 0;
+    released = 0;
     vi.mocked(getDb).mockReturnValue(dbCtx.db);
     vi.mocked(getConfig).mockReturnValue(DEFAULT_CONFIG);
   });
@@ -561,6 +585,21 @@ describe("file requests", () => {
       expect(file.status).toBe(200);
       expect(new Uint8Array(await file.arrayBuffer())).toEqual(data);
       expect(recorded).toEqual([["hashed-ip", 1000]]);
+      // The quota is reserved once, at init. Chunks and finalize run on that reservation.
+      expect(quotaCalls).toBe(1);
+      expect(released).toBe(0);
+    });
+
+    it("gives the quota reservation back when the sender cancels", async () => {
+      const app = createApp({ quota: true });
+      const { id, headers } = await createRequest(app);
+      const opened = await init(app, id, headers.upload, 10);
+      const { id: uid } = (await opened.json()) as { id: string };
+      expect(
+        (await app.request(`/api/request/${id}/upload/${uid}`, { method: "DELETE" })).status,
+      ).toBe(200);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
     });
 
     it("counts downloads as the request set them, but never a listing", async () => {
@@ -891,8 +930,7 @@ describe("file requests", () => {
                 return c.json({ error: "Upload quota exceeded. Try again later." }, 429);
               await next();
             },
-            recordUsage: () => {},
-            check: () => ({ ok: true, hashedIp: null }),
+            reserve: () => ({ ok: true, reservation: null }),
           },
         }),
       );
@@ -929,7 +967,7 @@ describe("file requests", () => {
           quota: {
             middleware: async (c) =>
               c.json({ error: "Upload quota exceeded. Try again later." }, 429),
-            recordUsage: () => {},
+            reserve: () => ({ ok: true, reservation: null }),
           },
         }),
       );
@@ -1365,6 +1403,36 @@ describe("file requests", () => {
         fake.ws,
       );
       expect(fake.lastJson()).toMatchObject({ type: "error", status: 429 });
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+    });
+
+    it("gives the quota reservation back exactly once when the socket closes", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
+    });
+
+    it("gives the quota reservation back when the request refuses the upload", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app, { maxSize: 5 });
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      expect(fake.lastJson()).toMatchObject({ type: "error" });
+      expect(released).toBe(1);
       expect(requestRow(created.id).reservedUploads).toBe(0);
     });
 

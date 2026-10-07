@@ -25,6 +25,8 @@ import {
   type ProgressState,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { availablePath, sanitizeFilename } from "../lib/filename.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface DownloadOptions {
   output?: string;
@@ -101,19 +103,20 @@ export function registerDownloadCommand(program: Command): void {
         // The metadata carries the authenticated size the download is checked against.
         if (!metadata) throw new Error("The upload has no metadata, so the download cannot be verified");
 
-        // Determine output path
+        // Determine output path. The sender picks the name, so it may neither leave the
+        // chosen directory nor replace a file there. Only an explicit -o file path overwrites.
         let outputPath: string;
-        const defaultName = metadata.type === "single" ? metadata.name : "archive.zip";
+        const defaultName = metadata.type === "single" ? sanitizeFilename(metadata.name) : "archive.zip";
 
         if (options.output) {
           const stat = fs.existsSync(options.output) ? fs.statSync(options.output) : null;
           if (stat?.isDirectory()) {
-            outputPath = path.join(options.output, defaultName);
+            outputPath = availablePath(options.output, defaultName);
           } else {
             outputPath = options.output;
           }
         } else {
-          outputPath = path.join(process.cwd(), defaultName);
+          outputPath = availablePath(process.cwd(), defaultName);
         }
 
         // Ensure output directory exists
@@ -124,7 +127,7 @@ export function registerDownloadCommand(program: Command): void {
 
         // Download + decrypt
         if (!options.json) {
-          writeLine(`Downloading to: ${outputPath}`);
+          writeLine(`Downloading to: ${forTerminal(outputPath)}`);
         }
 
         const { stream } = await downloadFile(server, parsed.id, creds.authTokenB64);
@@ -177,7 +180,7 @@ export function registerDownloadCommand(program: Command): void {
             fileCount: info.fileCount,
           }));
         } else {
-          writeLine(`Saved: ${outputPath} (${formatBytes(totalWritten)})${avgSpeedSuffix}`);
+          writeLine(`Saved: ${forTerminal(outputPath)} (${formatBytes(totalWritten)})${avgSpeedSuffix}`);
           if (metadata.type === "archive") {
             writeLine(`Archive contains ${metadata.files.length} files`);
           }
@@ -199,7 +202,7 @@ export function registerDownloadCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

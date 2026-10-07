@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from "react";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
 import {
@@ -25,6 +24,8 @@ import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 import { uploadWsTransport } from "../../lib/ws-upload.js";
 import { getWebSocket } from "../../lib/config.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
+import { createPrivateTempFile } from "../../lib/temp-file.js";
+import { forTerminal } from "../../lib/terminal.js";
 
 type Phase =
   | "file-select"
@@ -83,44 +84,44 @@ function getCompressionLevel(filename: string): 0 | 6 {
   return PRECOMPRESSED_EXTENSIONS.has(ext) ? 0 : 6;
 }
 
-async function createZipStream(
+async function createZipFile(
   filePaths: string[],
   onProgress?: (packed: number, total: number) => void,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number; cleanup: () => void }> {
+): Promise<{ path: string; size: number; cleanup: () => void }> {
   const totalBytes = filePaths.reduce((sum, f) => {
     try { return sum + fs.statSync(f).size; } catch { return sum; }
   }, 0);
   let packedBytes = 0;
 
-  // Stream ZIP output to a temp file instead of buffering in RAM
-  const tmpPath = path.join(os.tmpdir(), `skysend-zip-${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`);
-  const fd = fs.openSync(tmpPath, "w");
-
-  const zipper = new Zip((_err, chunk) => {
-    fs.writeSync(fd, chunk);
-  });
-  for (const filePath of filePaths) {
-    const name = path.basename(filePath);
-    const entry = new ZipDeflate(name, { level: getCompressionLevel(name) });
-    zipper.add(entry);
-    const nodeStream = fs.createReadStream(filePath);
-    for await (const chunk of nodeStream) {
-      const data = new Uint8Array(chunk as Buffer);
-      entry.push(data);
-      packedBytes += data.byteLength;
-      onProgress?.(packedBytes, totalBytes);
-      // Yield to let React re-render
-      await new Promise<void>((r) => setImmediate(r));
+  // Stream ZIP output to a temp file instead of buffering in RAM. The zip is still
+  // plaintext, so only this user may read it, and a failed packing removes it at once.
+  const tmp = createPrivateTempFile("upload.zip");
+  try {
+    const zipper = new Zip((_err, chunk) => {
+      fs.writeSync(tmp.fd, chunk);
+    });
+    for (const filePath of filePaths) {
+      const name = path.basename(filePath);
+      const entry = new ZipDeflate(name, { level: getCompressionLevel(name) });
+      zipper.add(entry);
+      const nodeStream = fs.createReadStream(filePath);
+      for await (const chunk of nodeStream) {
+        const data = new Uint8Array(chunk as Buffer);
+        entry.push(data);
+        packedBytes += data.byteLength;
+        onProgress?.(packedBytes, totalBytes);
+        // Yield to let React re-render
+        await new Promise<void>((r) => setImmediate(r));
+      }
+      entry.push(new Uint8Array(0), true);
     }
-    entry.push(new Uint8Array(0), true);
+    zipper.end();
+    tmp.close();
+    return { path: tmp.path, size: fs.statSync(tmp.path).size, cleanup: tmp.cleanup };
+  } catch (err) {
+    tmp.cleanup();
+    throw err;
   }
-  zipper.end();
-  fs.closeSync(fd);
-
-  const size = fs.statSync(tmpPath).size;
-  const stream = createFileStream(tmpPath);
-  const cleanup = () => { try { fs.unlinkSync(tmpPath); } catch { /* already gone */ } };
-  return { stream, size, cleanup };
 }
 
 export function UploadView({ appState, onBack }: UploadViewProps): React.ReactElement {
@@ -159,24 +160,26 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
       setAvgSpeed("");
       const isMulti = files.length > 1;
 
-      let plaintextStream: ReadableStream<Uint8Array>;
+      // The file the upload reads: the packed zip for several files, else the file itself.
+      let sourcePath: string;
       let plaintextSize: number;
       if (isMulti) {
         setPhase("packing");
         setPackProgress({ percent: 0, packed: 0, total: totalSize });
-        const zip = await createZipStream(files, (packed, total) => {
+        const zip = await createZipFile(files, (packed, total) => {
           setPackProgress({
             percent: total > 0 ? (packed / total) * 100 : 0,
             packed, total,
           });
         });
-        plaintextStream = zip.stream;
+        sourcePath = zip.path;
         plaintextSize = zip.size;
         zipCleanup = zip.cleanup;
       } else {
-        plaintextSize = fs.statSync(files[0]!).size;
-        plaintextStream = createFileStream(files[0]!);
+        sourcePath = files[0]!;
+        plaintextSize = fs.statSync(sourcePath).size;
       }
+      const plaintextStream = createFileStream(sourcePath);
 
       setPhase("uploading");
 
@@ -228,19 +231,10 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           );
           uploadId = result.id;
         } catch {
-          // WS failed - recreate stream for HTTP fallback
+          // WS failed - read the same file again for the HTTP fallback. A zip stays on
+          // disk until the finally block, so it is not packed a second time.
           setTransport("HTTP chunked");
-          let retryCleanup: (() => void) | undefined;
-          let retryStream: ReadableStream<Uint8Array>;
-          if (isMulti) {
-            const retryZip = await createZipStream(files);
-            retryStream = retryZip.stream;
-            retryCleanup = retryZip.cleanup;
-            // Old zip already cleaned up in finally, track new one
-            zipCleanup = retryCleanup;
-          } else {
-            retryStream = createFileStream(files[0]!);
-          }
+          const retryStream = createFileStream(sourcePath);
           const retryEncStream = retryStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
 
           const CHUNK_SIZE = 10 * 1024 * 1024;
@@ -566,7 +560,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     return (
       <Box flexDirection="column" paddingX={1}>
         <Text color="red" bold>Upload failed</Text>
-        <Text color="red">{errorMsg}</Text>
+        <Text color="red">{forTerminal(errorMsg)}</Text>
         <Box marginTop={1}>
           <Text dimColor>Press Enter or Esc to go back</Text>
         </Box>

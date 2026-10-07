@@ -18,6 +18,21 @@ export interface QuotaStatus {
 }
 
 /**
+ * The bytes an upload was granted when it started. Every transport ends it exactly one way:
+ * commit once the upload is stored, release when it ends without being stored.
+ */
+export interface QuotaReservation {
+  /** Records the bytes the stored upload takes and ends the reservation. */
+  commit(bytes: number): void;
+  /** Gives the reserved bytes back. Does nothing once the reservation has ended. */
+  release(): void;
+}
+
+export type QuotaDecision =
+  | { ok: true; reservation: QuotaReservation | null }
+  | { ok: false; status: 413 | 429; reason: string };
+
+/**
  * Privacy-preserving upload quota using HMAC-hashed IPs.
  * The daily rotating key ensures that IPs cannot be correlated across days.
  * State is persisted in SQLite so quotas survive server restarts.
@@ -72,11 +87,31 @@ export function createUploadQuota(config: Config) {
       .run();
   }
 
+  /**
+   * Bytes granted to uploads that are still running. An upload reserves its declared size
+   * when it starts, so parallel uploads cannot each pass the check against the same used
+   * bytes. In memory only, since no upload survives a restart. A reservation also lapses
+   * when the quota window it was granted in ends, so one a transport fails to end cannot
+   * block its owner for longer than the usage it stands for would have.
+   */
+  const held = new Set<{ hashedIp: string; bytes: number; expiresAt: number }>();
+
+  function heldBytes(hashedIp: string): number {
+    const now = Date.now();
+    let bytes = 0;
+    for (const entry of held) {
+      if (entry.expiresAt <= now) held.delete(entry);
+      else if (entry.hashedIp === hashedIp) bytes += entry.bytes;
+    }
+    return bytes;
+  }
+
   // Rotate HMAC key daily for privacy
   const rotateInterval = setInterval(() => {
     hmacKey = randomBytes(32);
     keyCreatedAt = Date.now();
     db.delete(quotaUsage).run();
+    held.clear();
     persistKey();
   }, keyRotationMs);
   rotateInterval.unref();
@@ -108,46 +143,7 @@ export function createUploadQuota(config: Config) {
     return { bytesUsed: 0, resetAt };
   }
 
-  const middleware = createMiddleware<{ Variables: QuotaVariables }>(async (c, next) => {
-    // Quota disabled
-    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
-      await next();
-      return;
-    }
-
-    const ip = getClientIp(c, config.TRUST_PROXY);
-    const hashedIp = hashIp(ip);
-    const entry = getOrCreateEntry(hashedIp);
-
-    // Check quota before accepting upload
-    if (entry.bytesUsed >= config.FILE_UPLOAD_QUOTA_BYTES) {
-      return c.json(
-        { error: "Upload quota exceeded. Try again later." },
-        429,
-      );
-    }
-
-    // Reject uploads that would exceed the remaining quota
-    // X-Content-Length is used for chunked uploads (init declares total size)
-    const contentLength = parseInt(
-      c.req.header("X-Content-Length") ?? c.req.header("Content-Length") ?? "0",
-      10,
-    );
-    if (contentLength > 0 && entry.bytesUsed + contentLength > config.FILE_UPLOAD_QUOTA_BYTES) {
-      return c.json(
-        { error: "File size exceeds remaining quota." },
-        413,
-      );
-    }
-
-    // Store hashed IP in context for post-upload tracking
-    c.set("quotaHashedIp", hashedIp);
-    await next();
-  });
-
-  /**
-   * Record bytes used after a successful upload.
-   */
+  /** Adds the bytes of a stored upload. Only a reservation's commit calls it. */
   function recordUsage(hashedIp: string, bytes: number): void {
     if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) return;
     const entry = getOrCreateEntry(hashedIp);
@@ -159,30 +155,63 @@ export function createUploadQuota(config: Config) {
   }
 
   /**
-   * Pre-flight quota check for non-HTTP transports (e.g. WebSocket uploads).
-   * Returns { ok: true, hashedIp } when the upload may proceed.  When quota
-   * is disabled, hashedIp is null and no quota tracking is expected.
+   * Checks an upload of `contentLength` bytes against what the IP stored and what its running
+   * uploads hold, and reserves the bytes when it fits. Check and reservation run without an
+   * await in between, so no other upload can pass the check in the gap. When the quota is
+   * disabled, every upload may proceed and there is nothing to reserve.
    */
-  function check(
-    ip: string,
-    contentLength: number,
-  ): { ok: true; hashedIp: string | null } | { ok: false; reason: string } {
-    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
-      return { ok: true, hashedIp: null };
-    }
+  function reserve(ip: string, contentLength: number): QuotaDecision {
+    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) return { ok: true, reservation: null };
     const hashedIp = hashIp(ip);
     const entry = getOrCreateEntry(hashedIp);
-    if (entry.bytesUsed >= config.FILE_UPLOAD_QUOTA_BYTES) {
-      return { ok: false, reason: "Upload quota exceeded. Try again later." };
+    const used = entry.bytesUsed + heldBytes(hashedIp);
+    if (used >= config.FILE_UPLOAD_QUOTA_BYTES) {
+      return { ok: false, status: 429, reason: "Upload quota exceeded. Try again later." };
     }
-    if (
-      contentLength > 0 &&
-      entry.bytesUsed + contentLength > config.FILE_UPLOAD_QUOTA_BYTES
-    ) {
-      return { ok: false, reason: "File size exceeds remaining quota." };
+    const bytes = Number.isFinite(contentLength) && contentLength > 0 ? contentLength : 0;
+    if (used + bytes > config.FILE_UPLOAD_QUOTA_BYTES) {
+      return { ok: false, status: 413, reason: "File size exceeds remaining quota." };
     }
-    return { ok: true, hashedIp };
+
+    const hold = { hashedIp, bytes, expiresAt: entry.resetAt };
+    held.add(hold);
+    let open = true;
+    return {
+      ok: true,
+      reservation: {
+        commit(stored: number) {
+          if (!open) return;
+          open = false;
+          held.delete(hold);
+          recordUsage(hashedIp, stored);
+        },
+        release() {
+          if (!open) return;
+          open = false;
+          held.delete(hold);
+        },
+      },
+    };
   }
+
+  /**
+   * For the request that starts an HTTP upload: the chunked init, which declares the size in
+   * X-Content-Length, or the single-request upload. Never for chunk or finalize requests,
+   * which belong to an upload that holds its reservation already.
+   */
+  const middleware = createMiddleware<{ Variables: QuotaVariables }>(async (c, next) => {
+    const contentLength = parseInt(
+      c.req.header("X-Content-Length") ?? c.req.header("Content-Length") ?? "0",
+      10,
+    );
+    const decision = reserve(getClientIp(c, config.TRUST_PROXY), contentLength);
+    if (!decision.ok) return c.json({ error: decision.reason }, decision.status);
+    if (decision.reservation) c.set("quotaReservation", decision.reservation);
+    await next();
+    // A refused or failed start gives the bytes back at once. A started chunked upload keeps
+    // them until its finalize or its abandonment, and a stored upload has committed already.
+    if (c.res.status >= 400) decision.reservation?.release();
+  });
 
   /**
    * Get quota status for a given Hono context (uses client IP).
@@ -194,15 +223,17 @@ export function createUploadQuota(config: Config) {
     const ip = getClientIp(c, config.TRUST_PROXY);
     const hashedIp = hashIp(ip);
     const entry = getOrCreateEntry(hashedIp);
+    // Running uploads count, so a client does not start one the quota can no longer take.
+    const used = entry.bytesUsed + heldBytes(hashedIp);
     return {
       enabled: true,
       limit: config.FILE_UPLOAD_QUOTA_BYTES,
-      used: entry.bytesUsed,
-      remaining: Math.max(0, config.FILE_UPLOAD_QUOTA_BYTES - entry.bytesUsed),
+      used,
+      remaining: Math.max(0, config.FILE_UPLOAD_QUOTA_BYTES - used),
       resetsAt: new Date(entry.resetAt).toISOString(),
       window: config.FILE_UPLOAD_QUOTA_WINDOW,
     };
   }
 
-  return { middleware, recordUsage, getStatus, check };
+  return { middleware, getStatus, reserve };
 }

@@ -4,6 +4,8 @@
 
 Upload an encrypted file stream to the server.
 
+When `OIDC_PROTECT_FILES` is on, the request needs the session cookie or a bearer token, like the chunked init and the WebSocket. With an upload quota, the upload reserves `Content-Length` bytes when it starts and gives them back if it fails.
+
 ### Request
 
 The request body is the raw encrypted stream (binary). All metadata is passed via headers.
@@ -35,11 +37,11 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 - `X-File-Count` must not exceed `FILE_MAX_FILES_PER_UPLOAD`
 - `X-Expire-Sec` must be one of the configured `FILE_EXPIRE_OPTIONS_SEC`
 - `X-Max-Downloads` must be one of the configured `FILE_DOWNLOAD_OPTIONS`
-- Body size must match `Content-Length` exactly
+- Body size must match `Content-Length` exactly. A body that grows past it is stopped, and nothing of it is stored
 
 ### Response
 
-**200 OK:**
+**201 Created:**
 
 ```json
 {
@@ -55,6 +57,13 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
   "error": "File size exceeds maximum allowed size"
 }
 ```
+
+| Status | Error | Cause |
+| --- | --- | --- |
+| `401` | `Authentication required` | `OIDC_PROTECT_FILES` is on and the request carries no valid session |
+| `413` | `Body size does not match declared content length` | The body grew past `Content-Length` |
+| `413` | `File size exceeds remaining quota.` | `Content-Length` does not fit into what is left of the upload quota |
+| `429` | `Upload quota exceeded. Try again later.` | The upload quota is used up |
 
 ### Example
 
@@ -78,6 +87,8 @@ For large files, the web client uses a three-step chunked upload flow. Chunks ar
 ### POST /api/upload/init
 
 Initialize a chunked upload session. Validates headers and creates an empty storage entry.
+
+With an upload quota, the init reserves `X-Content-Length` bytes until finalize, or until the session ends without one. A session that receives less than 1 MiB, or the rest of its upload, in 10 minutes is ended, the same rule the WebSocket applies.
 
 #### Request
 

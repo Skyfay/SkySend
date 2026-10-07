@@ -101,21 +101,17 @@ describe("upload-ws route", () => {
 
   async function bootstrap() {
     const mock = createMockUpgrade();
-    const recordUsage = vi.fn();
     const route = createUploadWsRoute({
       storage,
       upgradeWebSocket: mock.upgrade,
-      quota: {
-        check: () => ({ ok: true, hashedIp: null }),
-        record: recordUsage,
-      },
+      quota: { reserve: () => ({ ok: true, reservation: null }) },
     });
     // Trigger the middleware to install the event handlers.
     await route.request("/", {
       method: "GET",
       headers: { "X-Forwarded-For": "127.0.0.1" },
     });
-    return { events: mock.getEvents(), recordUsage };
+    return { events: mock.getEvents() };
   }
 
   it("completes a happy-path upload", async () => {
@@ -253,8 +249,7 @@ describe("upload-ws route", () => {
       storage,
       upgradeWebSocket: mock.upgrade,
       quota: {
-        check: () => ({ ok: false, reason: "Upload quota exceeded. Try again later." }),
-        record: vi.fn(),
+        reserve: () => ({ ok: false, status: 429, reason: "Upload quota exceeded. Try again later." }),
       },
     });
     await route.request("/", { method: "GET" });
@@ -342,10 +337,15 @@ describe("upload-ws route", () => {
       storage,
       upgradeWebSocket: mock.upgrade,
       quota: {
-        check: () => ({ ok: true, hashedIp: "hashed-ip-1" }),
-        record: () => {
-          throw new Error("SQLITE_BUSY");
-        },
+        reserve: () => ({
+          ok: true,
+          reservation: {
+            commit: () => {
+              throw new Error("SQLITE_BUSY");
+            },
+            release: vi.fn(),
+          },
+        }),
       },
     });
     await route.request("/", { method: "GET" });
@@ -367,16 +367,13 @@ describe("upload-ws route", () => {
     expect(row?.size).toBe(16);
   });
 
-  it("records quota usage on successful finalize", async () => {
+  it("commits the quota reservation on successful finalize", async () => {
     const mock = createMockUpgrade();
-    const recordUsage = vi.fn();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
     const route = createUploadWsRoute({
       storage,
       upgradeWebSocket: mock.upgrade,
-      quota: {
-        check: () => ({ ok: true, hashedIp: "hashed-ip-1" }),
-        record: recordUsage,
-      },
+      quota: { reserve: () => ({ ok: true, reservation }) },
     });
     await route.request("/", { method: "GET" });
     const events = mock.getEvents();
@@ -392,6 +389,52 @@ describe("upload-ws route", () => {
       fake.ws,
     );
 
-    expect(recordUsage).toHaveBeenCalledWith("hashed-ip-1", 16);
+    expect(reservation.commit).toHaveBeenCalledWith(16);
+  });
+
+  it("gives the quota reservation back when the socket closes before finalize", async () => {
+    const mock = createMockUpgrade();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve: () => ({ ok: true, reservation }) },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(8).buffer), fake.ws);
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+
+    expect(reservation.release).toHaveBeenCalled();
+    expect(reservation.commit).not.toHaveBeenCalled();
+  });
+
+  it("gives the quota reservation back when the socket closes while init runs", async () => {
+    const mock = createMockUpgrade();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve: () => ({ ok: true, reservation }) },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+
+    const init = events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+    await init;
+
+    expect(reservation.release).toHaveBeenCalled();
+    expect(reservation.commit).not.toHaveBeenCalled();
   });
 });

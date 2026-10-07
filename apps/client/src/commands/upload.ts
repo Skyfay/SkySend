@@ -37,6 +37,7 @@ import {
 import { ApiError } from "../lib/errors.js";
 import { addUpload } from "../lib/history.js";
 import { uploadWsTransport } from "../lib/ws-upload.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface UploadOptions {
   server?: string;
@@ -463,7 +464,7 @@ export function registerUploadCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

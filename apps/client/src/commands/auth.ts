@@ -3,6 +3,7 @@ import { resolveServer, clearStoredToken, getStoredToken } from "../lib/config.j
 import { performOidcLogin, decodeTokenUser, isTokenExpired } from "../lib/oidc.js";
 import { writeLine } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface AuthOptions {
   server?: string;
@@ -30,7 +31,7 @@ export function registerAuthCommand(program: Command): void {
         const token = await performOidcLogin(server);
         const user = decodeTokenUser(token);
         if (user) {
-          writeLine(`Logged in as: ${user.name}${user.email ? ` <${user.email}>` : ""}`);
+          writeLine(`Logged in as: ${forTerminal(user.name)}${user.email ? ` <${forTerminal(user.email)}>` : ""}`);
           writeLine(`Session expires: ${formatDate(user.exp)}`);
         } else {
           writeLine("Login successful.");
@@ -39,7 +40,7 @@ export function registerAuthCommand(program: Command): void {
         if (err instanceof ApiError) {
           console.error(`Error: ${err.message} (HTTP ${err.status})`);
         } else {
-          console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+          console.error(`Error: ${forTerminal(err instanceof Error ? err.message : String(err))}`);
         }
         process.exit(1);
       }
@@ -57,7 +58,7 @@ export function registerAuthCommand(program: Command): void {
         clearStoredToken(server);
         writeLine(`Logged out from ${server}.`);
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`Error: ${forTerminal(err instanceof Error ? err.message : String(err))}`);
         process.exit(1);
       }
     });
@@ -83,11 +84,11 @@ export function registerAuthCommand(program: Command): void {
         }
         const expired = isTokenExpired(token);
         writeLine(`Server:  ${server}`);
-        writeLine(`User:    ${user.name}${user.email ? ` <${user.email}>` : ""}`);
+        writeLine(`User:    ${forTerminal(user.name)}${user.email ? ` <${forTerminal(user.email)}>` : ""}`);
         writeLine(`Expires: ${formatDate(user.exp)}${expired ? " (expired)" : ""}`);
         writeLine(`Status:  ${expired ? "expired - run 'skysend auth login' to refresh" : "active"}`);
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`Error: ${forTerminal(err instanceof Error ? err.message : String(err))}`);
         process.exit(1);
       }
     });

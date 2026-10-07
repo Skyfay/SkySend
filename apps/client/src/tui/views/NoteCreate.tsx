@@ -19,6 +19,7 @@ import { FileExplorer } from "../components/FileExplorer.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
 import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
+import { forTerminal } from "../../lib/terminal.js";
 
 type Phase =
   // Common
@@ -591,7 +592,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
     return (
       <Box flexDirection="column" paddingX={1}>
         <Text color="red" bold>Error</Text>
-        <Text color="red">{errorMsg}</Text>
+        <Text color="red">{forTerminal(errorMsg)}</Text>
         <Box marginTop={1}><Text dimColor>Press Enter or Esc to go back</Text></Box>
       </Box>
     );

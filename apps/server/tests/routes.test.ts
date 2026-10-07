@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Hono } from "hono";
-import type { Context, Next } from "hono";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { eq } from "drizzle-orm";
 import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
 import { uploads } from "../src/db/schema.js";
@@ -35,6 +35,8 @@ import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
 import { authMiddleware, ownerMiddleware } from "../src/middleware/auth.js";
+import { createUploadQuota } from "../src/middleware/quota.js";
+import type { Config } from "../src/lib/config.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
 
@@ -1696,6 +1698,159 @@ describe("routes", () => {
       });
       const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
       expect(result).toBeNull();
+    });
+  });
+
+  // ── Quota reservations and the single-request body limit ──
+
+  describe("upload quota on the HTTP transports", () => {
+    const salt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+    const headersFor = (size: number) => ({
+      "X-Auth-Token": fakeBase64urlToken(),
+      "X-Owner-Token": fakeBase64urlToken(),
+      "X-Salt": salt,
+      "X-Max-Downloads": "1",
+      "X-Expire-Sec": "86400",
+      "X-File-Count": "1",
+      "X-Content-Length": String(size),
+    });
+
+    /** The upload routes with a real quota, mounted the way src/index.ts mounts them. */
+    function appWithQuota(limit: number) {
+      const config = { ...DEFAULT_CONFIG, FILE_UPLOAD_QUOTA_BYTES: limit } as unknown as Config;
+      vi.mocked(getConfig).mockReturnValue(config);
+      const app = new Hono();
+      app.route(
+        "/api/upload",
+        createUploadRoute(storage, { chunkDir, quota: createUploadQuota(config) }),
+      );
+      return app;
+    }
+
+    const init = async (app: Hono, size: number) => {
+      const res = await app.request("/api/upload/init", { method: "POST", headers: headersFor(size) });
+      return { status: res.status, id: res.status === 201 ? ((await res.json()) as { id: string }).id : "" };
+    };
+    const chunk = (app: Hono, id: string, size: number) =>
+      app.request(`/api/upload/${id}/chunk?index=0`, { method: "POST", body: new Uint8Array(size) });
+    const finalize = (app: Hono, id: string) =>
+      app.request(`/api/upload/${id}/finalize`, { method: "POST" });
+
+    it("reserves the declared size at init, so parallel uploads cannot pass the same check", async () => {
+      const app = appWithQuota(1000);
+      const opened = await Promise.all([init(app, 600), init(app, 600), init(app, 600)]);
+      expect(opened.map((o) => o.status).sort()).toEqual([201, 413, 413]);
+    });
+
+    it("runs chunks and finalize on the reservation of their init, even one that fills the quota", async () => {
+      const app = appWithQuota(10);
+      const { status, id } = await init(app, 10);
+      expect(status).toBe(201);
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(200);
+      // Stored, so the quota is used up now.
+      expect((await init(app, 1)).status).toBe(429);
+    });
+
+    it("gives the reservation back when finalize refuses the upload", async () => {
+      const app = appWithQuota(10);
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 5)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
+    it("gives the reservation back when the init itself fails", async () => {
+      const app = appWithQuota(10);
+      const res = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: { ...headersFor(10), "X-Expire-Sec": "999" },
+      });
+      expect(res.status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
+    it("counts a single-request upload and gives a failed one back", async () => {
+      const app = appWithQuota(5);
+      const tooLong = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(6),
+      });
+      expect(tooLong.status).toBe(413);
+      const stored = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+      expect(stored.status).toBe(201);
+      const again = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(1),
+        body: new Uint8Array(1),
+      });
+      expect(again.status).toBe(429);
+    });
+
+    it("guards both ways to start an upload, and only those", async () => {
+      const guard: MiddlewareHandler = async (c) => c.json({ error: "Login required" }, 401);
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir, startGuard: guard }));
+      const single = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+      expect(single.status).toBe(401);
+      expect((await init(app, 5)).status).toBe(401);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      // A chunk or finalize request reaches its session check, which only an init could pass.
+      expect((await chunk(app, "unknown-session", 5)).status).toBe(404);
+      expect((await finalize(app, "unknown-session")).status).toBe(404);
+    });
+
+    it("drops a chunked upload that stops making progress and gives its reservation back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10);
+        const stalled = await init(app, 10);
+        expect(stalled.status).toBe(201);
+        expect((await init(app, 10)).status).toBe(429);
+
+        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        expect((await finalize(app, stalled.id)).status).toBe(404);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps a chunked upload that makes progress", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10);
+        const { id } = await init(app, 10);
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+        expect((await chunk(app, id, 10)).status).toBe(200);
+        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        expect((await finalize(app, id)).status).toBe(200);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stops a single-request body at its declared size and keeps nothing of it", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(64 * 1024),
+      });
+      expect(res.status).toBe(413);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      const left = readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+      expect(left).toEqual([]);
     });
   });
 });
