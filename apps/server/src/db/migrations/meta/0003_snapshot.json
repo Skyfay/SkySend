@@ -93,14 +93,6 @@
           "autoincrement": false,
           "default": 0
         },
-        "reserved_bytes": {
-          "name": "reserved_bytes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
         "finished_uploads": {
           "name": "finished_uploads",
           "type": "integer",

@@ -23,16 +23,17 @@ Uploads, notes and file requests each get a table of their own:
 
 ```
 File requests
-ID                                    Uploads  Used             Kept        Closes   Created
-------------------------------------  -------  ---------------  ----------  -------  -------------------
-aa197437-0205-47c4-8d72-37b195c5be76  1/2      4.9 KB / 1.0 MB  1 (4.9 KB)  23h 59m  2026-10-06 22:00:40
+ID                                    Uploads  Received  Max/Upload  Kept        Closes   Created
+------------------------------------  -------  --------  ----------  ----------  -------  -------------------
+aa197437-0205-47c4-8d72-37b195c5be76  1/2      4.9 KB    1.0 MB      1 (4.9 KB)  23h 59m  2026-10-06 22:00:40
 1 file request(s)
 ```
 
 | Column | Meaning |
 | --- | --- |
 | Uploads | Finished uploads of the allowed ones. A deleted upload keeps its slot. |
-| Used | Bytes of the finished uploads of the allowed total |
+| Received | Bytes of the finished uploads, deleted ones included |
+| Max/Upload | The most bytes one upload may have |
 | Kept | Uploads still stored, and their size |
 | Closes | Time until the request stops taking uploads, `expired` once that time has passed, or `closed` |
 
@@ -240,7 +241,7 @@ File Request Settings
 Open For Options:   1d, 3d, 7d
 Default Open For:   3d
 Max Uploads:        10
-Max Total Size:     2.0 GB
+Max Size/Upload:    2.0 GB
 Retention:          7d
 Downloads per File: 5
 Daily Limit:        10

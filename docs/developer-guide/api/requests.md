@@ -14,7 +14,7 @@ Every binary field is canonical base64url without padding, checked for its exact
 | `X-Inbox-Token` | The inbox link | Listing the inbox, downloading a file |
 | `X-Inbox-Owner-Token` | The inbox link | Deleting a file, closing and deleting the request |
 
-A missing or wrong token answers `404`, the same as a request that does not exist. On the inbox routes a wrong token also counts as a failed attempt for the lockout `request:<id>` of the caller's IP, shared with the password and note routes. After `PASSWORD_MAX_ATTEMPTS` failures every inbox route answers `429` with `Retry-After` for `PASSWORD_LOCKOUT_MS`.
+A missing or wrong token answers `404`, the same as a request that does not exist. On the inbox routes of a request with a password, a well-formed wrong token also counts as a failed attempt for the lockout `request:<id>` of the caller's IP, shared with the password and note routes. After `PASSWORD_MAX_ATTEMPTS` failures every inbox route answers `429` with `Retry-After` for `PASSWORD_LOCKOUT_MS`. A request without a password never locks, since its tokens come from 256 random bits, and neither does an ID that does not exist.
 
 ## POST /api/request
 
@@ -40,8 +40,8 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
 | `title` | Optional, `null` when there is none |
 | `expireSec` | One of `FILE_REQUEST_EXPIRE_OPTIONS_SEC` |
 | `maxUploads` | At most `FILE_REQUEST_MAX_UPLOADS` |
-| `maxSize` | At most `FILE_REQUEST_MAX_SIZE` |
-| `hasPassword` | Must be `true` when `FORCE_FILE_PASSWORD` is on |
+| `maxSize` | Most bytes one upload may have, at most `FILE_REQUEST_MAX_SIZE` |
+| `hasPassword` | Must be `true` when `FORCE_FILE_PASSWORD` is on. The server takes the client's word for it, since the password never reaches it. |
 
 Unknown fields are refused, and the body may be at most 16 KB.
 
@@ -68,11 +68,11 @@ What a sender sees. Needs `X-Upload-Token`.
 }
 ```
 
-`maxUploadSize` is the smaller of `FILE_MAX_SIZE` and the bytes the request still takes. A closed or expired request answers `open: false` with `uploadsLeft` and `maxUploadSize` at `0`.
+`maxUploadSize` is the smaller of `FILE_MAX_SIZE` and the `maxSize` of the request. A closed or expired request answers `open: false` with `uploadsLeft` and `maxUploadSize` at `0`.
 
 ## Uploading Into a Request
 
-Uploads take the same two transports as [normal uploads](/developer-guide/api/upload): the WebSocket when `FILE_UPLOAD_WS` is on, and chunked HTTP otherwise or when the WebSocket cannot connect. Both share the session layer of normal uploads and its limits. The sender's upload quota applies, and the slot and the bytes are reserved at init on either transport.
+Uploads take the same two transports as [normal uploads](/developer-guide/api/upload): the WebSocket when `FILE_UPLOAD_WS` is on, and chunked HTTP otherwise or when the WebSocket cannot connect. Both share the session layer of normal uploads and its limits. The sender's upload quota applies, and the slot is reserved at init on either transport. A WebSocket session that delivers less than 1 MiB, or less than the rest of its upload, in 10 minutes is ended and gives its slot back.
 
 ### GET /api/request/:id/upload/ws
 
@@ -102,7 +102,7 @@ Needs `X-Upload-Token`, plus:
 | `X-Content-Length` | Encrypted size, at most `FILE_MAX_SIZE` |
 | `X-File-Count` | Files in the upload, at most `FILE_MAX_FILES_PER_UPLOAD`, default `1` |
 
-Init reserves a slot and the declared bytes in one statement, so parallel senders can never overfill a request. A session that fails or times out gives its reservation back, and so does a restart of the server.
+Init reserves a slot in one statement, which also checks the declared size against the `maxSize` of the request, so parallel senders can never overfill a request. A session that fails or times out gives its slot back, and so does a restart of the server.
 
 | Status | Meaning |
 | --- | --- |
@@ -112,7 +112,7 @@ Init reserves a slot and the declared bytes in one statement, so parallel sender
 | `404` | Unknown request or wrong upload token |
 | `409` | Every slot is taken |
 | `410` | The request is closed or expired |
-| `413` | Larger than `FILE_MAX_SIZE`, than the space left, or than the sender's remaining upload quota |
+| `413` | Larger than `FILE_MAX_SIZE`, than the `maxSize` of the request, or than the sender's remaining upload quota |
 | `429` | The sender's upload quota or the rate limit is used up |
 
 ### POST /api/request/:id/upload/:uid/chunk?index=N
@@ -121,7 +121,7 @@ The encrypted bytes of chunk `N`, as for a normal upload. A session of another r
 
 ### DELETE /api/request/:id/upload/:uid
 
-Ends an upload the sender cancelled, so its slot and bytes are free again at once instead of when the session times out after an hour. The upload ID came only from init, so knowing it is what allows this. Answers `{ "ok": true }`, or `404` for an unknown session or one of another request.
+Ends an upload the sender cancelled, so its slot is free again at once instead of when the session times out after an hour. The upload ID came only from init, so knowing it is what allows this. Answers `{ "ok": true }`, or `404` for an unknown session or one of another request.
 
 ### POST /api/request/:id/upload/:uid/finalize
 
@@ -179,7 +179,7 @@ Needs `X-Inbox-Token`. Never counts as a download.
 }
 ```
 
-`usedUploads` and `usedBytes` count the uploads that finished, deleted ones included, because a deleted upload keeps its slot. `uploads` holds only the ones that can still be downloaded.
+`usedUploads` and `usedBytes` count the uploads that finished, deleted ones included, because a deleted upload keeps its slot. `maxSize` is the most bytes one upload may have. `uploads` holds only the ones that can still be downloaded.
 
 ## GET /api/inbox/:id/file/:uid
 

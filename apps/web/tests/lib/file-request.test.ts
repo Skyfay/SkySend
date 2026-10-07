@@ -15,7 +15,6 @@ import {
   openInboxLink,
   prepareRequest,
   sanitizeFilename,
-  sanitizeMimeType,
   sanitizeTitle,
 } from "../../src/lib/file-request.js";
 import type { Inbox, InboxUpload } from "../../src/lib/api.js";
@@ -224,15 +223,6 @@ describe("sanitizeFilename", () => {
 
   it("keeps an ordinary name as it is", () => {
     expect(sanitizeFilename("Steuererklärung 2026.pdf")).toBe("Steuererklärung 2026.pdf");
-  });
-});
-
-describe("sanitizeMimeType", () => {
-  it("keeps a plain type and drops anything else", () => {
-    expect(sanitizeMimeType("application/pdf")).toBe("application/pdf");
-    expect(sanitizeMimeType("image/svg+xml")).toBe("image/svg+xml");
-    expect(sanitizeMimeType("text/html; charset=utf-8")).toBe("application/octet-stream");
-    expect(sanitizeMimeType("")).toBe("application/octet-stream");
   });
 });
 

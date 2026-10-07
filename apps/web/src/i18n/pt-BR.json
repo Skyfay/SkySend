@@ -166,7 +166,11 @@
       "request.retentionHint_other",
       "requestUpload.errorText",
       "errors.linkRewrittenInboxDesc",
-      "errors.linkRewrittenUploadDesc"
+      "errors.linkRewrittenUploadDesc",
+      "nav.requestsUnseen",
+      "requests.new_one",
+      "requests.new_other",
+      "inbox.new"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -194,7 +198,8 @@
     "upload": "Enviar",
     "myUploads": "Meus Envios",
     "menu": "Menu",
-    "requests": "Solicitações"
+    "requests": "Solicitações",
+    "requestsUnseen": "Novos envios em solicitações"
   },
   "tab": {
     "file": "Arquivo",
@@ -618,10 +623,10 @@
     "maxUploads": "Envios",
     "uploads_one": "{{count}} envio",
     "uploads_other": "{{count}} envios",
-    "maxSize": "Tamanho total",
+    "maxSize": "Tamanho por envio",
     "passwordHint": "Sua caixa só abre com esta senha.",
     "passwordOff": "O link da caixa sozinho abre a caixa.",
-    "summary": "Aberta por <b>{{expiry}}</b>, até <b>{{uploads}}</b> e <b>{{size}}</b> no total.",
+    "summary": "Aberta por <b>{{expiry}}</b>, até <b>{{uploads}}</b> de no máximo <b>{{size}}</b> cada.",
     "create": "Criar solicitação",
     "creating": "Criando…",
     "created": "Solicitação criada",
@@ -651,6 +656,8 @@
     "passwordProtected": "Protegida por senha",
     "received_one": "{{count}} envio recebido",
     "received_other": "{{count}} envios recebidos",
+    "new_one": "{{count}} novo",
+    "new_other": "{{count}} novos",
     "closed": "Fechada",
     "copyUploadLink": "Copiar link de envio",
     "deleteTitle": "Excluir esta solicitação?",
@@ -669,7 +676,7 @@
     "goneText": "Ela foi excluída, ou foi fechada e todos os seus arquivos expiraram.",
     "deleted": "Solicitação excluída",
     "deletedText": "A solicitação e todos os seus arquivos foram excluídos para sempre.",
-    "usage": "{{used}} de {{max}} envios, {{size}} de {{maxSize}}",
+    "usage": "{{used}} de {{max}} envios, {{size}} no total, no máximo {{maxSize}} cada",
     "closesIn": "fecha em {{time}}",
     "closed": "fechada",
     "refresh": "Atualizar",
@@ -680,6 +687,7 @@
     "downloadsLeft_other": "restam {{count}} downloads",
     "deletedIn": "excluído em {{time}}",
     "unverified": "Não verificado",
+    "new": "Novo",
     "unverifiedHint": "Qualquer pessoa com o link de envio pode mandar arquivos. Abra só o que você esperava.",
     "damaged": "Este envio não pode ser aberto",
     "damagedHint": "Ele está danificado ou não foi feito para esta solicitação. Exclua-o.",

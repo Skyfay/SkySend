@@ -20,7 +20,7 @@ Sender (browser)
   wrap                      HPKE seal of fileSecret to the public key
 ```
 
-The server stores the vault, three derived tokens, the encrypted title and, for each upload, the ciphertext, the encrypted metadata and the wrap. It never learns either secret or the public key.
+The server stores the vault, three derived tokens, the encrypted title and, for each upload, the ciphertext, the encrypted metadata and the wrap. It never learns either secret or the public key, unless a link reaches it, see [What the Server Can Still Do](#what-the-server-can-still-do).
 
 ## Keys From the Links
 
@@ -91,7 +91,8 @@ So the public key only ever travels in the fragment of the upload link and insid
 
 - **Withhold uploads.** It can drop an upload, or list fewer than arrived. No client can tell.
 - **Pick the upload ID.** The sender wraps to the ID the server returns, after checking it is a UUID. The binding stops the server from moving a finished wrap, not from refusing to store one.
-- **Read a rewritten link.** A mail gateway that turns `#` into `%23` sends the fragment to the server as part of the path. For an inbox link, that is the key to the vault. See the [threat model](/user-guide/security/threat-model).
+- **Read a rewritten link.** A mail gateway that turns `#` into `%23` sends the fragment to the server as part of the path. For an inbox link, that is the key to the vault. For an upload link, it is the public key, so the server could then put uploads of its own into the inbox. See the [threat model](/user-guide/security/threat-model).
+- **Read a reported link.** An abuse report for a request carries its upload link, so whoever receives the report learns the public key and could put uploads into the inbox as well. Reports never take an inbox link.
 
 ## Versions
 

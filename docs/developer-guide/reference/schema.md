@@ -74,16 +74,15 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `id` | TEXT (PK) | - | UUID v4 |
 | `vault` | BLOB NOT NULL | - | The requester's private key, sealed with a key from the inbox link (146 bytes) |
 | `vaultNonce` | BLOB NOT NULL | - | Vault IV (12 bytes) |
-| `inboxAuthToken` | TEXT NOT NULL | - | Base64url token from the inbox link, for reading |
-| `inboxOwnerToken` | TEXT NOT NULL | - | Base64url token from the inbox link, for managing |
-| `uploadToken` | TEXT NOT NULL | - | Base64url token from the upload link |
+| `inboxAuthToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for reading, base64url |
+| `inboxOwnerToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for managing, base64url |
+| `uploadToken` | TEXT NOT NULL | - | SHA-256 of the token from the upload link, base64url |
 | `titleCiphertext` | BLOB | NULL | AES-256-GCM encrypted title |
 | `titleNonce` | BLOB | NULL | Title IV (12 bytes) |
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether the inbox link is password protected |
 | `maxUploads` | INTEGER NOT NULL | - | Uploads the request takes |
-| `maxSize` | INTEGER NOT NULL | - | Bytes the request takes in total |
+| `maxSize` | INTEGER NOT NULL | - | Most bytes one upload may have |
 | `reservedUploads` | INTEGER NOT NULL | 0 | Uploads running or finished. Set back to `finishedUploads` at startup. |
-| `reservedBytes` | INTEGER NOT NULL | 0 | Bytes of uploads running or finished |
 | `finishedUploads` | INTEGER NOT NULL | 0 | Uploads that finished. Never goes down, so a deleted upload keeps its slot. |
 | `finishedBytes` | INTEGER NOT NULL | 0 | Bytes of uploads that finished |
 | `closed` | INTEGER NOT NULL | 0 | Closed by the requester |

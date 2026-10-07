@@ -358,7 +358,7 @@ describe("file requests", () => {
   // ── What a sender sees ──────────────────────────────
 
   describe("GET /api/request/:id", () => {
-    it("returns the title and the space left", async () => {
+    it("returns the title and the limits of an upload", async () => {
       const app = createApp();
       const { id, request, headers } = await createRequest(app);
       const res = await app.request(`/api/request/${id}`, { headers: headers.upload });
@@ -516,13 +516,15 @@ describe("file requests", () => {
       expect(requestRow(id).reservedUploads).toBe(2);
     });
 
-    it("refuses an upload larger than the space left", async () => {
+    it("lets every upload take the size the request allows", async () => {
       const app = createApp();
       const { id, headers } = await createRequest(app, { maxSize: 100 });
-      expect((await init(app, id, headers.upload, 60)).status).toBe(201);
-      expect((await init(app, id, headers.upload, 41)).status).toBe(413);
-      expect((await init(app, id, headers.upload, 40)).status).toBe(201);
-      expect(requestRow(id).reservedBytes).toBe(100);
+      expect((await init(app, id, headers.upload, 100)).status).toBe(201);
+      expect((await init(app, id, headers.upload, 101)).status).toBe(413);
+      expect((await init(app, id, headers.upload, 100)).status).toBe(201);
+      expect(requestRow(id).reservedUploads).toBe(2);
+      const res = await app.request(`/api/request/${id}`, { headers: headers.upload });
+      expect(await res.json()).toMatchObject({ uploadsLeft: 1, maxUploadSize: 100 });
     });
 
     it("refuses an upload larger than FILE_MAX_SIZE", async () => {
@@ -530,7 +532,7 @@ describe("file requests", () => {
       const app = createApp();
       const { id, headers } = await createRequest(app, { maxSize: 4096 });
       expect((await init(app, id, headers.upload, 51)).status).toBe(413);
-      expect(requestRow(id).reservedBytes).toBe(0);
+      expect(requestRow(id).reservedUploads).toBe(0);
     });
 
     it("refuses uploads into a closed or expired request", async () => {
@@ -579,9 +581,7 @@ describe("file requests", () => {
         json(body),
       );
       expect(res.status).toBe(400);
-      const row = requestRow(created.id);
-      expect(row.reservedUploads).toBe(0);
-      expect(row.reservedBytes).toBe(0);
+      expect(requestRow(created.id).reservedUploads).toBe(0);
     });
 
     it("keeps the session when the finalize body is broken", async () => {
@@ -656,11 +656,11 @@ describe("file requests", () => {
       const created = await createRequest(app, { maxUploads: 2 });
       await uploadInto(app, created, new Uint8Array(10));
       expect((await init(app, created.id, created.headers.upload, 30)).status).toBe(201);
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 2, reservedBytes: 40 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 2 });
 
       // A new route is what a restart creates.
       const restarted = createApp();
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 1, reservedBytes: 10 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 1 });
       expect((await init(restarted, created.id, created.headers.upload, 30)).status).toBe(201);
     });
 
@@ -675,7 +675,7 @@ describe("file requests", () => {
         body: new Uint8Array(10),
       });
       expect(chunk.status).toBe(500);
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
     });
 
     it("gives the slot back at once when the sender cancels", async () => {
@@ -692,7 +692,7 @@ describe("file requests", () => {
         (await app.request(`/api/request/${created.id}/upload/${uid}`, { method: "DELETE" }))
           .status,
       ).toBe(200);
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
       expect(
         (await app.request(`/api/request/${created.id}/upload/${uid}`, { method: "DELETE" }))
           .status,
@@ -797,9 +797,9 @@ describe("file requests", () => {
       ).toBe(404);
     });
 
-    it("locks the request for an IP after too many wrong tokens", async () => {
+    it("locks a request with a password for an IP after too many wrong tokens", async () => {
       const app = createApp();
-      const { id, headers } = await createRequest(app);
+      const { id, headers } = await createRequest(app, { hasPassword: true });
       for (let i = 0; i < 3; i++) {
         await app.request(`/api/inbox/${id}`, {
           headers: { "X-Inbox-Token": fakeBase64urlToken() },
@@ -827,10 +827,21 @@ describe("file requests", () => {
       expect((await app.request(`/api/inbox/${id}`, { headers: headers.inbox })).status).toBe(200);
     });
 
-    it("locks a request ID that does not exist the same way", async () => {
+    it("never locks a request without a password, whose tokens nobody can guess", async () => {
+      const app = createApp();
+      const { id, headers } = await createRequest(app);
+      for (let i = 0; i < 5; i++) {
+        await app.request(`/api/inbox/${id}`, {
+          headers: { "X-Inbox-Token": fakeBase64urlToken() },
+        });
+      }
+      expect((await app.request(`/api/inbox/${id}`, { headers: headers.inbox })).status).toBe(200);
+    });
+
+    it("never locks a request ID that does not exist", async () => {
       const app = createApp();
       const id = crypto.randomUUID();
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         expect(
           (
             await app.request(`/api/inbox/${id}`, {
@@ -839,13 +850,6 @@ describe("file requests", () => {
           ).status,
         ).toBe(404);
       }
-      expect(
-        (
-          await app.request(`/api/inbox/${id}`, {
-            headers: { "X-Inbox-Token": fakeBase64urlToken() },
-          })
-        ).status,
-      ).toBe(429);
     });
 
     it("counts finished uploads as used, deleted ones included", async () => {
@@ -1138,7 +1142,7 @@ describe("file requests", () => {
       );
       expect(requestRow(created.id).reservedUploads).toBe(1);
       await events.onClose!(new CloseEvent("close"), fake.ws);
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
     });
 
     it("refuses a broken finalize, drops the blob and gives the slot back", async () => {
@@ -1238,7 +1242,7 @@ describe("file requests", () => {
       );
       await events.onClose!(new CloseEvent("close"), fake.ws);
       await opening;
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
       expect(blobs()).toHaveLength(0);
     });
 
@@ -1257,7 +1261,7 @@ describe("file requests", () => {
         type: "error",
         message: "Unexpected message before ready",
       });
-      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, reservedBytes: 0 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
       expect(blobs()).toHaveLength(0);
     });
 
@@ -1275,6 +1279,69 @@ describe("file requests", () => {
         );
         expect(requestRow(created.id).reservedUploads).toBe(1);
         await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        expect(fake.lastJson()).toMatchObject({ type: "error", message: "Upload timed out" });
+        expect(requestRow(created.id).reservedUploads).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("ends a session that only trickles bytes and gives its slot back", async () => {
+      vi.useFakeTimers({
+        toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout", "Date"],
+      });
+      try {
+        const mock = createMockUpgrade();
+        const app = createApp({ upgradeWebSocket: mock.upgrade });
+        const created = await createRequest(app);
+        const events = await connect(app, created.id, mock);
+        const fake = createFakeWs();
+        await events.onMessage!(
+          msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 4096)),
+          fake.ws,
+        );
+        // A byte every nine minutes never lets ten minutes pass in silence.
+        for (let minute = 0; minute < 27; minute += 9) {
+          await events.onMessage!(msgEvent(new Uint8Array(1).buffer), fake.ws);
+          await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        }
+        expect(fake.lastJson()).toMatchObject({ type: "error", message: "Upload timed out" });
+        expect(requestRow(created.id).reservedUploads).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps a slow upload that makes progress, and ends one that never finalizes", async () => {
+      const MiB = 1024 * 1024;
+      vi.mocked(getConfig).mockReturnValue({
+        ...DEFAULT_CONFIG,
+        FILE_MAX_SIZE: 8 * MiB,
+        FILE_REQUEST_MAX_SIZE: 8 * MiB,
+      } as unknown as ReturnType<typeof getConfig>);
+      vi.useFakeTimers({
+        toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout", "Date"],
+      });
+      try {
+        const mock = createMockUpgrade();
+        const app = createApp({ upgradeWebSocket: mock.upgrade });
+        const created = await createRequest(app, { maxSize: 8 * MiB });
+        const events = await connect(app, created.id, mock);
+        const fake = createFakeWs();
+        await events.onMessage!(
+          msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 3 * MiB)),
+          fake.ws,
+        );
+        // One MiB every nine minutes is enough to stay.
+        for (let i = 0; i < 3; i++) {
+          await events.onMessage!(msgEvent(new Uint8Array(MiB).buffer), fake.ws);
+          await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        }
+        expect(fake.allJson().some((m) => m.type === "error")).toBe(false);
+        expect(requestRow(created.id).reservedUploads).toBe(1);
+
+        // Every byte is in, but no finalize follows.
+        await vi.advanceTimersByTimeAsync(12 * 60 * 1000);
         expect(fake.lastJson()).toMatchObject({ type: "error", message: "Upload timed out" });
         expect(requestRow(created.id).reservedUploads).toBe(0);
       } finally {

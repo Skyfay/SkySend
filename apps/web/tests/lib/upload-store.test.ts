@@ -40,6 +40,7 @@ const {
   getRequest,
   removeRequest,
   getAllRequests,
+  markUploadsSeen,
 } = await import("../../src/lib/upload-store.js");
 
 function makeUpload(overrides: Partial<StoredUpload> = {}): StoredUpload {
@@ -300,5 +301,19 @@ describe("file request storage", () => {
     await removeRequest("a");
     expect(await getRequest("a")).toBeUndefined();
     expect((await getAllRequests()).map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("remembers the uploads an inbox listed and gives back the ones it knew before", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    expect(await markUploadsSeen("a", "inbox-a", ["u1"])).toEqual(new Set());
+    expect(await markUploadsSeen("a", "inbox-a", ["u1", "u2"])).toEqual(new Set(["u1"]));
+    expect(await getRequest("a")).toMatchObject({ seenUploads: ["u1", "u2"] });
+  });
+
+  it("changes nothing for a link this browser did not store", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    expect(await markUploadsSeen("a", "made-up", ["u1"])).toBeNull();
+    expect(await markUploadsSeen("missing", "inbox-missing", ["u1"])).toBeNull();
+    expect((await getRequest("a"))?.seenUploads).toBeUndefined();
   });
 });

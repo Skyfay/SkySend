@@ -479,7 +479,8 @@ const inboxResponseSchema = z.object({
   maxSize: z.number(),
   usedUploads: z.number(),
   usedBytes: z.number(),
-  uploads: z.array(inboxUploadSchema),
+  // FILE_REQUEST_MAX_UPLOADS is at most 1000, so a longer list did not come from SkySend.
+  uploads: z.array(inboxUploadSchema).max(1000),
 });
 
 export type Inbox = z.infer<typeof inboxResponseSchema>;

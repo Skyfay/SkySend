@@ -310,6 +310,63 @@ describe("upload-ws route", () => {
     expect(done).toBeTruthy();
   });
 
+  it("writes a buffer below the flush threshold out after a second", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { events } = await bootstrap();
+      const fake = createFakeWs();
+      const append = vi.spyOn(storage, "appendChunk");
+      await events.onMessage!(
+        msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "64" }) })),
+        fake.ws,
+      );
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      // A later frame does not push the deadline back.
+      await vi.advanceTimersByTimeAsync(600);
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      expect(append).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(400);
+      expect(append).toHaveBeenCalledTimes(1);
+
+      await events.onMessage!(msgEvent(new Uint8Array(44).buffer), fake.ws);
+      await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+      expect(fake.lastJson()).toMatchObject({ type: "done" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a stored upload when recording the quota fails", async () => {
+    const mock = createMockUpgrade();
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: {
+        check: () => ({ ok: true, hashedIp: "hashed-ip-1" }),
+        record: () => {
+          throw new Error("SQLITE_BUSY");
+        },
+      },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    expect(await storage.exists(done.id)).toBe(true);
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row?.size).toBe(16);
+  });
+
   it("records quota usage on successful finalize", async () => {
     const mock = createMockUpgrade();
     const recordUsage = vi.fn();

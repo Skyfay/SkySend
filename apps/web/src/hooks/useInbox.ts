@@ -7,12 +7,12 @@ import {
   openInbox,
   openInboxLink,
   sanitizeFilename,
-  sanitizeMimeType,
   type InboxAccess,
   type OpenedInbox,
   type OpenedUpload,
 } from "@/lib/file-request";
-import { getRequest, removeRequest } from "@/lib/upload-store";
+import { getRequest, markUploadsSeen, removeRequest } from "@/lib/upload-store";
+import { setUnseen } from "@/lib/unseen-uploads";
 
 export type InboxPhase =
   | "invalid"
@@ -36,16 +36,18 @@ interface InboxState {
   opened: OpenedInbox | null;
   /** Progress in percent of each download that is running. */
   downloads: Record<string, number>;
+  /** Uploads that arrived since the inbox was last open in this browser. */
+  fresh: ReadonlySet<string>;
 }
 
-/** The name and type a download is saved under. A sender wrote the name, so it is cleaned. */
+/**
+ * The name and type a download is saved under. A sender wrote the name, so it is cleaned,
+ * and the type it claims is ignored, so the browser never treats the file as a page.
+ */
 export function downloadName(entry: OpenedUpload): { filename: string; mimeType: string } {
   const metadata = entry.file?.metadata;
   if (metadata?.type === "single") {
-    return {
-      filename: sanitizeFilename(metadata.name),
-      mimeType: sanitizeMimeType(metadata.mimeType),
-    };
+    return { filename: sanitizeFilename(metadata.name), mimeType: "application/octet-stream" };
   }
   return { filename: "archive.zip", mimeType: "application/zip" };
 }
@@ -70,6 +72,7 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
     inbox: null,
     opened: null,
     downloads: {},
+    fresh: new Set(),
   });
   const accessRef = useRef<InboxAccess | null>(null);
   const hasPasswordRef = useRef(linkState === "needs-password");
@@ -78,9 +81,20 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
   const load = useCallback(
     async (access: InboxAccess) => {
       try {
+        // This browser knows the one link of a request it made. Another link for the same ID
+        // is made up, and asking the server with it could only count a failed attempt.
+        const known = await getRequest(id).catch(() => undefined);
+        if (known && known.inboxFragment !== fragment) {
+          setState((s) => ({ ...s, phase: "invalid" }));
+          return;
+        }
         const inbox = await api.fetchInbox(id, access.inboxToken);
         const opened = await openInbox(id, inbox, access.keys);
         accessRef.current = access;
+        // What was new stays marked until the page is left, even after a refresh.
+        const ids = inbox.uploads.map((upload) => upload.id);
+        const seenBefore = await markUploadsSeen(id, fragment, ids).catch(() => null);
+        if (seenBefore) setUnseen(id, 0);
         setState((s) => ({
           ...s,
           phase: "ready",
@@ -88,6 +102,9 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
           error: null,
           inbox,
           opened,
+          fresh: seenBefore
+            ? new Set([...s.fresh, ...ids.filter((uploadId) => !seenBefore.has(uploadId))])
+            : s.fresh,
         }));
       } catch (err) {
         if (err instanceof api.ApiError && err.status === 429) {
@@ -108,7 +125,10 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
           // Anyone who knows the ID can make up an inbox link that leads here. Only the
           // link this browser stored for the request may remove it from the list.
           const stored = await getRequest(id).catch(() => undefined);
-          if (stored?.inboxFragment === fragment) await removeRequest(id).catch(() => {});
+          if (stored?.inboxFragment === fragment) {
+            await removeRequest(id).catch(() => {});
+            setUnseen(id, 0);
+          }
           setState((s) => ({ ...s, phase: "gone" }));
           return;
         }

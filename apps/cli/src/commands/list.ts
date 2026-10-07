@@ -161,11 +161,12 @@ export async function listUploads(ctx: CliContext, options: ListOptions): Promis
   }
 
   if (requestResults.length > 0) {
-    const headers = ["ID", "Uploads", "Used", "Kept", "Closes", "Created"];
+    const headers = ["ID", "Uploads", "Received", "Max/Upload", "Kept", "Closes", "Created"];
     const rows = requestResults.map(({ request, uploads: kept }) => [
       request.id,
       `${request.finishedUploads}/${request.maxUploads}`,
-      `${formatBytes(request.finishedBytes)} / ${formatBytes(request.maxSize)}`,
+      formatBytes(request.finishedBytes),
+      formatBytes(request.maxSize),
       `${kept.length} (${formatBytes(kept.reduce((sum, u) => sum + u.size, 0))})`,
       request.closed ? "closed" : formatDuration(request.closesAt.getTime() - now.getTime()),
       formatDate(request.createdAt),

@@ -92,14 +92,11 @@ function isOpen(request: FileRequest, now = new Date()): boolean {
   return !request.closed && request.closesAt > now;
 }
 
-/** Gives the slot and the bytes of an upload that did not finish back to its request. */
-function release(requestId: string, bytes: number): void {
+/** Gives the slot of an upload that did not finish back to its request. */
+function release(requestId: string): void {
   getDb()
     .update(fileRequests)
-    .set({
-      reservedUploads: sql`max(${fileRequests.reservedUploads} - 1, 0)`,
-      reservedBytes: sql`max(${fileRequests.reservedBytes} - ${bytes}, 0)`,
-    })
+    .set({ reservedUploads: sql`max(${fileRequests.reservedUploads} - 1, 0)` })
     .where(eq(fileRequests.id, requestId))
     .run();
 }
@@ -128,8 +125,8 @@ function isForeignKeyError(err: unknown): boolean {
 }
 
 /**
- * Reserves a slot and the declared bytes of a request. One statement, so two senders can
- * never both take the last slot or the last bytes. Returns why it refused, or null.
+ * Reserves a slot of a request for an upload of `contentLength` bytes. One statement, so two
+ * senders can never both take the last slot. Returns why it refused, or null.
  */
 async function reserveSlot(
   id: string,
@@ -138,17 +135,14 @@ async function reserveSlot(
   const db = getDb();
   const reserved = db
     .update(fileRequests)
-    .set({
-      reservedUploads: sql`${fileRequests.reservedUploads} + 1`,
-      reservedBytes: sql`${fileRequests.reservedBytes} + ${contentLength}`,
-    })
+    .set({ reservedUploads: sql`${fileRequests.reservedUploads} + 1` })
     .where(
       and(
         eq(fileRequests.id, id),
         eq(fileRequests.closed, false),
         gt(fileRequests.closesAt, new Date()),
         sql`${fileRequests.reservedUploads} < ${fileRequests.maxUploads}`,
-        sql`${fileRequests.reservedBytes} + ${contentLength} <= ${fileRequests.maxSize}`,
+        sql`${contentLength} <= ${fileRequests.maxSize}`,
       ),
     )
     .run();
@@ -158,7 +152,7 @@ async function reserveSlot(
   if (current.reservedUploads >= current.maxUploads) {
     return { status: 409, error: "File request is full" };
   }
-  return { status: 413, error: "Upload exceeds the space left in this file request" };
+  return { status: 413, error: "Upload exceeds the size this file request allows" };
 }
 
 /**
@@ -244,8 +238,7 @@ export interface RequestRouteOptions {
  * Uploads take the same two transports as normal uploads: WebSocket first when
  * FILE_UPLOAD_WS is on (lib/ws-upload.ts), chunked HTTP otherwise and as the fallback
  * (lib/chunked-upload.ts). Both share the session layer and its limits with normal uploads,
- * and the slot and the bytes are reserved at init, so parallel senders can never overfill
- * a request.
+ * and the slot is reserved at init, so parallel senders can never overfill a request.
  */
 export function createRequestRoute({
   storage,
@@ -273,16 +266,13 @@ export function createRequestRoute({
   // belonged to a session that is gone.
   getDb()
     .update(fileRequests)
-    .set({
-      reservedUploads: sql`${fileRequests.finishedUploads}`,
-      reservedBytes: sql`${fileRequests.finishedBytes}`,
-    })
+    .set({ reservedUploads: sql`${fileRequests.finishedUploads}` })
     .run();
 
   const chunked = createChunkedUploads<RequestUploadSession>(storage, {
     chunkDir,
     maxChunkSize,
-    onAbandon: (_id, session) => release(session.requestId, session.contentLength),
+    onAbandon: (_id, session) => release(session.requestId),
   });
 
   /**
@@ -325,7 +315,7 @@ export function createRequestRoute({
       }
       if (data.maxSize > config.FILE_REQUEST_MAX_SIZE) {
         return c.json(
-          { error: `A request accepts at most ${config.FILE_REQUEST_MAX_SIZE} bytes` },
+          { error: `A request accepts uploads of at most ${config.FILE_REQUEST_MAX_SIZE} bytes` },
           400,
         );
       }
@@ -388,16 +378,14 @@ export function createRequestRoute({
       open,
       closesAt: request.closesAt.toISOString(),
       uploadsLeft: open ? Math.max(0, request.maxUploads - request.reservedUploads) : 0,
-      maxUploadSize: open
-        ? Math.max(0, Math.min(config.FILE_MAX_SIZE, request.maxSize - request.reservedBytes))
-        : 0,
+      maxUploadSize: open ? Math.min(config.FILE_MAX_SIZE, request.maxSize) : 0,
       maxFilesPerUpload: config.FILE_MAX_FILES_PER_UPLOAD,
     });
   });
 
   /**
    * POST /api/request/:id/upload/init
-   * Reserves a slot and the declared bytes, then opens an upload session.
+   * Reserves a slot, then opens an upload session.
    */
   route.post("/:id/upload/init", async (c) => {
     const id = c.req.param("id");
@@ -432,7 +420,7 @@ export function createRequestRoute({
       });
       return c.json({ id: uploadId }, 201);
     } catch (err) {
-      release(id, contentLength);
+      release(id);
       throw err;
     }
   });
@@ -451,7 +439,7 @@ export function createRequestRoute({
 
   /**
    * DELETE /api/request/:id/upload/:uid
-   * Ends an upload the sender cancelled, so its slot and bytes are free again at once.
+   * Ends an upload the sender cancelled, so its slot is free again at once.
    * The upload ID came only from init, so knowing it is what allows this.
    */
   route.delete("/:id/upload/:uid", async (c) => {
@@ -502,7 +490,7 @@ export function createRequestRoute({
 
       if (session.bytesWritten !== meta.contentLength) {
         await storage.abortChunkedUpload(uid).catch(() => {});
-        release(id, meta.contentLength);
+        release(id);
         return c.json({ error: "Body size does not match declared content length" }, 400);
       }
 
@@ -510,7 +498,7 @@ export function createRequestRoute({
         await storage.finalizeChunkedUpload(uid);
       } catch (err) {
         await storage.abortChunkedUpload(uid).catch(() => {});
-        release(id, meta.contentLength);
+        release(id);
         throw err;
       }
 
@@ -522,7 +510,7 @@ export function createRequestRoute({
         );
       } catch (err) {
         await storage.delete(uid).catch(() => {});
-        release(id, meta.contentLength);
+        release(id);
         throw err;
       }
       if (!stored) {
@@ -601,7 +589,7 @@ export function createRequestRoute({
             }
           },
 
-          abandon: (meta) => release(meta.requestId, meta.contentLength),
+          abandon: (meta) => release(meta.requestId),
         },
       ),
     );

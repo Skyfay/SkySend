@@ -33,6 +33,7 @@ import * as api from "../../src/lib/api.js";
 import * as fileRequest from "../../src/lib/file-request.js";
 import * as store from "../../src/lib/upload-store.js";
 import { useCreateRequest, useRequestHistory } from "../../src/hooks/useFileRequests.js";
+import { keepUnseen, unseenFor } from "../../src/lib/unseen-uploads.js";
 
 const ID = "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const argon2 = vi.fn();
@@ -92,7 +93,25 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  keepUnseen(new Set());
 });
+
+function upload(id: string): api.InboxUpload {
+  return {
+    id,
+    size: 50,
+    fileCount: 1,
+    salt: "s",
+    wrapEnc: "e",
+    wrapCiphertext: "c",
+    encryptedMeta: "m",
+    metaNonce: "n",
+    downloadCount: 0,
+    maxDownloads: 5,
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+}
 
 describe("useCreateRequest", () => {
   it("creates the request and keeps both links in this browser", async () => {
@@ -120,6 +139,7 @@ describe("useCreateRequest", () => {
         inboxFragment: "inboxfrag",
         uploadFragment: "uploadfrag",
         title: "Docs",
+        seenUploads: [],
       }),
     );
     expect(result.current.created?.uploadLink).toBe(
@@ -156,6 +176,20 @@ describe("useRequestHistory", () => {
     expect(api.fetchInbox).toHaveBeenCalledWith("a", "it");
     expect(result.current.requests[0]?.inbox).toEqual(inbox());
     expect(result.current.requests[1]).toMatchObject({ id: "b", inbox: null, loading: false });
+  });
+
+  it("counts the uploads its inbox has not shown in this browser yet", async () => {
+    vi.mocked(store.getAllRequests).mockResolvedValueOnce([{ ...stored("a"), seenUploads: ["x"] }]);
+    vi.mocked(api.fetchInbox).mockResolvedValueOnce({
+      ...inbox(),
+      uploads: [upload("x"), upload("y")],
+    });
+    const { result } = renderHook(() => useRequestHistory());
+    await waitFor(() => expect(result.current.requests[0]?.loading).toBe(false));
+    expect(unseenFor("a")).toBe(1);
+
+    await act(() => result.current.remove(stored("a")));
+    expect(unseenFor("a")).toBe(0);
   });
 
   it("forgets a request the server no longer has", async () => {

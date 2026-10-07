@@ -11,7 +11,7 @@ Like everything in SkySend, the files are encrypted before they leave the sender
 3. Choose:
    - **Open for** - How long the request takes uploads, one of the times the instance offers
    - **Uploads** - How many uploads it takes in total
-   - **Total size** - How many bytes all uploads may add up to
+   - **Size per upload** - How many bytes one upload may have, at most the [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) of the instance
    - **Password** - Optional. The inbox then opens only with the link and the password together.
 4. Click **Create request**
 
@@ -34,11 +34,11 @@ The sender opens the upload link and sees:
 
 - What you wrote, marked as written by the requester and not checked by anyone
 - The host the files go to
-- An upload zone with the space that is left
+- An upload zone with the size one upload may have
 
-They drop their files, click **Encrypt and send** and see **Delivered** when it is done. There is no share link for them and nothing to keep. When a sender cancels, the slot is given back. An upload that breaks off without a cancel, for example when the connection drops, holds its slot for up to about an hour. One upload may hold several files, which arrive as one zip archive, like a normal multi-file upload.
+They drop their files, click **Encrypt and send** and see **Delivered** when it is done. There is no share link for them and nothing to keep. When a sender cancels, the slot is given back. An upload that breaks off without a cancel, for example when the connection drops, holds its slot for a while: over WebSocket until it delivered less than 1 MB in 10 minutes, over chunked HTTP for up to about an hour. One upload may hold several files, which arrive as one zip archive, like a normal multi-file upload.
 
-Every upload is limited by the request and by the instance alike: at most what is left of the total size, at most [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) and [`FILE_MAX_FILES_PER_UPLOAD`](/user-guide/configuration/environment-variables#file). The upload counts against the sender's own upload quota, if the instance sets one.
+Every upload is limited by the request and by the instance alike: at most the size per upload of the request, at most [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) and [`FILE_MAX_FILES_PER_UPLOAD`](/user-guide/configuration/environment-variables#file). The upload counts against the sender's own upload quota, if the instance sets one.
 
 ## Open the Inbox
 
@@ -49,13 +49,23 @@ Open the inbox link, and enter the password if the request has one. The inbox li
 - **Close request** stops new uploads. Uploads already running still finish.
 - **Delete request** removes the request and every file in it.
 
-Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters. An upload that cannot be opened is shown as damaged, and the others are not affected.
+Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. One that arrived since the inbox was last open in this browser is also marked **New**.
+
+## New Uploads
+
+While a SkySend page is visible, the browser checks up to 20 of the newest requests it keeps, every 5 minutes. A dot beside **Requests** in the navigation, and a count on the request in **Your requests**, show uploads that its inbox has not shown in this browser yet. Opening the inbox clears them.
+
+- A request with a password is not checked. Its tokens need the password, and the browser keeps none beside the protected link on purpose.
+- Nothing new is sent. Each check sends the inbox token that opening the Requests page sends anyway. The server does see the checks, so it learns that the requests checked together belong to one browser, and when that browser is open.
+- The pages of share links check nothing. A download, or an upload into someone else's request, never sits right next to a check of your requests.
+- A check never forgets a request. Only the Requests page does, once the server no longer has it.
+- Nothing is checked while every SkySend tab is closed or hidden, and there are no push notifications. They would need the server to store a push address for each request.
 
 ## What Happens Over Time
 
 | Event | When |
 | --- | --- |
-| The request stops taking uploads | After the time you chose, at most 7 days, or when you close it |
+| The request stops taking uploads | After the time you chose, or when you close it |
 | An upload is deleted | [`FILE_REQUEST_RETENTION_SEC`](/user-guide/configuration/environment-variables#file-requests) after it arrived, or once its downloads are used up |
 | The request itself is deleted | About 75 minutes after the time you chose ran out, once no upload is left in it. Closing it by hand does not bring this forward, deleting it does. |
 
@@ -81,11 +91,13 @@ File requests are on by default. Leave `request` out of [`ENABLED_SERVICES`](/us
 - With [`FORCE_FILE_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization), the app asks for a password for every inbox, the same as for every file.
 - [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. The count lives in memory and resets on a restart.
 - An abuse report for a file request takes its upload link. The report form refuses inbox links, since their key would open every file sent to the request.
-- A wrong inbox password counts toward the same lockout as a wrong file password, [`PASSWORD_MAX_ATTEMPTS`](/user-guide/configuration/environment-variables#password-lockout) per IP.
+- A wrong inbox password counts toward the same lockout as a wrong file password, [`PASSWORD_MAX_ATTEMPTS`](/user-guide/configuration/environment-variables#password-lockout) per IP. An inbox without a password never locks, since nobody can guess its 256-bit key.
+- One request can take its number of uploads times its size per upload, for example 1000 × 2 GB with the largest settings. Choose [`FILE_REQUEST_MAX_UPLOADS`](/user-guide/configuration/environment-variables#file-requests) and [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) with that product in mind.
+- With `FORCE_FILE_PASSWORD`, the server refuses a request that does not say it has a password. It cannot check the password itself, which never reaches it.
 - Uploads into a request take the same transports as normal uploads: WebSocket when [`FILE_UPLOAD_WS`](/user-guide/configuration/environment-variables#file) is on, chunked HTTP otherwise and whenever the WebSocket cannot connect.
 - The [admin CLI](/user-guide/admin-cli/commands) lists, counts and deletes requests like uploads and notes.
 
 ::: info Things to keep in mind
 - Anyone with the upload link can use up the slots of a request. Hand it only to the people you ask.
-- The lockout counts per IP. Someone behind the same NAT as you, who knows the request ID from the upload link, can lock your IP out of the inbox for a while by trying wrong passwords.
+- The lockout of an inbox with a password counts per IP. Someone behind the same NAT as you, who knows the request ID from the upload link, can lock your IP out of the inbox for a while by trying wrong passwords. A made-up inbox link opened in the browser that created the request asks the server nothing, since that browser knows the real one.
 :::

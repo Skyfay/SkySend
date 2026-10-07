@@ -158,6 +158,8 @@ export interface StoredRequest {
   title?: string;
   closesAt: string;
   createdAt: string;
+  /** IDs of the uploads the inbox listed when it was last open here. Any other one is new. */
+  seenUploads?: string[];
 }
 
 const REQUEST_PREFIX = "request:";
@@ -176,6 +178,22 @@ export async function getRequest(id: string): Promise<StoredRequest | undefined>
 
 export async function removeRequest(id: string): Promise<void> {
   await del(requestKey(id));
+}
+
+/**
+ * Remembers which uploads the inbox listed, so only later ones count as new. Only for the
+ * link this browser stored, so a made-up link to the same ID changes nothing. Returns the
+ * IDs it knew before, or null when it changed nothing.
+ */
+export async function markUploadsSeen(
+  id: string,
+  inboxFragment: string,
+  uploadIds: string[],
+): Promise<Set<string> | null> {
+  const request = await getRequest(id);
+  if (!request || request.inboxFragment !== inboxFragment) return null;
+  await saveRequest({ ...request, seenUploads: uploadIds });
+  return new Set(request.seenUploads ?? []);
 }
 
 export async function getAllRequests(): Promise<StoredRequest[]> {

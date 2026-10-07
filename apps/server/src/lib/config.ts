@@ -29,6 +29,15 @@ const commaSeparatedInts = z
   .transform((s) => s.split(",").map((v) => parseInt(v.trim(), 10)))
   .pipe(z.array(z.number().int().positive()).min(1));
 
+/** The longest duration a setting may hold, 100 years. A longer one would not make a valid date. */
+const MAX_DURATION_SEC = 3_153_600_000;
+
+/** Comma-separated list of durations in seconds, each at most MAX_DURATION_SEC. */
+const commaSeparatedDurations = commaSeparatedInts.refine(
+  (list) => list.every((seconds) => seconds <= MAX_DURATION_SEC),
+  { message: `Each duration must be at most ${MAX_DURATION_SEC} seconds (100 years)` },
+);
+
 /** Comma-separated list of non-negative integers (allows 0). */
 const commaSeparatedNonNegativeInts = z
   .string()
@@ -74,7 +83,7 @@ const configSchema = z.object({
     .transform((v) => parseByteSize(v))
     .pipe(z.number().positive()),
 
-  FILE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+  FILE_EXPIRE_OPTIONS_SEC: commaSeparatedDurations.default(() => [300, 3600, 86400, 604800]),
 
   FILE_DEFAULT_EXPIRE_SEC: z
     .string()
@@ -148,7 +157,7 @@ const configSchema = z.object({
     .transform((v) => parseByteSize(v))
     .pipe(z.number().positive()),
 
-  NOTE_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [300, 3600, 86400, 604800]),
+  NOTE_EXPIRE_OPTIONS_SEC: commaSeparatedDurations.default(() => [300, 3600, 86400, 604800]),
 
   NOTE_DEFAULT_EXPIRE_SEC: z
     .string()
@@ -166,8 +175,8 @@ const configSchema = z.object({
 
   // --- File request configuration ---
 
-  /** How long a file request accepts uploads, as options for the requester. At most 7 days. */
-  FILE_REQUEST_EXPIRE_OPTIONS_SEC: commaSeparatedInts.default(() => [86400, 259200, 604800]),
+  /** How long a file request accepts uploads, as options for the requester. */
+  FILE_REQUEST_EXPIRE_OPTIONS_SEC: commaSeparatedDurations.default(() => [86400, 259200, 604800]),
 
   FILE_REQUEST_DEFAULT_EXPIRE_SEC: z
     .string()
@@ -182,19 +191,19 @@ const configSchema = z.object({
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().int().min(1).max(1000)),
 
-  /** Most bytes one request accepts in total. Unset means FILE_MAX_SIZE. */
+  /** Most bytes one upload into a request may have. Unset means FILE_MAX_SIZE. */
   FILE_REQUEST_MAX_SIZE: z
     .string()
     .optional()
     .transform((v) => (v ? parseByteSize(v) : undefined))
     .pipe(z.number().positive().optional()),
 
-  /** How long an upload stays after it arrived. At most 30 days. */
+  /** How long an upload stays after it arrived. */
   FILE_REQUEST_RETENTION_SEC: z
     .string()
     .default("604800")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive().max(2_592_000, "FILE_REQUEST_RETENTION_SEC must be at most 30 days")),
+    .pipe(z.number().int().positive().max(MAX_DURATION_SEC)),
 
   /** How often the requester can download each uploaded file. */
   FILE_REQUEST_DOWNLOADS: z
@@ -431,7 +440,7 @@ const configSchema = z.object({
 type RawConfig = z.infer<typeof configSchema>;
 export type Config = Omit<RawConfig, "UPLOADS_DIR" | "BRANDING_DIR" | "FILE_REQUEST_MAX_SIZE"> & {
   UPLOADS_DIR: string;
-  /** Most bytes one request accepts in total, FILE_MAX_SIZE unless set. */
+  /** Most bytes one upload into a request may have, FILE_MAX_SIZE unless set. */
   FILE_REQUEST_MAX_SIZE: number;
   /** Directory whose contents are served under /branding/ (custom logo etc.). */
   BRANDING_DIR: string;
@@ -489,22 +498,17 @@ export function loadConfig(): Config {
     }
   }
 
-  // Cross-field validation - File requests. A request that stays open longer than a week
-  // would turn an upload link into a standing drop box.
+  // Cross-field validation - File requests
   if (_config.ENABLED_SERVICES.includes("request")) {
-    const tooLong = _config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.filter((s) => s > 604800);
-    if (tooLong.length > 0) {
-      throw new Error(`FILE_REQUEST_EXPIRE_OPTIONS_SEC must not exceed 604800 (7 days), got ${tooLong.join(", ")}`);
-    }
     if (!_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.includes(_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)) {
       throw new Error(
         `FILE_REQUEST_DEFAULT_EXPIRE_SEC (${_config.FILE_REQUEST_DEFAULT_EXPIRE_SEC}) must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC (${_config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.join(", ")})`,
       );
     }
-    const maxTotal = _config.FILE_MAX_SIZE * _config.FILE_REQUEST_MAX_UPLOADS;
-    if (_config.FILE_REQUEST_MAX_SIZE > maxTotal) {
+    // Every upload passes the FILE_MAX_SIZE check as well, so a larger value could never be used.
+    if (_config.FILE_REQUEST_MAX_SIZE > _config.FILE_MAX_SIZE) {
       throw new Error(
-        `FILE_REQUEST_MAX_SIZE (${_config.FILE_REQUEST_MAX_SIZE}) must not exceed FILE_MAX_SIZE × FILE_REQUEST_MAX_UPLOADS (${maxTotal})`,
+        `FILE_REQUEST_MAX_SIZE (${_config.FILE_REQUEST_MAX_SIZE}) must not exceed FILE_MAX_SIZE (${_config.FILE_MAX_SIZE})`,
       );
     }
   }

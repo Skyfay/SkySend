@@ -87,9 +87,12 @@ interface Session<M> {
   paused: boolean;
   /** Set when the socket closed while finalize was running, so finalize does not commit. */
   clientGone: boolean;
-  /** When the last frame arrived or the last flush finished, for the idle timeout. */
-  lastActivity: number;
-  idleTimer: ReturnType<typeof setInterval> | null;
+  /** Start of the current progress window and the bytes received when it began. */
+  windowStart: number;
+  windowBytes: number;
+  progressTimer: ReturnType<typeof setInterval> | null;
+  /** Writes out a buffer that sat below the flush threshold, see FLUSH_DELAY_MS. */
+  flushTimer: ReturnType<typeof setTimeout> | null;
 }
 
 /**
@@ -101,8 +104,19 @@ interface PendingInit {
   gone: boolean;
 }
 
-/** A session that receives nothing for this long is ended, so it cannot hold a claim. */
-const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+/**
+ * A session has to receive MIN_PROGRESS_BYTES, or the rest of its upload, in every window of
+ * this length. A sender that trickles a byte now and then would otherwise hold its claim, a
+ * slot of a request among them, for as long as it likes. All bytes in and no finalize counts
+ * as no progress.
+ */
+const PROGRESS_WINDOW_MS = 10 * 60 * 1000;
+const MIN_PROGRESS_BYTES = 1024 * 1024;
+/**
+ * A buffer below the flush threshold is written out this long after its first frame at the
+ * latest, so a sender that stops short of the threshold cannot keep it in memory.
+ */
+const FLUSH_DELAY_MS = 1000;
 
 export interface WsUploadDeps {
   storage: StorageBackend;
@@ -193,12 +207,63 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
     }
   }
 
-  /** Ends a session that did not commit: aborts its storage entry and gives the claim back. */
+  function stopTimers(session: Session<M>): void {
+    if (session.progressTimer) clearInterval(session.progressTimer);
+    if (session.flushTimer) clearTimeout(session.flushTimer);
+    session.progressTimer = null;
+    session.flushTimer = null;
+  }
+
+  /**
+   * Ends a session that did not commit: aborts its storage entry and gives the claim back.
+   * A write that is running finishes first, so it cannot bring the file back after the abort.
+   */
   function close(session: Session<M>): Promise<void> {
     session.stage = "closed";
-    if (session.idleTimer) clearInterval(session.idleTimer);
+    stopTimers(session);
     target.abandon?.(session.meta);
-    return storage.abortChunkedUpload(session.id).catch(() => {});
+    return session.writePromise
+      .catch(() => {})
+      .then(() => storage.abortChunkedUpload(session.id))
+      .catch(() => {});
+  }
+
+  /**
+   * Hands the buffer to the write chain. It is detached synchronously, so new frames collect
+   * in a fresh buffer while the write, which may be slow on S3, is in flight.
+   */
+  function flushBuffer(session: Session<M>, ws: WSContext, maxBuffer: number): void {
+    if (session.flushTimer) clearTimeout(session.flushTimer);
+    session.flushTimer = null;
+    if (session.bufferSize === 0) return;
+    const chunksToFlush = session.buffer;
+    const sizeToFlush = session.bufferSize;
+    session.buffer = [];
+    session.bufferSize = 0;
+    session.pendingWriteSize += sizeToFlush;
+
+    const resumeThreshold = maxBuffer * 0.5;
+    session.writePromise = session.writePromise
+      .then(() => flushChunks(session, chunksToFlush, sizeToFlush))
+      .then(() => {
+        // Resume socket once memory pressure has eased.
+        if (session.paused) {
+          const current = session.bufferSize + session.pendingWriteSize;
+          if (current < resumeThreshold) {
+            session.paused = false;
+            resumeSocket(ws);
+          }
+        }
+      })
+      .catch((err) => {
+        // Store the error for the finalize handler to detect.
+        // Do NOT re-throw: that would create an unhandled rejection
+        // and crash Node.js when the writePromise chain continues
+        // after an abort.
+        if (session.stage !== "closed") {
+          session.backpressureError = err instanceof Error ? err : new Error(String(err));
+        }
+      });
   }
 
   function fail(
@@ -342,21 +407,30 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             backpressureError: null,
             paused: false,
             clientGone: false,
-            lastActivity: Date.now(),
-            idleTimer: null,
+            windowStart: Date.now(),
+            windowBytes: 0,
+            progressTimer: null,
+            flushTimer: null,
           };
           const started = session;
-          started.idleTimer = setInterval(() => {
+          started.progressTimer = setInterval(() => {
             if (started.stage === "closed") {
-              if (started.idleTimer) clearInterval(started.idleTimer);
-            } else if (
-              started.stage === "receiving" &&
-              Date.now() - started.lastActivity > IDLE_TIMEOUT_MS
-            ) {
-              fail(ws, started, "Upload timed out", 1008);
+              stopTimers(started);
+              return;
             }
+            if (started.stage !== "receiving") return;
+            const now = Date.now();
+            if (now - started.windowStart < PROGRESS_WINDOW_MS) return;
+            const remaining = started.contentLength - started.windowBytes;
+            const needed = Math.max(1, Math.min(MIN_PROGRESS_BYTES, remaining));
+            if (started.bytesReceived - started.windowBytes < needed) {
+              fail(ws, started, "Upload timed out", 1008);
+              return;
+            }
+            started.windowStart = now;
+            started.windowBytes = started.bytesReceived;
           }, 60_000);
-          started.idleTimer.unref?.();
+          started.progressTimer.unref?.();
           sessions.set(ws, session);
           sendJson(ws, { type: "ready", id });
           sendJson(ws, {
@@ -385,6 +459,8 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             return;
           }
           session.stage = "finalizing";
+          if (session.flushTimer) clearTimeout(session.flushTimer);
+          session.flushTimer = null;
 
           // Send periodic keepalive messages while finalizing to prevent
           // reverse proxies (Caddy, Nginx) from closing the WebSocket due
@@ -452,13 +528,17 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
               return;
             }
 
-            if (session.quotaHashedIp) {
-              quota.record(session.quotaHashedIp, session.bytesReceived);
-            }
-
+            // Stored. Nothing after this may delete the file or give the claim back.
             session.stage = "closed";
-            if (session.idleTimer) clearInterval(session.idleTimer);
+            stopTimers(session);
             clearInterval(keepaliveTimer);
+            if (session.quotaHashedIp) {
+              try {
+                quota.record(session.quotaHashedIp, session.bytesReceived);
+              } catch (err) {
+                console.error("[upload-ws] Recording the quota failed:", err);
+              }
+            }
             sendJson(ws, { type: "done", id: session.id });
             try {
               ws.close(1000, "done");
@@ -501,7 +581,6 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
         if (session.firstFrameAt === 0) {
           session.firstFrameAt = Date.now();
         }
-        session.lastActivity = Date.now();
 
         if (session.bytesReceived + frame.byteLength > session.contentLength) {
           fail(ws, session, "Received more bytes than declared content length", 1008);
@@ -528,41 +607,15 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
         }
 
         if (session.bufferSize >= FLUSH_THRESHOLD) {
-          // Detach the buffer synchronously so new frames accumulate
-          // into a fresh array while the (potentially slow) storage
-          // write is in flight.  This is critical for S3 backends
-          // where appendChunk involves network I/O.
-          const chunksToFlush = session.buffer;
-          const sizeToFlush = session.bufferSize;
-          session.buffer = [];
-          session.bufferSize = 0;
-          session.pendingWriteSize += sizeToFlush;
-
+          flushBuffer(session, ws, maxBuffer);
+        } else if (!session.flushTimer && session.bufferSize > 0) {
+          // Armed by the first frame of a buffer and never pushed back by later ones.
           const sessionRef = session;
-          const wsRef = ws;
-          const resumeThreshold = maxBuffer * 0.5;
-          sessionRef.writePromise = sessionRef.writePromise
-            .then(() => flushChunks(sessionRef, chunksToFlush, sizeToFlush))
-            .then(() => {
-              sessionRef.lastActivity = Date.now();
-              // Resume socket once memory pressure has eased.
-              if (sessionRef.paused) {
-                const current = sessionRef.bufferSize + sessionRef.pendingWriteSize;
-                if (current < resumeThreshold) {
-                  sessionRef.paused = false;
-                  resumeSocket(wsRef);
-                }
-              }
-            })
-            .catch((err) => {
-              // Store the error for the finalize handler to detect.
-              // Do NOT re-throw: that would create an unhandled rejection
-              // and crash Node.js when the writePromise chain continues
-              // after an abort.
-              if (sessionRef.stage !== "closed") {
-                sessionRef.backpressureError = err instanceof Error ? err : new Error(String(err));
-              }
-            });
+          sessionRef.flushTimer = setTimeout(() => {
+            sessionRef.flushTimer = null;
+            if (sessionRef.stage === "receiving") flushBuffer(sessionRef, ws, maxBuffer);
+          }, FLUSH_DELAY_MS);
+          sessionRef.flushTimer.unref?.();
         }
 
         // Note: Speed limiting for WebSocket uploads is enforced

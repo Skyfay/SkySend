@@ -218,7 +218,7 @@ describe("upload worker", () => {
     [410, "File request is closed", "closed"],
     [404, "File request not found", "gone"],
     [403, "File request service is disabled", "gone"],
-    [413, "Upload exceeds the space left in this file request", "tooLarge"],
+    [413, "Upload exceeds the size this file request allows", "tooLarge"],
     [413, "File size exceeds remaining quota.", "quota"],
     [429, "Upload quota exceeded. Try again later.", "quota"],
     [429, "Too many requests", "Too many requests"],

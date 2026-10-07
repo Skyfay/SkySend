@@ -272,6 +272,7 @@ export function InboxPage() {
               <InboxFileRow
                 key={entry.upload.id}
                 entry={entry}
+                fresh={inbox.fresh.has(entry.upload.id)}
                 progress={inbox.downloads[entry.upload.id]}
                 onDownload={() => requestDownload(entry)}
                 onCancel={() => inbox.cancelDownload(entry.upload.id)}

@@ -261,7 +261,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Required | No |
 | Type | Comma-separated integers |
 | Default | `86400,259200,604800` |
-| Description | How long a file request takes uploads, as options for the requester. Each value is at most `604800` (7 days). |
+| Description | How long a file request takes uploads, as options for the requester. |
 
 ### FILE_REQUEST_DEFAULT_EXPIRE_SEC
 
@@ -289,7 +289,7 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Required | No |
 | Type | Byte size |
 | Default | `FILE_MAX_SIZE` |
-| Description | Most bytes one file request takes in total. Supports units: `B`, `KB`, `MB`, `GB`. Must not exceed `FILE_MAX_SIZE` times `FILE_REQUEST_MAX_UPLOADS`. |
+| Description | Most bytes one upload into a file request may have. Supports units: `B`, `KB`, `MB`, `GB`. Must not exceed `FILE_MAX_SIZE`. |
 
 ### FILE_REQUEST_RETENTION_SEC
 
@@ -298,7 +298,6 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Required | No |
 | Type | Integer |
 | Default | `604800` |
-| Range | At most `2592000` (30 days) |
 | Description | How long an uploaded file stays in the inbox after it arrived. |
 
 ### FILE_REQUEST_DOWNLOADS
@@ -604,8 +603,8 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 ## Validation Rules
 
 - `ENABLED_SERVICES` must contain at least one of `file`, `note` or `request`
-- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be included in `FILE_REQUEST_EXPIRE_OPTIONS_SEC`, and no option may exceed 604800 (only validated when request service is enabled)
-- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE` times `FILE_REQUEST_MAX_UPLOADS` (only validated when request service is enabled)
+- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be included in `FILE_REQUEST_EXPIRE_OPTIONS_SEC` (only validated when request service is enabled)
+- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE` (only validated when request service is enabled)
 - `FILE_DEFAULT_EXPIRE_SEC` must be included in `FILE_EXPIRE_OPTIONS_SEC` (only validated when file service is enabled)
 - `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS` (only validated when file service is enabled)
 - `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC` (only validated when note service is enabled)

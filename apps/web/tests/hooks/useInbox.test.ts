@@ -35,14 +35,16 @@ vi.mock("../../src/lib/download-tiers.js", () => ({
 }));
 
 vi.mock("../../src/lib/upload-store.js", () => ({
-  getRequest: vi.fn(),
+  getRequest: vi.fn().mockResolvedValue(undefined),
   removeRequest: vi.fn().mockResolvedValue(undefined),
+  markUploadsSeen: vi.fn().mockResolvedValue(null),
 }));
 
 import * as api from "../../src/lib/api.js";
 import * as fileRequest from "../../src/lib/file-request.js";
 import { saveDecryptedDownload } from "../../src/lib/download-tiers.js";
-import { getRequest, removeRequest } from "../../src/lib/upload-store.js";
+import { getRequest, markUploadsSeen, removeRequest } from "../../src/lib/upload-store.js";
+import { keepUnseen, setUnseen, unseenFor } from "../../src/lib/unseen-uploads.js";
 import { downloadName, useInbox } from "../../src/hooks/useInbox.js";
 import type { OpenedUpload } from "../../src/lib/file-request.js";
 
@@ -107,6 +109,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  keepUnseen(new Set());
 });
 
 describe("useInbox", () => {
@@ -115,6 +118,31 @@ describe("useInbox", () => {
     await waitFor(() => expect(result.current.phase).toBe("ready"));
     expect(api.fetchInbox).toHaveBeenCalledWith(ID, "inbox-token");
     expect(result.current.opened?.title).toBe("Docs");
+  });
+
+  it("marks what arrived since the last visit as new, until the page is left", async () => {
+    vi.mocked(api.fetchInbox).mockResolvedValue({ ...inbox(), uploads: [entry().upload] });
+    vi.mocked(markUploadsSeen).mockResolvedValueOnce(new Set());
+    setUnseen(ID, 1);
+    const { result } = renderHook(() => useInbox(ID, "fragment", argon2));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    expect(markUploadsSeen).toHaveBeenCalledWith(ID, "fragment", [UPLOAD_ID]);
+    expect(result.current.fresh.has(UPLOAD_ID)).toBe(true);
+    expect(unseenFor(ID)).toBe(0);
+
+    // The refresh finds it seen already, and it stays marked anyway.
+    vi.mocked(markUploadsSeen).mockResolvedValueOnce(new Set([UPLOAD_ID]));
+    await act(() => result.current.refresh());
+    expect(result.current.fresh.has(UPLOAD_ID)).toBe(true);
+  });
+
+  it("marks nothing and clears nothing for a link this browser did not store", async () => {
+    vi.mocked(api.fetchInbox).mockResolvedValue({ ...inbox(), uploads: [entry().upload] });
+    setUnseen(ID, 1);
+    const { result } = renderHook(() => useInbox(ID, "forged", argon2));
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+    expect(result.current.fresh.size).toBe(0);
+    expect(unseenFor(ID)).toBe(1);
   });
 
   it("calls a link that does not decode invalid without asking the server", () => {
@@ -155,7 +183,9 @@ describe("useInbox", () => {
   });
 
   it("forgets a request without a password that the server no longer has", async () => {
-    vi.mocked(getRequest).mockResolvedValueOnce({ inboxFragment: "fragment" } as never);
+    vi.mocked(getRequest)
+      .mockResolvedValueOnce({ inboxFragment: "fragment" } as never)
+      .mockResolvedValueOnce({ inboxFragment: "fragment" } as never);
     vi.mocked(api.fetchInbox).mockRejectedValueOnce(
       new api.ApiError(404, "File request not found"),
     );
@@ -165,6 +195,8 @@ describe("useInbox", () => {
   });
 
   it("keeps the stored request when a made-up link for its ID leads nowhere", async () => {
+    // Not stored when the inbox opens, stored by the time the server answers.
+    vi.mocked(getRequest).mockResolvedValueOnce(undefined);
     vi.mocked(getRequest).mockResolvedValueOnce({ inboxFragment: "the-real-one" } as never);
     vi.mocked(api.fetchInbox).mockRejectedValueOnce(
       new api.ApiError(404, "File request not found"),
@@ -172,6 +204,13 @@ describe("useInbox", () => {
     const { result } = renderHook(() => useInbox(ID, "forged", argon2));
     await waitFor(() => expect(result.current.phase).toBe("gone"));
     expect(removeRequest).not.toHaveBeenCalled();
+  });
+
+  it("does not ask the server with a link that differs from the one stored for the request", async () => {
+    vi.mocked(getRequest).mockResolvedValueOnce({ inboxFragment: "the-real-one" } as never);
+    const { result } = renderHook(() => useInbox(ID, "forged", argon2));
+    await waitFor(() => expect(result.current.phase).toBe("invalid"));
+    expect(api.fetchInbox).not.toHaveBeenCalled();
   });
 
   it("shows the lockout without asking for a password the inbox does not have", async () => {
@@ -249,10 +288,17 @@ describe("useInbox", () => {
 });
 
 describe("downloadName", () => {
-  it("saves a type that is not a plain type and subtype as bytes", () => {
-    const odd = entry();
-    (odd.file!.metadata as { mimeType: string }).mimeType = "text/html\r\nX-Evil: 1";
-    expect(downloadName(odd).mimeType).toBe("application/octet-stream");
+  it("saves a file as bytes, whatever type its sender claims", () => {
+    for (const claimed of [
+      "text/html",
+      "image/svg+xml",
+      "application/pdf",
+      "text/html\r\nX-Evil: 1",
+    ]) {
+      const odd = entry();
+      (odd.file!.metadata as { mimeType: string }).mimeType = claimed;
+      expect(downloadName(odd).mimeType).toBe("application/octet-stream");
+    }
   });
 
   it("cleans the name a sender chose", () => {

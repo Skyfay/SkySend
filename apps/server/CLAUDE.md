@@ -56,7 +56,7 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | `GET /api/quota` | none | Remaining upload quota for the caller |
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
 | `POST /api/request` | OIDC when `OIDC_PROTECT_FILES` | Create a file request, daily limit per user or IP |
-| `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, space left |
+| `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, uploads left, size of one upload |
 | `GET /api/request/:id/upload/ws` | upload token in the init frame | WebSocket upload into a request, primary path when `FILE_UPLOAD_WS=true` |
 | `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, the fallback |
 | `DELETE /api/request/:id/upload/:uid` | upload session | A cancelled upload gives its slot back at once |
@@ -132,7 +132,7 @@ Three transports, one validation path. All of them parse through `uploadHeadersS
 
 **Single-request HTTP** (`POST /api/upload`): streams one body straight to storage. Legacy, still kept as a simple fallback.
 
-**WebSocket** (`src/routes/upload-ws.ts` on top of `src/lib/ws-upload.ts`, which uploads into a file request share): the primary path when `FILE_UPLOAD_WS=true`. Registered only when the flag and the `file` service are both on, and it validates the `Origin` header itself as defence in depth. The request route registers its own handler at `/api/request/:id/upload/ws` when the flag and the `request` service are on. A target adds only its init check, its commit and what to give back when a session ends without a commit, so the framing, buffering, backpressure and keepalive stay one piece of code. An empty origin is allowed on purpose so the CLI and curl still work - the comment at that check explains it.
+**WebSocket** (`src/routes/upload-ws.ts` on top of `src/lib/ws-upload.ts`, which uploads into a file request share): the primary path when `FILE_UPLOAD_WS=true`. Registered only when the flag and the `file` service are both on, and it validates the `Origin` header itself as defence in depth. The request route registers its own handler at `/api/request/:id/upload/ws` when the flag and the `request` service are on. A target adds only its init check, its commit and what to give back when a session ends without a commit, so the framing, buffering, backpressure and keepalive stay one piece of code. A buffer below the 4 MB flush threshold is written out a second after its first frame, and a session that receives less than 1 MiB, or the rest of its upload, in 10 minutes is ended, so a trickling client holds neither memory nor a claim. An empty origin is allowed on purpose so the CLI and curl still work - the comment at that check explains it.
 
 Chunk requests are intentionally exempt from the global rate limiter - the reasoning is written out at the exemption in `src/index.ts`. Read it before changing that condition. The limits in `src/routes/upload.ts` are what bound chunk traffic. The quota does not, it only counts finished uploads.
 

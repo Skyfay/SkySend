@@ -42,7 +42,9 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
   /**
    * The request, if the token in `header` matches. A password protected inbox derives its
    * tokens from the password, so a wrong token counts as a failed attempt and locks the
-   * request for this IP like a wrong password does.
+   * request for this IP like a wrong password does. Any other token comes from 256 random
+   * bits, so counting misses there would protect nothing and only let a made-up inbox link
+   * lock the requester out.
    */
   async function authorize(
     c: Context,
@@ -62,12 +64,13 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
       return { response: c.json({ error: "Too many failed attempts. Try again later." }, 429) };
     }
 
-    // A request that does not exist counts as a failure too, so the lockout does not tell
-    // which IDs exist. The lockout forgets failures that led to no lock after a while.
+    // The lockout forgets failures that led to no lock after a while. That it never locks
+    // an unknown ID tells nothing, since a request ID is a random UUID that only its links
+    // carry.
     const request = await getDb().query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
     const stored = header === "X-Inbox-Token" ? request?.inboxAuthToken : request?.inboxOwnerToken;
     if (!request || !stored || !tokenMatches(c.req.header(header), stored)) {
-      lockout.recordFailure(resourceKey, ip);
+      if (request?.hasPassword) lockout.recordFailure(resourceKey, ip);
       return { response: notFound(c) };
     }
     lockout.recordSuccess(resourceKey, ip);

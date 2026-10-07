@@ -504,15 +504,34 @@ describe("config", () => {
     });
 
     it("should parse FILE_REQUEST_MAX_SIZE with units", async () => {
-      process.env.FILE_REQUEST_MAX_SIZE = "5GB";
+      process.env.FILE_REQUEST_MAX_SIZE = "1GB";
       const config = await loadFreshConfig();
-      expect(config.FILE_REQUEST_MAX_SIZE).toBe(5 * 1024 ** 3);
+      expect(config.FILE_REQUEST_MAX_SIZE).toBe(1024 ** 3);
     });
 
-    it("should reject an expiry option above 7 days", async () => {
-      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,1209600";
+    it("should refuse a duration that would not make a valid date", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,9000000000000";
       process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
-      await expect(loadFreshConfig()).rejects.toThrow("must not exceed 604800");
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC;
+      delete process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC;
+      process.env.FILE_REQUEST_RETENTION_SEC = "3153600001";
+      await expect(loadFreshConfig()).rejects.toThrow();
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_RETENTION_SEC;
+      process.env.FILE_EXPIRE_OPTIONS_SEC = "300,9000000000000";
+      process.env.FILE_DEFAULT_EXPIRE_SEC = "300";
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+    });
+
+    it("should leave the longest expiry and retention to the operator", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,7776000";
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
+      process.env.FILE_REQUEST_RETENTION_SEC = "31536000";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 7776000]);
+      expect(config.FILE_REQUEST_RETENTION_SEC).toBe(31536000);
     });
 
     it("should reject a default expiry that is not an option", async () => {
@@ -520,16 +539,10 @@ describe("config", () => {
       await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC");
     });
 
-    it("should reject a total size that no number of uploads can reach", async () => {
+    it("should reject an upload size that FILE_MAX_SIZE would refuse anyway", async () => {
       process.env.FILE_MAX_SIZE = "1GB";
-      process.env.FILE_REQUEST_MAX_UPLOADS = "2";
-      process.env.FILE_REQUEST_MAX_SIZE = "3GB";
+      process.env.FILE_REQUEST_MAX_SIZE = "2GB";
       await expect(loadFreshConfig()).rejects.toThrow("must not exceed FILE_MAX_SIZE");
-    });
-
-    it("should reject a retention above 30 days", async () => {
-      process.env.FILE_REQUEST_RETENTION_SEC = "2592001";
-      await expect(loadFreshConfig()).rejects.toThrow();
     });
 
     it("should reject limits out of range", async () => {

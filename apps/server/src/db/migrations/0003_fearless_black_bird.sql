@@ -11,7 +11,6 @@ CREATE TABLE `file_requests` (
 	`max_uploads` integer NOT NULL,
 	`max_size` integer NOT NULL,
 	`reserved_uploads` integer DEFAULT 0 NOT NULL,
-	`reserved_bytes` integer DEFAULT 0 NOT NULL,
 	`finished_uploads` integer DEFAULT 0 NOT NULL,
 	`finished_bytes` integer DEFAULT 0 NOT NULL,
 	`closed` integer DEFAULT false NOT NULL,

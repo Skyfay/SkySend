@@ -75,14 +75,13 @@ export const fileRequests = sqliteTable(
     titleNonce: blob("title_nonce", { mode: "buffer" }),
     hasPassword: integer("has_password", { mode: "boolean" }).default(false).notNull(),
     maxUploads: integer("max_uploads").notNull(),
+    /** Most bytes one upload may have. */
     maxSize: integer("max_size").notNull(),
     /** Uploads started or finished. An upload that is abandoned gives its slot back. */
     reservedUploads: integer("reserved_uploads").default(0).notNull(),
-    /** Bytes of uploads started or finished. */
-    reservedBytes: integer("reserved_bytes").default(0).notNull(),
     /**
      * Uploads that finished. Never goes down, so a deleted upload keeps its slot. No session
-     * survives a restart, so at startup the reservations are set back to these two.
+     * survives a restart, so at startup the reservations are set back to this.
      */
     finishedUploads: integer("finished_uploads").default(0).notNull(),
     /** Bytes of uploads that finished. */

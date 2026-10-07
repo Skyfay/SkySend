@@ -257,8 +257,3 @@ export function sanitizeTitle(title: string): string {
       .trim()
   );
 }
-
-/** A MIME type from a sender, if it is a plain type/subtype. Anything else saves as bytes. */
-export function sanitizeMimeType(type: string): string {
-  return /^[\w.+-]+\/[\w.+-]+$/.test(type) ? type : "application/octet-stream";
-}

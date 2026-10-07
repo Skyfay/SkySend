@@ -3,6 +3,7 @@ import type { Argon2idHashFn } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { openInboxLink, prepareRequest, requestLinks, type RequestLinks } from "@/lib/file-request";
 import { getAllRequests, removeRequest, saveRequest, type StoredRequest } from "@/lib/upload-store";
+import { countUnseen, keepUnseen, setUnseen } from "@/lib/unseen-uploads";
 
 export interface NewRequestOptions {
   title: string;
@@ -49,6 +50,7 @@ export function useCreateRequest(argon2id: Argon2idHashFn) {
           title: title || undefined,
           closesAt,
           createdAt: new Date().toISOString(),
+          seenUploads: [],
         };
         // The request exists on the server now. If this browser cannot keep it, the two
         // links are still shown, so they can be saved by hand.
@@ -111,18 +113,21 @@ export function useRequestHistory() {
     const stored = await getAllRequests();
     setRequests(stored.map((r) => ({ ...r, inbox: null, loading: !r.hasPassword })));
     setLoading(false);
+    keepUnseen(new Set(stored.map((r) => r.id)));
 
     for (const request of stored) {
       if (request.hasPassword) continue;
       try {
         const access = await openInboxLink(request.inboxFragment);
         const inbox = await api.fetchInbox(request.id, access.inboxToken);
+        setUnseen(request.id, countUnseen(request, inbox));
         setRequests((prev) =>
           prev.map((r) => (r.id === request.id ? { ...r, inbox, loading: false } : r)),
         );
       } catch (err) {
         if (err instanceof api.ApiError && err.status === 404) {
           await removeRequest(request.id);
+          setUnseen(request.id, 0);
           setRequests((prev) => prev.filter((r) => r.id !== request.id));
         } else {
           setRequests((prev) =>
@@ -156,6 +161,7 @@ export function useRequestHistory() {
       }
     }
     await removeRequest(request.id);
+    setUnseen(request.id, 0);
     setRequests((prev) => prev.filter((r) => r.id !== request.id));
   }, []);
 

@@ -320,7 +320,11 @@
       "request.retentionHint_other",
       "requestUpload.errorText",
       "errors.linkRewrittenInboxDesc",
-      "errors.linkRewrittenUploadDesc"
+      "errors.linkRewrittenUploadDesc",
+      "nav.requestsUnseen",
+      "requests.new_one",
+      "requests.new_other",
+      "inbox.new"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -348,7 +352,8 @@
     "upload": "アップロード",
     "myUploads": "アップロード履歴",
     "menu": "メニュー",
-    "requests": "リクエスト"
+    "requests": "リクエスト",
+    "requestsUnseen": "リクエストに新しいアップロードがあります"
   },
   "tab": {
     "file": "ファイル",
@@ -772,10 +777,10 @@
     "maxUploads": "アップロード数",
     "uploads_one": "{{count}} 件のアップロード",
     "uploads_other": "{{count}} 件のアップロード",
-    "maxSize": "合計サイズ",
+    "maxSize": "1 件あたりのサイズ",
     "passwordHint": "受信箱はこのパスワードでのみ開きます。",
     "passwordOff": "受信箱リンクだけで受信箱が開きます。",
-    "summary": "<b>{{expiry}}</b> 受付、最大 <b>{{uploads}}</b>、合計 <b>{{size}}</b> まで。",
+    "summary": "<b>{{expiry}}</b> 受付、最大 <b>{{uploads}}</b>、1 件あたり <b>{{size}}</b> まで。",
     "create": "リクエストを作成",
     "creating": "作成中…",
     "created": "リクエストを作成しました",
@@ -805,6 +810,8 @@
     "passwordProtected": "パスワード保護",
     "received_one": "{{count}} 件受信",
     "received_other": "{{count}} 件受信",
+    "new_one": "新着 {{count}} 件",
+    "new_other": "新着 {{count}} 件",
     "closed": "締め切り済み",
     "copyUploadLink": "アップロードリンクをコピー",
     "deleteTitle": "このリクエストを削除しますか？",
@@ -823,7 +830,7 @@
     "goneText": "削除されたか、締め切られてすべてのファイルの期限が切れました。",
     "deleted": "リクエストを削除しました",
     "deletedText": "リクエストとそのすべてのファイルは完全に削除されました。",
-    "usage": "{{max}} 件中 {{used}} 件、{{maxSize}} 中 {{size}}",
+    "usage": "{{max}} 件中 {{used}} 件、合計 {{size}}、1 件あたり最大 {{maxSize}}",
     "closesIn": "あと {{time}} で締め切り",
     "closed": "締め切り済み",
     "refresh": "更新",
@@ -834,6 +841,7 @@
     "downloadsLeft_other": "残り {{count}} 回ダウンロード可能",
     "deletedIn": "あと {{time}} で削除",
     "unverified": "未確認",
+    "new": "新着",
     "unverifiedHint": "アップロードリンクを持つ人なら誰でもファイルを送れます。心当たりのあるものだけを開いてください。",
     "damaged": "このアップロードは開けません",
     "damagedHint": "破損しているか、このリクエスト用に作られていません。削除してください。",

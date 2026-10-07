@@ -58,11 +58,11 @@ A file request is a link you send to someone so they can upload files to you, en
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `FILE_REQUEST_EXPIRE_OPTIONS_SEC` | ❌ | `86400,259200,604800` | Comma-separated list of how long a request accepts uploads, in seconds. Each value is at most `604800` (7 days). |
+| `FILE_REQUEST_EXPIRE_OPTIONS_SEC` | ❌ | `86400,259200,604800` | Comma-separated list of how long a request accepts uploads, in seconds. |
 | `FILE_REQUEST_DEFAULT_EXPIRE_SEC` | ❌ | `259200` | Default for new requests (must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`). |
 | `FILE_REQUEST_MAX_UPLOADS` | ❌ | `10` | Most uploads one request accepts, from `1` to `1000`. |
-| `FILE_REQUEST_MAX_SIZE` | ❌ | `FILE_MAX_SIZE` | Most bytes one request accepts in total. Supports units: `B`, `KB`, `MB`, `GB`. A single upload is still limited by `FILE_MAX_SIZE`. |
-| `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. At most `2592000` (30 days). |
+| `FILE_REQUEST_MAX_SIZE` | ❌ | `FILE_MAX_SIZE` | Most bytes one upload into a request may have. The requester picks a size up to this. Supports units: `B`, `KB`, `MB`, `GB`. |
+| `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. |
 | `FILE_REQUEST_DOWNLOADS` | ❌ | `5` | How often the requester can download each uploaded file, from `1` to `100`. |
 | `FILE_REQUEST_DAILY_LIMIT` | ❌ | `10` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. `0` turns the limit off. The count lives in memory and resets on restart. |
 
@@ -263,8 +263,8 @@ SkySend validates all environment variables on startup using Zod:
 - `FILE_DEFAULT_DOWNLOAD` must be one of the values in `FILE_DOWNLOAD_OPTIONS`
 - `NOTE_DEFAULT_EXPIRE_SEC` must be one of the values in `NOTE_EXPIRE_OPTIONS_SEC`
 - `NOTE_DEFAULT_VIEWS` must be one of the values in `NOTE_VIEW_OPTIONS`
-- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be one of the values in `FILE_REQUEST_EXPIRE_OPTIONS_SEC`, and no option may exceed 7 days
-- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE` times `FILE_REQUEST_MAX_UPLOADS`
+- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be one of the values in `FILE_REQUEST_EXPIRE_OPTIONS_SEC`
+- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE`
 - `ENABLED_SERVICES` must contain at least one of `file`, `note` or `request`
 - `PORT` must be between 1 and 65535
 - `FILE_MAX_SIZE` must be a valid byte size string

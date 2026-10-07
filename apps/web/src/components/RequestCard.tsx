@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Clock, Inbox, Loader2, Lock, Upload } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -12,8 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HistoryRow, HistoryStat } from "@/components/HistoryRow";
+import { Badge } from "@/components/ui/badge";
 import type { RequestWithStatus } from "@/hooks/useFileRequests";
 import { requestLinks } from "@/lib/file-request";
+import { subscribeUnseen, unseenFor } from "@/lib/unseen-uploads";
 import { formatTimeRemaining } from "@/lib/utils";
 
 interface RequestCardProps {
@@ -29,6 +31,7 @@ export function RequestCard({ request, onDelete }: RequestCardProps) {
   const [deleting, setDeleting] = useState(false);
   const { uploadLink, inboxLink } = requestLinks(request);
   const inbox = request.inbox;
+  const unseen = useSyncExternalStore(subscribeUnseen, () => unseenFor(request.id));
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -55,6 +58,11 @@ export function RequestCard({ request, onDelete }: RequestCardProps) {
   } else if (inbox) {
     meta = (
       <>
+        {unseen > 0 && (
+          <Badge variant="accent" className="h-5 px-2">
+            {t("requests.new", { count: unseen })}
+          </Badge>
+        )}
         <HistoryStat icon={Upload}>
           {t("requests.received", { count: inbox.usedUploads })}
         </HistoryStat>

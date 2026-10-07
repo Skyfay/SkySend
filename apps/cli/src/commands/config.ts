@@ -55,7 +55,7 @@ export async function showConfig(ctx: CliContext, options: ConfigOptions): Promi
   );
   console.log(`Default Open For:   ${formatExpiry(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)}`);
   console.log(`Max Uploads:        ${config.FILE_REQUEST_MAX_UPLOADS}`);
-  console.log(`Max Total Size:     ${formatBytes(config.FILE_REQUEST_MAX_SIZE)}`);
+  console.log(`Max Size/Upload:    ${formatBytes(config.FILE_REQUEST_MAX_SIZE)}`);
   console.log(`Retention:          ${formatExpiry(config.FILE_REQUEST_RETENTION_SEC)}`);
   console.log(`Downloads per File: ${config.FILE_REQUEST_DOWNLOADS}`);
   const dailyLimit = config.FILE_REQUEST_DAILY_LIMIT;

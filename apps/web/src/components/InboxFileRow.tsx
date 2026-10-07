@@ -26,6 +26,8 @@ import { cn, formatBytes, formatTimeRemaining } from "@/lib/utils";
 
 interface InboxFileRowProps {
   entry: OpenedUpload;
+  /** Whether it arrived since the inbox was last open in this browser. */
+  fresh: boolean;
   /** Progress in percent while a download runs. */
   progress: number | undefined;
   onDownload: () => void;
@@ -39,6 +41,7 @@ interface InboxFileRowProps {
  */
 export function InboxFileRow({
   entry,
+  fresh,
   progress,
   onDownload,
   onCancel,
@@ -99,6 +102,11 @@ export function InboxFileRow({
             <p className="line-clamp-2 text-xs text-muted-foreground wrap-anywhere">{detail}</p>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {fresh && (
+              <Badge variant="accent" className="h-5 px-2">
+                {t("inbox.new")}
+              </Badge>
+            )}
             <span>{formatBytes(size)}</span>
             <HistoryStat icon={Download}>
               {t("inbox.downloadsLeft", { count: downloadsLeft })}
