@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, X, type LucideIcon } from "lucide-react";
+import { MAX_LABEL_LENGTH } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +67,35 @@ export function BlockControls({ first, last, disabled, onMove, onRemove }: Block
         <X />
       </IconButton>
     </span>
+  );
+}
+
+interface BlockTitleRowProps {
+  value: string | undefined;
+  onChange: (title: string) => void;
+  placeholder: string;
+  disabled: boolean;
+}
+
+/**
+ * The title of a block, a borderless field at the top of its body, like the file name of a
+ * code block. The title heads the block for whoever reads it.
+ */
+export function BlockTitleRow({ value, onChange, placeholder, disabled }: BlockTitleRowProps) {
+  return (
+    <div className="border-b border-border p-2 pl-3">
+      <Input
+        type="text"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        maxLength={MAX_LABEL_LENGTH}
+        className="h-8 w-full rounded-lg border-0 bg-transparent px-1 text-[13px] shadow-none focus-visible:ring-0"
+        disabled={disabled}
+        autoComplete="off"
+      />
+    </div>
   );
 }
 

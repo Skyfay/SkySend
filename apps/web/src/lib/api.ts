@@ -16,6 +16,16 @@ const configResponseSchema = z.object({
   fileUploadConcurrentChunks: z.number(),
   fileUploadSpeedLimit: z.number().optional().default(0),
   fileUploadWs: z.boolean().optional().default(false),
+  // File requests. A server from before v4 sends none of these and offers no requests.
+  fileRequestsEnabled: z.boolean().optional().default(false),
+  fileRequestExpireOptions: z.array(z.number()).optional().default([]),
+  fileRequestDefaultExpire: z.number().optional().default(0),
+  fileRequestUploadOptions: z.array(z.number()).optional().default([]),
+  fileRequestDefaultUploads: z.number().optional().default(0),
+  fileRequestMaxSize: z.number().optional().default(0),
+  fileRequestRetention: z.number().optional().default(0),
+  fileRequestDownloadOptions: z.array(z.number()).optional().default([]),
+  fileRequestDefaultDownloads: z.number().optional().default(0),
   // Note configuration
   noteMaxSize: z.number(),
   noteExpireOptions: z.array(z.number()),
@@ -38,6 +48,7 @@ const configResponseSchema = z.object({
   defaultTab: z.enum(["file", "note", "text", "password", "code", "sshkey"]).optional().default("file"),
   forceFilePassword: z.boolean().optional().default(false),
   forceNotePassword: z.boolean().optional().default(false),
+  forceRequestPassword: z.boolean().optional().default(false),
   // OIDC auth
   oidcEnabled: z.boolean().optional().default(false),
   oidcProtectFiles: z.boolean().optional().default(false),
@@ -108,6 +119,21 @@ export async function fetchConfig(): Promise<ServerConfig> {
 export async function fetchQuota(): Promise<QuotaStatus> {
   const res = await fetch("/api/quota");
   return handleResponse(res, quotaResponseSchema);
+}
+
+const requestLimitSchema = z.object({
+  /** New requests per day, 0 while there is no limit. */
+  dailyLimit: z.number().int().nonnegative(),
+  remaining: z.number().int().nonnegative().nullable(),
+  resetsAt: z.string().datetime().nullable(),
+});
+
+export type RequestLimit = z.infer<typeof requestLimitSchema>;
+
+/** How many new file requests the caller has left today. */
+export async function fetchRequestLimit(): Promise<RequestLimit> {
+  const res = await fetch("/api/request/limit");
+  return handleResponse(res, requestLimitSchema);
 }
 
 export async function fetchInfo(id: string): Promise<UploadInfo> {
@@ -199,13 +225,18 @@ export async function verifyPassword(
   return true;
 }
 
-export async function downloadFile(
-  id: string,
-  authToken: string,
+const presignedResponseSchema = z.object({
+  url: z.string(),
+  size: z.number(),
+  fileCount: z.number(),
+});
+
+/** Fetches a ciphertext from an API endpoint, following a presigned S3 URL when one comes back. */
+async function fetchCiphertext(
+  path: string,
+  headers: Record<string, string>,
 ): Promise<{ stream: ReadableStream<Uint8Array>; size: number; fileCount: number; storageBackend: "s3" | "filesystem" }> {
-  const res = await fetch(`/api/download/${encodeURIComponent(id)}`, {
-    headers: { "X-Auth-Token": authToken },
-  });
+  const res = await fetch(path, { headers });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: "Download failed" }));
     throw new ApiError(
@@ -217,7 +248,7 @@ export async function downloadFile(
   // S3 backend returns JSON with a presigned URL
   const contentType = res.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
-    const data = (await res.json()) as { url: string; size: number; fileCount: number };
+    const data = presignedResponseSchema.parse(await res.json());
     let s3Res: Response;
     try {
       s3Res = await fetch(data.url);
@@ -246,6 +277,10 @@ export async function downloadFile(
     fileCount: parseInt(res.headers.get("X-File-Count") ?? "1", 10),
     storageBackend: "filesystem",
   };
+}
+
+export function downloadFile(id: string, authToken: string) {
+  return fetchCiphertext(`/api/download/${encodeURIComponent(id)}`, { "X-Auth-Token": authToken });
 }
 
 export async function deleteUpload(
@@ -381,6 +416,132 @@ export async function deleteNote(
       (data as { error?: string }).error ?? "Delete failed",
     );
   }
+}
+
+// ── File Request API ──────────────────────────────────
+
+/** Binary fields of the request API are base64url without padding. */
+const base64url = z.string().regex(/^[A-Za-z0-9_-]*$/);
+
+// Every request carries a brief. A server that drops it shows the sender a broken request.
+const encryptedBriefSchema = z.object({ ciphertext: base64url, nonce: base64url });
+
+export interface CreateRequestBody {
+  vault: string;
+  vaultNonce: string;
+  inboxAuthToken: string;
+  inboxOwnerToken: string;
+  uploadToken: string;
+  brief: { ciphertext: string; nonce: string };
+  expireSec: number;
+  maxUploads: number;
+  maxSize: number;
+  /** How often the requester can download each upload. */
+  downloads: number;
+  hasPassword: boolean;
+}
+
+const createRequestResponseSchema = z.object({ id: z.string().uuid(), closesAt: z.string() });
+
+export async function createRequest(body: CreateRequestBody): Promise<z.infer<typeof createRequestResponseSchema>> {
+  const res = await fetch("/api/request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res, createRequestResponseSchema);
+}
+
+const senderRequestSchema = z.object({
+  // Null only from a server that dropped it, which leaves the request broken, never plain.
+  brief: encryptedBriefSchema.nullable(),
+  open: z.boolean(),
+  closesAt: z.string().datetime(),
+  uploadsLeft: z.number().int().nonnegative(),
+  maxUploadSize: z.number().int().nonnegative(),
+  maxFilesPerUpload: z.number().int().positive(),
+});
+
+export type SenderRequest = z.infer<typeof senderRequestSchema>;
+
+/** What a sender sees of a request. Needs the token from the upload link. */
+export async function fetchRequestForSender(id: string, uploadToken: string): Promise<SenderRequest> {
+  const res = await fetch(`/api/request/${encodeURIComponent(id)}`, {
+    headers: { "X-Upload-Token": uploadToken },
+  });
+  return handleResponse(res, senderRequestSchema);
+}
+
+const inboxUploadSchema = z.object({
+  id: z.string().uuid(),
+  size: z.number(),
+  fileCount: z.number(),
+  salt: base64url,
+  wrapEnc: base64url,
+  wrapCiphertext: base64url,
+  encryptedMeta: base64url,
+  metaNonce: base64url,
+  downloadCount: z.number(),
+  maxDownloads: z.number(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+
+export type InboxUpload = z.infer<typeof inboxUploadSchema>;
+
+const inboxResponseSchema = z.object({
+  vault: base64url,
+  vaultNonce: base64url,
+  // Null only from a server that dropped it, which leaves the request broken, never plain.
+  brief: encryptedBriefSchema.nullable(),
+  hasPassword: z.boolean(),
+  open: z.boolean(),
+  closesAt: z.string(),
+  createdAt: z.string(),
+  maxUploads: z.number(),
+  maxSize: z.number(),
+  usedUploads: z.number(),
+  usedBytes: z.number(),
+  // A request takes at most twice the largest FILE_REQUEST_UPLOAD_OPTIONS, which is at most
+  // 1000, so a longer list did not come from SkySend.
+  uploads: z.array(inboxUploadSchema).max(2000),
+});
+
+export type Inbox = z.infer<typeof inboxResponseSchema>;
+
+/** The inbox of a request. Listing never counts as a download. */
+export async function fetchInbox(id: string, inboxToken: string): Promise<Inbox> {
+  const res = await fetch(`/api/inbox/${encodeURIComponent(id)}`, {
+    headers: { "X-Inbox-Token": inboxToken },
+  });
+  return handleResponse(res, inboxResponseSchema);
+}
+
+export function inboxFilePath(id: string, uploadId: string): string {
+  return `/api/inbox/${encodeURIComponent(id)}/file/${encodeURIComponent(uploadId)}`;
+}
+
+export function downloadInboxFile(id: string, uploadId: string, inboxToken: string) {
+  return fetchCiphertext(inboxFilePath(id, uploadId), { "X-Inbox-Token": inboxToken });
+}
+
+const okResponseSchema = z.object({ ok: z.literal(true) });
+
+async function manageInbox(path: string, method: "POST" | "DELETE", ownerToken: string): Promise<void> {
+  const res = await fetch(path, { method, headers: { "X-Inbox-Owner-Token": ownerToken } });
+  await handleResponse(res, okResponseSchema);
+}
+
+export function deleteInboxFile(id: string, uploadId: string, ownerToken: string): Promise<void> {
+  return manageInbox(inboxFilePath(id, uploadId), "DELETE", ownerToken);
+}
+
+export function closeRequest(id: string, ownerToken: string): Promise<void> {
+  return manageInbox(`/api/inbox/${encodeURIComponent(id)}/close`, "POST", ownerToken);
+}
+
+export function deleteRequest(id: string, ownerToken: string): Promise<void> {
+  return manageInbox(`/api/inbox/${encodeURIComponent(id)}`, "DELETE", ownerToken);
 }
 
 // ── OIDC Auth API ─────────────────────────────────────

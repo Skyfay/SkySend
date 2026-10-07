@@ -20,6 +20,10 @@ The encryption never sees blocks, only a string. This package never sees a key. 
 3. **Renderers stay safe for every block.** This package only returns data. The web app renders text as text, Markdown through `rehype-sanitize`, code through DOMPurify. A server that lies about `kind` must only ever pick the wrong reader, never unlock unsafe rendering.
 4. **`serializeNote` validates too**, so an editor bug cannot write a note its recipient cannot read.
 
+## Templates
+
+`template.ts` holds the templates of file requests: a note document without values, which a requester lays out and a sender fills in. `parseTemplate` treats one as untrusted input like a note, throws every value away and cleans every label with `cleanLabel`. It keeps the titles of text, password and SSH key blocks, cleaned like every label, and `secret: false` on a password entry, the requester's say that a value like a username is shown in clear, and a sender cannot change it. `padNote` pads a note sent into a request to whole 1 KiB blocks. A template is shaped like a note, so a filled-in template is a note and needs no format of its own.
+
 ## Legacy notes
 
 Before v3 every note had one content type with a plaintext format of its own. `legacy.ts` turns those into blocks, following the v2 web app's parsing exactly, and `tests/legacy.test.ts` pins it with the formats v2 wrote.
@@ -28,6 +32,6 @@ Every piece that only exists for those notes is marked `LEGACY(notes-v1)`, and t
 
 ## Tests
 
-`tests/`, run with `pnpm --filter @skysend/note-format test`. Coverage is 100% and should stay there. Every format change needs a round-trip test, a test that a reader of the previous version still copes, and a test for what a crafted document does.
+`tests/`, run with `pnpm --filter @skysend/note-format test`. Coverage is 100% and should stay there. `tsconfig.test.json` typechecks the tests as part of `pnpm typecheck`. Every format change needs a round-trip test, a test that a reader of the previous version still copes, and a test for what a crafted document does.
 
 `tests/encrypted.test.ts` runs the real path with `@skysend/crypto` and hash-wasm's Argon2id: link secret, note password, HKDF, auth and owner token, AES-256-GCM, reader. `tests/fixtures/encrypted-notes.json` holds notes encrypted with the v2 code and the v3.0 format, one per legacy kind, with a note password, and with a 16-byte salt. **Never regenerate or edit that file.** A failing fixture means real notes on real servers stop opening. Add a new fixture when a new format version ships, and leave the old ones in place. The one exception is phase 2 of the removal checklist, which removes the legacy fixtures.

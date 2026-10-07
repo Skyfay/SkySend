@@ -31,6 +31,12 @@ const ALLOWED_ORIGINS = ["https://skysend.app", "https://www.skysend.app"];
 const FROM_ADDRESS = "report@mail.skysend.app";
 const INSTANCES_API = "https://docs.skysend.app/instances.json";
 
+/**
+ * The share links that can be reported: files, notes and the upload link of a file request.
+ * Never an inbox link, whose key opens every file of every sender and would travel on to
+ * the abuse contact in the report email.
+ */
+const REPORTABLE_PATH = /\/(?:file|note|request)\//;
 /** The longest address SMTP allows (RFC 5321). */
 const MAX_EMAIL_LENGTH = 254;
 /**
@@ -101,8 +107,12 @@ export default {
       return corsResponse({ error: "Invalid URL" }, 400, allowedOrigin);
     }
 
-    if (!url.includes("/file/") && !url.includes("/note/")) {
-      return corsResponse({ error: "URL must point to a file or note" }, 400, allowedOrigin);
+    if (!REPORTABLE_PATH.test(reportedUrl.pathname)) {
+      return corsResponse(
+        { error: "URL must point to a file, a note or a file request" },
+        400,
+        allowedOrigin,
+      );
     }
 
     if (!Array.isArray(reason) || reason.length === 0) {

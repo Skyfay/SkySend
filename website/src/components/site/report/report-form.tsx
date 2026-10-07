@@ -130,8 +130,9 @@ export function ReportForm() {
     }
     const reportedHostname = getHostname(url);
     const isKnownInstance = reportedHostname === selectedHostname;
-    if (!isKnownInstance || (!url.includes("/file/") && !url.includes("/note/"))) {
-      setFormError("Enter a valid SkySend file or note link that matches the selected instance.");
+    // An inbox link is refused: its key would open every file sent to the request.
+    if (!isKnownInstance || !/\/(?:file|note|request)\//.test(new URL(url).pathname)) {
+      setFormError("Enter a valid SkySend file, note or file request link that matches the selected instance.");
       return;
     }
     if (comment.trim().length < 10) {
@@ -196,7 +197,7 @@ export function ReportForm() {
             Instance <span className="text-destructive">*</span>
           </h3>
           <p className="mb-3 text-sm text-muted-foreground">
-            Select the instance the file or note is hosted on:
+            Select the instance the file, note or file request is hosted on:
           </p>
 
           {instancesState.status === "loading" && (

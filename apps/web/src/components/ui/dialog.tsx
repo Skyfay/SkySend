@@ -97,6 +97,7 @@ export {
   Dialog,
   DialogClose,
   DialogTrigger,
+  DialogOverlay,
   DialogContent,
   DialogHeader,
   DialogFooter,

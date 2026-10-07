@@ -5,6 +5,7 @@ import {
   NOTE_NONCE_LENGTH,
 } from "../src/note.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
+import { flipped } from "./helpers.js";
 
 async function getMetaKey(): Promise<CryptoKey> {
   const keys = await deriveKeys(generateSecret(), generateSalt());
@@ -80,8 +81,7 @@ describe("note encryption/decryption", () => {
     const encrypted = await encryptNoteContent("secret note", metaKey);
 
     // Flip a byte
-    const tampered = new Uint8Array(encrypted.ciphertext);
-    tampered[0] ^= 0xff;
+    const tampered = flipped(encrypted.ciphertext);
 
     await expect(
       decryptNoteContent(tampered, encrypted.nonce, metaKey),
@@ -93,8 +93,7 @@ describe("note encryption/decryption", () => {
     const encrypted = await encryptNoteContent("secret note", metaKey);
 
     // Flip a bit in the nonce - AES-GCM authentication will fail
-    const tamperedNonce = new Uint8Array(encrypted.nonce);
-    tamperedNonce[0] ^= 0xff;
+    const tamperedNonce = flipped(encrypted.nonce);
 
     await expect(
       decryptNoteContent(encrypted.ciphertext, tamperedNonce, metaKey),

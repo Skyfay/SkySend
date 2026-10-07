@@ -41,7 +41,8 @@ Near zero. Only the current record (64 KB plaintext + 16 bytes GCM tag) is in me
 
 ### Key files
 
-- [useDownload.ts](https://github.com/nicokempe/SkySend/blob/main/apps/web/src/hooks/useDownload.ts) - Tier selection logic
+- [download-tiers.ts](https://github.com/Skyfay/SkySend/blob/main/apps/web/src/lib/download-tiers.ts) - Tier selection logic, shared by downloads and the inbox of a file request
+- [useDownload.ts](https://github.com/Skyfay/SkySend/blob/main/apps/web/src/hooks/useDownload.ts) - File info, password and the browser warnings before the tiers run
 
 ---
 
@@ -77,7 +78,7 @@ Service Worker (inside respondWith):
 
 Firefox does not propagate backpressure from a `ReadableStream` consumer back through `fetch()` when the fetch happens in a Web Worker or on the main thread. The entire HTTP response body gets buffered in RAM regardless of how fast the consumer reads.
 
-However, when `fetch()` happens **inside a Service Worker's `respondWith()`**, it becomes part of the browser's native download pipeline. Firefox manages the network read speed based on how fast the download manager writes to disk. This is the same technique [Mozilla Send](https://github.com/nicokempe/SkySend) used.
+However, when `fetch()` happens **inside a Service Worker's `respondWith()`**, it becomes part of the browser's native download pipeline. Firefox manages the network read speed based on how fast the download manager writes to disk. This is the same technique [Mozilla Send](https://github.com/mozilla/send) used.
 
 ### Key design decisions
 
@@ -96,8 +97,8 @@ The SW reports progress to the main thread via `client.postMessage({ type: "dl-p
 
 ### Key files
 
-- [download-sw.js](https://github.com/nicokempe/SkySend/blob/main/apps/web/public/download-sw.js) - Service Worker with inline ECE decryption
-- [opfs-download.ts](https://github.com/nicokempe/SkySend/blob/main/apps/web/src/lib/opfs-download.ts) - `streamDownloadViaSw()` + `ensureSwController()`
+- [download-sw.js](https://github.com/Skyfay/SkySend/blob/main/apps/web/public/download-sw.js) - Service Worker with inline ECE decryption
+- [opfs-download.ts](https://github.com/Skyfay/SkySend/blob/main/apps/web/src/lib/opfs-download.ts) - `streamDownloadViaSw()` + `ensureSwController()`
 
 ---
 
@@ -121,7 +122,7 @@ The entire decrypted file is held in RAM. For large files this will cause the br
 
 ### Key files
 
-- [useDownload.ts](https://github.com/nicokempe/SkySend/blob/main/apps/web/src/hooks/useDownload.ts) - Blob fallback at the bottom of the download function
+- [download-tiers.ts](https://github.com/Skyfay/SkySend/blob/main/apps/web/src/lib/download-tiers.ts) - Blob fallback at the end of `saveDecryptedDownload()`
 
 ---
 
@@ -134,9 +135,20 @@ Every tier checks the decrypted size against the size from the authenticated met
 - A truncated download does not fall through to the next tier. Every tier fetches the same ciphertext, so a retry would only repeat the download and use up a download from the limit.
 - A download without metadata fails before anything is fetched. Archives uploaded by older clients carry no `archiveSize` and skip the check.
 
+## Download Sources
+
+A normal download and a file in the inbox of a [file request](/user-guide/file-requests) run through the same three tiers. They differ only in where the ciphertext comes from, which the caller passes to `saveDecryptedDownload()` as a source:
+
+| Caller | Endpoint | Token header |
+| --- | --- | --- |
+| `useDownload.ts` | `GET /api/download/:id` | `X-Auth-Token` |
+| `useInbox.ts` | `GET /api/inbox/:id/file/:uid` | `X-Inbox-Token` |
+
+The Service Worker takes the header name from the config message, but only from an allowlist of these two. Anything else falls back to `X-Auth-Token`. The name and the MIME type of the file come from whoever uploaded it, so the Service Worker also falls back to safe values when either would make building the response headers throw.
+
 ## Tier Selection Logic
 
-The selection happens in `useDownload.ts`:
+The selection happens in `saveDecryptedDownload()` in `lib/download-tiers.ts`:
 
 ```typescript
 const safari = isSafari();

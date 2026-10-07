@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Check, ClipboardPaste, Copy, Eye, EyeOff, KeyRound, Loader2, RefreshCw, Terminal, Wand2 } from "lucide-react";
@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
+import { BlockEditorFrame, BlockTitleRow, IconButton } from "@/components/BlockEditorFrame";
 import { copyText } from "@/lib/clipboard";
+import type { EditorMode } from "@/lib/note-editor";
 import { Ed25519UnsupportedError, generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "@/lib/ssh-keygen";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -36,13 +37,15 @@ interface SshKeyBlockEditorProps {
   onChange: (block: SshKeyBlock) => void;
   controls: ReactNode;
   disabled: boolean;
+  /** A template asks for a key and holds none, filling it in works like writing a note. */
+  mode?: EditorMode;
 }
 
 /**
  * An SSH key pair, generated in the browser or pasted. The block only holds what goes into
  * the note. The settings of the generator stay in this editor.
  */
-export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKeyBlockEditorProps) {
+export function SshKeyBlockEditor({ block, onChange, controls, disabled, mode: editorMode = "compose" }: SshKeyBlockEditorProps) {
   const { t } = useTranslation();
   const id = useId();
   const [mode, setMode] = useState<Mode>("generate");
@@ -53,8 +56,27 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
   const [showPassphrase, setShowPassphrase] = useState(false);
   const [keyPair, setKeyPair] = useState<SSHKeyPair | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [parts, setParts] = useState<Part[]>(["public", "private", "passphrase"]);
+  // Someone filling in a request is asked for a key, and the public half is what grants access.
+  // Sending a fresh private key to a stranger has to be a choice, not the default.
+  const [parts, setParts] = useState<Part[]>(
+    editorMode === "fill" ? ["public"] : ["public", "private", "passphrase"],
+  );
   const [copied, setCopied] = useState<"public" | "private" | null>(null);
+  // The title outlives a new key, also one that took a while to generate while it was typed.
+  const labelRef = useRef(block.label);
+  useEffect(() => {
+    labelRef.current = block.label;
+  }, [block.label]);
+  const keep = (next: SshKeyBlock): SshKeyBlock =>
+    labelRef.current ? { ...next, label: labelRef.current } : next;
+  const titleRow = (placeholder: string) => (
+    <BlockTitleRow
+      value={block.label}
+      onChange={(label) => onChange({ ...block, label })}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
 
   const generate = async () => {
     setGenerating(true);
@@ -64,7 +86,7 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
           ? await generateEd25519KeyPair(comment || undefined, passphrase || undefined)
           : await generateRSAKeyPair(rsaBits, comment || undefined, passphrase || undefined);
       setKeyPair(pair);
-      onChange(fromPair(pair, parts, passphrase));
+      onChange(keep(fromPair(pair, parts, passphrase)));
       if (pair.extrasDropped) toast.warning(t("sshKey.extrasDropped"));
     } catch (err) {
       if (err instanceof Ed25519UnsupportedError) toast.error(t("sshKey.ed25519Unsupported"));
@@ -76,7 +98,7 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
 
   const discardPair = () => {
     setKeyPair(null);
-    onChange(EMPTY);
+    onChange(keep(EMPTY));
   };
 
   const copy = async (which: "public" | "private", text: string) => {
@@ -87,10 +109,19 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
 
   const keyTextarea = "resize-y rounded-xl border-0 bg-transparent px-3 font-mono text-sm shadow-none placeholder:font-sans focus-visible:ring-0";
 
+  if (editorMode === "template") {
+    return (
+      <BlockEditorFrame icon={Terminal} title={t("tab.sshkey")} controls={controls}>
+        {titleRow(t("template.blockTitle"))}
+        <p className="p-3 text-xs text-muted-foreground">{t("template.sshKeyHint")}</p>
+      </BlockEditorFrame>
+    );
+  }
+
   return (
     <BlockEditorFrame
       icon={Terminal}
-      title={t("tab.sshkey")}
+      title={editorMode === "fill" && block.label ? block.label : t("tab.sshkey")}
       controls={controls}
       toolbar={
         <ToggleGroup
@@ -101,7 +132,7 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
             if (v !== "generate" && v !== "paste") return;
             setMode(v);
             setKeyPair(null);
-            onChange(EMPTY);
+            onChange(keep(EMPTY));
           }}
           aria-label={t("share.sshMode")}
           disabled={disabled}
@@ -117,6 +148,7 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
         </ToggleGroup>
       }
     >
+      {editorMode === "compose" && titleRow(t("note.blockTitle"))}
       {mode === "paste" && (
         <>
           <div className="px-4 pt-3">
@@ -273,7 +305,7 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled }: SshKe
               onValueChange={(value) => {
                 const next = value.filter((part): part is Part => part === "public" || part === "private" || part === "passphrase");
                 setParts(next);
-                onChange(fromPair(keyPair, next, passphrase));
+                onChange(keep(fromPair(keyPair, next, passphrase)));
               }}
               aria-label={t("sshKey.shareAs")}
               disabled={disabled}

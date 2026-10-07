@@ -48,7 +48,7 @@ describe("config", () => {
       expect(config.NOTE_DEFAULT_EXPIRE_SEC).toBe(86400);
       expect(config.NOTE_VIEW_OPTIONS).toEqual([0, 1, 2, 3, 5, 10, 20, 50, 100]);
       expect(config.NOTE_DEFAULT_VIEWS).toBe(0);
-      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note", "request"]);
       expect(config.FILE_UPLOAD_WS).toBe(true);
       expect(config.FILE_UPLOAD_WS_MAX_BUFFER).toBe(16 * 1024 * 1024);
     });
@@ -193,10 +193,10 @@ describe("config", () => {
       await expect(loadFreshConfig()).rejects.toThrow("must be one of NOTE_VIEW_OPTIONS");
     });
 
-    it("should treat empty ENABLED_SERVICES as default (both enabled)", async () => {
+    it("should treat empty ENABLED_SERVICES as default (all enabled)", async () => {
       process.env.ENABLED_SERVICES = "";
       const config = await loadFreshConfig();
-      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note", "request"]);
     });
 
     it("should reject ENABLED_SERVICES with only invalid values", async () => {
@@ -488,6 +488,105 @@ describe("config", () => {
       expect(config.OIDC_ENABLED).toBe(true);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no upload routes are protected"));
       warnSpy.mockRestore();
+    });
+  });
+
+  describe("file requests", () => {
+    it("should load the defaults", async () => {
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 259200, 604800]);
+      expect(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC).toBe(259200);
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(10);
+      expect(config.FILE_REQUEST_MAX_SIZE).toBe(config.FILE_MAX_SIZE);
+      expect(config.FILE_REQUEST_RETENTION_SEC).toBe(604800);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(5);
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(false);
+    });
+
+    it("should parse FILE_REQUEST_MAX_SIZE with units", async () => {
+      process.env.FILE_REQUEST_MAX_SIZE = "1GB";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_MAX_SIZE).toBe(1024 ** 3);
+    });
+
+    it("should refuse a duration that would not make a valid date", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,9000000000000";
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC;
+      delete process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC;
+      process.env.FILE_REQUEST_RETENTION_SEC = "3153600001";
+      await expect(loadFreshConfig()).rejects.toThrow();
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_RETENTION_SEC;
+      process.env.FILE_EXPIRE_OPTIONS_SEC = "300,9000000000000";
+      process.env.FILE_DEFAULT_EXPIRE_SEC = "300";
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+    });
+
+    it("should leave the longest expiry and retention to the operator", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,7776000";
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
+      process.env.FILE_REQUEST_RETENTION_SEC = "31536000";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 7776000]);
+      expect(config.FILE_REQUEST_RETENTION_SEC).toBe(31536000);
+    });
+
+    it("should reject a default expiry that is not an option", async () => {
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "3600";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC");
+    });
+
+    it("should reject an upload size that FILE_MAX_SIZE would refuse anyway", async () => {
+      process.env.FILE_MAX_SIZE = "1GB";
+      process.env.FILE_REQUEST_MAX_SIZE = "2GB";
+      await expect(loadFreshConfig()).rejects.toThrow("must not exceed FILE_MAX_SIZE");
+    });
+
+    it("should reject options out of range", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "0,10";
+      await expect(loadFreshConfig()).rejects.toThrow();
+      vi.resetModules();
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "10,1001";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 1000");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_UPLOAD_OPTIONS;
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "5,101";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 100");
+    });
+
+    it("should reject a default number of uploads or downloads that is not an option", async () => {
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "7";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_UPLOAD_OPTIONS");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_DEFAULT_UPLOADS;
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "4";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_DOWNLOAD_OPTIONS");
+    });
+
+    it("should parse custom options and a forced password", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "5, 25, 250";
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "25";
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "1,3";
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "3";
+      process.env.FORCE_REQUEST_PASSWORD = "true";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([5, 25, 250]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(25);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 3]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(3);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(true);
+    });
+
+    it("should turn the daily limit off at 0", async () => {
+      process.env.FILE_REQUEST_DAILY_LIMIT = "0";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
     });
   });
 });

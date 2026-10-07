@@ -11,11 +11,17 @@ The 32-byte secret lives in the URL fragment and nowhere else that leaves the ma
 ```
 https://host/file/<id>#<secret>          window.location.hash.slice(1)
 https://host/note/<id>#<secret>
+https://host/request/<id>#<pk+linkSecret>  upload link of a file request, for the sender
+https://host/inbox/<id>#<inboxSecret>      inbox link of a file request, for the requester
 ```
 
 - Never put the secret, a derived key, a filename, or note content into a request path, query string, header, or body.
 - Never log any of them, including in `catch` blocks. `console.warn` for a browser capability probe is fine, a value is not.
-- `upload-store.ts` persists `{ id, ownerToken, secret, fileNames, name }` in IndexedDB via `idb-keyval` for the "My Uploads" page. That store is local-only, and the optional `name` never leaves the browser.
+- `upload-store.ts` persists `{ id, ownerToken, secret, fileNames, name }` in IndexedDB via `idb-keyval` for the "My Links" page. That store is local-only, and the optional `name` never leaves the browser.
+- It also keeps the file requests made in this browser, `{ id, inboxFragment, uploadFragment, hasPassword, title, asks, closesAt, createdAt, seenUploads }`. For a request with a password it keeps no token beside the fragment, since a token next to a protected secret would let anyone with the store test passwords offline.
+- `lib/defaults.ts` keeps what the forms start with in `localStorage` (`skysend-defaults`), read through Zod like any stored text: expiry, limit and whether a password starts on for files and notes, and expiry, sends, size, downloads and password for requests. A value the server no longer offers falls back to the server's default (`pickOption`), and a forced password always wins. It never holds a password itself.
+- And the request templates of this browser under `template:`, `{ id, name, asks, title?, note?, limits?, createdAt, usedAt? }`. Every read goes through `readStoredTemplate` in `lib/request-templates.ts`, the same check an import gets, so a template never holds a value.
+- The public key of a request only ever comes from the upload link. Never take it from the server, which could swap in its own.
 - Filenames and MIME types are encrypted client-side into `encryptedMeta` before the `POST /api/meta/:id` call.
 
 ## Layout
@@ -23,15 +29,17 @@ https://host/note/<id>#<secret>
 ```
 src/main.tsx        Entry, imports i18n before rendering
 src/App.tsx         Router + provider stack (ErrorBoundary > Theme > Tooltip > ServerConfig)
-src/pages/          Upload, Download, NoteView, MyUploads, HowItWorks, NotFound
+src/pages/          Upload, Download, NoteView, MyUploads, Requests, Inbox, RequestUpload, TemplatesLink, Settings, HowItWorks, NotFound
 src/components/     Feature components (PascalCase)
-src/components/ui/  Radix + cva primitives, 20 of them
+src/components/ui/  Radix + cva primitives, 21 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
 src/lib/            api client, crypto glue, workers, toast helpers, utils
 src/i18n/           i18next setup + 13 locale JSON files
 ```
 
-Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` local history, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` My Links, the local history with a Shared and a Requests tab (`?tab=requests`), `/settings` the settings of this browser with a Defaults and a Templates tab (`?tab=templates`), `/requests` the form for a new file request (`?template=<id>` starts from a template, `?edit=<id>` edits one), `/templates#<export>` a templates link that goes on to the import, `/inbox/:id` the inbox of a request, `/request/:id` the upload page for a sender, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
+
+`/api/config` reports file requests as `fileRequestsEnabled`, apart from `enabledServices`, which stays `file` and `note` for older CLI clients. An instance with only requests enabled sends `/` on to `/requests`.
 
 ## Server config
 
@@ -51,7 +59,9 @@ All of it comes from `@skysend/crypto`. Do not reimplement key derivation or str
 
 **Upload** (`hooks/useUpload.ts` + `lib/upload-worker.ts`): the hook generates the secret and salt on the main thread, builds the metadata from `File` objects, then hands the work to a Web Worker that derives keys, encrypts, and uploads. Multi-file uploads are zipped first via `lib/zip.ts` (fflate). Transport is WebSocket when the server advertises `fileUploadWs`, with an HTTP chunk fallback - `debugInfo.transport` records which one ran.
 
-**Download** (`hooks/useDownload.ts` + `lib/opfs-download.ts` + `public/download-sw.js`): three tiers, selected by capability, recorded in `debugInfo.tier`.
+**File requests** (`lib/file-request.ts`, `hooks/useFileRequests.ts`, `hooks/useInbox.ts`, `hooks/useRequestUpload.ts`): the requester's browser creates the key pair, the sealed vault and the encrypted brief, and the server gets only those and three derived tokens. The brief says whether files, a note or both are asked for, and carries the note template the form lays out with `BlockListEditor` in `template` mode. A sender fills it in with the same editors in `fill` mode (`RequestNoteForm`), and `useRequestUpload` sends the note through `useUpload` as one padded upload with metadata `{ type: "note" }`. A request for both takes files and a note in one send: two uploads, files first, whose metadata share a random `submission`, so the inbox lists them together. Every other upload into a request gets a random `submission` of its own, so metadata lengths match. A submission takes two uploads of the request, which the form and the counters show as one. The files reserve both at init (`reserveNext`), and their finalize returns a `hold` for the note's slot, which `useRequestUpload` keeps for the note, a retry included. The inbox opens a note in memory only (`readInboxNote`, `InboxNoteDialog`), after checking its size against `noteMaxSize`, and renders it with `NoteBlocks`. A sender uploads through `useUpload` with a `request` option, which makes the worker take the same transports as a normal upload into `/api/request/:id/upload/*`, WebSocket first and chunked HTTP as the fallback, wrap the file secret to the request's public key at finalize, and skip the share link and My Links. The inbox opens every upload on its own, so a damaged or crafted one does not hide the others, every name from a sender goes through `sanitizeFilename` before it is shown or saved, and the title goes through `sanitizeTitle` before a sender sees it. Request templates (`lib/request-templates.ts`, `hooks/useRequestTemplates.ts`) keep the setup of the form, never a password or a value. `RequestForm` starts from one, saves one (`SaveTemplateDialog`) and edits one, and the Templates tab of the settings (`TemplateList`) exports and imports them as a file or a `/templates#` link, sealed with `sealWithPassword` when a password is set. An import is untrusted input: Zod, then `parseTemplate`, `cleanLabel` and `sanitizeTitle`, then the brief limit. `useUnseenUploads` in the layout checks every stored request without a password every 5 minutes while the page is visible and feeds `lib/unseen-uploads.ts`, the counts behind the dot beside My Links and its Requests tab. Opening an inbox writes the IDs it listed to `seenUploads`, only for the link this browser stored.
+
+**Download** (`hooks/useDownload.ts` + `lib/download-tiers.ts` + `lib/opfs-download.ts` + `public/download-sw.js`): three tiers, selected by capability, recorded in `debugInfo.tier`. `saveDecryptedDownload` in `lib/download-tiers.ts` runs them for a normal download and for a file in an inbox alike. The two differ only in the endpoint and the token header, which the Service Worker takes from an allowlist of `X-Auth-Token` and `X-Inbox-Token`.
 
 | Tier | `tier` | Path | Used for |
 | :--- | :--- | :--- | :--- |
@@ -63,11 +73,11 @@ Tier 1 is the only shape that gets real backpressure in Firefox, which is why `d
 
 Safari is excluded from tier 1 deliberately - it terminates Service Workers early and buffers stream responses in RAM. A Safari download over `SAFARI_BIG_SIZE` shows a warning first. Firefox with DevTools open gets its own warning because the network panel buffers the response.
 
-`useDownload` only imports `ensureSwController` and `streamDownloadViaSw` from `lib/opfs-download.ts`. The OPFS-worker pipeline in that file (`checkOpfsSupport`, `startOpfsDownload`, `triggerSwDownload`, `triggerBlobDownload`, and all of `lib/opfs-worker.ts`) is not reachable from the app today - read the hook, not those functions, when reasoning about what actually runs.
+`lib/download-tiers.ts` only imports `ensureSwController` and `streamDownloadViaSw` from `lib/opfs-download.ts`. The OPFS-worker pipeline in that file (`checkOpfsSupport`, `startOpfsDownload`, `triggerSwDownload`, `triggerBlobDownload`, and all of `lib/opfs-worker.ts`) is not reachable from the app today - read `lib/download-tiers.ts`, not those functions, when reasoning about what actually runs.
 
 `docs/developer-guide/download-modes.md` is the long-form version and has to be updated whenever the tier logic changes.
 
-**Notes** (`components/NoteComposer.tsx` + `hooks/useNoteUpload.ts`, `hooks/useNoteView.ts`): a note is a list of blocks. The composer edits them, `useNoteUpload` turns them into one document with `serializeNote` from `@skysend/note-format` and encrypts that with `encryptNoteContent`. The server only ever gets `contentType: "blocks"`, so never send a block type, a block count or anything else about the content alongside it. Reading goes through `readNote`, which also opens notes from before v3. Every block comes from someone else's note, so the renderers in `components/NoteBlocks.tsx` show text as text, Markdown through `rehype-sanitize` and code through the sanitized highlighter in `lib/highlight.ts`. The kinds of a note are kept in IndexedDB for "My Uploads" only.
+**Notes** (`components/NoteComposer.tsx` + `hooks/useNoteUpload.ts`, `hooks/useNoteView.ts`): a note is a list of blocks. The composer edits them, `useNoteUpload` turns them into one document with `serializeNote` from `@skysend/note-format` and encrypts that with `encryptNoteContent`. The server only ever gets `contentType: "blocks"`, so never send a block type, a block count or anything else about the content alongside it. Reading goes through `readNote`, which also opens notes from before v3. Every block comes from someone else's note, so the renderers in `components/NoteBlocks.tsx` show text as text, Markdown through `rehype-sanitize` and code through the sanitized highlighter in `lib/highlight.ts`. The kinds of a note are kept in IndexedDB for "My Links" only.
 
 **Passwords**: Argon2id via `hash-wasm`, wired up in `lib/argon2.ts` and passed into the crypto package as an `Argon2idHashFn`. This is why the CSP allows `wasm-unsafe-eval`.
 
@@ -133,11 +143,13 @@ No user-facing string is hardcoded in a component. Errors that surface as toasts
 
 `src/components/ui/` holds the Shadcn UI components. **Use them instead of the browser-native element, and instead of a hand-rolled div.** This is the single most important rule in this section - a native control looks fine on your machine and wrong on Windows, in dark mode, or against the operator's `CUSTOM_COLOR`.
 
-The 20 available primitives:
+The 21 available primitives:
 
-`badge` · `button` · `card` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `progress` · `scroll-area` · `select` · `skeleton` · `sonner` · `stepper` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
+`badge` · `button` · `card` · `checkbox` · `custom-toast` · `dialog` · `dropdown-menu` · `input` · `label` · `popover` · `progress` · `scroll-area` · `select` · `sheet` · `skeleton` · `sonner` · `switch` · `tabs` · `textarea` · `toggle-group` · `tooltip`
 
-`toggle-group` has two variants: `chips` for a short list of options like the expiry times, and `segmented` for a switch between two or three modes like Plain and Markdown. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
+`popover` holds a choice at its trigger, `sheet` is a dialog that slides up from the bottom on a phone. `OptionPill` combines them: a setting that shows its value and opens its options in a popover, or in a sheet below the `sm` breakpoint, the way the settings of `ShareOptions`, `RequestForm` and `DefaultsSettings` work. `useMediaQuery` decides which.
+
+`toggle-group` has three variants: `chips` for a short list of options like the expiry times, `segmented` for a switch between two or three modes like Plain and Markdown, and `cards` for two or three choices with a line of explanation each that open no panel, like the format of a template export. Reach for it before writing another row of hand-styled buttons. `tabs` has `segmented` too, plus `cards` for a few big choices with a line of explanation each, like Datei and Notiz.
 
 Never hand-roll what already exists:
 

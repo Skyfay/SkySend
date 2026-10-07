@@ -1,11 +1,7 @@
-import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-import { Lock } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Stepper } from "@/components/ui/stepper";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useId } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { Clock, Download, Eye, Lock } from "lucide-react";
+import { OptionPill, SwitchPill } from "@/components/OptionPill";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { formatDuration } from "@/lib/utils";
 
@@ -28,7 +24,7 @@ interface ShareOptionsProps {
   disabled?: boolean;
 }
 
-/** How a limit reads, for the stepper and for the summary above the share button. */
+/** How a limit reads, for the defaults and the summary of a share. */
 export function useLimitLabel(kind: ShareKind) {
   const { t } = useTranslation();
   return (value: number, short = false) => {
@@ -39,95 +35,31 @@ export function useLimitLabel(kind: ShareKind) {
   };
 }
 
-function Row({ label, labelId, children }: { label: ReactNode; labelId: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-      <span id={labelId} className="flex items-center gap-2 text-[13px] font-medium sm:w-36 sm:shrink-0">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-interface ExpiryPickerProps {
-  options: number[];
-  value: number;
-  onChange: (value: number) => void;
-  labelId: string;
-  disabled: boolean;
-}
-
 /**
- * The expiry times as chips while they fit on one line, as a dropdown once they would wrap.
- * An invisible copy of the chips measures that line, so the switch follows the width of the
- * row, on a phone as on a wide screen.
+ * How the chips of a view limit read: unlimited as ∞ with its name for a screen reader, and a
+ * hint for what 1 and ∞ do, as far as the server offers them.
  */
-function ExpiryPicker({ options, value, onChange, labelId, disabled }: ExpiryPickerProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [fits, setFits] = useState(true);
-
-  useLayoutEffect(() => {
-    const row = rowRef.current;
-    const measure = measureRef.current;
-    if (!row || !measure) return;
-    const check = () => setFits(measure.scrollWidth <= row.clientWidth);
-    check();
-    // The copy changes width when the web font arrives, the row when the window resizes.
-    const observer = new ResizeObserver(check);
-    observer.observe(row);
-    observer.observe(measure);
-    return () => observer.disconnect();
-  }, [options]);
-
-  return (
-    <div ref={rowRef} className="relative min-w-0 sm:flex-1">
-      <div ref={measureRef} aria-hidden="true" className="invisible absolute left-0 top-0 w-max">
-        <ToggleGroup type="single" className="flex-nowrap">
-          {options.map((sec) => (
-            <ToggleGroupItem key={sec} value={String(sec)}>
-              {formatDuration(sec)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
-      {fits ? (
-        <ToggleGroup
-          type="single"
-          value={String(value)}
-          // Radix lets a single toggle be switched off. An expiry is always required.
-          onValueChange={(v) => v && onChange(parseInt(v, 10))}
-          aria-labelledby={labelId}
-          disabled={disabled}
-        >
-          {options.map((sec) => (
-            <ToggleGroupItem key={sec} value={String(sec)}>
-              {formatDuration(sec)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      ) : (
-        <Select value={String(value)} onValueChange={(v) => onChange(parseInt(v, 10))} disabled={disabled}>
-          <SelectTrigger className="w-44" aria-labelledby={labelId}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((sec) => (
-              <SelectItem key={sec} value={String(sec)}>
-                {formatDuration(sec)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-    </div>
-  );
+export function useViewChips(options: readonly number[]) {
+  const { t } = useTranslation();
+  const burns = options.includes(1);
+  const unlimited = options.includes(0);
+  return {
+    format: (count: number) => (count === 0 ? "∞" : String(count)),
+    optionLabel: (count: number) => (count === 0 ? t("note.unlimited") : undefined),
+    hint:
+      burns && unlimited
+        ? t("share.pick.viewsHint")
+        : burns
+          ? t("share.pick.burnHint")
+          : unlimited
+            ? t("share.pick.unlimitedHint")
+            : undefined,
+  };
 }
 
 /**
- * Expiry, download or view limit and password for a share. Expiry times are chips, or a
- * dropdown when an operator lists too many for one line. Limits use a stepper.
+ * Expiry, download or view limit and password for a share, as pills that show their value
+ * and open their options on a click.
  */
 export function ShareOptions({
   kind,
@@ -146,72 +78,74 @@ export function ShareOptions({
 }: ShareOptionsProps) {
   const { t } = useTranslation();
   const id = useId();
-  const limitLabel = useLimitLabel(kind);
+  const file = kind === "file";
+  // Trans parses its values as markup, so only numbers and what is formatted from them go
+  // in here.
+  const pill = (key: string, values: Record<string, string | number> = {}) => (
+    <Trans i18nKey={key} values={values} components={{ b: <strong className="font-semibold" /> }} />
+  );
+  // A note without a view limit only expires by time, one with a single view burns.
+  const limitLabel = file
+    ? pill("share.pill.downloads", { count: limit })
+    : limit === 0
+      ? pill("share.pill.unlimitedViews")
+      : limit === 1
+        ? pill("share.pill.burnAfterReading")
+        : pill("share.pill.views", { count: limit });
+  const chips = useViewChips(limitOptions);
 
   return (
-    <div className="space-y-4">
-      <Row label={t("share.expires")} labelId={`${id}-expiry`}>
-        <ExpiryPicker
+    <section className="space-y-3" aria-labelledby={`${id}-settings`}>
+      <h3 id={`${id}-settings`} className="text-[13px] font-medium">
+        {t("share.settings")}
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        <OptionPill
+          icon={Clock}
+          label={pill("share.pill.expiry", { time: formatDuration(expireSec) })}
+          title={t("share.pick.expiry")}
           options={expireOptions}
           value={expireSec}
           onChange={onExpireChange}
-          labelId={`${id}-expiry`}
+          format={formatDuration}
+          columns={3}
           disabled={disabled}
         />
-      </Row>
-
-      <Row label={t(kind === "file" ? "upload.downloads" : "note.maxViews")} labelId={`${id}-limit`}>
-        <div role="group" aria-labelledby={`${id}-limit`}>
-          <Stepper
-            options={limitOptions}
-            value={limit}
-            onChange={onLimitChange}
-            format={(v) => limitLabel(v)}
-            decreaseLabel={t("share.fewer")}
-            increaseLabel={t("share.more")}
-            disabled={disabled}
-          />
-        </div>
-      </Row>
-
-      <Row
-        labelId={`${id}-password`}
-        label={
-          <Label htmlFor={`${id}-password-toggle`} className="flex items-center gap-2 text-[13px]">
-            <Lock className="h-3.5 w-3.5" />
-            {t("share.password")}
-          </Label>
-        }
-      >
-        <div className="flex items-center gap-3">
-          {!forcePassword && (
-            <Switch
-              id={`${id}-password-toggle`}
-              checked={passwordEnabled}
-              onCheckedChange={onPasswordEnabledChange}
-              disabled={disabled}
-            />
-          )}
-          <span className="text-[13px] text-muted-foreground">
-            {forcePassword
-              ? t("upload.passwordRequired")
-              : passwordEnabled
-                ? t("share.passwordHint")
-                : t("share.passwordOff")}
-          </span>
-        </div>
-      </Row>
+        <OptionPill
+          icon={file ? Download : Eye}
+          label={limitLabel}
+          title={file ? t("share.pick.downloads") : t("share.pick.views")}
+          hint={file ? undefined : chips.hint}
+          options={limitOptions}
+          value={limit}
+          onChange={onLimitChange}
+          format={file ? String : chips.format}
+          optionLabel={file ? undefined : chips.optionLabel}
+          columns={4}
+          disabled={disabled}
+        />
+        {/* A forced password stays on. */}
+        <SwitchPill
+          icon={Lock}
+          label={t("share.password")}
+          checked={passwordEnabled}
+          onCheckedChange={onPasswordEnabledChange}
+          disabled={disabled || forcePassword}
+        />
+      </div>
 
       {passwordEnabled && (
-        <div className="sm:pl-40">
+        <div className="space-y-1.5">
           <PasswordProtectionInput
             value={password}
             onChange={onPasswordChange}
             placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
             disabled={disabled}
           />
+          <p className="text-xs text-muted-foreground">{t("share.passwordHint")}</p>
+          {forcePassword && <p className="text-xs text-muted-foreground">{t("share.passwordForced")}</p>}
         </div>
       )}
-    </div>
+    </section>
   );
 }

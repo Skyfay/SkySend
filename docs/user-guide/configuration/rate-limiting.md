@@ -37,6 +37,14 @@ Upload quotas use HMAC-SHA256 to hash IP addresses before storing them. The HMAC
 - IP hashes cannot be correlated across days
 - When the key rotates, the entire quota store is cleared
 
+## Daily File Request Limit
+
+`FILE_REQUEST_DAILY_LIMIT` caps how many file requests one person creates per day. It counts the OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and the client IP otherwise. The day starts with the first request of that user or IP. Set it to `0` to disable the limit (default).
+
+A request costs little by itself, but every one is an inbox that anyone with its link can fill. On a public instance, set the limit together with [Upload Quotas](#upload-quotas), for example `FILE_REQUEST_DAILY_LIMIT=100`. Behind a reverse proxy, the limit needs `TRUST_PROXY=true`, or everyone shares the count of the proxy's IP.
+
+When the limit is used up, creating a request returns `429 Too Many Requests`, and the request form says when the next one is possible. The count lives in memory, with the IP HMAC-hashed by a key that is never stored, so a restart resets it.
+
 ## Password Attempt Lockout
 
 SkySend tracks failed password attempts per upload/note and per client IP. After too many failures, that specific IP is locked out from that specific resource for a configurable duration. Controlled via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`.

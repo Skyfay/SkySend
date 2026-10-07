@@ -229,6 +229,33 @@
           ]
         }
       ]
+    },
+    {
+      "name": "a v3 note with a labelled text block",
+      "kind": "blocks",
+      "link": "2tSRo2mkNABD3m9KEDe2Z3d6ymhqenxDdeEPW7viEYo",
+      "salt": "e6FthS8tqxnB58p2kjanHPjnDiTNwklqf9Oh259Gvcs",
+      "nonce": "rHO1Y2I/DiwZWvdJ",
+      "ciphertext": "BhX95hwOu3VD6cGggxy+PUnIGzTznZZ0nkq0+clspu/naQwGgt0SPJyT1pORYKbdlrIv4mit3th6QLgGt7B4/QAsTK3RCDLGEZVb2IEgXIR+yuWIOryLlCzDZe1POZGAP7lyrN4sGtqieYdENQFv3AzL3Dsg3aZVX/ocyWRL651wsPcZPaVg7ZRKkqsdo9m4QYN970uB0pPZBW9ViQF2b5K2Tl/VztnqGOist2WO5o76o0L7jAaWPfafV7OBbFvSPgGgl/wl0R4=",
+      "authToken": "O2NF6BxBr2G64DSRW9sD4uxGMNEDaUq6LMR0qDLzQsg",
+      "ownerToken": "wW0tHV4h2oEQ1qfwlxLCCBddB4KkQpTFYHKz__0CvBM",
+      "blocks": [
+        {
+          "type": "text",
+          "format": "plain",
+          "text": "Behind the blue plant pot.",
+          "label": "Where the key is"
+        },
+        {
+          "type": "password",
+          "entries": [
+            {
+              "label": "Alarm code",
+              "value": "4711"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

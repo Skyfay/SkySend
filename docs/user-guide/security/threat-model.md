@@ -105,6 +105,9 @@ Decrypting an upload takes three separate pieces, and a rewritten link puts all 
 ### Malicious File Content
 SkySend does not inspect or scan file contents. It encrypts and stores whatever the user uploads. SkySend is not responsible for malicious file content.
 
+### Unknown Senders in a File Request
+Anyone with the upload link of a [file request](/user-guide/file-requests) can upload into it, and nothing identifies them. The inbox marks every upload as unverified and cleans file names before showing them, but it cannot tell a wanted file from an unwanted one. Equally, a sender cannot verify who wrote the title of a request, which is why the upload page marks it as not checked. Hand out upload links only to the people you ask, and open only what you expected.
+
 ### Metadata Leakage (File Size)
 The server knows the encrypted file size, which reveals the approximate original file size. This is inherent to any file transfer system. File names and types are encrypted.
 

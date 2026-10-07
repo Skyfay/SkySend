@@ -37,11 +37,13 @@ interface TextBlock {
   type: "text"
   format: "plain" | "markdown"
   text: string
+  label?: string // what the text is about, shown above it, optional since it came after v1
 }
 
 interface PasswordBlock {
   type: "password"
-  entries: Array<{ label: string; value: string }> // at most 100, label may be empty
+  entries: Array<{ label: string; value: string; secret?: false }> // at most 100, label may be empty
+  label?: string // the title of the block, like "Server access", optional like the text label
 }
 
 interface CodeBlock {
@@ -56,10 +58,11 @@ interface SshKeyBlock {
   publicKey: string  // either key may be empty
   privateKey: string
   passphrase: string // the passphrase of the private key, may be empty
+  label?: string     // the title of the block, like "Deploy key", optional like the text label
 }
 ```
 
-Every field is required. A writer that has nothing for a field writes an empty string.
+Every field but the labels of the blocks and `secret` is required. A code block has a `title` for its file name instead, so it needs no label. A writer that has nothing for a field writes an empty string. `secret: false` marks a password entry whose value is no secret, like a username or an address. Readers show it in clear, and an entry without it is a secret, as every entry was before the field existed.
 
 ## Writing
 
@@ -88,6 +91,21 @@ const blocks = readNote(contentType, plaintext)
 When reading throws, the web app and the CLI client show the decrypted plaintext as plain text with a warning. The view is counted by then, and a note with a view limit of 1 is already deleted, so the content must not be lost.
 
 `noteToText(blocks)` joins the blocks into one text, for "Copy all" in the web app and for saving a note in the CLI client.
+
+## Templates
+
+A file request can ask a sender for a note and lay out the fields the sender fills in. That template is a note document without values:
+
+```typescript
+const template = serializeTemplate(blocks) // { v: 1, blocks } with every value emptied
+const fields = parseTemplate(template)     // the blocks a sender fills in
+```
+
+- `serializeTemplate()` validates the blocks like `serializeNote()`, empties every value and cleans every label.
+- `parseTemplate()` treats the template as untrusted, since the requester wrote it and every sender reads it. It drops blocks it cannot read and throws away any value a crafted template carries, so a template can never put words into an answer. A language name that is not plain letters, digits and `_+#.-` becomes `auto`.
+- `cleanLabel()` keeps a label to one line of at most 100 characters, without control, format or reordering characters, blank fillers or towers of combining marks. The zero-width joiner and non-joiner stay.
+
+The template travels inside the encrypted brief of the request, see [File Requests](/developer-guide/crypto/file-requests#the-brief). A note sent into a request is padded with `padNote()` to a multiple of 1024 bytes before it is encrypted, so its length tells little about how long a password in it is. JSON allows the trailing spaces, so `parseNote()` reads it like any other note.
 
 ## Security Properties
 

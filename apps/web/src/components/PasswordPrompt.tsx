@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface PasswordPromptProps {
+  /** What is locked. A file when left out. */
+  title?: string;
   onSubmit: (password: string) => void;
   loading?: boolean;
   error?: string | null;
 }
 
 export function PasswordPrompt({
+  title,
   onSubmit,
   loading = false,
   error,
@@ -41,7 +44,7 @@ export function PasswordPrompt({
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-text">
           <Lock className="h-4 w-4" />
         </span>
-        <p className="text-[15px] font-semibold tracking-tight">{t("download.passwordRequired")}</p>
+        <p className="text-[15px] font-semibold tracking-tight">{title ?? t("download.passwordRequired")}</p>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">

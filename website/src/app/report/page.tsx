@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/site/section-heading";
 export const metadata = {
   title: "Report Abuse",
   description:
-    "Report a SkySend file or note link that violates our policies - spam, malware, illegal content, or copyright infringement.",
+    "Report a SkySend file, note or file request link that violates our policies - spam, malware, illegal content, or copyright infringement.",
   alternates: {
     canonical: "/report",
   },

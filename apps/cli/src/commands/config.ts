@@ -5,11 +5,18 @@ interface ConfigOptions {
   json?: boolean;
 }
 
+/** Settings that are credentials. JSON output often lands in tickets and logs, so they never show. */
+const SECRET_KEYS = ["S3_ACCESS_KEY", "S3_SECRET_KEY", "OIDC_CLIENT_SECRET", "OIDC_SESSION_SECRET"];
+
 export async function showConfig(ctx: CliContext, options: ConfigOptions): Promise<void> {
   const config = ctx.config;
 
   if (options.json) {
-    console.log(JSON.stringify(config, null, 2));
+    const masked: Record<string, unknown> = { ...config };
+    for (const key of SECRET_KEYS) {
+      if (masked[key]) masked[key] = "********";
+    }
+    console.log(JSON.stringify(masked, null, 2));
     return;
   }
 
@@ -40,6 +47,21 @@ export async function showConfig(ctx: CliContext, options: ConfigOptions): Promi
   console.log(`Default Expiry:     ${formatExpiry(config.NOTE_DEFAULT_EXPIRE_SEC)}`);
   console.log(`View Options:       ${config.NOTE_VIEW_OPTIONS.map((v: number) => v === 0 ? "∞" : String(v)).join(", ")}`);
   console.log(`Default Views:      ${config.NOTE_DEFAULT_VIEWS === 0 ? "∞" : config.NOTE_DEFAULT_VIEWS}`);
+  console.log();
+  console.log("File Request Settings");
+  console.log("---------------------");
+  console.log(
+    `Open For Options:   ${config.FILE_REQUEST_EXPIRE_OPTIONS_SEC.map(formatExpiry).join(", ")}`,
+  );
+  console.log(`Default Open For:   ${formatExpiry(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC)}`);
+  console.log(`Upload Options:     ${config.FILE_REQUEST_UPLOAD_OPTIONS.join(", ")}`);
+  console.log(`Default Uploads:    ${config.FILE_REQUEST_DEFAULT_UPLOADS}`);
+  console.log(`Max Size/Upload:    ${formatBytes(config.FILE_REQUEST_MAX_SIZE)}`);
+  console.log(`Retention:          ${formatExpiry(config.FILE_REQUEST_RETENTION_SEC)}`);
+  console.log(`Download Options:   ${config.FILE_REQUEST_DOWNLOAD_OPTIONS.join(", ")}`);
+  console.log(`Default Downloads:  ${config.FILE_REQUEST_DEFAULT_DOWNLOADS}`);
+  const dailyLimit = config.FILE_REQUEST_DAILY_LIMIT;
+  console.log(`Daily Limit:        ${dailyLimit === 0 ? "∞" : dailyLimit}`);
   console.log();
   console.log("General");
   console.log("-------");

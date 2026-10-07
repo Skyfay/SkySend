@@ -36,16 +36,25 @@ const textBlockSchema = z.object({
   type: z.literal("text"),
   format: z.enum(["plain", "markdown"]),
   text: z.string(),
+  /** What the text is about, shown above it. Added after v1 shipped, so it is optional. */
+  label: z.string().optional(),
 });
 
 const passwordEntrySchema = z.object({
   label: z.string(),
   value: z.string(),
+  /**
+   * False for a value that is no secret, like a username or an address, which is shown in
+   * clear. Missing means a secret, so a document written before it reads as it did.
+   */
+  secret: z.boolean().optional(),
 });
 
 const passwordBlockSchema = z.object({
   type: z.literal("password"),
   entries: z.array(passwordEntrySchema).max(MAX_PASSWORD_ENTRIES),
+  /** The title of the block, like "Server access", shown above it. Optional like the text label. */
+  label: z.string().optional(),
 });
 
 const codeBlockSchema = z.object({
@@ -61,9 +70,11 @@ const sshKeyBlockSchema = z.object({
   publicKey: z.string(),
   privateKey: z.string(),
   passphrase: z.string(),
+  /** The title of the block, like "Deploy key", shown above it. Optional like the text label. */
+  label: z.string().optional(),
 });
 
-const noteBlockSchema = z.discriminatedUnion("type", [
+export const noteBlockSchema = z.discriminatedUnion("type", [
   textBlockSchema,
   passwordBlockSchema,
   codeBlockSchema,
@@ -86,7 +97,7 @@ export interface UnsupportedBlock {
 /** A block as a reader gets it back. */
 export type ReadBlock = NoteBlock | UnsupportedBlock;
 
-const documentSchema = z.object({
+export const documentSchema = z.object({
   v: z.number().int().positive(),
   // Each block is checked on its own below, so one bad block does not hide the others.
   blocks: z.array(z.unknown()).max(MAX_BLOCKS),

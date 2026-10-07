@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { showKnownErrorToast } from "@/lib/toast";
 import {
@@ -31,6 +31,7 @@ import { useFaviconProgress } from "@/hooks/useFaviconProgress";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
+import { fileStart } from "@/lib/defaults";
 import { formatBytes } from "@/lib/utils";
 
 type Tab = "file" | "note";
@@ -125,18 +126,24 @@ export function UploadPage() {
     uploadHook.phase !== "error";
   useFaviconProgress(isUploading ? uploadHook.progress : null);
 
-  // Initialize defaults when config loads
+  // Initialize defaults when config loads, this browser's own within what the server offers
   if (config && expireSec === 0) {
-    setExpireSec(config.fileDefaultExpire);
-    setMaxDownloads(config.fileDefaultDownload);
+    const start = fileStart(config);
+    setExpireSec(start.expireSec);
+    setMaxDownloads(start.limit);
     // Set initial tab: use server default if available, else first available tab
     const preferredTab: Tab = defaultTab === "file" ? "file" : "note";
     const targetTab = availableTabs.includes(preferredTab) ? preferredTab : availableTabs[0]!;
     setActiveTab(targetTab);
-    // Apply force-password for file uploads
-    if (config.forceFilePassword) {
+    // Apply force-password for file uploads, or this browser's wish for one
+    if (start.password) {
       setPasswordEnabled(true);
     }
+  }
+
+  // An instance that offers only file requests has nothing to share here.
+  if (config && availableTabs.length === 0 && config.fileRequestsEnabled) {
+    return <Navigate to="/requests" replace />;
   }
 
   if (configLoading || !config) {
@@ -163,8 +170,14 @@ export function UploadPage() {
   const sizeExceeded = totalSize > config.fileMaxSize;
   const tooManyFiles = files.length > config.fileMaxFilesPerUpload;
   const quotaExceeded = quota?.enabled && totalSize > quota.remaining;
+  // A password that is switched on has to be typed, or the link would go out without one.
   const canUpload =
-    files.length > 0 && !sizeExceeded && !tooManyFiles && !quotaExceeded && !isUploading;
+    files.length > 0 &&
+    !sizeExceeded &&
+    !tooManyFiles &&
+    !quotaExceeded &&
+    !isUploading &&
+    (!passwordEnabled || password.length > 0);
 
   const handleUpload = () => {
     uploadHook.upload({
@@ -179,7 +192,7 @@ export function UploadPage() {
     uploadHook.reset();
     setFiles([]);
     setPassword("");
-    setPasswordEnabled(config.forceFilePassword);
+    setPasswordEnabled(fileStart(config).password);
     setQuotaRefreshKey((k) => k + 1);
   };
 

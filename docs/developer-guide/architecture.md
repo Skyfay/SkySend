@@ -187,6 +187,23 @@ Client                                          Server
 
 Notes created before v3 have a single content type instead of blocks (`text`, `markdown`, `password`, `code` or `sshkey`). They are read into blocks and shown by the same viewer.
 
+## File Request Flow
+
+A file request reverses the direction of an upload. The requester's browser makes a key pair, keeps the private key sealed in a vault on the server and puts the public key into the upload link. A sender uploads with the same transports as a normal upload, the [WebSocket](#websocket-transport-primary) first and the [HTTP chunked transport](#http-chunked-transport-fallback) as the fallback, into `/api/request/:id/upload/*`. At finalize the sender sends the file secret sealed to that public key. The requester opens the inbox with the inbox link, unseals each file secret and downloads through the same [download tiers](/developer-guide/download-modes) as a normal download.
+
+```
+Requester                     Server                         Sender
+---------                     ------                         ------
+POST /api/request  ------>    vault, tokens, title
+                                       <------  GET /api/request/:id (upload token)
+                                       <------  init / chunk / finalize
+                                                (ciphertext, sealed secret, metadata)
+GET /api/inbox/:id ------>    vault + uploads
+GET /api/inbox/:id/file/:uid  ciphertext
+```
+
+Files of a request live in `request_uploads`, apart from `uploads`, so no route of a normal upload can reach them. See [File Requests API](/developer-guide/api/requests) and [File Requests cryptography](/developer-guide/crypto/file-requests).
+
 ## Package Dependencies
 
 ```
@@ -270,7 +287,7 @@ apps/web/src/
     ShareLink.tsx       # Share link display + copy
     DownloadCard.tsx    # Download UI
     PasswordPrompt.tsx  # Password input dialog
-    UploadCard.tsx      # Upload card in My Uploads
+    UploadCard.tsx      # Upload card in My Links
     NoteComposer.tsx    # Note tab: block cards, block list, share options
     BlockEditorFrame.tsx # Frame with move and remove controls around a block editor
     TextBlockEditor.tsx # Text block (plain or Markdown)
@@ -278,7 +295,7 @@ apps/web/src/
     CodeBlockEditor.tsx # Code block (title, language)
     SshKeyBlockEditor.tsx # SSH key block (generate or paste)
     NoteBlocks.tsx      # Renders the blocks of a received note
-    NoteCard.tsx        # Note card in My Uploads
+    NoteCard.tsx        # Note card in My Links
     PasswordGenerator.tsx # Password generator with entropy display
     ui/                 # Shadcn UI components
   hooks/
@@ -358,10 +375,11 @@ The CLI client uses the same `@skysend/crypto` library and the same API endpoint
 - **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Used when `STORAGE_BACKEND=filesystem` (default).
 - **S3-compatible storage** - Encrypted file blobs stored as `<uuid>.bin` objects. Used when `STORAGE_BACKEND=s3`. Downloads use presigned URLs for direct client-to-S3 transfers.
 - Notes are stored entirely in the database regardless of storage backend.
+- File requests keep their vault, tokens and limits in the database. Files uploaded into a request are blobs like any other upload.
 
 ### Client-Side
 
-- **IndexedDB** (`skysend-uploads`) - Local upload history for the "My Uploads" dashboard
+- **IndexedDB** (`skysend-uploads`) - Local history for the "My Links" page: the uploads and notes shared from this browser, and the file requests made in it
 - **URL fragment** (`#secret`) - Encryption key, never stored or sent to server
 
 ## Security Layers

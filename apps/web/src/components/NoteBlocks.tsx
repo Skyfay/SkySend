@@ -24,6 +24,7 @@ import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
 import { highlightAs, highlightCode, highlightedBlocks } from "@/lib/highlight";
 import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
+import { entryFallback, passwordBlockTitle } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
 
 // Every block comes from a decrypted note, which anyone with a link can craft. Text is only
@@ -128,7 +129,8 @@ function TextBlockView({ block, highlight }: { block: TextBlock; highlight: bool
   return (
     <BlockFrame
       icon={FileText}
-      title={block.format === "markdown" ? t("tab.markdown") : t("tab.text")}
+      // A text block from a template carries what it answers, which tells it from the others.
+      title={block.label || (block.format === "markdown" ? t("tab.markdown") : t("tab.text"))}
       actions={<CopyAction copied={copied === "text"} onClick={() => void copy("text", block.text)} />}
     >
       {block.format === "markdown" ? (
@@ -153,22 +155,26 @@ function PasswordBlockView({ block }: { block: PasswordBlock }) {
     });
 
   return (
-    <BlockFrame icon={KeyRound} title={t("tab.password")}>
+    <BlockFrame icon={KeyRound} title={block.label || t(passwordBlockTitle(block))}>
       <div className="space-y-3 p-3">
         {block.entries.map((entry, index) => {
-          const shown = revealed.has(index);
+          // An entry that is no secret, like a username, needs no reveal.
+          const plain = entry.secret === false;
+          const shown = plain || revealed.has(index);
           return (
             <div key={index}>
               <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">
-                {entry.label || t("password.passwordNumber", { number: index + 1 })}
+                {entry.label || t(entryFallback(entry), { number: index + 1 })}
               </p>
               <div className="flex items-center gap-1.5">
                 <div className="min-h-10 min-w-0 flex-1 break-all rounded-xl border border-border bg-card px-4 py-2 font-mono text-sm leading-6">
                   {shown ? entry.value : "•".repeat(Math.min(entry.value.length, 40))}
                 </div>
-                <IconAction label={shown ? t("noteView.hide") : t("noteView.reveal")} onClick={() => toggle(index)}>
-                  {shown ? <EyeOff /> : <Eye />}
-                </IconAction>
+                {!plain && (
+                  <IconAction label={shown ? t("noteView.hide") : t("noteView.reveal")} onClick={() => toggle(index)}>
+                    {shown ? <EyeOff /> : <Eye />}
+                  </IconAction>
+                )}
                 <CopyAction copied={copied === `entry-${index}`} onClick={() => void copy(`entry-${index}`, entry.value)} />
               </div>
             </div>
@@ -243,7 +249,7 @@ function SshKeyBlockView({ block }: { block: SshKeyBlock }) {
   ].filter((part) => part.value.length > 0);
 
   return (
-    <BlockFrame icon={Terminal} title={t("tab.sshkey")}>
+    <BlockFrame icon={Terminal} title={block.label || t("tab.sshkey")}>
       <div className="space-y-3 p-3">
         {parts.map((part) => (
           <div key={part.key} className="space-y-1.5">

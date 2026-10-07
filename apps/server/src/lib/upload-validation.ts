@@ -40,6 +40,24 @@ export const uploadHeadersSchema = z.object({
 
 export type UploadHeaders = z.infer<typeof uploadHeadersSchema>;
 
+/**
+ * The limits every upload meets, a normal one and one into a file request alike.
+ * Returns null if valid.
+ */
+export function validateUploadSize(
+  contentLength: number,
+  fileCount: number,
+  config: Config,
+): { message: string; status: 400 | 413 } | null {
+  if (contentLength > config.FILE_MAX_SIZE) {
+    return { message: `File size exceeds maximum of ${config.FILE_MAX_SIZE} bytes`, status: 413 };
+  }
+  if (fileCount > config.FILE_MAX_FILES_PER_UPLOAD) {
+    return { message: `Maximum ${config.FILE_MAX_FILES_PER_UPLOAD} files per upload`, status: 400 };
+  }
+  return null;
+}
+
 /** Validate parsed upload headers against server config. Returns null if valid. */
 export function validateUploadHeaders(
   headers: UploadHeaders,
@@ -54,13 +72,8 @@ export function validateUploadHeaders(
     return { message: "Invalid salt encoding", status: 400 };
   }
 
-  if (headers.contentLength > config.FILE_MAX_SIZE) {
-    return { message: `File size exceeds maximum of ${config.FILE_MAX_SIZE} bytes`, status: 413 };
-  }
-
-  if (headers.fileCount > config.FILE_MAX_FILES_PER_UPLOAD) {
-    return { message: `Maximum ${config.FILE_MAX_FILES_PER_UPLOAD} files per upload`, status: 400 };
-  }
+  const sizeError = validateUploadSize(headers.contentLength, headers.fileCount, config);
+  if (sizeError) return sizeError;
 
   if (!config.FILE_EXPIRE_OPTIONS_SEC.includes(headers.expireSec)) {
     return { message: "Invalid expiry time. Must be one of the allowed options.", status: 400 };

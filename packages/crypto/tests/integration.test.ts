@@ -20,17 +20,29 @@ import {
   NONCE_LENGTH,
   ENCRYPTED_RECORD_SIZE,
   PASSWORD_SALT_LENGTH,
+  createFileRequest,
+  deriveInboxKeys,
+  openRequestKey,
+  wrapFileSecret,
+  unwrapFileSecret,
+  decodeUploadFragment,
+  encodeUploadFragment,
+  decodeInboxFragment,
+  encodeInboxFragment,
   type Argon2idHashFn,
 } from "../src/index.js";
+import { asBytes } from "../src/util.js";
 
 /**
  * Deterministic Argon2id mock for tests - uses PBKDF2 (1 iteration) as a stand-in.
  * Produces the same output for the same input without WASM.
  */
 const mockArgon2id: Argon2idHashFn = async (password, salt, params) => {
-  const baseKey = await crypto.subtle.importKey("raw", password, "PBKDF2", false, ["deriveBits"]);
+  const baseKey = await crypto.subtle.importKey("raw", asBytes(password), "PBKDF2", false, [
+    "deriveBits",
+  ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 1 },
+    { name: "PBKDF2", hash: "SHA-256", salt: asBytes(salt), iterations: 1 },
     baseKey,
     params.hashLength * 8,
   );
@@ -330,3 +342,38 @@ describe("Integration: full upload/download roundtrip", () => {
     }
   });
 });
+
+describe("Integration: file request roundtrip", () => {
+  it("should let a sender upload to a request and only the requester read it", async () => {
+    // The requester creates the request. The server gets the vault and the tokens.
+    const { local, server } = await createFileRequest();
+    const requestId = crypto.randomUUID();
+    const uploadLink = encodeUploadFragment(local.publicKey, local.linkSecret);
+    const inboxLink = encodeInboxFragment(local.inboxSecret);
+
+    // The sender reads only the upload link and uploads a file the usual way.
+    const { publicKey } = await decodeUploadFragment(uploadLink);
+    const plaintext = randomBytes(RECORD_SIZE * 2 + 17);
+    const fileSecret = generateSecret();
+    const salt = generateSalt();
+    const senderKeys = await deriveKeys(fileSecret, salt);
+    const encrypted = await collectStream(toStream(plaintext).pipeThrough(createEncryptStream(senderKeys.fileKey)));
+    const meta = await encryptMetadata({ type: "single", name: "contract.pdf", size: plaintext.length, mimeType: "application/pdf" }, senderKeys.metaKey);
+    const uploadId = crypto.randomUUID();
+    const wrapped = await wrapFileSecret(publicKey, requestId, uploadId, fileSecret);
+
+    // The requester opens the inbox link on any device: vault, wrap, then a normal download.
+    const { inboxKey } = await deriveInboxKeys(decodeInboxFragment(inboxLink).secret);
+    const key = await openRequestKey(server.vault, server.vaultNonce, inboxKey, server.brief);
+    const recovered = await unwrapFileSecret(key, requestId, uploadId, wrapped);
+    expect(constantTimeEqual(recovered, fileSecret)).toBe(true);
+    const readerKeys = await deriveKeys(recovered, salt);
+    const metadata = await decryptMetadata(meta.ciphertext, meta.iv, readerKeys.metaKey);
+    expect(metadata).toMatchObject({ name: "contract.pdf" });
+    const decrypted = await collectStream(
+      toStream(encrypted).pipeThrough(createDecryptStream(readerKeys.fileKey, expectedPlaintextSize(metadata))),
+    );
+    expect(decrypted).toEqual(plaintext);
+  });
+});
+

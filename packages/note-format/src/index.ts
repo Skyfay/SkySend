@@ -22,6 +22,16 @@ export type {
   ReadBlock,
 } from "./document.js";
 
+export {
+  MAX_LABEL_LENGTH,
+  NOTE_PAD_BLOCK,
+  cleanLabel,
+  serializeTemplate,
+  parseTemplate,
+  padNote,
+} from "./template.js";
+export type { NoteTemplate } from "./template.js";
+
 export { readNote } from "./read.js";
 export { noteToText } from "./text.js";
 export { findPrivateKey } from "./private-key.js";

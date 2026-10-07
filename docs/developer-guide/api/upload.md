@@ -126,6 +126,8 @@ Limits per chunk and per session:
 - All chunks of a session together never exceed the `X-Content-Length` declared at `/init`.
 - A session accepts at most `FILE_UPLOAD_CONCURRENT_CHUNKS` chunk requests at the same time.
 - Each chunk index is accepted once.
+- An empty chunk is refused.
+- At most 64 chunks wait for an earlier one. The chunk everything waits for is always taken.
 
 The bundled clients send 10 MiB chunks and never more parallel requests than `fileUploadConcurrentChunks` from `/api/config`, so they stay within these limits.
 
@@ -141,10 +143,12 @@ The bundled clients send 10 MiB chunks and never more parallel requests than `fi
 
 | Status | Error | Cause |
 | --- | --- | --- |
+| `400` | `Empty chunk` | The chunk body holds no bytes |
 | `409` | `Chunk already received` | The chunk index arrived before |
 | `413` | `Chunk too large` | Over 16 MiB or over the declared upload size |
 | `413` | `Chunks exceed the declared content length` | The chunks of the session together would pass `X-Content-Length` |
 | `429` | `Too many parallel chunk requests` | More than `FILE_UPLOAD_CONCURRENT_CHUNKS` requests in flight for the session |
+| `429` | `Too many chunks waiting for an earlier one` | 64 chunks already wait for an earlier index |
 
 ### POST /api/upload/:id/finalize
 

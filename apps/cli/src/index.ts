@@ -24,8 +24,8 @@ async function withContext(fn: (ctx: ReturnType<typeof createContext>) => Promis
 
 program
   .command("list")
-  .description("Show active uploads and notes")
-  .option("-a, --all", "Include expired uploads")
+  .description("Show active uploads, notes and file requests")
+  .option("-a, --all", "Include expired uploads, notes and file requests")
   .option("--json", "Output as JSON")
   .action((options: { all?: boolean; json?: boolean }) =>
     withContext((ctx) => listUploads(ctx, options)),
@@ -33,7 +33,7 @@ program
 
 program
   .command("delete <id>")
-  .description("Delete an upload or note by ID")
+  .description("Delete an upload, a note or a file request by ID")
   .action((id: string) =>
     withContext((ctx) => deleteUpload(ctx, id)),
   );
@@ -48,7 +48,7 @@ program
 
 program
   .command("cleanup")
-  .description("Remove expired uploads and notes")
+  .description("Remove expired uploads, notes and file requests")
   .option("-n, --dry-run", "Show what would be cleaned up")
   .action((options: { dryRun?: boolean }) =>
     withContext((ctx) => runCleanupCommand(ctx, options)),

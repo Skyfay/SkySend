@@ -51,10 +51,11 @@ Inspired by [timvisee/send](https://github.com/timvisee/send), the community for
 - **Zero knowledge** - AES-256-GCM in the browser, and the key never leaves the share link
 - **Files and folders** - single files, several at once or a whole folder, zipped in the browser, with size and file limits you set yourself
 - **Notes made of blocks** - text and Markdown, passwords with a generator, code with highlighting and SSH keys, combined in one note
+- **File requests** - send someone an upload link, and what they upload is encrypted for you alone
 - **Shares that delete themselves** - expiry times, download and view limits, and burn after reading
 - **Password protection** - an optional password on top of the link, derived with Argon2id
 - **A CLI for the terminal** - upload, download and notes with the same encryption, plus an interactive TUI
-- **No accounts** - My Uploads lives in the browser, and optional OIDC sign-in limits who may share
+- **No accounts** - My Links lives in the browser, and optional OIDC sign-in limits who may share
 - **Runs anywhere** - local storage or any S3-compatible bucket, 13 languages and three themes
 
 ## 🔒 Security Design
@@ -67,6 +68,7 @@ Inspired by [timvisee/send](https://github.com/timvisee/send), the community for
 | Note and metadata encryption | AES-256-GCM with a random IV |
 | Auth token | HMAC-SHA256 |
 | Password KDF | Argon2id (WASM) |
+| File requests | HPKE (RFC 9180), P-256 and AES-256-GCM |
 
 ## 🚀 Quick Start
 

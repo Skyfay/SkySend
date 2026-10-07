@@ -7,6 +7,7 @@ The `@skysend/crypto` package (`packages/crypto`) is the shared encryption libra
 - Metadata encryption/decryption (AES-256-GCM)
 - Note content encryption/decryption (AES-256-GCM)
 - Password-based key derivation (Argon2id)
+- File requests: HPKE (RFC 9180) wrap of file secrets to a requester's public key
 - Utility functions (base64url, constant-time comparison)
 
 ## Design Principles
@@ -34,7 +35,7 @@ calculatePlaintextSize(encryptedSize): number
 
 // Metadata
 encryptMetadata(metadata, metaKey): Promise<{ ciphertext, iv }>
-decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>
+decryptMetadata(ciphertext, iv, metaKey): Promise<Metadata>, never a note
 expectedPlaintextSize(metadata): number | undefined
 
 // Note Content (the content is a note document, see Note Format)
@@ -44,6 +45,20 @@ decryptNoteContent(ciphertext, nonce, metaKey): Promise<string>
 // Password
 deriveKeyFromPassword(password, salt, argon2id?): Promise<{ key, algorithm }>
 applyPasswordProtection(secret, passwordKey): Uint8Array
+
+// File Requests
+createFileRequest({ title?, asks?, template? }): Promise<{ local, server }>
+deriveInboxKeys(inboxSecret): Promise<{ inboxKey, inboxAuthToken, inboxOwnerToken }>
+deriveLinkKeys(linkSecret, publicKey): Promise<{ uploadToken, briefKey }>
+openRequestKey(vault, vaultNonce, inboxKey, brief): Promise<{ publicKey, linkSecret, privateKey }>
+wrapFileSecret(publicKey, requestId, uploadId, fileSecret): Promise<{ enc, ciphertext }>
+unwrapFileSecret(requestKey, requestId, uploadId, wrapped): Promise<Uint8Array>
+encodeUploadFragment(publicKey, linkSecret): string
+decodeUploadFragment(fragment): Promise<{ publicKey, linkSecret }>
+encodeInboxFragment(secret, passwordSalt?): string
+decodeInboxFragment(fragment): { secret, passwordSalt }
+encryptRequestBrief(brief, briefKey) / decryptRequestBrief(brief, briefKey): { title, asks, template }
+decryptRequestMetadata(ciphertext, iv, metaKey): file, archive or { type: "note", size }
 
 // Utilities
 toBase64url(data): string
@@ -58,4 +73,5 @@ randomBytes(length): Uint8Array
 - [Streaming Encryption](/developer-guide/crypto/streaming-encryption) - AES-256-GCM ECE format
 - [Metadata Encryption](/developer-guide/crypto/metadata-encryption) - File metadata encryption
 - [Note Format](/developer-guide/crypto/note-format) - The blocks a note is made of, before it is encrypted
+- [File Requests](/developer-guide/crypto/file-requests) - HPKE, the vault and the two links of a file request
 - [Password Protection](/developer-guide/crypto/password-protection) - Argon2id password-based key derivation

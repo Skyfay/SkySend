@@ -1,5 +1,5 @@
-import { desc, and, gt, sql, or } from "drizzle-orm";
-import { uploads, notes } from "@skysend/server/db/schema";
+import { desc, and, eq, gt, sql, or } from "drizzle-orm";
+import { uploads, notes, fileRequests, requestUploads } from "@skysend/server/db/schema";
 import type { CliContext } from "../lib/context.js";
 import { formatBytes, formatDate, formatDuration, table } from "../lib/format.js";
 
@@ -42,25 +42,83 @@ export async function listUploads(ctx: CliContext, options: ListOptions): Promis
     .orderBy(desc(notes.createdAt))
     .all();
 
+  // A request stays listed while it takes uploads or still holds some.
+  const requestResults = ctx.db
+    .select()
+    .from(fileRequests)
+    .orderBy(desc(fileRequests.createdAt))
+    .all()
+    .map((request) => ({
+      request,
+      uploads: ctx.db
+        .select()
+        .from(requestUploads)
+        .where(eq(requestUploads.requestId, request.id))
+        .orderBy(desc(requestUploads.createdAt))
+        .all(),
+    }))
+    .filter(
+      ({ request, uploads: kept }) =>
+        options.all || (!request.closed && request.closesAt > now) || kept.length > 0,
+    );
+
   if (options.json) {
-    const safeUploads = uploadResults.map(({ salt: _s, encryptedMeta: _e, nonce: _n, passwordSalt: _p, ...r }) => ({
-      ...r,
-      type: "upload" as const,
-      expiresAt: r.expiresAt.toISOString(),
-      createdAt: r.createdAt.toISOString(),
+    // The vault, the tokens, the title and the wrapped keys stay out, like the salts above.
+    const safeRequests = requestResults.map(({ request, uploads: kept }) => ({
+      id: request.id,
+      hasPassword: request.hasPassword,
+      closed: request.closed,
+      maxUploads: request.maxUploads,
+      maxSize: request.maxSize,
+      finishedUploads: request.finishedUploads,
+      finishedBytes: request.finishedBytes,
+      closesAt: request.closesAt.toISOString(),
+      createdAt: request.createdAt.toISOString(),
+      uploads: kept.map((u) => ({
+        id: u.id,
+        size: u.size,
+        fileCount: u.fileCount,
+        downloadCount: u.downloadCount,
+        maxDownloads: u.maxDownloads,
+        expiresAt: u.expiresAt.toISOString(),
+        createdAt: u.createdAt.toISOString(),
+      })),
     }));
+    // Like notes, the tokens of an upload stay out too.
+    const safeUploads = uploadResults.map(
+      ({
+        salt: _s,
+        encryptedMeta: _e,
+        nonce: _n,
+        passwordSalt: _p,
+        authToken: _a,
+        ownerToken: _o,
+        ...r
+      }) => ({
+        ...r,
+        type: "upload" as const,
+        expiresAt: r.expiresAt.toISOString(),
+        createdAt: r.createdAt.toISOString(),
+      }),
+    );
     const safeNotes = noteResults.map(({ salt: _s, encryptedContent: _e, nonce: _n, passwordSalt: _p, authToken: _a, ownerToken: _o, ...r }) => ({
       ...r,
       type: "note" as const,
       expiresAt: r.expiresAt.toISOString(),
       createdAt: r.createdAt.toISOString(),
     }));
-    console.log(JSON.stringify({ uploads: safeUploads, notes: safeNotes }, null, 2));
+    console.log(
+      JSON.stringify({ uploads: safeUploads, notes: safeNotes, requests: safeRequests }, null, 2),
+    );
     return;
   }
 
-  if (uploadResults.length === 0 && noteResults.length === 0) {
-    console.log(options.all ? "No uploads or notes found." : "No active uploads or notes. Use --all to include expired.");
+  if (uploadResults.length === 0 && noteResults.length === 0 && requestResults.length === 0) {
+    console.log(
+      options.all
+        ? "No uploads, notes or file requests found."
+        : "No active uploads, notes or file requests. Use --all to include expired.",
+    );
     return;
   }
 
@@ -99,6 +157,22 @@ export async function listUploads(ctx: CliContext, options: ListOptions): Promis
     });
     console.log("Notes");
     console.log(table(headers, rows));
-    console.log(`${noteResults.length} note(s)`);
+    console.log(`${noteResults.length} note(s)\n`);
+  }
+
+  if (requestResults.length > 0) {
+    const headers = ["ID", "Uploads", "Received", "Max/Upload", "Kept", "Closes", "Created"];
+    const rows = requestResults.map(({ request, uploads: kept }) => [
+      request.id,
+      `${request.finishedUploads}/${request.maxUploads}`,
+      formatBytes(request.finishedBytes),
+      formatBytes(request.maxSize),
+      `${kept.length} (${formatBytes(kept.reduce((sum, u) => sum + u.size, 0))})`,
+      request.closed ? "closed" : formatDuration(request.closesAt.getTime() - now.getTime()),
+      formatDate(request.createdAt),
+    ]);
+    console.log("File requests");
+    console.log(table(headers, rows));
+    console.log(`${requestResults.length} file request(s)`);
   }
 }

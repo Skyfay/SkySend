@@ -35,6 +35,7 @@ Browser (Client)                              Server
 | Nonce Handling | Counter-based XOR (32-bit big-endian) |
 | Auth Token | HMAC-SHA256 |
 | Password KDF | Argon2id (64 MiB memory, 3 iterations, 1 parallelism) |
+| File Request Key Wrap | HPKE base mode (RFC 9180): DHKEM(P-256, HKDF-SHA256), HKDF-SHA256, AES-256-GCM |
 
 ## Key Derivation
 
@@ -198,6 +199,37 @@ When a user sets a password, additional protection is applied:
 5. The browser derives keys from the recovered secret
 6. The browser verifies the auth token via `POST /api/password/:id`
 7. If valid, the download proceeds normally
+
+## File Requests
+
+A [file request](/user-guide/file-requests) lets someone upload into an inbox that only the requester can open. The sender encrypts the file and its metadata exactly as above, with a fresh secret of their own. Only the last step differs: instead of putting that secret into a share link, the sender's browser seals it with HPKE to the requester's public key, and the sealed secret is stored next to the upload.
+
+```
+Requester                                     Server
+---------------------------------------       ------
+1. Generate a P-256 key pair, an inbox
+   secret and a link secret
+2. Seal the private key with a key from
+   the inbox secret (the vault)
+3. Send vault + three derived tokens ------> Stores the vault and the tokens
+4. Upload link:  /request/<id>#<public key + link secret>
+   Inbox link:   /inbox/<id>#<inbox secret>
+
+Sender                                        Server
+---------------------------------------       ------
+5. Public key from the upload link only
+6. Encrypt file and metadata as above
+7. HPKE-seal the file secret to the
+   public key, bound to request and upload
+8. Send blob + sealed secret --------------> Stores ciphertext only
+
+Requester
+---------------------------------------
+9. Open the vault with the inbox link
+10. Unseal each file secret, decrypt as above
+```
+
+The server never learns the public key. A server that handed it out could swap in its own and read every upload, so it travels only in the upload link and inside the vault. The details are on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
 
 ## Security Invariants
 

@@ -43,6 +43,8 @@ export function Toaster(props: ToasterProps) {
           content: "flex min-w-0 flex-1 flex-col gap-0.5 pt-1.5",
           title: "text-sm leading-5 font-semibold tracking-[-0.01em]",
           description: "text-[13px] leading-normal text-muted-foreground",
+          actionButton:
+            "inline-flex h-8 shrink-0 cursor-pointer items-center self-center rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground shadow-chip transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           closeButton:
             "absolute top-2.5 right-2.5 inline-flex size-7 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-[15px]",
           error: "[&_[data-icon]]:bg-destructive-soft [&_[data-icon]]:text-destructive-text",

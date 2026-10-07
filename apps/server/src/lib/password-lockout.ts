@@ -26,6 +26,7 @@ function hashIp(ip: string): string {
 interface LockoutEntry {
   failures: number;
   lockedUntil: number | null;
+  lastFailureAt: number;
 }
 
 export interface PasswordLockout {
@@ -40,13 +41,16 @@ export interface PasswordLockout {
 export function createPasswordLockout(maxAttempts: number, lockoutMs: number): PasswordLockout {
   const store = new Map<string, LockoutEntry>();
 
-  // Periodic cleanup to prevent unbounded memory growth
+  // Periodic cleanup to prevent unbounded memory growth. Failures that never led to a lock
+  // count for lockoutMs, so an entry for each made-up resource does not stay forever.
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of store) {
-      if (entry.lockedUntil !== null && now >= entry.lockedUntil) {
-        store.delete(key);
-      }
+      const expired =
+        entry.lockedUntil !== null
+          ? now >= entry.lockedUntil
+          : now - entry.lastFailureAt >= lockoutMs;
+      if (expired) store.delete(key);
     }
   }, lockoutMs * 2);
 
@@ -73,8 +77,9 @@ export function createPasswordLockout(maxAttempts: number, lockoutMs: number): P
 
     recordFailure(resourceKey: string, ip: string): void {
       const key = storeKey(resourceKey, ip);
-      const entry = store.get(key) ?? { failures: 0, lockedUntil: null };
+      const entry = store.get(key) ?? { failures: 0, lockedUntil: null, lastFailureAt: 0 };
       entry.failures++;
+      entry.lastFailureAt = Date.now();
       if (entry.failures >= maxAttempts) {
         entry.lockedUntil = Date.now() + lockoutMs;
       }

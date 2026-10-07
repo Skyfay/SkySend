@@ -65,7 +65,7 @@ async function deriveFileKey(secret, salt) {
 
 // ── Pending Downloads ──────────────────────────────────
 
-/** @type {Map<string, {url:string, authToken:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number, plaintextSize:number|null}>} */
+/** @type {Map<string, {url:string, authToken:string, tokenHeader:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number, plaintextSize:number|null}>} */
 const pending = new Map();
 /** @type {Map<string, () => void>} Maps downloadId to a cancel function that aborts the in-progress download. */
 const pendingCancels = new Map();
@@ -87,6 +87,8 @@ bc.onmessage = (event) => {
     pending.set(msg.id, {
       url: msg.url,
       authToken: msg.authToken,
+      // Only the two headers the API knows. A file in a request inbox uses its own.
+      tokenHeader: msg.tokenHeader === "X-Inbox-Token" ? "X-Inbox-Token" : "X-Auth-Token",
       secret: msg.secret,
       salt: msg.salt,
       filename: msg.filename,
@@ -137,7 +139,7 @@ self.addEventListener("fetch", (event) => {
  * - Report progress and completion back to main thread
  */
 async function handleDownload(config, downloadId, streamDone) {
-  const { url, authToken, secret, salt, filename, mimeType, size, plaintextSize } = config;
+  const { url, authToken, tokenHeader, secret, salt, filename, mimeType, size, plaintextSize } = config;
   const cleanup = () => {
     pendingCancels.delete(downloadId);
     streamDone();
@@ -147,7 +149,7 @@ async function handleDownload(config, downloadId, streamDone) {
 
   // Step 1: Fetch from SkySend API (handles auth + download counting)
   const apiResponse = await fetch(url, {
-    headers: { "X-Auth-Token": authToken },
+    headers: { [tokenHeader]: authToken },
   });
 
   if (!apiResponse.ok) {
@@ -191,8 +193,13 @@ async function handleDownload(config, downloadId, streamDone) {
     totalSize = totalSize || parseInt(response.headers.get("Content-Length") || "0", 10);
   }
 
+  // The type and the name come from whoever uploaded the file. A value Headers or
+  // encodeURIComponent would throw on falls back to a plain one here, after the
+  // download was already counted, instead of failing the whole tier.
   const headers = new Headers({
-    "Content-Type": mimeType || "application/octet-stream",
+    "Content-Type": /^[\w.+-]+\/[\w.+-]+$/.test(mimeType || "") ? mimeType : "application/octet-stream",
+    // The type is the uploader's word, so the browser must not guess a more dangerous one.
+    "X-Content-Type-Options": "nosniff",
   });
 
   // Content-Length of the DECRYPTED output. Critical for Safari:
@@ -211,10 +218,15 @@ async function handleDownload(config, downloadId, streamDone) {
     headers.set("Content-Length", String(decryptedSize));
   }
 
-  const encoded = encodeURIComponent(filename).replace(
-    /[!'()*]/g,
-    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
-  );
+  let encoded;
+  try {
+    encoded = encodeURIComponent(filename).replace(
+      /[!'()*]/g,
+      (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
+    );
+  } catch {
+    encoded = "download";
+  }
   headers.set("Content-Disposition", "attachment; filename*=UTF-8''" + encoded);
 
   // Inform main thread which decryption path was chosen.

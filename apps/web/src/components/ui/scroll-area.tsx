@@ -22,8 +22,11 @@ const ScrollArea = React.forwardRef<
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
+    {/* Radix wraps the content in a table that grows with it, so a long name would push
+        what sits beside it out of view. Nothing here scrolls sideways, so a block keeps the
+        content to the width of the area and lets text truncate. */}
     <ScrollAreaPrimitive.Viewport
-      className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
+      className={cn("h-full w-full rounded-[inherit] [&>div]:block!", viewportClassName)}
     >
       {children}
     </ScrollAreaPrimitive.Viewport>

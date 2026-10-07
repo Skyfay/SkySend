@@ -254,16 +254,99 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | Validation | Must be one of `NOTE_VIEW_OPTIONS` |
 | Description | Default view limit for notes. `0` means unlimited views (expires only by time). `1` means burn-after-reading. |
 
+### FILE_REQUEST_EXPIRE_OPTIONS_SEC
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `86400,259200,604800` |
+| Description | How long a file request takes uploads, as options for the requester. |
+
+### FILE_REQUEST_DEFAULT_EXPIRE_SEC
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `259200` |
+| Description | Default for new file requests. Must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`. |
+
+### FILE_REQUEST_UPLOAD_OPTIONS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `1,2,3,5,10,20,50,100` |
+| Range | Each `1` to `1000` |
+| Description | How many uploads a file request takes, as options for the requester. A request for files and a note counts submissions with them, which take two uploads each, so the server accepts an option or twice an option. |
+
+### FILE_REQUEST_DEFAULT_UPLOADS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `10` |
+| Description | Default for new file requests. Must be one of `FILE_REQUEST_UPLOAD_OPTIONS`. |
+
+### FILE_REQUEST_MAX_SIZE
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Byte size |
+| Default | `FILE_MAX_SIZE` |
+| Description | Most bytes one upload into a file request may have. Supports units: `B`, `KB`, `MB`, `GB`. Must not exceed `FILE_MAX_SIZE`. |
+
+### FILE_REQUEST_RETENTION_SEC
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `604800` |
+| Description | How long an uploaded file stays in the inbox after it arrived. |
+
+### FILE_REQUEST_DOWNLOAD_OPTIONS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Comma-separated integers |
+| Default | `1,2,3,5,10,20` |
+| Range | Each `1` to `100` |
+| Description | How often the requester can download each upload of a file request, as options chosen per request. |
+
+### FILE_REQUEST_DEFAULT_DOWNLOADS
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `5` |
+| Description | Default for new file requests. Must be one of `FILE_REQUEST_DOWNLOAD_OPTIONS`. |
+
+### FILE_REQUEST_DAILY_LIMIT
+
+| Property | Value |
+| --- | --- |
+| Required | No |
+| Type | Integer |
+| Default | `0` |
+| Description | New file requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by HMAC-hashed IP otherwise. The day starts with the first request of that user or IP. `0`, the default, turns the limit off. In memory, a restart resets it. Behind a reverse proxy, `TRUST_PROXY` has to be on, or every user counts as the proxy's IP. A public instance should set it, for example to `100`, together with `FILE_UPLOAD_QUOTA_BYTES`. |
+
 ### ENABLED_SERVICES
 
 | Property | Value |
 | --- | --- |
 | Required | No |
 | Type | Comma-separated list |
-| Default | `file,note` |
-| Allowed values | `file`, `note` |
+| Default | `file,note,request` |
+| Allowed values | `file`, `note`, `request` |
 | Validation | At least one service must be enabled |
-| Description | Controls which services are available. Set to `file` for file sharing only, `note` for notes only, or `file,note` for both. Disabled services return HTTP 403 and their UI tabs are hidden. |
+| Description | Controls which services are available: `file` for file sharing, `note` for notes, `request` for file requests. Disabled services return HTTP 403 and their UI is hidden. `/api/config` lists `file` and `note` in `enabledServices` and reports file requests as `fileRequestsEnabled`, since older CLI clients accept only the first two in that list. |
 
 ### CLEANUP_INTERVAL
 
@@ -537,7 +620,9 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 
 ## Validation Rules
 
-- `ENABLED_SERVICES` must contain at least one of `file` or `note`
+- `ENABLED_SERVICES` must contain at least one of `file`, `note` or `request`
+- `FILE_REQUEST_DEFAULT_EXPIRE_SEC` must be included in `FILE_REQUEST_EXPIRE_OPTIONS_SEC` (only validated when request service is enabled)
+- `FILE_REQUEST_MAX_SIZE` must not exceed `FILE_MAX_SIZE` (only validated when request service is enabled)
 - `FILE_DEFAULT_EXPIRE_SEC` must be included in `FILE_EXPIRE_OPTIONS_SEC` (only validated when file service is enabled)
 - `FILE_DEFAULT_DOWNLOAD` must be included in `FILE_DOWNLOAD_OPTIONS` (only validated when file service is enabled)
 - `NOTE_DEFAULT_EXPIRE_SEC` must be included in `NOTE_EXPIRE_OPTIONS_SEC` (only validated when note service is enabled)

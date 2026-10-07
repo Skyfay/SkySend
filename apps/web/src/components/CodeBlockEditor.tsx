@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Code, Search } from "lucide-react";
-import type { CodeBlock } from "@skysend/note-format";
+import { MAX_LABEL_LENGTH, type CodeBlock } from "@skysend/note-format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BlockEditorFrame } from "@/components/BlockEditorFrame";
 import { CODE_LANGUAGES } from "@/lib/code-languages";
+import type { EditorMode } from "@/lib/note-editor";
 
 function LanguageSelect({ value, onValueChange, disabled }: { value: string; onValueChange: (v: string) => void; disabled: boolean }) {
   const { t } = useTranslation();
@@ -61,26 +62,38 @@ interface CodeBlockEditorProps {
   onChange: (block: CodeBlock) => void;
   controls: ReactNode;
   disabled: boolean;
+  mode?: EditorMode;
 }
 
-/** A code snippet with an optional file name and its language, detected by default. */
-export function CodeBlockEditor({ block, onChange, controls, disabled }: CodeBlockEditorProps) {
+/**
+ * A code snippet with an optional file name and its language, detected by default. A template
+ * holds the name and the language, and filling it in keeps the name.
+ */
+export function CodeBlockEditor({ block, onChange, controls, disabled, mode = "compose" }: CodeBlockEditorProps) {
   const { t } = useTranslation();
   return (
     <BlockEditorFrame icon={Code} title={t("tab.code")} controls={controls}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border p-2 pl-3">
-        <Input
-          type="text"
-          value={block.title}
-          onChange={(e) => onChange({ ...block, title: e.target.value })}
-          placeholder={t("code.titlePlaceholder")}
-          aria-label={t("code.titlePlaceholder")}
-          className="h-8 min-w-40 flex-1 rounded-lg border-0 bg-transparent px-1 font-mono text-[13px] shadow-none placeholder:font-sans focus-visible:ring-0"
-          disabled={disabled}
-          autoComplete="off"
-        />
+        {mode === "fill" ? (
+          <span className="min-w-40 flex-1 px-1 font-mono text-[13px] wrap-anywhere">{block.title}</span>
+        ) : (
+          <Input
+            type="text"
+            value={block.title}
+            onChange={(e) => onChange({ ...block, title: e.target.value })}
+            placeholder={t("code.titlePlaceholder")}
+            aria-label={t("code.titlePlaceholder")}
+            maxLength={mode === "template" ? MAX_LABEL_LENGTH : undefined}
+            className="h-8 min-w-40 flex-1 rounded-lg border-0 bg-transparent px-1 font-mono text-[13px] shadow-none placeholder:font-sans focus-visible:ring-0"
+            disabled={disabled}
+            autoComplete="off"
+          />
+        )}
         <LanguageSelect value={block.language} onValueChange={(language) => onChange({ ...block, language })} disabled={disabled} />
       </div>
+      {mode === "template" ? (
+        <p className="p-3 text-xs text-muted-foreground">{t("template.codeHint")}</p>
+      ) : (
       <div className="p-1.5">
         <Textarea
           value={block.code}
@@ -92,6 +105,7 @@ export function CodeBlockEditor({ block, onChange, controls, disabled }: CodeBlo
           spellCheck={false}
         />
       </div>
+      )}
     </BlockEditorFrame>
   );
 }

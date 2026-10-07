@@ -18,8 +18,26 @@ import { randomBytes, asBytes } from "./util.js";
 /** IV length for metadata encryption (12 bytes for AES-GCM). */
 export const META_IV_LENGTH = 12;
 
+/**
+ * Marks the uploads a sender of a file request sent together, files and a note. 32 hex
+ * characters, random per send. Every upload into a request carries one, so the metadata of a
+ * note sent alone is as long as the one of a note sent with files.
+ */
+export interface Submission {
+  submission?: string;
+}
+
+const SUBMISSION = /^[0-9a-f]{32}$/;
+
+/** The submission of parsed metadata, when it has one of the right form. Anything else is left out. */
+function submissionOf(obj: Record<string, unknown>): Submission {
+  return typeof obj.submission === "string" && SUBMISSION.test(obj.submission)
+    ? { submission: obj.submission }
+    : {};
+}
+
 /** Metadata for a single-file upload. */
-export interface SingleFileMetadata {
+export interface SingleFileMetadata extends Submission {
   type: "single";
   name: string;
   size: number;
@@ -27,7 +45,7 @@ export interface SingleFileMetadata {
 }
 
 /** Metadata for a multi-file/folder upload (archived as zip). */
-export interface ArchiveMetadata {
+export interface ArchiveMetadata extends Submission {
   type: "archive";
   files: Array<{
     name: string;
@@ -44,6 +62,19 @@ export interface ArchiveMetadata {
 
 export type FileMetadata = SingleFileMetadata | ArchiveMetadata;
 
+/**
+ * Metadata of a note sent into a file request. The stream holds a note document, padded,
+ * and `size` is its byte length. Only an inbox reads it: decryptMetadata refuses it, so a
+ * crafted normal upload never sends a download page down the path of a note.
+ */
+export interface NoteUploadMetadata extends Submission {
+  type: "note";
+  size: number;
+}
+
+/** What an upload into a file request carries: a file, an archive, or a note. */
+export type RequestUploadMetadata = FileMetadata | NoteUploadMetadata;
+
 /** Result of metadata encryption. */
 export interface EncryptedMetadata {
   ciphertext: Uint8Array;
@@ -58,7 +89,7 @@ export interface EncryptedMetadata {
  * @returns The encrypted ciphertext and the random IV
  */
 export async function encryptMetadata(
-  metadata: FileMetadata,
+  metadata: RequestUploadMetadata,
   metaKey: CryptoKey,
 ): Promise<EncryptedMetadata> {
   const encoder = new TextEncoder();
@@ -91,6 +122,34 @@ export async function decryptMetadata(
   iv: Uint8Array,
   metaKey: CryptoKey,
 ): Promise<FileMetadata> {
+  return validateMetadata(await decryptJson(ciphertext, iv, metaKey));
+}
+
+/**
+ * Decrypt the metadata of an upload into a file request, which may also be a note. Only the
+ * inbox calls this.
+ */
+export async function decryptRequestMetadata(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  metaKey: CryptoKey,
+): Promise<RequestUploadMetadata> {
+  const data = await decryptJson(ciphertext, iv, metaKey);
+  if (typeof data === "object" && data !== null && (data as { type?: unknown }).type === "note") {
+    const { size } = data as { size?: unknown };
+    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) {
+      throw new Error("Invalid metadata: invalid note size");
+    }
+    return { type: "note", size, ...submissionOf(data as Record<string, unknown>) };
+  }
+  return validateMetadata(data);
+}
+
+async function decryptJson(
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  metaKey: CryptoKey,
+): Promise<unknown> {
   if (iv.length !== META_IV_LENGTH) {
     throw new Error(`Metadata IV must be exactly ${META_IV_LENGTH} bytes`);
   }
@@ -109,14 +168,11 @@ export async function decryptMetadata(
   const decoder = new TextDecoder();
   const json = decoder.decode(plaintext);
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(json);
+    return JSON.parse(json);
   } catch {
     throw new Error("Metadata decryption produced invalid JSON");
   }
-
-  return validateMetadata(parsed);
 }
 
 /**
@@ -127,8 +183,8 @@ export async function decryptMetadata(
  * with the metaKey, so its size is the one the server cannot change. Undefined only
  * for archives uploaded by older clients, which carry no archive size.
  */
-export function expectedPlaintextSize(metadata: FileMetadata): number | undefined {
-  return metadata.type === "single" ? metadata.size : metadata.archiveSize;
+export function expectedPlaintextSize(metadata: RequestUploadMetadata): number | undefined {
+  return metadata.type === "archive" ? metadata.archiveSize : metadata.size;
 }
 
 /** Validate that parsed JSON conforms to the FileMetadata shape. */
@@ -154,6 +210,7 @@ function validateMetadata(data: unknown): FileMetadata {
       name: obj.name,
       size: obj.size,
       mimeType: obj.mimeType,
+      ...submissionOf(obj),
     };
   }
 
@@ -191,6 +248,7 @@ function validateMetadata(data: unknown): FileMetadata {
       files,
       totalSize: obj.totalSize,
       ...(obj.archiveSize !== undefined ? { archiveSize: obj.archiveSize } : {}),
+      ...submissionOf(obj),
     };
   }
 

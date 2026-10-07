@@ -38,6 +38,25 @@ http://localhost:3000/api
 | `POST` | `/api/note/:id/password` | Verify note password | - |
 | `DELETE` | `/api/note/:id` | Delete note | Owner Token |
 
+### File Request Endpoints
+
+Active when `request` is in `ENABLED_SERVICES`. See [File Requests](/developer-guide/api/requests).
+
+| Method | Path | Description | Auth |
+| --- | --- | --- | --- |
+| `POST` | `/api/request` | Create a file request | OIDC when `OIDC_PROTECT_FILES` |
+| `GET` | `/api/request/:id` | What a sender sees | Upload Token |
+| `GET` | `/api/request/:id/upload/ws` | WebSocket upload into the request | Upload Token in the init frame |
+| `POST` | `/api/request/:id/upload/init` | Open an upload into the request | Upload Token |
+| `POST` | `/api/request/:id/upload/:uid/chunk` | Append chunk (with `?index=N`) | Upload session |
+| `POST` | `/api/request/:id/upload/:uid/finalize` | Store the upload with its wrapped key | Upload session |
+| `DELETE` | `/api/request/:id/upload/:uid` | Cancel an upload and free its slot | Upload session |
+| `GET` | `/api/inbox/:id` | Vault and uploads of the inbox | Inbox Token |
+| `GET` | `/api/inbox/:id/file/:uid` | Download one upload | Inbox Token |
+| `DELETE` | `/api/inbox/:id/file/:uid` | Delete one upload | Inbox Owner Token |
+| `POST` | `/api/inbox/:id/close` | Stop new uploads | Inbox Owner Token |
+| `DELETE` | `/api/inbox/:id` | Delete the request and its uploads | Inbox Owner Token |
+
 ### OIDC Auth Endpoints
 
 These routes are only active when OIDC is configured (i.e., when `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set). They live outside the `/api` prefix.
@@ -92,6 +111,8 @@ X-RateLimit-Reset: 1704067260000
 
 Returns server limits and options for the client UI. Each field comes from the [environment variable](/user-guide/configuration/environment-variables) of the same name.
 
+`enabledServices` lists `file` and `note` only. File requests are reported as `fileRequestsEnabled`, because CLI clients before v4 refuse a config whose `enabledServices` holds anything else.
+
 **Response:**
 
 ```json
@@ -108,6 +129,15 @@ Returns server limits and options for the client UI. Each field comes from the [
   "fileUploadConcurrentChunks": 3,
   "fileUploadSpeedLimit": 0,
   "fileUploadWs": true,
+  "fileRequestsEnabled": true,
+  "fileRequestExpireOptions": [86400, 259200, 604800],
+  "fileRequestDefaultExpire": 259200,
+  "fileRequestUploadOptions": [1, 2, 3, 5, 10, 20, 50, 100],
+  "fileRequestDefaultUploads": 10,
+  "fileRequestMaxSize": 2147483648,
+  "fileRequestRetention": 604800,
+  "fileRequestDownloadOptions": [1, 2, 3, 5, 10, 20],
+  "fileRequestDefaultDownloads": 5,
   "noteMaxSize": 1048576,
   "noteExpireOptions": [300, 3600, 86400, 604800],
   "noteDefaultExpire": 86400,
@@ -127,6 +157,7 @@ Returns server limits and options for the client UI. Each field comes from the [
   "defaultTab": "file",
   "forceFilePassword": false,
   "forceNotePassword": false,
+  "forceRequestPassword": false,
   "oidcEnabled": false,
   "oidcProtectFiles": false,
   "oidcProtectNotes": false

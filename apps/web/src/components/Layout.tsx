@@ -1,13 +1,14 @@
 import { Link, Outlet, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { Upload, FolderOpen, LogOut, Menu, X, Sparkles } from "lucide-react";
+import { Upload, FolderOpen, Inbox, LogOut, Menu, X, Settings, Sparkles } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ColorSchemeToggle } from "@/components/ColorSchemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnseenUploads } from "@/hooks/useUnseenUploads";
 import { cn } from "@/lib/utils";
 
 /** Built-in logo shipped with the frontend build. */
@@ -57,13 +58,55 @@ export function Layout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
 
+  // Not on the page of a share link, see useUnseenUploads.
+  const onShareLink = /^\/(file|note|request|d)\//.test(location.pathname);
+  const unseen = useUnseenUploads(Boolean(config?.fileRequestsEnabled) && !onShareLink);
+  // A dot beside My Links, which lists the requests, while uploads wait that no inbox here
+  // has shown yet.
+  const unseenDot = (to: string) =>
+    to === "/uploads" &&
+    unseen > 0 && (
+      <>
+        <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+        <span className="sr-only">{t("nav.requestsUnseen")}</span>
+      </>
+    );
+
+  // An instance with only file requests has nothing to share and no uploads to list.
+  const sharing = !config || config.enabledServices.length > 0;
+  // What you do first, then the list of what it made, then how it works, which is read once.
   const navItems = [
-    { to: "/", label: t("header.share"), icon: Upload },
+    ...(sharing ? [{ to: "/", label: t("header.share"), icon: Upload }] : []),
+    ...(config?.fileRequestsEnabled ? [{ to: "/requests", label: t("nav.requests"), icon: Inbox }] : []),
+    ...(sharing || config?.fileRequestsEnabled
+      ? [{ to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen }]
+      : []),
     { to: "/how", label: t("header.howItWorks"), icon: Sparkles },
-    { to: "/uploads", label: t("nav.myUploads"), icon: FolderOpen },
   ];
   const isActive = (to: string) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
+
+  // Settings sit with the switches of this browser, as an icon, so the nav stays short.
+  const settingsLink = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to="/settings"
+          aria-label={t("nav.settings")}
+          aria-current={isActive("/settings") ? "page" : undefined}
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+            isActive("/settings")
+              ? "bg-primary-soft text-primary-text"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{t("nav.settings")}</TooltipContent>
+    </Tooltip>
+  );
 
   const logoutButton = oidcEnabled && isLoggedIn && (
     authLoading ? (
@@ -116,18 +159,20 @@ export function Layout() {
                 to={to}
                 aria-current={isActive(to) ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium transition-colors",
+                  "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors",
                   isActive(to)
                     ? "bg-primary-soft text-primary-text"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
                 {label}
+                {unseenDot(to)}
               </Link>
             ))}
             <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
             <LanguageSwitcher />
             <ColorSchemeToggle />
+            {settingsLink}
             {logoutButton}
           </nav>
 
@@ -138,9 +183,15 @@ export function Layout() {
               onClick={() => setMobileMenuOpen((v) => !v)}
               aria-label={t("nav.menu")}
               aria-expanded={mobileMenuOpen}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {!mobileMenuOpen && unseen > 0 && (
+                <span
+                  className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary ring-2 ring-card"
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </div>
 
@@ -161,11 +212,26 @@ export function Layout() {
                 >
                   <Icon className="h-4 w-4" />
                   {label}
+                  {unseenDot(to)}
                 </Link>
               ))}
               <div className="-mx-1.5 my-1.5 h-px bg-border" />
               <LanguageSwitcher mobile />
               <ColorSchemeToggle mobile />
+              <Link
+                to="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive("/settings") ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  isActive("/settings")
+                    ? "bg-primary-soft text-primary-text"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                {t("nav.settings")}
+              </Link>
               {oidcEnabled && isLoggedIn && (
                 <>
                   <div className="-mx-1.5 my-1.5 h-px bg-border" />
