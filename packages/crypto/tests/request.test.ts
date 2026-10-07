@@ -35,6 +35,7 @@ import {
   type RequestKey,
   type WrappedFileSecret,
 } from "../src/index.js";
+import { asBytes } from "../src/util.js";
 import { flipped, fromHex, negate, toHex } from "./helpers.js";
 import fixture from "./fixtures/file-request.json";
 
@@ -67,7 +68,11 @@ async function rawBrief(briefKey: CryptoKey, text: string) {
   padded.set(encodeUtf8(text));
   const ciphertext = new Uint8Array(
     await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: nonce, additionalData: encodeUtf8("skysend-request-brief-v1") },
+      {
+        name: "AES-GCM",
+        iv: asBytes(nonce),
+        additionalData: asBytes(encodeUtf8("skysend-request-brief-v1")),
+      },
       briefKey,
       padded,
     ),
@@ -276,18 +281,17 @@ describe("openRequestKey", () => {
     const { brief } = request.server;
     const digest = await crypto.subtle.digest(
       "SHA-256",
-      concatBytes(brief.nonce, brief.ciphertext),
+      asBytes(concatBytes(brief.nonce, brief.ciphertext)),
     );
-    const additionalData = concatBytes(
-      encodeUtf8("skysend-inbox-privkey-v1"),
-      new Uint8Array(digest),
+    const additionalData = asBytes(
+      concatBytes(encodeUtf8("skysend-inbox-privkey-v1"), new Uint8Array(digest)),
     );
     const seal = async (plaintext: Uint8Array) => {
       const nonce = randomBytes(12);
       const sealed = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: nonce, additionalData },
+        { name: "AES-GCM", iv: asBytes(nonce), additionalData },
         inboxKey,
-        plaintext,
+        asBytes(plaintext),
       );
       return openRequestKey(new Uint8Array(sealed), nonce, inboxKey, brief);
     };

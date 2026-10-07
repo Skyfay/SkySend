@@ -1,6 +1,6 @@
 import { NOTE_KIND, type LegacyNoteKind, type NoteBlock, type NoteBlockType } from "@skysend/note-format";
 
-/** What a block is called in the interface and in "My Uploads". Markdown counts on its own. */
+/** What a block is called in the interface and in "My Links". Markdown counts on its own. */
 export type NoteKindKey = "text" | "markdown" | "password" | "code" | "sshkey";
 
 /** A block while the note is being written, with an id the editor keys it by. */
@@ -72,7 +72,7 @@ export function noteKinds(blocks: readonly NoteBlock[]): NoteKindKey[] {
 }
 
 /**
- * The kinds of a note in "My Uploads". A note made of blocks keeps them in this browser, the
+ * The kinds of a note in "My Links". A note made of blocks keeps them in this browser, the
  * server never learns them.
  */
 export function storedNoteKinds(note: { contentType: typeof NOTE_KIND | LegacyNoteKind; kinds?: NoteKindKey[] }): NoteKindKey[] {

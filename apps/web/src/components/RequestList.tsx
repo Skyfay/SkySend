@@ -8,8 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequestCard } from "@/components/RequestCard";
 import { useRequestHistory, type RequestWithStatus } from "@/hooks/useFileRequests";
 
-/** The requests made in this browser, for the Requests tab of My Links. */
-export function RequestList() {
+/**
+ * The requests made in this browser, for the Requests tab of My Links. `hint` leaves out the
+ * line on where the list lives, for a page that says it already.
+ */
+export function RequestList({ hint = true }: { hint?: boolean }) {
   const { t } = useTranslation();
   const history = useRequestHistory();
 
@@ -67,7 +70,7 @@ export function RequestList() {
           ))}
         </ul>
       </Card>
-      <p className="text-xs text-muted-foreground">{t("requests.localHint")}</p>
+      {hint && <p className="text-xs text-muted-foreground">{t("requests.localHint")}</p>}
     </div>
   );
 }

@@ -433,7 +433,8 @@ export async function createRequest(body: CreateRequestBody): Promise<z.infer<ty
 }
 
 const senderRequestSchema = z.object({
-  brief: encryptedBriefSchema,
+  // Null only from a server that dropped it, which leaves the request broken, never plain.
+  brief: encryptedBriefSchema.nullable(),
   open: z.boolean(),
   closesAt: z.string().datetime(),
   uploadsLeft: z.number().int().nonnegative(),
@@ -471,7 +472,8 @@ export type InboxUpload = z.infer<typeof inboxUploadSchema>;
 const inboxResponseSchema = z.object({
   vault: base64url,
   vaultNonce: base64url,
-  brief: encryptedBriefSchema,
+  // Null only from a server that dropped it, which leaves the request broken, never plain.
+  brief: encryptedBriefSchema.nullable(),
   hasPassword: z.boolean(),
   open: z.boolean(),
   closesAt: z.string(),

@@ -104,7 +104,7 @@ describe("notes encrypted before this version", () => {
       salt: fromBase64url(fixture.salt),
       ciphertext: fromBase64(fixture.ciphertext),
       nonce: fromBase64(fixture.nonce),
-      ...("passwordSalt" in fixture ? { passwordSalt: fromBase64url(fixture.passwordSalt) } : {}),
+      ...(fixture.passwordSalt ? { passwordSalt: fromBase64url(fixture.passwordSalt) } : {}),
     };
     const opened = await openNote(note, fixture.kind, "password" in fixture ? fixture.password : "");
 

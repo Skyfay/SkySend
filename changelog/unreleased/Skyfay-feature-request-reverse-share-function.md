@@ -50,3 +50,5 @@
 - **server**: Tests for file requests covering the tokens, the login for creating, parallel uploads into one request and the cleanup.
 - **server**: Tests for WebSocket uploads that send a `null` frame, close during setup or finalize, or go silent.
 - **web**: Tests for creating file requests, opening their inbox with and without a password, downloading from it and uploading into a request.
+- **web**: Component tests for the note editors, a template filled in and the note viewer.
+- **infra**: The tests of `@skysend/crypto` and `@skysend/note-format` are typechecked along with their code.

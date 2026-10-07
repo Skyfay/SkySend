@@ -26,8 +26,8 @@ let lastRound = Number.NEGATIVE_INFINITY;
  * Checks the requests kept in this browser for uploads their inbox has not shown yet. Only a
  * request without a password can be checked, since the token of one with a password needs
  * the password. One request at a time. It never forgets a request: a 404 here may come from
- * a proxy or a rollback, and the stored link is often the only copy, so the Requests page
- * decides that.
+ * a proxy or a rollback, and the stored link is often the only copy, so the list of requests
+ * in My Links decides that.
  */
 export async function checkUnseenUploads(now = Date.now()): Promise<void> {
   if (running) return;
@@ -44,7 +44,7 @@ export async function checkUnseenUploads(now = Date.now()): Promise<void> {
         const inbox = await api.fetchInbox(request.id, access.inboxToken);
         setUnseen(request.id, countUnseen(request, inbox));
       } catch {
-        // Waits for the next round. The Requests page shows what went wrong.
+        // Waits for the next round. The list of requests in My Links shows what went wrong.
       }
     }
   } finally {
@@ -63,7 +63,7 @@ function startRound(): void {
 /**
  * The number of uploads that arrived in requests of this browser since their inbox was
  * last open, checked every few minutes while a SkySend page is visible. Nothing is sent
- * but the inbox tokens a visit to the Requests page sends anyway. The layout turns it off
+ * but the inbox tokens opening the list of requests sends anyway. The layout turns it off
  * on the pages of share links, so a check never ties the requests to a download or to an
  * upload into someone else's request.
  */

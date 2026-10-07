@@ -3,7 +3,7 @@ import type { StoredRequest } from "@/lib/upload-store";
 
 /**
  * How many uploads arrived in each request since its inbox was last open in this browser.
- * Feeds the dot in the navigation and the count on the Requests page. Lives in memory only,
+ * Feeds the dot in the navigation and the count on each request in My Links. Lives in memory only,
  * the IDs it compares against are in the stored request.
  */
 const counts = new Map<string, number>();

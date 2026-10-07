@@ -196,6 +196,28 @@ describe("note requests in the browser", () => {
     });
   });
 
+  it("stops reading a note whose stream runs past its size", async () => {
+    const prepared = await prepareRequest({ asks: ["note"] });
+    const note = await senderNote(prepared.uploadFragment, padNote("{}"));
+    const access = await openInboxLink(prepared.inboxFragment);
+    const opened = await openInbox(REQUEST_ID, inboxFor(prepared.body, [note.upload]), access.keys);
+    const extra = new Blob([
+      new Uint8Array(await new Response(note.stream()).arrayBuffer()),
+      new Uint8Array(64 * 1024),
+    ]).stream();
+    await expect(readInboxNote(opened.uploads[0]!.file!, extra, MiB)).rejects.toThrow(
+      "longer than its size",
+    );
+  });
+
+  it("refuses an inbox without a brief", async () => {
+    const prepared = await prepareRequest({});
+    const access = await openInboxLink(prepared.inboxFragment);
+    await expect(
+      openInbox(REQUEST_ID, { ...inboxFor(prepared.body), brief: null }, access.keys),
+    ).rejects.toThrow("no brief");
+  });
+
   it("refuses to read a note larger than the instance takes, before reading it", async () => {
     const prepared = await prepareRequest({ asks: ["note"] });
     const note = await senderNote(prepared.uploadFragment, padNote("x".repeat(5000)));

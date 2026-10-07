@@ -112,7 +112,7 @@ Build with `pnpm --filter @skysend/crypto build`. Consumers import from `dist/`,
 
 ## Tests
 
-`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 180 cases across 9 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo.
+`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 180 cases across 9 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo. `tsconfig.test.json` typechecks the tests with the same strict settings as the code, as part of `pnpm typecheck`. A direct `crypto.subtle` call in a test wraps its bytes in `asBytes` from `src/util.ts`, and a byte is flipped with `flipped` from `tests/helpers.ts`.
 
 Every change needs:
 

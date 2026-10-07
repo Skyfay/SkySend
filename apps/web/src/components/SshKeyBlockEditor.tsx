@@ -56,7 +56,11 @@ export function SshKeyBlockEditor({ block, onChange, controls, disabled, mode: e
   const [showPassphrase, setShowPassphrase] = useState(false);
   const [keyPair, setKeyPair] = useState<SSHKeyPair | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [parts, setParts] = useState<Part[]>(["public", "private", "passphrase"]);
+  // Someone filling in a request is asked for a key, and the public half is what grants access.
+  // Sending a fresh private key to a stranger has to be a choice, not the default.
+  const [parts, setParts] = useState<Part[]>(
+    editorMode === "fill" ? ["public"] : ["public", "private", "passphrase"],
+  );
   const [copied, setCopied] = useState<"public" | "private" | null>(null);
 
   const generate = async () => {

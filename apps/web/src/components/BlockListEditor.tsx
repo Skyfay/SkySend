@@ -30,7 +30,12 @@ export function addDraft(drafts: readonly DraftBlock[], type: NoteBlockType): Dr
 
 interface BlockListEditorProps {
   drafts: DraftBlock[];
-  onChange: (drafts: DraftBlock[]) => void;
+  /**
+   * Gets an update of the drafts as they are then, like a state setter. An editor can call it
+   * long after the render that gave it, after a key was generated for one, and an update made
+   * from the drafts of that render would undo every edit since.
+   */
+  onChange: (update: (current: DraftBlock[]) => DraftBlock[]) => void;
   mode: EditorMode;
   disabled: boolean;
   /** Shown at the end of the row of buttons that add a block, like the size of the note. */
@@ -46,15 +51,16 @@ export function BlockListEditor({ drafts, onChange, mode, disabled, addon }: Blo
   const structured = mode !== "fill";
 
   const replace = (id: number, block: NoteBlock) =>
-    onChange(drafts.map((draft) => (draft.id === id ? { ...block, id } : draft)));
-  const move = (index: number, delta: -1 | 1) => {
-    const target = index + delta;
-    if (target < 0 || target >= drafts.length) return;
-    const next = [...drafts];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange(next);
-  };
-  const remove = (id: number) => onChange(drafts.filter((draft) => draft.id !== id));
+    onChange((current) => current.map((draft) => (draft.id === id ? { ...block, id } : draft)));
+  const move = (index: number, delta: -1 | 1) =>
+    onChange((current) => {
+      const target = index + delta;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  const remove = (id: number) => onChange((current) => current.filter((draft) => draft.id !== id));
 
   return (
     <div className="space-y-3">
@@ -101,7 +107,7 @@ export function BlockListEditor({ drafts, onChange, mode, disabled, addon }: Blo
                   variant="outline"
                   size="sm"
                   className="h-8 rounded-full px-3 text-[13px] hover:border-primary-line hover:text-primary-text"
-                  onClick={() => onChange(addDraft(drafts, type))}
+                  onClick={() => onChange((current) => addDraft(current, type))}
                   disabled={disabled || drafts.length >= MAX_BLOCKS}
                 >
                   <Icon />

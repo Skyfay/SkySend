@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { FileText, Heading, Maximize2, Type } from "lucide-react";
-import type { TextBlock } from "@skysend/note-format";
+import { MAX_LABEL_LENGTH, type TextBlock } from "@skysend/note-format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -88,6 +88,7 @@ export function TextBlockEditor({ block, onChange, controls, disabled, mode = "c
             onChange={(e) => onChange({ ...block, label: e.target.value })}
             placeholder={t("template.textLabel")}
             aria-label={t("template.textLabel")}
+            maxLength={MAX_LABEL_LENGTH}
             disabled={disabled}
             autoComplete="off"
           />

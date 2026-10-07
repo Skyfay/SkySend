@@ -31,15 +31,18 @@ import {
   encodeInboxFragment,
   type Argon2idHashFn,
 } from "../src/index.js";
+import { asBytes } from "../src/util.js";
 
 /**
  * Deterministic Argon2id mock for tests - uses PBKDF2 (1 iteration) as a stand-in.
  * Produces the same output for the same input without WASM.
  */
 const mockArgon2id: Argon2idHashFn = async (password, salt, params) => {
-  const baseKey = await crypto.subtle.importKey("raw", password, "PBKDF2", false, ["deriveBits"]);
+  const baseKey = await crypto.subtle.importKey("raw", asBytes(password), "PBKDF2", false, [
+    "deriveBits",
+  ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 1 },
+    { name: "PBKDF2", hash: "SHA-256", salt: asBytes(salt), iterations: 1 },
     baseKey,
     params.hashLength * 8,
   );

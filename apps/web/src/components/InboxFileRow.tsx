@@ -33,6 +33,8 @@ interface InboxFileRowProps {
   fresh: boolean;
   /** What the request asks for, so a kind it did not ask for stands out. */
   asks: RequestAsk[];
+  /** Whether a note is being opened, so a second click does not count a second view. */
+  busy?: boolean;
   /** Progress in percent while a download runs. */
   progress: number | undefined;
   /** Downloads a file, or opens a note in this page. Either one counts as a download. */
@@ -49,6 +51,7 @@ export function InboxFileRow({
   entry,
   fresh,
   asks,
+  busy = false,
   progress,
   onDownload,
   onCancel,
@@ -162,7 +165,12 @@ export function InboxFileRow({
           </Button>
         ) : (
           metadata && (
-            <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadsLeft <= 0}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDownload}
+              disabled={busy || downloadsLeft <= 0}
+            >
               {isNote ? <Eye /> : <Download />}
               {isNote ? t("inbox.open") : t("common.download")}
             </Button>

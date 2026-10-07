@@ -128,7 +128,8 @@ function TextBlockView({ block, highlight }: { block: TextBlock; highlight: bool
   return (
     <BlockFrame
       icon={FileText}
-      title={block.format === "markdown" ? t("tab.markdown") : t("tab.text")}
+      // A text block from a template carries what it answers, which tells it from the others.
+      title={block.label || (block.format === "markdown" ? t("tab.markdown") : t("tab.text"))}
       actions={<CopyAction copied={copied === "text"} onClick={() => void copy("text", block.text)} />}
     >
       {block.format === "markdown" ? (

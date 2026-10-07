@@ -23,7 +23,7 @@ interface RequestCardProps {
   onDelete: (request: RequestWithStatus) => Promise<void>;
 }
 
-/** One request on the Requests page: what arrived, how long it stays open, both links. */
+/** One request in the list of My Links: what arrived, how long it stays open, both links. */
 export function RequestCard({ request, onDelete }: RequestCardProps) {
   const { t } = useTranslation();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

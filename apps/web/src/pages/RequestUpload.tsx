@@ -30,6 +30,7 @@ import { useServerConfig } from "@/hooks/useServerConfig";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { NotFoundPage } from "@/pages/NotFound";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
+import { toDrafts, type DraftBlock } from "@/lib/note-editor";
 import { formatBytes, formatTimeRemaining } from "@/lib/utils";
 
 /**
@@ -45,6 +46,9 @@ export function RequestUploadPage() {
   const { config } = useServerConfig();
   const sender = useRequestUpload(id, fragment);
   const [files, setFiles] = useState<File[]>([]);
+  // The note lives here, not in its form, so a send that fails or is cancelled keeps what
+  // was typed, and so does switching between the file and the note tab. Null until edited.
+  const [noteDrafts, setNoteDrafts] = useState<DraftBlock[] | null>(null);
 
   useEffect(() => {
     if (wasShareLinkRewritten()) showRewrittenLinkWarning("upload");
@@ -145,6 +149,7 @@ export function RequestUploadPage() {
             variant="outline"
             onClick={() => {
               setFiles([]);
+              setNoteDrafts(null);
               void sender.again();
             }}
           >
@@ -207,10 +212,14 @@ export function RequestUploadPage() {
         </div>
       </div>
     );
+    const firstDrafts = () => (brief.template ? toDrafts(brief.template) : []);
     const noteBody = (
       <RequestNoteForm
-        template={brief.template}
+        template={brief.template !== null}
+        drafts={noteDrafts ?? firstDrafts()}
+        onChange={(update) => setNoteDrafts((current) => update(current ?? firstDrafts()))}
         maxSize={config?.noteMaxSize ?? 0}
+        maxUploadSize={status.maxUploadSize}
         limits={t("requestUpload.limitsNote", {
           count: status.uploadsLeft,
           time: formatTimeRemaining(status.closesAt),

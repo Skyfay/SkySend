@@ -99,15 +99,15 @@ export function useRequestUpload(id: string, fragment: string) {
         return;
       }
       if (cancelled) return;
-      // Every request has a brief. One that does not open was dropped or swapped, and
-      // guessing what the requester wanted would only help whoever did that.
-      const opened = await decryptRequestBrief(
-        {
-          ciphertext: fromBase64url(sender.brief.ciphertext),
-          nonce: fromBase64url(sender.brief.nonce),
-        },
-        briefKey,
-      ).catch(() => null);
+      // Every request has a brief. One that is missing or does not open was dropped or
+      // swapped, and guessing what the requester wanted would only help whoever did that.
+      const stored = sender.brief;
+      const opened = stored
+        ? await decryptRequestBrief(
+            { ciphertext: fromBase64url(stored.ciphertext), nonce: fromBase64url(stored.nonce) },
+            briefKey,
+          ).catch(() => null)
+        : null;
       if (cancelled) return;
       if (!opened) {
         setPhase("broken");

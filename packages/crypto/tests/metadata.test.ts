@@ -8,6 +8,8 @@ import {
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
+import { asBytes } from "../src/util.js";
+import { flipped } from "./helpers.js";
 
 /**
  * Encrypts arbitrary JSON directly via Web Crypto, bypassing the type-safe
@@ -33,7 +35,7 @@ async function encryptRawBytes(
   metaKey: CryptoKey,
 ): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
   const iv = crypto.getRandomValues(new Uint8Array(META_IV_LENGTH));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, bytes);
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, asBytes(bytes));
   return { ciphertext: new Uint8Array(ciphertext), iv };
 }
 
@@ -151,8 +153,7 @@ describe("metadata encryption/decryption", () => {
     };
 
     const encrypted = await encryptMetadata(metadata, metaKey);
-    const tampered = new Uint8Array(encrypted.ciphertext);
-    tampered[0] ^= 0xff;
+    const tampered = flipped(encrypted.ciphertext);
     await expect(
       decryptMetadata(tampered, encrypted.iv, metaKey),
     ).rejects.toThrow("corrupted or tampered");

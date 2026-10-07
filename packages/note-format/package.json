@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"

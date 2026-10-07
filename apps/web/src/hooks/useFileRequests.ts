@@ -22,7 +22,7 @@ export type CreateRequestError = "signInRequired" | "dailyLimit" | "failed";
 
 /**
  * Creates a request: keys and vault in this browser, then the server row, then the entry
- * for the Requests page. The secrets of both links stay in this browser.
+ * for My Links. The secrets of both links stay in this browser.
  */
 export function useCreateRequest(argon2id: Argon2idHashFn) {
   const [creating, setCreating] = useState(false);

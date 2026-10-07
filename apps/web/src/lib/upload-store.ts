@@ -8,7 +8,7 @@ export interface StoredUpload {
   secret: string;
   fileNames: string[];
   createdAt: string;
-  /** Optional label the owner set in "My Uploads". Never leaves this browser. */
+  /** Optional label the owner set in "My Links". Never leaves this browser. */
   name?: string;
 }
 
@@ -21,7 +21,7 @@ export interface StoredNote {
   secret: string;
   /** "blocks". LEGACY(notes-v1): or the content type of a note created before v3. */
   contentType: typeof NOTE_KIND | LegacyNoteKind;
-  /** The kinds of blocks a note made of blocks holds, for "My Uploads". Never leaves this browser. */
+  /** The kinds of blocks a note made of blocks holds, for "My Links". Never leaves this browser. */
   kinds?: NoteKindKey[];
   createdAt: string;
 }
@@ -143,7 +143,7 @@ export async function clearExpiredNotes(activeIds: Set<string>): Promise<void> {
 // ── File Request Storage ───────────────────────────────
 
 /**
- * A file request created in this browser, for the Requests page. The two fragments are
+ * A file request created in this browser, for My Links. The two fragments are
  * what the two links carry. With a password the inbox fragment holds the protected
  * secret, so it opens nothing without the password, and no token is kept beside it.
  */

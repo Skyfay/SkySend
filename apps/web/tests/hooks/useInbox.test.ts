@@ -309,6 +309,13 @@ describe("useInbox", () => {
     expect(result.current.error).toBe("Internal server error");
   });
 
+  it("keeps what the client threw off the page, which shows a plain error instead", async () => {
+    vi.mocked(api.fetchInbox).mockRejectedValueOnce(new Error('[{"code":"invalid_type"}]'));
+    const { result } = renderHook(() => useInbox(ID, "fragment", argon2));
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.error).toBeNull();
+  });
+
   it("manages the request with the owner token", async () => {
     const { result } = renderHook(() => useInbox(ID, "fragment", argon2));
     await waitFor(() => expect(result.current.phase).toBe("ready"));

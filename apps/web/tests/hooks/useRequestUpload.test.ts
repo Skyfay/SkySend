@@ -151,6 +151,13 @@ describe("useRequestUpload", () => {
     await waitFor(() => expect(result.current.phase).toBe("gone"));
   });
 
+  it("calls a request without a brief broken, without trying to open one", async () => {
+    vi.mocked(api.fetchRequestForSender).mockResolvedValueOnce(senderView({ brief: null }));
+    const { result } = renderHook(() => useRequestUpload(ID, "fragment"));
+    await waitFor(() => expect(result.current.phase).toBe("broken"));
+    expect(crypto.decryptRequestBrief).not.toHaveBeenCalled();
+  });
+
   it("calls a request whose brief does not open broken, and offers nothing to send", async () => {
     vi.mocked(crypto.decryptRequestBrief).mockRejectedValueOnce(new Error("bad"));
     const { result } = renderHook(() => useRequestUpload(ID, "fragment"));

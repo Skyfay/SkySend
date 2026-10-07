@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Code, Search } from "lucide-react";
-import type { CodeBlock } from "@skysend/note-format";
+import { MAX_LABEL_LENGTH, type CodeBlock } from "@skysend/note-format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,6 +83,7 @@ export function CodeBlockEditor({ block, onChange, controls, disabled, mode = "c
             onChange={(e) => onChange({ ...block, title: e.target.value })}
             placeholder={t("code.titlePlaceholder")}
             aria-label={t("code.titlePlaceholder")}
+            maxLength={mode === "template" ? MAX_LABEL_LENGTH : undefined}
             className="h-8 min-w-40 flex-1 rounded-lg border-0 bg-transparent px-1 font-mono text-[13px] shadow-none placeholder:font-sans focus-visible:ring-0"
             disabled={disabled}
             autoComplete="off"

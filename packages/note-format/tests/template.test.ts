@@ -46,7 +46,7 @@ describe("serializeTemplate", () => {
   });
 
   it("drops the fields an editor keeps for itself", () => {
-    const withId = { ...filled[1], id: "editor-7" } as NoteBlock;
+    const withId = { ...filled[1]!, id: "editor-7" };
     expect(serializeTemplate([withId]).blocks[0]).not.toHaveProperty("id");
   });
 

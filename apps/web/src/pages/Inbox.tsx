@@ -88,6 +88,7 @@ export function InboxPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [note, setNote] = useState<{ entry: OpenedUpload; opened: OpenedNote } | null>(null);
+  const [openingNote, setOpeningNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (wasShareLinkRewritten()) showRewrittenLinkWarning("inbox");
@@ -180,7 +181,10 @@ export function InboxPage() {
     }
   };
 
+  // Each opening counts as a view, so one runs at a time.
   const openNote = async (entry: OpenedUpload) => {
+    if (openingNote) return;
+    setOpeningNote(entry.upload.id);
     try {
       setNote({ entry, opened: await inbox.openNote(entry, config?.noteMaxSize ?? 0) });
     } catch (err) {
@@ -188,6 +192,8 @@ export function InboxPage() {
         err instanceof NoteTooLargeError ? t("inbox.noteTooLarge") : t("inbox.noteFailed"),
       );
       void inbox.refresh();
+    } finally {
+      setOpeningNote(null);
     }
   };
 
@@ -289,6 +295,7 @@ export function InboxPage() {
                 entry={entry}
                 fresh={inbox.fresh.has(entry.upload.id)}
                 asks={opened.asks}
+                busy={openingNote !== null}
                 progress={inbox.downloads[entry.upload.id]}
                 onDownload={() => requestDownload(entry)}
                 onCancel={() => inbox.cancelDownload(entry.upload.id)}

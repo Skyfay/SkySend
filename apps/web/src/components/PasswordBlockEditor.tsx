@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Eye, EyeOff, KeyRound, Plus, Wand2, X } from "lucide-react";
-import { MAX_PASSWORD_ENTRIES, type PasswordBlock, type PasswordEntry } from "@skysend/note-format";
+import { MAX_LABEL_LENGTH, MAX_PASSWORD_ENTRIES, type PasswordBlock, type PasswordEntry } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BlockEditorFrame, IconButton } from "@/components/BlockEditorFrame";
@@ -71,6 +71,7 @@ export function PasswordBlockEditor({ block, onChange, controls, disabled, mode 
                   onChange={(e) => update(index, { label: e.target.value })}
                   placeholder={t(mode === "template" ? "template.fieldLabel" : "password.labelPlaceholder", { number: index + 1 })}
                   aria-label={t(mode === "template" ? "template.fieldLabel" : "password.labelPlaceholder", { number: index + 1 })}
+                  maxLength={mode === "template" ? MAX_LABEL_LENGTH : undefined}
                   className="min-w-40 flex-1 basis-44"
                   disabled={disabled}
                   autoComplete="off"

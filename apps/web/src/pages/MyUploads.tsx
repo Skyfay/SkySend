@@ -262,7 +262,8 @@ export function MyUploadsPage() {
   } else if (sharing) {
     body = shared;
   } else {
-    body = <RequestList />;
+    // The intro says where the list lives already.
+    body = <RequestList hint={false} />;
   }
 
   return (

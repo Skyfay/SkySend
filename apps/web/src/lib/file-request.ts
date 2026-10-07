@@ -188,6 +188,7 @@ export async function openInbox(
   keys: InboxKeys,
 ): Promise<OpenedInbox> {
   // The vault binds the brief as stored, so a brief the server swapped opens nothing.
+  if (!inbox.brief) throw new Error("The request has no brief");
   const storedBrief = {
     ciphertext: fromBase64url(inbox.brief.ciphertext),
     nonce: fromBase64url(inbox.brief.nonce),
@@ -280,7 +281,19 @@ export async function readInboxNote(
     await stream.cancel().catch(() => {});
     throw new NoteTooLargeError("The note is larger than this instance takes");
   }
-  const plain = stream.pipeThrough(createDecryptStream(file.keys.fileKey, metadata.size));
+  // The size is checked only once the stream ends, so the bytes are counted as they come.
+  const limit = calculateEncryptedSize(metadata.size);
+  let received = 0;
+  const bounded = stream.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        received += chunk.byteLength;
+        if (received > limit) controller.error(new Error("The note is longer than its size"));
+        else controller.enqueue(chunk);
+      },
+    }),
+  );
+  const plain = bounded.pipeThrough(createDecryptStream(file.keys.fileKey, metadata.size));
   const text = new TextDecoder().decode(await new Response(plain).arrayBuffer());
   try {
     return { blocks: parseNote(text).map(cleanBlockLabels), unreadable: false };

@@ -136,7 +136,8 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
           setState((s) => ({ ...s, phase: "gone" }));
           return;
         }
-        const message = err instanceof Error ? err.message : "Failed to open the inbox";
+        // What the server says is worth showing. What the client threw is not for the page.
+        const message = err instanceof api.ApiError ? err.message : null;
         setState((s) => ({ ...s, phase: "error", error: message }));
       }
     },

@@ -1,17 +1,23 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Lock, ShieldQuestion } from "lucide-react";
-import { serializeNote, type NoteBlock } from "@skysend/note-format";
+import { calculateEncryptedSize } from "@skysend/crypto";
+import { padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { BlockListEditor, addDraft } from "@/components/BlockListEditor";
 import { BlockCards } from "@/components/NoteComposer";
-import { blocksToSend, toDrafts, type DraftBlock } from "@/lib/note-editor";
+import { blocksToSend, type DraftBlock } from "@/lib/note-editor";
 import { cn, formatBytes } from "@/lib/utils";
 
 interface RequestNoteFormProps {
-  /** The fields the requester laid out, or null for a note written freely. */
-  template: NoteBlock[] | null;
+  /** Whether the drafts follow a template, whose structure is the requester's. */
+  template: boolean;
+  /** Kept by the page, so a send that fails or is cancelled keeps what was typed. */
+  drafts: DraftBlock[];
+  onChange: (update: (current: DraftBlock[]) => DraftBlock[]) => void;
+  /** The largest note the instance takes. */
   maxSize: number;
+  /** The largest upload the request takes. The padded and encrypted note has to fit as well. */
+  maxUploadSize: number;
   /** What the request still takes, shown beside the button. */
   limits: string;
   disabled: boolean;
@@ -24,23 +30,30 @@ interface RequestNoteFormProps {
  */
 export function RequestNoteForm({
   template,
+  drafts,
+  onChange,
   maxSize,
+  maxUploadSize,
   limits,
   disabled,
   onSend,
 }: RequestNoteFormProps) {
   const { t } = useTranslation();
-  const [drafts, setDrafts] = useState<DraftBlock[]>(() => (template ? toDrafts(template) : []));
   const toSend = blocksToSend(drafts);
-  const bytes = toSend.length > 0 ? new TextEncoder().encode(serializeNote(toSend)).length : 0;
-  const tooLarge = bytes > maxSize;
+  const document = toSend.length > 0 ? serializeNote(toSend) : "";
+  const bytes = new TextEncoder().encode(document).length;
+  const sent = document
+    ? calculateEncryptedSize(new TextEncoder().encode(padNote(document)).length)
+    : 0;
+  const limit = Math.min(maxSize, maxUploadSize);
+  const tooLarge = bytes > maxSize || sent > maxUploadSize;
   const canSend = toSend.length > 0 && !tooLarge && !disabled;
 
   if (!template && drafts.length === 0) {
     return (
       <BlockCards
         title={t("requestUpload.noteStart")}
-        onPick={(type) => setDrafts((current) => addDraft(current, type))}
+        onPick={(type) => onChange((current) => addDraft(current, type))}
       />
     );
   }
@@ -55,7 +68,7 @@ export function RequestNoteForm({
       )}
       <BlockListEditor
         drafts={drafts}
-        onChange={setDrafts}
+        onChange={onChange}
         mode={template ? "fill" : "compose"}
         disabled={disabled}
         addon={
@@ -65,13 +78,13 @@ export function RequestNoteForm({
               tooLarge ? "text-destructive-text" : "text-muted-foreground",
             )}
           >
-            {formatBytes(bytes)} / {formatBytes(maxSize)}
+            {formatBytes(bytes)} / {formatBytes(limit)}
           </span>
         }
       />
       {tooLarge && (
         <p className="px-2 text-sm text-destructive-text" role="alert">
-          {t("note.tooLarge", { size: formatBytes(maxSize) })}
+          {t("note.tooLarge", { size: formatBytes(limit) })}
         </p>
       )}
       <div className="flex flex-col gap-3 rounded-2xl bg-well p-3 sm:flex-row sm:items-center sm:pl-5">
