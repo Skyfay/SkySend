@@ -159,7 +159,7 @@ Pull requests go into the `dev` branch, never into `main`. [CONTRIBUTING.md](CON
 
 ## 🤖 AI Development Transparency
 
-The architecture, the cryptographic design, the technology stack and the feature specifications of SkySend were designed and directed by a human system engineer. The code is written by AI coding agents that follow those specifications and the guidelines of the project. Every feature is tested by hand, backed by unit tests with coverage tracking, CodeQL and security audits.
+The architecture, the cryptographic design, the technology stack and the feature specifications of SkySend were designed and directed by a human system engineer. The code is written by AI coding agents that follow those specifications and the guidelines of the project. Every feature is tested by hand, backed by unit tests with coverage tracking, CodeQL and security audits run by AI agents.
 
 A formal security audit by an external firm has not been done yet. Independent security researchers have reviewed parts of the code and reported vulnerabilities privately. Every report was fixed in a release and published as an advisory that credits the reporter, see [Security Advisories](https://github.com/Skyfay/SkySend/security/advisories). The crypto design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to make a full review easy. If you review code or work in security, your findings are very welcome, see [SECURITY.md](SECURITY.md) for how to report them.
 
