@@ -2,6 +2,8 @@
 
 SkySend includes built-in rate limiting and upload quotas to protect against abuse. All variables are documented in the [Environment Variables](/user-guide/configuration/environment-variables) reference.
 
+Every limit on this page counts per client address. An IPv6 client counts per /64 network, since a household, a phone or a server usually holds a whole /64 and could otherwise take a new address for every request. An IPv4 address that arrives mapped into IPv6 counts as that IPv4 address.
+
 ## Rate Limiting
 
 Rate limiting applies to all API endpoints using a sliding window algorithm per IP address. Controlled via `RATE_LIMIT_WINDOW` (milliseconds) and `RATE_LIMIT_MAX` (requests per window, default: 60 per minute).
