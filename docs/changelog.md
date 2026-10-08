@@ -2,6 +2,202 @@
 
 All notable changes to SkySend are documented here.
 
+## v3.0.0 - File and Note Requests, Notes Made of Blocks, New Themes and Security Hardening
+
+*Released: October 8, 2026*
+
+> ⚠️ **Breaking:** A CLI from before v3 can neither open notes created with v3 nor download password-protected files from a v3 server. Run `skysend update` together with the server update.
+
+> ⚠️ **Breaking:** `DEFAULT_THEME` now selects the visual theme (`graphite`, `aurora` or `midnight`) and the color scheme moved to the new `DEFAULT_COLOR_SCHEME`. An instance that still sets `DEFAULT_THEME` to `dark`, `light` or `system` refuses to start and names the value to set in `DEFAULT_COLOR_SCHEME` instead.
+
+> 💙 **Thank you** to everyone who reported bugs, reviewed the security of SkySend and shared ideas for this release. SkySend stays free and open source, and if it saves you time, you can now support it through [GitHub Sponsors](https://github.com/sponsors/Skyfay).
+
+### ✨ Features
+
+- **server**: `/api/config` reports `noteBlocks`, so a client can tell whether the server accepts notes made of blocks.
+- **server**: `DEFAULT_TAB` accepts `note`, and `text`, `password`, `code` or `sshkey` open the note tab with that block already added.
+- **server**: `DEFAULT_THEME` picks the theme of the web app and the new `DEFAULT_COLOR_SCHEME` sets the color scheme for new visitors.
+- **server**: File requests with an inbox, where senders upload files that only the requester can decrypt. The requester sets how long a request stays open, how many uploads it takes and how large each may be.
+- **server**: `FILE_REQUEST_UPLOAD_OPTIONS` and `FILE_REQUEST_DOWNLOAD_OPTIONS` list how many uploads a request takes and how often each can be downloaded, with `FILE_REQUEST_DEFAULT_UPLOADS` and `FILE_REQUEST_DEFAULT_DOWNLOADS` as the defaults. The requester picks both per request.
+- **server**: `FORCE_REQUEST_PASSWORD` requires a password on the inbox of every file request, apart from `FORCE_FILE_PASSWORD`.
+- **server**: `OIDC_PROTECT_REQUESTS` puts creating a file request behind the OIDC login, apart from files and notes. Unset, it protects requests while `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` is on.
+- **server**: `GET /api/request/limit` tells the caller how many new requests are left today, without counting one.
+- **web**: A note is made of blocks, so text, passwords, code and SSH keys can be shared together in any order. The note tab starts with a card for each block type, and blocks can be added, moved and removed.
+- **web**: Three visual themes, Graphite, Aurora and Midnight, each in a light and a dark color scheme. Graphite is the default.
+- **web**: A new How it works page explains the encryption step by step and lets visitors encrypt a sample text in their own browser.
+- **web**: A Request page to create file requests, with its settings as a row of pills, an upload link to hand out and an inbox link to keep, plus the inbox that lists, downloads and deletes what arrived.
+- **web**: An upload page for senders of a file request, which encrypts their files for the requester alone and gives them no link back.
+- **web**: A file request can ask for files, a note with a template of fields the sender fills in, or both as one submission. The inbox opens a note in the page and lists a submission together.
+- **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.
+- **web**: A settings page behind the gear in the header keeps defaults for sharing files and notes and for requests in this browser, like how long they stay open and whether a password starts on. Values the instance no longer offers fall back to its own, and an enforced password always wins.
+- **web**: Templates keep the setup of a request for the next one, with built-in ones for credentials, an SSH key, Wi-Fi and an API key. They live in the settings of this browser and move to another one as a file or a link, sealed with a password if wanted.
+- **web**: A field of a password block can be marked as no secret, like a username or an address, and is then shown in clear without a generator. A block with such a field is called Fields instead of Password.
+- **web**: Text, password and SSH key blocks take a title of their own, like Server access, in a shared note and in a request template. It heads the block for whoever fills it in or reads it.
+- **web**: The request form shows how many new requests are left today and offers none once the daily limit is used up.
+- **client**: The CLI client opens notes made of blocks and creates them on servers from v3 on. On an older server it still creates notes in the format that server knows.
+- **client**: Fields of a password block that are no secret show in clear in the terminal view of a note, under the title of their block.
+- **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.
+- **crypto**: Encryption for file requests that only the requester can open, notes sent into them included.
+- **website**: The report form accepts links to file requests.
+- **website**: The home page has a new design in the Graphite look of the app, with a window in the hero that shows a share next to what the server stores of it. The public instances list their status and limits, like the largest file and how long a share is kept.
+- **website**: The blog has a new design with an illustration and a color for every post, a filter by tag, a table of contents, the GitHub avatar of the author and an RSS feed. A new post introduces file and note requests.
+- **website**: The roadmap runs releases and plans along one line, with the latest release, the work in progress and the next star goal on top.
+- **website**: The report page leads through the report step by step, picks the instance from the pasted link and refuses inbox links before sending.
+- **website**: The website is in German as well as English, follows the language of the browser like the app and offers Auto, English and Deutsch to choose from. Blog posts show in German where a translation exists.
+- **infra**: The report worker accepts links to file requests.
+
+### 🐛 Bug Fixes
+
+- **server**: A WebSocket upload keeps its file when recording the upload quota fails.
+- **server**: Expiry options longer than 100 years are refused at startup instead of failing every upload.
+- **web**: Messages about generating an SSH key are translated instead of always shown in English.
+- **web**: A code note whose language name is crafted no longer breaks the note view.
+- **web**: Text on a light `CUSTOM_COLOR` was unreadable because it was always white. It now turns white or black by itself, and the accent is darkened or lightened wherever it is used as text.
+- **web**: The default color scheme of the server is no longer stored in the browser on the first visit, so a later change of the default reaches returning visitors.
+- **web**: The color scheme menu shows the translated name of the system option instead of a fixed English "Auto".
+- **web**: Dialogs, menus and tooltips animate again when they open and close.
+- **web**: The password generator no longer makes passwords shorter than 8 characters when a smaller length is typed into its number field.
+- **web**: The Markdown switch of text notes is translated.
+- **web**: Error messages under the upload and note forms are readable in the light color scheme. They were nearly white before.
+- **web**: With a password forced by the server, the password field no longer disappears after starting a new upload or note, which made the next share fail.
+- **web**: The QR code dialog and the button that shows the password of a protected download are translated.
+- **web**: The share button of a generated SSH key is disabled while no part of the key is selected. It did nothing before.
+- **web**: Long file names in the list of an upload are shortened on a phone, so the button to remove a file stays in view.
+- **web**: The download speed no longer shows a negative value after a download falls back to another way of saving the file.
+- **client**: A note with unlimited views shows its view count correctly in the terminal.
+- **client**: The macOS binaries are now signed, so macOS on Apple Silicon no longer stops them as soon as they start. A macOS installation that does not start has to run the install script once more, since `skysend update` cannot run either.
+- **client**: A failed download in the CLI or the TUI no longer deletes a file that was already at the output path. Thanks @NotAFlightRisk ([#81](https://github.com/Skyfay/SkySend/pull/81))
+
+### 🔒 Security
+
+- **server**: The metadata of a password-protected file is released only after a correct password, so a link holder can no longer test password guesses offline. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **server**: A wrong token at the download of a password-protected file counts against the password lockout like a wrong password. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **server**: A failed OIDC sign-in and other server errors are logged without the claims of an ID token or other values attached to the error, so the log no longer holds data that identifies a user.
+- **server**: An IPv6 client counts per /64 network in the rate limit, the upload quota, the password lockout and the daily request limit, so a new address from the same network no longer starts a fresh count.
+- **server**: Updated `@hono/node-server` to 2.1.3 to patch a middleware bypass in static file serving (GHSA-rmxm-3fg6-px4f).
+- **server**: An upload reserves its size in the upload quota when it starts, so uploads running side by side can no longer store more than the quota allows.
+- **server**: The single-request upload requires the OIDC login when `OIDC_PROTECT_FILES` is on, like every other way to upload a file.
+- **server**: The single-request upload stops at the size it declared, so a client can no longer fill the disk with a body that never ends.
+- **server**: A chunked HTTP upload that receives less than 1 MiB in 10 minutes is ended like a WebSocket upload, so a stalled upload no longer holds its share of the quota or a slot of a request.
+- **server**: Chunked uploads refuse empty chunks and keep at most 64 chunks waiting for an earlier one.
+- **server**: A WebSocket upload whose first frame is `null` no longer crashes the server.
+- **server**: WebSocket uploads closed during setup or finalize leave no orphaned file behind, and uploads that deliver less than 1 MiB in 10 minutes are closed.
+- **server**: A WebSocket upload that stops short of 4 MB no longer keeps its data in memory.
+- **server**: WebSocket uploads no longer send storage error details to the client.
+- **web**: A crafted SSH key or code note can no longer freeze the browser that opens it.
+- **web**: Markdown notes no longer load images, so a note cannot make its reader's browser send requests to the instance.
+- **web**: A new file or note password needs at least 8 characters. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **web**: Notes are padded to whole kilobytes before they are encrypted, so the server no longer learns how long a password in a note is.
+- **web**: Updated dompurify to 3.4.16 to fix two XSS issues in in-place sanitizing (GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2).
+- **web**: Downloads through the service worker tell the browser not to guess the file type.
+- **client**: A crafted SSH key note can no longer freeze the terminal that opens it.
+- **client**: Escape sequences and other control characters in a note are shown as placeholders in the terminal instead of being run.
+- **client**: A note saved from the terminal can only be read by its owner.
+- **client**: The CLI and the TUI ask for at least 8 characters for a new file or note password and take the metadata from the password check. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **client**: The CLI and the TUI pad notes to whole kilobytes like the web app.
+- **client**: The CLI keeps its history, config and session files readable for the current user only, and narrows the permissions of files an older version created. Thanks @lissy93 ([GHSA-5vjq-2637-p33f](https://github.com/Skyfay/SkySend/security/advisories/GHSA-5vjq-2637-p33f))
+- **client**: Password prompts of the CLI no longer show what is typed, and a pasted password no longer keeps its line break.
+- **client**: `skysend note` without text asks for the note at a prompt that does not show it, or reads it from a pipe, so a secret no longer has to go into the shell history.
+- **client**: The CLI and the TUI save a download under a cleaned file name inside the chosen folder and add a number instead of replacing an existing file, so a crafted name can no longer write elsewhere on disk. Thanks @lissy93 ([GHSA-2gh8-5c87-87jx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-2gh8-5c87-87jx))
+- **client**: File names, error messages and the server title are shown with their control characters made visible, so a sender or a server can no longer rewrite terminal output or the clipboard through escape sequences.
+- **client**: The TUI packs a multi-file upload into a temporary file only the current user can read and removes it even when the TUI is closed with Ctrl+C.
+- **cli**: `list --json` no longer prints the auth and owner tokens of uploads.
+- **cli**: `config --json` masks the S3 keys and the OIDC secrets.
+- **crypto**: File metadata is padded to whole kilobytes before it is encrypted, so its length no longer reveals how long a file name is.
+- **docs**: Updated vue to 3.5.43 to patch an XSS in server-side rendering of attribute names (GHSA-g2v6-rqmx-r4w6).
+- **website**: Updated next and eslint-config-next to 16.4.0 to patch a remote code execution in `next/og` image responses (GHSA-vcvr-r3jv-pc5j).
+- **infra**: Updated wrangler to 4.148.0 and refreshed the lockfile, so undici in the local worker runtime and source-map-js in the build tooling resolve to patched versions (GHSA-rfgv-xxqx-mfg5, GHSA-w293-vg96-wgc3, GHSA-3wwx-pv8p-q78v, GHSA-pmjh-fq2x-6v4x, GHSA-3xpg-4rpp-hhhm, GHSA-2jfj-6hjv-fm6j, GHSA-rx4f-c7p8-82vq, GHSA-r53p-7pc4-xj5r, GHSA-2gqq-gqf2-x968, GHSA-8436-99hf-9mmv, GHSA-68fv-2mgg-jv7q).
+- **infra**: Raised the pnpm overrides for `sharp` and `brace-expansion` and added overrides for `postcss-selector-parser` under `@tailwindcss/typography` and `argparse` under `js-yaml` to clear transitive advisories (GHSA-wq5f-xc86-pv6w, GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p, GHSA-rj75-hqrm-r3gf, GHSA-hp3w-g68c-fv3c).
+- **infra**: The report Worker only accepts https links whose last part is a file, a note or a request, and refuses any link with an inbox in its path.
+
+### 🎨 Improvements
+
+- **web**: Notifications match the design of the app and appear below the header instead of covering it.
+- **web**: Every part of a received note is shown in a frame of its own with a copy button, and code blocks can be folded one by one.
+- **web**: A note that cannot be read in its format is shown as it arrived instead of failing, so a note that deleted itself on opening is not lost.
+- **web**: The interface uses the Geist font, served by the instance itself without a request to a font service.
+- **web**: A redesigned interface with a floating navigation bar, a new share form and new pages for receiving files and notes.
+- **web**: The settings of a share are a row of pills that open their choices on a click. A sentence next to the share button says when the share will be deleted.
+- **web**: Expired, used up and unknown links show one page with an explanation and a way back to sharing.
+- **web**: My Links keeps the copy button at hand and moves opening, renaming, the QR code and deleting into a menu.
+- **web**: Icon buttons show tooltips and have labels for screen readers, and the code blocks of a note open and close with the keyboard.
+- **web**: The German message for a file that cannot be read uses the formal address.
+- **web**: The technical info of an upload or a download sums up what was used in one row, and opens to tiles and a timeline that match the new look.
+- **web**: The technical info also shows after an upload that failed, with the reason in its timeline, and on the upload page of a file request.
+- **client**: The terminal reveals all passwords of a note at once with `a`.
+
+### 🔄 Changed
+
+- **server**: Notes created since v3 are stored with the content type `blocks`, so the server no longer learns whether a note holds text, a password, code or an SSH key.
+- **server**: Updated better-sqlite3 to 13, which ships its prebuilt binaries in the package, so an install no longer downloads or compiles one. Outside Docker the server now needs Linux, macOS or Windows on x64 or arm64.
+- **server**: `ENABLED_SERVICES` now defaults to `file,note,request`. Instances that set it explicitly add `request` to offer file requests.
+- **server**: Failed password attempts that led to no lockout are forgotten after `PASSWORD_LOCKOUT_MS`.
+- **web**: The share form has two tabs, File and Note, instead of one tab per note type.
+- **web**: My Uploads is now My Links, with one tab for what was shared and one for the file requests made in this browser.
+
+### 📝 Documentation
+
+- **docs**: The toast system page describes the new look and position of notifications.
+- **docs**: The config endpoint shows its current response, and the notes API documents the `blocks` content type and the 32-byte salt.
+- **docs**: A new page describes the note format and when support for notes from before v3 is removed. The guides and the architecture page describe notes made of blocks, and `note:view` no longer lists options it does not have.
+- **docs**: Documented `DEFAULT_THEME` and `DEFAULT_COLOR_SCHEME` in both environment variable references.
+- **docs**: Described the three themes and how `CUSTOM_COLOR` applies to them, and added the steps to upgrade from v2.
+- **docs**: First Steps matches the new interface and points to the How it works page.
+- **docs**: The threat model covers an instance that serves modified code, and the instance list says what that means for trusting an operator.
+- **docs**: The development setup covers the macOS setup script, the Node version and the platforms the server runs on outside Docker.
+- **docs**: Documented the environment variables of file requests.
+- **docs**: The download modes page covers downloads from the inbox of a file request.
+- **docs**: New pages for file requests in the user guide, the API reference and the cryptography section, request templates included.
+- **docs**: A new page in the user guide describes the settings of a browser.
+- **docs**: The rate limiting page covers the daily limit of file requests, with a recommendation for public instances.
+- **docs**: The admin CLI commands page matches what the commands print.
+- **docs**: The CLI guide explains why macOS binaries up to v2.12.2 do not start on Apple Silicon and how to install one that does.
+- **docs**: The README is shorter and opens with a banner of the new interface on a desktop and a phone instead of a screenshot of the old one.
+- **docs**: A security policy explains how to report a vulnerability privately, and the contributing guide and the developer guide explain that pull requests go into the `dev` branch.
+- **docs**: The README names file and note requests among the highlights and says how independent researchers have reviewed SkySend so far, with a link to the published security advisories.
+- **website**: The zero-knowledge section and the blog post promise that the server holds nothing readable, not that an operator can never read along.
+
+### 🧪 Tests
+
+- **server**: Tests for notes made of blocks, the note tab in `DEFAULT_TAB` and the `noteBlocks` flag.
+- **server**: Tests for the new theme and color scheme variables and for the hint a pre-v3 value gets.
+- **server**: Tests for file requests covering the tokens, the login for creating, parallel uploads into one request and the cleanup.
+- **server**: Tests for WebSocket uploads that send a `null` frame, close during setup or finalize, or go silent.
+- **web**: Tests for opening notes made of blocks and notes from before v3, for code highlighting against injected markup, and for copying to the clipboard.
+- **web**: Tests for building a note from its blocks, for the upload that only tells the server it is made of blocks, and for the kinds kept for My Links.
+- **web**: Tests that text on and next to the accent reaches a contrast of at least 4.5:1 for any color.
+- **web**: Tests for the color scheme choice, the accent injected for `CUSTOM_COLOR` and the file type badges.
+- **web**: Tests for creating file requests, opening their inbox with and without a password, downloading from it and uploading into a request.
+- **web**: Component tests for the note editors, a template filled in and the note viewer.
+- **web**: Tests for request templates, their storage, their export with and without a password, and every way an import is refused.
+- **web**: Tests for the defaults of a browser, how they read and how the forms start from them.
+- **client**: Tests for turning CLI input into a note, for the format sent to older servers and for a round trip through the real encryption.
+- **crypto**: Notes encrypted before v3 are kept as test fixtures, so a change that stops them from opening fails the tests. They cover every note type, a note password and the older 16-byte salt.
+- **crypto**: Tests for file requests against the official HPKE test vectors, a frozen fixture of the request format and every way to tamper with a wrapped key.
+- **infra**: Tests for the note format, including every format a note from before v3 can have.
+- **infra**: The tests of `@skysend/crypto` and `@skysend/note-format` are typechecked along with their code.
+
+### 🔧 CI/CD
+
+- **docker**: The image keeps only the SQLite binary for its own platform, which makes it about 29 MB smaller.
+- **infra**: The note format the web app and the CLI client share is a workspace package of its own, built and covered in CI, in the Docker image and for the CLI binaries.
+- **infra**: The release thanks the author of a pull request from outside the project at the end of each of its changelog entries, with a link to the pull request.
+- **infra**: Updated the GitHub Actions of every workflow to their newest major versions, which run on Node 24, among them checkout 7, setup-node 7, pnpm/action-setup 6, the artifact actions 7 and 8, codecov 7 and the Docker actions.
+- **infra**: Updated the dependencies across the monorepo, among them ink 8 in the CLI client, vitest 5, jsdom 30, eslint 10 and TypeScript 6 on the website, and minor and patch releases of the AWS SDK, hono, radix-ui, react 19.3, react-router, i18next, lucide-react, zod 4.6, vite 8.3, tailwindcss, typescript-eslint and prettier.
+- **infra**: A `.node-version` file pins Node 24 for local development, the version CI and the Docker image use.
+- **infra**: `scripts/setup-dev-macos.sh` sets up a Mac for development with fnm, the Node of `.node-version`, pnpm and the dependencies.
+- **infra**: The release groups the entries of each changelog section by scope, from the server to the tooling, so the lines about one part of SkySend stand together.
+- **infra**: A pull request into `main` now also builds the CLI binaries for all five platforms and starts them once, after the same approval as the Docker image.
+- **infra**: The release fails when a macOS binary does not carry a valid signature.
+- **infra**: The dev environment comes from the tracked template `.env.dev.example`, and `.env.dev` is ignored by git, so local values and secrets stay out of the repository. The setup scripts create `.env.dev` for a new checkout or worktree.
+- **infra**: The repository shows a Sponsor button for GitHub Sponsors, and the Sponsors section of the README updates by itself.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v3.0.0`
+- **Also tagged as**: `latest`, `v3`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v2.12.2 - Download Integrity and Upload Memory Security Fixes and CI Improvements
 
 *Released: October 5, 2026*

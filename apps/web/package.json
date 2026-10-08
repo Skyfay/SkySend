@@ -1,6 +1,6 @@
 {
   "name": "@skysend/web",
-  "version": "2.12.2",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
