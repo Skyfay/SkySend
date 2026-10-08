@@ -26,8 +26,8 @@ The main upload page where users can share files and encrypted notes.
 ### SSH Key Note
 ![SSH Key Note](/screenshots/ssh.png)
 
-## My Uploads
+## My Links
 
 The upload management dashboard - view download counts, expiry countdowns, and re-copy share links.
 
-![My Uploads](/screenshots/uploads.png)
+![My Links](/screenshots/uploads.png)

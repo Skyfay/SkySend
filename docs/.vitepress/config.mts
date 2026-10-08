@@ -75,7 +75,9 @@ export default defineConfig({
           items: [
             { text: 'Introduction', link: '/user-guide/getting-started' },
             { text: 'Installation', link: '/user-guide/installation' },
-            { text: 'First Steps', link: '/user-guide/first-steps' }
+            { text: 'First Steps', link: '/user-guide/first-steps' },
+            { text: 'File Requests', link: '/user-guide/file-requests' },
+            { text: 'Settings', link: '/user-guide/settings' }
           ]
         },
         {
@@ -148,6 +150,7 @@ export default defineConfig({
             { text: 'Metadata & Info', link: '/developer-guide/api/metadata' },
             { text: 'Password Verification', link: '/developer-guide/api/password' },
             { text: 'Management', link: '/developer-guide/api/management' },
+            { text: 'File Requests', link: '/developer-guide/api/requests' },
             { text: 'OIDC Authentication', link: '/developer-guide/api/oidc' }
           ]
         },
@@ -159,7 +162,9 @@ export default defineConfig({
             { text: 'Key Derivation', link: '/developer-guide/crypto/key-derivation' },
             { text: 'Streaming Encryption', link: '/developer-guide/crypto/streaming-encryption' },
             { text: 'Metadata Encryption', link: '/developer-guide/crypto/metadata-encryption' },
-            { text: 'Password Protection', link: '/developer-guide/crypto/password-protection' }
+            { text: 'Note Format', link: '/developer-guide/crypto/note-format' },
+            { text: 'Password Protection', link: '/developer-guide/crypto/password-protection' },
+            { text: 'File Requests', link: '/developer-guide/crypto/file-requests' }
           ]
         },
         {

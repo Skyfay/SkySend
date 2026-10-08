@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { writePrivateFile } from "./private-file.js";
 
 export interface ServerEntry {
   name: string;
@@ -36,9 +37,7 @@ export function loadConfig(): ClientConfig {
 }
 
 export function saveConfig(config: ClientConfig): void {
-  const dir = getConfigDir();
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2) + "\n", "utf-8");
+  writePrivateFile(getConfigPath(), JSON.stringify(config, null, 2) + "\n");
 }
 
 export function resetConfig(): void {
@@ -158,10 +157,7 @@ function loadTokens(): Record<string, string> {
 }
 
 function writeTokens(tokens: Record<string, string>): void {
-  const dir = getConfigDir();
-  fs.mkdirSync(dir, { recursive: true });
-  const tokensPath = getTokensPath();
-  fs.writeFileSync(tokensPath, JSON.stringify(tokens, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
+  writePrivateFile(getTokensPath(), JSON.stringify(tokens, null, 2) + "\n");
 }
 
 export function getStoredToken(serverUrl: string): string | undefined {

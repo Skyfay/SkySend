@@ -249,7 +249,9 @@ export async function ensureSwController(): Promise<ServiceWorker | null> {
  *
  * The SW reports progress and completion back via postMessage (dl-progress, dl-done).
  * `plaintextSize` is the size from the authenticated metadata. The SW fails the
- * download when the decrypted stream ends up any other size.
+ * download when the decrypted stream ends up any other size. `tokenHeader` names the
+ * header the SW sends the token in: X-Auth-Token for a download, X-Inbox-Token for a
+ * file in the inbox of a file request.
  */
 export async function streamDownloadViaSw(
   url: string,
@@ -264,6 +266,7 @@ export async function streamDownloadViaSw(
   signal?: AbortSignal,
   onS3Info?: () => void,
   plaintextSize?: number,
+  tokenHeader: "X-Auth-Token" | "X-Inbox-Token" = "X-Auth-Token",
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -302,6 +305,7 @@ export async function streamDownloadViaSw(
       id: downloadId,
       url,
       authToken,
+      tokenHeader,
       secret,
       salt,
       filename,

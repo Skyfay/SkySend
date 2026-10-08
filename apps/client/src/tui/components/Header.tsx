@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import type { AppState } from "../types.js";
 import { formatBytes } from "../../lib/progress.js";
+import { forTerminal } from "../../lib/terminal.js";
 import { useAccent } from "../theme.js";
 
 interface HeaderProps {
@@ -11,7 +12,7 @@ interface HeaderProps {
 export function Header({ appState }: HeaderProps): React.ReactElement {
   const accent = useAccent();
   const { config, quota, serverName, server } = appState;
-  const title = config.customTitle || "SkySend";
+  const title = forTerminal(config.customTitle || "SkySend");
   const services = config.enabledServices.join(", ");
 
   return (

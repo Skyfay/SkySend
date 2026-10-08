@@ -11,6 +11,7 @@ import {
 } from "../src/ece.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
 import { constantTimeEqual, randomBytes } from "../src/util.js";
+import { flipped } from "./helpers.js";
 
 /** Helper: collect all chunks from a ReadableStream into a single Uint8Array. */
 async function collectStream(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
@@ -222,8 +223,7 @@ describe("ECE streaming encryption/decryption", () => {
     );
 
     // Flip a byte in the ciphertext (after the nonce)
-    const tampered = new Uint8Array(encrypted);
-    tampered[NONCE_LENGTH + 5] ^= 0xff;
+    const tampered = flipped(encrypted, NONCE_LENGTH + 5);
 
     await expect(
       collectStream(

@@ -9,7 +9,7 @@ The CLI client (`skysend`) lets you:
 - **Upload** single or multiple files with E2E encryption
 - **Download** and decrypt files from a share URL
 - **Create** encrypted notes (text, password, code, markdown, SSH keys)
-- **View** encrypted notes from the terminal
+- **View** encrypted notes from the terminal, including notes made of several blocks
 - **Delete** uploads and notes using the owner token
 - **Authenticate** with OIDC/SSO when required by the server (`auth login`, `auth logout`, `auth status`)
 - **Self-update** to the latest version from GitHub Releases
@@ -45,6 +45,12 @@ To install a specific version or to a custom directory:
 VERSION=v2.11.3 curl -fsSL https://skysend.app/install.sh | sh
 INSTALL_DIR=$HOME/.local/bin curl -fsSL https://skysend.app/install.sh | sh
 ```
+
+::: warning macOS on Apple Silicon
+The macOS binaries up to v2.12.2 carry an invalid signature, so macOS stops them right after they start and the shell only prints `killed`. `skysend update` cannot run either, so install the current version once more with the install script above. Pinning `VERSION` to v2.12.2 or older brings the problem back.
+
+A binary downloaded through a browser is also held back by Gatekeeper, because it is signed without an Apple developer certificate. Use the install script, or remove the quarantine flag with `xattr -d com.apple.quarantine skysend-macos-arm64`.
+:::
 
 ### Windows
 
@@ -137,7 +143,7 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 | `skysend` | Interactive menu-driven mode (recommended) |
 | `skysend upload <files...>` | Upload files with E2E encryption |
 | `skysend download <url>` | Download and decrypt a file |
-| `skysend note <text>` | Create an encrypted note |
+| `skysend note [text]` | Create an encrypted note |
 | `skysend note:view <url>` | View an encrypted note |
 | `skysend ls` | List upload and note history |
 | `skysend delete <url> <ownerToken>` | Delete an upload or note |

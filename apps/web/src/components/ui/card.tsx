@@ -5,10 +5,13 @@ const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
+  // data-slot lets a theme turn cards into glass or light them from above. A page marks
+  // the card it is about with data-emphasis="main".
   <div
     ref={ref}
+    data-slot="card"
     className={cn(
-      "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+      "rounded-3xl border border-border bg-card text-card-foreground shadow-lift",
       className,
     )}
     {...props}

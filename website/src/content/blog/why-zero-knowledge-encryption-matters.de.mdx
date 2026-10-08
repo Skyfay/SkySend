@@ -1,0 +1,27 @@
+---
+title: "Warum wir SkySend um Zero-Knowledge-Verschlüsselung herum gebaut haben"
+excerpt: "Jede Datei und jede Notiz, die über SkySend geteilt wird, ist verschlüsselt, bevor sie Ihren Browser verlässt - und darum ist das eine andere Garantie als „im Ruhezustand verschlüsselt“."
+tags: ["Philosophie", "Verschlüsselung", "Sicherheit"]
+---
+
+Die meisten Werkzeuge zum Teilen von Dateien verschlüsseln Ihre Daten „im Ruhezustand“ - sobald sie auf ihren Servern ankommen. Das schützt vor einer gestohlenen Festplatte, hilft aber nichts gegen den Betreiber des Dienstes selbst, einen kompromittierten Server oder eine gerichtliche Anordnung, die den Zugriff auf gespeicherte Daten erzwingt. Wenn der Dienst Ihre Datei technisch lesen kann, wird es irgendwann jemand tun, ob jemand aus dem Team, ein Angreifer oder ein Gericht.
+
+SkySend geht einen anderen Weg: **Die Verschlüsselung passiert in Ihrem Browser, noch bevor der Upload beginnt.** Wenn ein Byte den Server erreicht, ist es bereits Chiffretext. Der Server speichert verschlüsselte Blobs und liefert sie aus, ohne sie auf irgendeine Weise öffnen zu können.
+
+## Was „Zero Knowledge“ wirklich bedeutet
+
+Jede Datei, jede Notiz, jedes Passwort, jeder Code-Schnipsel und jeder SSH-Schlüssel, der über SkySend geteilt wird, wird auf dem Client mit AES-256-GCM verschlüsselt. Der Schlüssel entsteht im Browser und wird in keiner Form an den Server übertragen - er steht nur im Fragment der URL des Freigabelinks, dem Teil nach dem Zeichen `#`.
+
+Browser senden den Fragment-Teil einer URL grundsätzlich nie an einen Server - er ist ein Teil der Adresse, der nur auf dem Client existiert. Genau dieser Mechanismus macht Zero-Knowledge-Teilen möglich, ohne dass der Server besonders mitwirken muss: Der Server erhält nie den Teil des Links, der die Datei öffnet.
+
+## Der Passwortschutz ist eine zweite, unabhängige Schicht
+
+Ein optionales Passwort fügt dem Schlüssel einen zweiten Faktor hinzu. Es wird mit Argon2id abgeleitet, statt im Klartext an den Server zu gehen. Wer den Freigabelink hat, aber nicht das Passwort, kann die Datei trotzdem nicht entschlüsseln, und wer irgendwie an das Passwort ohne den Link gekommen ist, hat gar nichts, was sich entschlüsseln ließe.
+
+## Was das in der Praxis bedeutet
+
+- **Der Server hält nichts Lesbares.** Ob Sie eine öffentliche Community-Instanz nutzen oder Ihre eigene betreiben, wer den Server betreibt, sieht Chiffretext, Dateigrößen und Ablaufzeitpunkte - keine Inhalte.
+- **Ein kompromittierter Server legt frühere Freigaben nicht offen.** Wer Zugriff auf den Speicher des Servers erlangt, bekommt verschlüsselte Blobs, nicht die Schlüssel, um sie zu öffnen.
+- **Der Ablauf ist ein echtes Löschen, nicht nur eine versteckte Markierung.** Wenn eine Datei oder Notiz ihre Ablaufzeit oder ihr Download- beziehungsweise Aufruflimit erreicht, wird sie gelöscht - danach liegt keine Klartextkopie mehr herum, um die man sich sorgen müsste.
+
+Nichts davon setzt voraus, dass Sie SkySend oder dem Betreiber Ihrer Instanz vertrauen, die Inhalte Ihrer Freigaben auf dem Server sicher aufzubewahren. Worauf Sie vertrauen, ist, dass die Instanz die veröffentlichte Web-App unverändert ausliefert, wie bei jeder verschlüsselten Web-App, denn Ihr Browser führt den Code aus, den die Seite schickt. Eine eigene Instanz, oder der CLI-Client für Dateien und Notizen, nimmt auch dieses letzte Stück Vertrauen aus dem Spiel.

@@ -67,7 +67,8 @@ describe("useNoteView", () => {
     const { result } = renderHook(() => useNoteView());
 
     expect(result.current.phase).toBe("idle");
-    expect(result.current.content).toBeNull();
+    expect(result.current.blocks).toBeNull();
+    expect(result.current.unreadable).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
@@ -137,7 +138,7 @@ describe("useNoteView", () => {
     });
 
     expect(result.current.phase).toBe("viewing");
-    expect(result.current.content).toBe("decrypted content");
+    expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "decrypted content" }]);
   });
 
   it("view() sets phase=destroyed when last view consumed", async () => {
@@ -246,7 +247,7 @@ describe("useNoteView", () => {
     });
 
     expect(result.current.phase).toBe("viewing");
-    expect(result.current.content).toBe("decrypted content");
+    expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "decrypted content" }]);
   });
 
   it("loadInfo() setzt error='Failed to load note info' bei generischem Fehler", async () => {
@@ -302,5 +303,54 @@ describe("useNoteView", () => {
     });
 
     expect(result.current.phase).toBe("viewing");
+  });
+
+  describe("reading the decrypted note", () => {
+    async function viewWith(contentType: string, plaintext: string) {
+      const crypto = await import("@skysend/crypto");
+      const api = await import("../../src/lib/api.js");
+      vi.mocked(crypto.decryptNoteContent).mockResolvedValueOnce(plaintext);
+      vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo({ contentType }) as never);
+      vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
+      const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+      const { result } = renderHook(() => useNoteView());
+      await act(async () => {
+        await result.current.loadInfo("n-1");
+      });
+      await act(async () => {
+        await result.current.view("n-1", "secretb64");
+      });
+      return result;
+    }
+
+    it("turns a note made of blocks into its blocks", async () => {
+      const plaintext = JSON.stringify({
+        v: 1,
+        blocks: [
+          { type: "text", format: "plain", text: "Server access" },
+          { type: "password", entries: [{ label: "root", value: "pw" }] },
+        ],
+      });
+      const result = await viewWith("blocks", plaintext);
+      expect(result.current.phase).toBe("viewing");
+      expect(result.current.unreadable).toBe(false);
+      expect(result.current.blocks).toEqual([
+        { type: "text", format: "plain", text: "Server access" },
+        { type: "password", entries: [{ label: "root", value: "pw" }] },
+      ]);
+    });
+
+    // LEGACY(notes-v1): drop with the legacy readers.
+    it("reads a password note from before v3 through the legacy reader", async () => {
+      const result = await viewWith("password", JSON.stringify([{ label: "", value: "old-pw" }]));
+      expect(result.current.blocks).toEqual([{ type: "password", entries: [{ label: "", value: "old-pw" }] }]);
+    });
+
+    it("shows a note made of blocks that does not parse as it arrived, instead of losing it", async () => {
+      const result = await viewWith("blocks", "not a document");
+      expect(result.current.phase).toBe("viewing");
+      expect(result.current.unreadable).toBe(true);
+      expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "not a document" }]);
+    });
   });
 });

@@ -29,6 +29,17 @@ describe("normalizeRewrittenPath", () => {
     expect(normalizeRewrittenPath(`/d/${ID}%23${SECRET}`)).toBe(`/d/${ID}#${SECRET}`);
   });
 
+  it("rebuilds a request and an inbox link", () => {
+    expect(normalizeRewrittenPath(`/request/${ID}%23${SECRET}`)).toBe(`/request/${ID}#${SECRET}`);
+    expect(normalizeRewrittenPath(`/inbox/${ID}%23${SECRET}`)).toBe(`/inbox/${ID}#${SECRET}`);
+  });
+
+  it("rebuilds a templates link, which has no ID", () => {
+    expect(normalizeRewrittenPath(`/templates%23${SECRET}`)).toBe(`/templates#${SECRET}`);
+    expect(normalizeRewrittenPath(`/templates%2523${SECRET}/`)).toBe(`/templates#${SECRET}`);
+    expect(normalizeRewrittenPath(`/templates/${ID}%23${SECRET}`)).toBeNull();
+  });
+
   it("handles a double-encoded fragment from a gateway that did not decode its wrapper", () => {
     expect(normalizeRewrittenPath(`/file/${ID}%2523${SECRET}`)).toBe(`/file/${ID}#${SECRET}`);
   });

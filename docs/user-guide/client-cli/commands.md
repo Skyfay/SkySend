@@ -23,7 +23,7 @@ skysend upload <files...> [options]
 | `-s, --server <url>` | Server URL (overrides config) |
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
-| `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
+| `-p, --password [password]` | Password protect the upload, at least 8 characters. Prompts interactively if no value is given. |
 | `--no-ws` | Use HTTP chunked upload instead of WebSocket. Currently the default anyway, see below |
 | `--json` | Output result as JSON |
 
@@ -91,7 +91,7 @@ skysend download <url> [options]
 
 | Option | Description |
 | --- | --- |
-| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. |
+| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. The filename is cleaned of path separators, control characters and leading dots, and a file that already exists keeps its place while the download gets a number, such as `report (1).pdf`. Only an explicit file path replaces an existing file. |
 | `-p, --password [password]` | Password for protected uploads. Prompts interactively if no value is given. |
 | `--json` | Output result as JSON |
 
@@ -126,29 +126,40 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 Create an encrypted note.
 
 ```bash
-skysend note <text> [options]
+skysend note [text] [options]
 ```
 
 ### Arguments
 
 | Argument | Description |
 | --- | --- |
-| `<text>` | The note content |
+| `[text]` | The note content. Leave it out, or pass `-`, to type it at a prompt or pipe it in |
+
+::: warning Keep secrets out of the command line
+A note given as an argument stays in your shell history, and on Linux other users of the machine can read it from the process list while the command runs. For a password or any other secret, leave the argument out: the CLI asks for a note of one line without showing it, and reads a note that spans lines from a pipe or a file.
+:::
 
 ### Options
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `-s, --server <url>` | | Server URL (overrides config) |
-| `-t, --type <type>` | `text` | Content type: `text`, `password`, `code`, `markdown`, `sshkey` |
+| `-t, --type <type>` | `text` | Note type: `text`, `password`, `code`, `markdown`, `sshkey` |
 | `-e, --expires <duration>` | | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-v, --views <count>` | | Maximum view count (`0` = unlimited) |
-| `-p, --password [password]` | | Password protect. Prompts interactively if no value is given. |
+| `-p, --password [password]` | | Password protect, at least 8 characters. Prompts interactively if no value is given. |
 | `--json` | | Output result as JSON |
 
 ### Examples
 
 ```bash
+# Type a secret note at a prompt that does not show it
+skysend note --type password
+
+# Read a note from a file or a pipe
+skysend note --type sshkey < ~/.ssh/deploy_key
+pbpaste | skysend note --type code
+
 # Create a simple text note
 skysend note "This is a secret message"
 
@@ -161,33 +172,32 @@ skysend note "console.log('hello')" --type code --expires 1h
 # Create a Markdown note
 skysend note "# Hello\n\nThis is **bold**." --type markdown
 
-# Create a password note
-skysend note "admin:s3cret" --type password
-
-# Create a password-protected note
-skysend note "secret data" --password --expires 24h --views 5
+# Create a password-protected note, both typed at prompts
+skysend note --password --expires 24h --views 5
 ```
 
-### Content Types
+### Note Types
+
+The CLI creates a note of one block. Notes that combine several blocks can be created in the web app.
 
 | Type | Description |
 | --- | --- |
 | `text` | Plain text (default) |
-| `password` | Password(s) displayed with masked fields and copy buttons in the web UI |
+| `password` | The whole text as one password, shown masked with a copy button |
 | `code` | Code with syntax highlighting and line numbers in the web UI |
-| `markdown` | Rendered GitHub Flavored Markdown in the web UI |
-| `sshkey` | SSH key pairs with structured display in the web UI |
+| `markdown` | Text rendered as GitHub Flavored Markdown in the web UI |
+| `sshkey` | SSH key material. A public key, a private key and a `Passphrase:` line in the text are shown as separate parts. |
 
-::: tip
-Note content types affect how the note is rendered in the **web UI**. In the terminal, `note:view` always displays the raw content.
+::: tip Older servers
+A server before v3 does not know notes made of blocks. The CLI client detects this and creates the note in the format that server knows, so the note opens in its web UI as before.
 :::
 
 ## note:view
 
-View and decrypt an encrypted note.
+View and decrypt an encrypted note in the interactive TUI.
 
 ```bash
-skysend note:view <url> [options]
+skysend note:view <url>
 ```
 
 ### Arguments
@@ -196,25 +206,16 @@ skysend note:view <url> [options]
 | --- | --- |
 | `<url>` | SkySend note share URL (e.g. `https://instance.com/note/abc123#secret`) |
 
-### Options
-
-| Option | Description |
-| --- | --- |
-| `-p, --password [password]` | Password for protected notes. Prompts interactively if no value is given. |
-| `--json` | Output result as JSON |
-
 ### Examples
 
 ```bash
 # View an encrypted note
 skysend note:view https://instance.com/note/abc123#secret
-
-# View a password-protected note
-skysend note:view https://instance.com/note/abc123#secret --password
-
-# View with JSON output
-skysend note:view https://instance.com/note/abc123#secret --json
 ```
+
+If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords are hidden until revealed with their number key or all at once with `a`, and `s` saves the whole note to a file. The file is created so that only you can read it. Control characters in a note, which could hide text or change the terminal, are shown as `�`.
+
+Notes made of blocks need a CLI client from v3 on. Notes created before v3 open in every version.
 
 ::: warning Burn After Reading
 If the note has a view limit of 1 (burn-after-reading), viewing it will permanently destroy it. There is no way to view it again.
@@ -500,7 +501,7 @@ skysend i [options]           # short alias
 
 ### Upload History
 
-All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode.
+All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode. The history holds the full share links with their keys and the owner tokens, so the CLI keeps it, the config and the OIDC session readable for your user only (file mode `0600` in a `0700` folder), and narrows files an older version created with wider permissions.
 
 ### Example
 

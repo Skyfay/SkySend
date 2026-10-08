@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import { sql } from "drizzle-orm";
 import { Readable } from "node:stream";
 import { getDb } from "../db/index.js";
@@ -6,18 +7,41 @@ import { uploads } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { Upload } from "../db/schema.js";
 import type { StorageBackend } from "../storage/types.js";
+import type { PasswordLockout } from "../lib/password-lockout.js";
+import { getConfig } from "../lib/config.js";
+import { getClientIp } from "../middleware/rate-limit.js";
 
-export function createDownloadRoute(storage: StorageBackend) {
+export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLockout) {
   const route = new Hono<{
     Variables: { upload: Upload };
   }>();
+
+  /**
+   * The auth token of a password-protected upload comes from the password, so a wrong token is
+   * a wrong guess. It counts against the same lockout as POST /api/password/:id, under the same
+   * key, so a guesser cannot switch to the download to get around it (GHSA-rxxj-c5wr-phqp).
+   */
+  const guessLimit = createMiddleware(async (c, next) => {
+    const ip = getClientIp(c, getConfig().TRUST_PROXY);
+    const resourceKey = `file:${c.req.param("id")}`;
+    const lockState = lockout.check(resourceKey, ip);
+    if (lockState.locked) {
+      c.header("Retry-After", String(lockState.retryAfter));
+      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
+    }
+    await next();
+    // Only a token that was sent is a guess. A request without one, such as an image tag on
+    // another site pointing here, must not lock the visitor out.
+    if (c.res.status === 401 && c.req.header("X-Auth-Token")) lockout.recordFailure(resourceKey, ip);
+    else if (c.res.ok) lockout.recordSuccess(resourceKey, ip);
+  });
 
   /**
    * GET /api/download/:id
    * Streams the encrypted file to the client.
    * Requires valid auth token. Increments download count atomically.
    */
-  route.get("/:id", authMiddleware, async (c) => {
+  route.get("/:id", guessLimit, authMiddleware, async (c) => {
     const upload = c.get("upload");
 
     // Check if expired

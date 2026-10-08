@@ -1,0 +1,1 @@
+ALTER TABLE `file_requests` ADD `downloads` integer DEFAULT 5 NOT NULL;

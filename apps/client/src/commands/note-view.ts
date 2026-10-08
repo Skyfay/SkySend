@@ -4,6 +4,7 @@ import type { Command } from "commander";
 import { parseShareUrl } from "../lib/url.js";
 import { App } from "../tui/App.js";
 import { resolveServer } from "../lib/config.js";
+import { forTerminal } from "../lib/terminal.js";
 
 export function registerNoteViewCommand(program: Command): void {
   program
@@ -37,7 +38,7 @@ export function registerNoteViewCommand(program: Command): void {
         await waitUntilExit();
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        console.error(`Error: ${message}`);
+        console.error(`Error: ${forTerminal(message)}`);
         process.exit(1);
       }
     });

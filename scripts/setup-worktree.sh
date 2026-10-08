@@ -5,7 +5,16 @@ set -e
 ROOT="${ORCA_ROOT_PATH:-$(git worktree list --porcelain | head -n1 | sed 's/^worktree //')}"
 TARGET="${ORCA_WORKTREE_PATH:-$(pwd)}"
 
+# A checkout without a dev environment of its own starts from the template.
+ensure_dev_env() {
+  if [ ! -f "$1/.env.dev" ] && [ -f "$1/.env.dev.example" ]; then
+    cp "$1/.env.dev.example" "$1/.env.dev"
+    echo "Created: .env.dev from .env.dev.example"
+  fi
+}
+
 if [ "$ROOT" = "$TARGET" ]; then
+  ensure_dev_env "$TARGET"
   echo "Running in the primary checkout, nothing to copy."
   exit 0
 fi
@@ -20,6 +29,8 @@ copy_file() {
 }
 
 copy_file .env
+copy_file .env.dev
+ensure_dev_env "$TARGET"
 
 cd "$TARGET"
 pnpm install

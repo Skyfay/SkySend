@@ -41,7 +41,7 @@ Client                                          Server
 4. If multi-file: zip with fflate
 5. WS connect /api/upload/ws -------->  Validate Origin header
 6. Send JSON { type: "init",            Validate headers (shared schema)
-     headers: auth, salt, limits }       Check quota
+     headers: auth, salt, limits }       Reserve quota
                                          Create empty storage entry
                                   <----  { type: "ready", id }
 7. Encrypt payload (streaming AES-256-GCM)
@@ -53,7 +53,7 @@ Client                                          Server
 8. Send JSON { type: "finalize" } --->  Verify total bytes == contentLength
                                          Flush remaining buffer
                                          Create DB record
-                                         Record quota
+                                         Commit quota reservation
                                   <----  { type: "done", id }
                                          Close 1000
 9. Encrypt metadata (names, types)
@@ -133,7 +133,7 @@ SkySend uses a tiered approach to handle large file downloads without exhausting
 
 ## Note Flow
 
-Notes use the same key derivation and encryption as files, but content is stored in the database instead of the filesystem.
+Notes use the same key derivation and encryption as files, but content is stored in the database instead of the filesystem. A note is made of blocks (text, passwords, code and SSH keys), serialized into a JSON document before it is encrypted. See [Note Format](/developer-guide/crypto/note-format).
 
 ### Create Note
 
@@ -143,12 +143,13 @@ Client                                          Server
 1. Generate secret (32 bytes)
 2. Derive metaKey, authKey (HKDF)
 3. Compute authToken, ownerToken
-4. Encrypt note content (AES-256-GCM + random IV)
-5. POST /api/note ------------------>  Store encrypted content in DB
-                                       Create DB record
+4. Serialize the blocks into the note document
+5. Encrypt the document (AES-256-GCM + random IV)
+6. POST /api/note ------------------>  Store encrypted content in DB
+   (contentType: "blocks")             Create DB record
                                 <----  Return { id, expiresAt }
-6. Build share link: baseUrl/note/:id#secret
-7. Store in IndexedDB (local history)
+7. Build share link: baseUrl/note/:id#secret
+8. Store in IndexedDB (local history)
 ```
 
 ### View Note
@@ -170,30 +171,43 @@ Client                                          Server
    (authToken in body)                  Return encrypted content
                                   <----  { encryptedContent, nonce, viewCount }
 6. Decrypt content (AES-256-GCM)
-7. Render based on contentType:
-   - text: plain text
-   - markdown: rendered GFM
-   - password: masked fields with reveal/copy
-   - code: syntax-highlighted with line numbers
-   - sshkey: structured Public/Private Key sections
+7. Read the blocks with readNote(contentType, plaintext)
+8. Render each block in a frame of its own
 ```
 
-### Content Types
+### Blocks
 
-Notes support five content types, each with a dedicated UI:
+| Block | Viewer |
+| --- | --- |
+| Text (plain) | Whitespace-preserving display |
+| Text (Markdown) | Rendered GFM via react-markdown and rehype-sanitize |
+| Password | Per-password masked display with reveal and copy |
+| Code | Syntax highlighting with line numbers, foldable |
+| SSH key | Public key, private key and passphrase sections |
 
-| contentType | Description | Viewer |
-| --- | --- | --- |
-| `text` | Plain text | Whitespace-preserving display |
-| `markdown` | Markdown (GFM) | Rendered HTML via react-markdown |
-| `password` | One or more passwords | Per-password masked display with reveal/copy |
-| `code` | Code snippets | Syntax highlighting (43 languages) with line numbers |
-| `sshkey` | SSH key pairs | Structured Public Key / Private Key sections |
+Notes created before v3 have a single content type instead of blocks (`text`, `markdown`, `password`, `code` or `sshkey`). They are read into blocks and shown by the same viewer.
+
+## File Request Flow
+
+A file request reverses the direction of an upload. The requester's browser makes a key pair, keeps the private key sealed in a vault on the server and puts the public key into the upload link. A sender uploads with the same transports as a normal upload, the [WebSocket](#websocket-transport-primary) first and the [HTTP chunked transport](#http-chunked-transport-fallback) as the fallback, into `/api/request/:id/upload/*`. At finalize the sender sends the file secret sealed to that public key. The requester opens the inbox with the inbox link, unseals each file secret and downloads through the same [download tiers](/developer-guide/download-modes) as a normal download.
+
+```
+Requester                     Server                         Sender
+---------                     ------                         ------
+POST /api/request  ------>    vault, tokens, title
+                                       <------  GET /api/request/:id (upload token)
+                                       <------  init / chunk / finalize
+                                                (ciphertext, sealed secret, metadata)
+GET /api/inbox/:id ------>    vault + uploads
+GET /api/inbox/:id/file/:uid  ciphertext
+```
+
+Files of a request live in `request_uploads`, apart from `uploads`, so no route of a normal upload can reach them. See [File Requests API](/developer-guide/api/requests) and [File Requests cryptography](/developer-guide/crypto/file-requests).
 
 ## Package Dependencies
 
 ```
-@skysend/crypto    (shared, no dependencies on other packages)
+@skysend/crypto       (shared, no dependencies on other packages)
        |
        +-----> @skysend/server  (imports crypto for validation)
        |
@@ -201,10 +215,16 @@ Notes support five content types, each with a dedicated UI:
        |
        +-----> @skysend/client  (imports crypto for encryption/decryption)
 
-@skysend/cli       (accesses server database directly)
+@skysend/note-format  (note document format, no keys and no crypto)
+       |
+       +-----> @skysend/web     (writes and reads notes)
+       |
+       +-----> @skysend/client  (writes and reads notes)
+
+@skysend/cli          (accesses server database directly)
 ```
 
-The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line).
+The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes.
 
 ## Server Architecture
 
@@ -254,44 +274,50 @@ apps/web/src/
   main.tsx              # Entry point
   App.tsx               # React Router setup
   pages/
-    Upload.tsx          # Main upload page (tabs: File, Text, Password, Code, SSH Key)
+    Upload.tsx          # Main page (tabs: File, Note)
     Download.tsx        # Download page (/file/:id)
     NoteView.tsx        # Note view page (/note/:id)
     MyUploads.tsx       # Upload management dashboard
+    HowItWorks.tsx      # How the encryption works
     NotFound.tsx        # 404 page
   components/
     UploadZone.tsx      # Drag & drop file selection
     UploadProgress.tsx  # Upload progress indicator
+    ShareOptions.tsx    # Expiry, download or view limit, password
     ShareLink.tsx       # Share link display + copy
     DownloadCard.tsx    # Download UI
     PasswordPrompt.tsx  # Password input dialog
-    ExpirySelector.tsx  # Expiry + download limit config
-    UploadCard.tsx      # Single upload status card
-    NoteForm.tsx        # Note creation form (text, code, markdown)
-    NoteContent.tsx     # Note content renderer (all 5 content types)
-    NoteCard.tsx        # Note card in My Uploads
-    PasswordForm.tsx    # Password note form (multi-password support)
+    UploadCard.tsx      # Upload card in My Links
+    NoteComposer.tsx    # Note tab: block cards, block list, share options
+    BlockEditorFrame.tsx # Frame with move and remove controls around a block editor
+    TextBlockEditor.tsx # Text block (plain or Markdown)
+    PasswordBlockEditor.tsx # Password block (several entries, generator)
+    CodeBlockEditor.tsx # Code block (title, language)
+    SshKeyBlockEditor.tsx # SSH key block (generate or paste)
+    NoteBlocks.tsx      # Renders the blocks of a received note
+    NoteCard.tsx        # Note card in My Links
     PasswordGenerator.tsx # Password generator with entropy display
-    SSHKeyForm.tsx      # SSH key generation/paste form
     ui/                 # Shadcn UI components
   hooks/
     useUpload.ts        # Upload logic (encrypt + stream)
     useDownload.ts      # Download logic (tier selection + decrypt)
-    useNoteUpload.ts    # Note upload logic (encrypt + submit)
+    useNoteUpload.ts    # Note upload logic (serialize + encrypt + submit)
+    useNoteView.ts      # Note view logic (decrypt + read blocks)
     useUploadHistory.ts # IndexedDB upload history
+    useNoteHistory.ts   # IndexedDB note history
     useServerConfig.tsx # Fetch server config
-    useTheme.tsx        # Dark/light mode
-    useToast.ts         # Toast notifications
+    useColorScheme.tsx  # Dark/light mode
   lib/
     api.ts              # API client
+    note-editor.ts      # Draft blocks, empty blocks, blocks to send
+    highlight.ts        # Code highlighting, sanitized with DOMPurify
     opfs-download.ts    # OPFS probe, SW stream, download triggers
     opfs-worker.ts      # Web Worker: fetch + decrypt + OPFS write
     upload-store.ts     # IndexedDB operations
     upload-worker.ts    # Web Worker: encrypt + upload (WS primary, HTTP fallback)
     zip.ts              # Client-side zip/unzip (fflate)
+    toast.tsx           # Toast helpers on top of Sonner
     utils.ts            # Utility functions
-  public/
-    download-sw.js      # Service Worker: streaming ECE decryption
   i18n/
     index.ts            # i18next setup with auto-detection
     en.json             # English translations
@@ -308,6 +334,8 @@ apps/web/src/
     zh.json             # Chinese translations
     ja.json             # Japanese translations
 ```
+
+The Service Worker for streaming ECE decryption, `download-sw.js`, lives in `apps/web/public/`.
 
 ## CLI Client Architecture
 
@@ -327,6 +355,7 @@ apps/client/src/
     auth.ts             # Key generation, derivation, password handling
     config.ts           # Config file management (~/.config/skysend/)
     errors.ts           # ApiError class
+    note.ts             # Notes of one block, legacy fallback for older servers
     progress.ts         # Terminal progress bar, formatting, password prompt
     url.ts              # Share URL parsing and building
 ```
@@ -346,10 +375,11 @@ The CLI client uses the same `@skysend/crypto` library and the same API endpoint
 - **Filesystem** (`data/uploads/`) - Encrypted file blobs, one file per upload (`<uuid>.bin`). Used when `STORAGE_BACKEND=filesystem` (default).
 - **S3-compatible storage** - Encrypted file blobs stored as `<uuid>.bin` objects. Used when `STORAGE_BACKEND=s3`. Downloads use presigned URLs for direct client-to-S3 transfers.
 - Notes are stored entirely in the database regardless of storage backend.
+- File requests keep their vault, tokens and limits in the database. Files uploaded into a request are blobs like any other upload.
 
 ### Client-Side
 
-- **IndexedDB** (`skysend-uploads`) - Local upload history for the "My Uploads" dashboard
+- **IndexedDB** (`skysend-uploads`) - Local history for the "My Links" page: the uploads and notes shared from this browser, and the file requests made in it
 - **URL fragment** (`#secret`) - Encryption key, never stored or sent to server
 
 ## Security Layers

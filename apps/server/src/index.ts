@@ -17,7 +17,7 @@ import { createRateLimiter } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
 import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
 import { createPasswordLockout } from "./lib/password-lockout.js";
-import type { QuotaVariables } from "./types.js";
+import { createRequestLimiter } from "./lib/request-limit.js";
 
 // Routes
 import { configRoute } from "./routes/config.js";
@@ -32,10 +32,13 @@ import { existsRoute } from "./routes/exists.js";
 import { healthRoute } from "./routes/health.js";
 import { createNoteRoute } from "./routes/note.js";
 import { createAuthRoute } from "./routes/auth.js";
+import { createRequestRoute } from "./routes/request.js";
+import { createInboxRoute } from "./routes/inbox.js";
 
 // OIDC
 import { createOidcAdapter } from "./auth/index.js";
 import { createOidcGuard } from "./middleware/oidc-guard.js";
+import { describeError } from "./lib/log-error.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -60,7 +63,7 @@ await storage.init();
 try {
   await runCleanup(storage);
 } catch (err) {
-  console.error("[startup] Initial cleanup failed:", err);
+  console.error("[startup] Initial cleanup failed:", describeError(err));
   process.exit(1);
 }
 
@@ -166,6 +169,11 @@ app.use(
       "X-Has-Password",
       "X-Password-Salt",
       "X-Password-Algo",
+      "X-Upload-Token",
+      "X-Reserve-Next",
+      "X-Slot-Hold",
+      "X-Inbox-Token",
+      "X-Inbox-Owner-Token",
       "Authorization",
     ],
     exposeHeaders: [
@@ -184,7 +192,7 @@ const quota = createUploadQuota(config);
 // responses. Without this, a transient 500 for a static asset during deployment
 // gets cached and served to all clients until the proxy container is recreated.
 app.onError((err, c) => {
-  console.error("[error]", err);
+  console.error("[error]", describeError(err));
   return c.json({ error: "Internal server error" }, 500, {
     "Cache-Control": "no-store",
   });
@@ -208,15 +216,19 @@ api.use("*", async (c, next) => {
 // Rate limiter on API routes (not static assets).
 // S-2 (Security Audit): Chunk upload requests are exempt from the global rate
 // limiter, because 60 req/min would block a single legitimate large-file upload
-// (a 1 GB file = ~100 chunks at 10 MB each). Opening a session through /init
-// stays rate limited. What bounds the chunk traffic instead is routes/upload.ts,
+// (a 1 GB file = ~100 chunks at 10 MB each). The same goes for the chunks of an
+// upload into a file request (/request/:id/upload/:uid/chunk), which the pattern
+// below matches too. Opening a session through an init stays rate limited. What
+// bounds the chunk traffic instead is lib/chunked-upload.ts, shared by both,
 // checked while the body is read (GHSA-9rmm-v3p2-c26g):
 //   1. A chunk body is streamed into a file, never held in memory.
 //   2. A chunk is at most 16 MiB, and all chunks of a session together never
 //      exceed the declared upload size.
 //   3. A session has at most FILE_UPLOAD_CONCURRENT_CHUNKS requests in flight,
 //      and each chunk index is accepted once.
-// The quota does not bound chunk traffic, it only counts finished uploads.
+//   4. An empty chunk is refused, and at most 64 chunks wait for an earlier one.
+// The quota does not bound chunk traffic. It reserves the declared size of an
+// upload when the upload starts, and chunks run on that reservation.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
 const rateLimiter = createRateLimiter(config);
@@ -255,33 +267,25 @@ api.route("/info", infoRoute);
 api.route("/exists", existsRoute);
 api.route("/password", passwordRoute);
 api.route("/meta", metaRoute);
-api.route("/download", createDownloadRoute(storage));
+api.route("/download", createDownloadRoute(storage, passwordLockout));
 
 // Quota status endpoint
 api.get("/quota", (c) => {
   return c.json(quota.getStatus(c));
 });
 
-// Upload route with quota middleware
 // Chunk bodies wait in DATA_DIR, which is writable for every storage backend.
-const uploadRoute = createUploadRoute(storage, { chunkDir: join(config.DATA_DIR, "tmp", "chunks") });
-const uploadWithQuota = new Hono<{ Variables: QuotaVariables }>();
-
-// OIDC guard: protect file upload init when configured
-if (config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter) {
-  const oidcGuard = createOidcGuard(config);
-  // Guard applies to POST /upload/init only (chunk + finalize need no re-check)
-  uploadWithQuota.use("/init", oidcGuard);
-}
-
-uploadWithQuota.use("*", quota.middleware);
-uploadWithQuota.use("*", async (c, next) => {
-  // Inject quota recorder into context for all upload sub-routes
-  c.set("quotaRecorder", quota.recordUsage);
-  await next();
+// The route guards and reserves the quota at the start of every upload itself, the chunked
+// init and the single-request upload alike.
+const uploadRoute = createUploadRoute(storage, {
+  chunkDir: join(config.DATA_DIR, "tmp", "chunks"),
+  startGuard:
+    config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter
+      ? createOidcGuard(config)
+      : undefined,
+  quota,
 });
-uploadWithQuota.route("/", uploadRoute);
-api.route("/upload", uploadWithQuota);
+api.route("/upload", uploadRoute);
 
 // WebSocket upload transport (primary path when FILE_UPLOAD_WS=true)
 if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
@@ -293,13 +297,32 @@ if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
   const uploadWsRoute = createUploadWsRoute({
     storage,
     upgradeWebSocket,
-    quota: { check: quota.check, record: quota.recordUsage },
+    quota,
   });
   api.route("/upload/ws", uploadWsRoute);
 }
 
 // Delete uses the upload path with DELETE method
 api.route("/upload", createDeleteRoute(storage));
+
+// File requests. Both routes carry the guard for the "request" service themselves.
+// Request uploads wait in their own chunk folder, apart from the one of normal uploads.
+api.route(
+  "/request",
+  createRequestRoute({
+    storage,
+    limiter: createRequestLimiter(config.FILE_REQUEST_DAILY_LIMIT),
+    chunkDir: join(config.DATA_DIR, "tmp", "request-chunks"),
+    createGuard:
+      config.OIDC_ENABLED && config.OIDC_PROTECT_REQUESTS && oidcAdapter
+        ? createOidcGuard(config)
+        : undefined,
+    quota,
+    // The same WebSocket transport as normal uploads, with chunked HTTP as the fallback.
+    upgradeWebSocket: config.FILE_UPLOAD_WS ? upgradeWebSocket : undefined,
+  }),
+);
+api.route("/inbox", createInboxRoute({ storage, lockout: passwordLockout }));
 
 // Note routes (E2EE encrypted notes) - guarded by ENABLED_SERVICES
 api.use("/note/*", async (c: Context, next: Next) => {
@@ -447,8 +470,12 @@ nodeServer.headersTimeout = 60_000;
 nodeServer.requestTimeout = 0;
 nodeServer.keepAliveTimeout = 120_000;
 
-// Attach the WebSocket adapter so /api/upload/ws can accept upgrade requests.
-if (config.FILE_UPLOAD_WS && config.ENABLED_SERVICES.includes("file")) {
+// Attach the WebSocket adapter so /api/upload/ws and /api/request/:id/upload/ws can accept
+// upgrade requests.
+if (
+  config.FILE_UPLOAD_WS &&
+  (config.ENABLED_SERVICES.includes("file") || config.ENABLED_SERVICES.includes("request"))
+) {
   injectWebSocket(nodeServer);
 }
 nodeServer.timeout = 0;

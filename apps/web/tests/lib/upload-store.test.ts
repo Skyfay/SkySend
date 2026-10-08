@@ -36,6 +36,14 @@ const {
   removeNote,
   getAllNotes,
   clearExpiredNotes,
+  saveRequest,
+  getRequest,
+  removeRequest,
+  getAllRequests,
+  markUploadsSeen,
+  saveTemplate,
+  removeTemplate,
+  getAllTemplates,
 } = await import("../../src/lib/upload-store.js");
 
 function makeUpload(overrides: Partial<StoredUpload> = {}): StoredUpload {
@@ -270,5 +278,77 @@ describe("getAllNotes skips null values from idb", () => {
     store.set("note:orphan", undefined);
     const notes = await getAllNotes();
     expect(notes).toHaveLength(0);
+  });
+});
+
+describe("file request storage", () => {
+  beforeEach(() => {
+    store.clear();
+  });
+
+  const request = (id: string, createdAt: string) => ({
+    id,
+    inboxFragment: `inbox-${id}`,
+    uploadFragment: `upload-${id}`,
+    hasPassword: false,
+    closesAt: "2099-01-01T00:00:00Z",
+    createdAt,
+  });
+
+  it("keeps requests apart from uploads and notes, newest first", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    await saveRequest(request("b", "2026-02-01T00:00:00Z"));
+    store.set("upload:x", { id: "x" });
+    expect((await getAllRequests()).map((r) => r.id)).toEqual(["b", "a"]);
+    expect(await getRequest("a")).toMatchObject({ inboxFragment: "inbox-a" });
+    await removeRequest("a");
+    expect(await getRequest("a")).toBeUndefined();
+    expect((await getAllRequests()).map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("remembers the uploads an inbox listed and gives back the ones it knew before", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    expect(await markUploadsSeen("a", "inbox-a", ["u1"])).toEqual(new Set());
+    expect(await markUploadsSeen("a", "inbox-a", ["u1", "u2"])).toEqual(new Set(["u1"]));
+    expect(await getRequest("a")).toMatchObject({ seenUploads: ["u1", "u2"] });
+  });
+
+  it("changes nothing for a link this browser did not store", async () => {
+    await saveRequest(request("a", "2026-01-01T00:00:00Z"));
+    expect(await markUploadsSeen("a", "made-up", ["u1"])).toBeNull();
+    expect(await markUploadsSeen("missing", "inbox-missing", ["u1"])).toBeNull();
+    expect((await getRequest("a"))?.seenUploads).toBeUndefined();
+  });
+});
+
+describe("request template storage", () => {
+  const template = (id: string, name: string) => ({
+    id,
+    name,
+    asks: ["files" as const],
+    createdAt: "2026-10-01T00:00:00.000Z",
+  });
+
+  it("lists the kept templates by name and removes one", async () => {
+    await saveTemplate(template("00000000-0000-4000-8000-000000000002", "WLAN"));
+    await saveTemplate(template("00000000-0000-4000-8000-000000000001", "Access"));
+    expect((await getAllTemplates()).map((t) => t.name)).toEqual(["Access", "WLAN"]);
+    await removeTemplate("00000000-0000-4000-8000-000000000001");
+    expect((await getAllTemplates()).map((t) => t.name)).toEqual(["WLAN"]);
+  });
+
+  it("reads the store like a template from elsewhere and leaves out what does not read", async () => {
+    store.set("template:broken", { id: "broken", name: "", asks: [] });
+    store.set("template:00000000-0000-4000-8000-000000000003", {
+      ...template("00000000-0000-4000-8000-000000000003", "Dirty\u202Ename"),
+      note: { v: 1, blocks: [{ type: "password", entries: [{ label: "PIN", value: "4711" }] }] },
+      asks: ["note"],
+    });
+    const [only] = await getAllTemplates();
+    expect(only?.name).toBe("Dirtyname");
+    expect(only?.note).toEqual({
+      v: 1,
+      blocks: [{ type: "password", entries: [{ label: "PIN", value: "" }] }],
+    });
   });
 });

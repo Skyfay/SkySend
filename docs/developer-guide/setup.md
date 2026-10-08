@@ -4,17 +4,34 @@ Set up a local development environment for SkySend.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 24 LTS or later
-- [pnpm](https://pnpm.io/) 9+
+- [Node.js](https://nodejs.org/) 24 LTS, the version in `.node-version` that CI and the Docker image use. A version manager like [fnm](https://github.com/Schniz/fnm) switches to it on its own.
+- [pnpm](https://pnpm.io/) 10
 - [Git](https://git-scm.com/)
+- Linux, macOS or Windows on x64 or arm64, the platforms the SQLite driver of the server ships prebuilt binaries for
 
 ## Clone and Install
 
 ```bash
 git clone https://github.com/Skyfay/SkySend.git
 cd SkySend
-pnpm install
+git checkout dev
 ```
+
+On macOS, the setup script installs fnm with the Node of `.node-version`, pnpm in the version `package.json` pins and the dependencies. It also offers to add the line to `~/.zshrc` that lets new terminals switch to that Node inside the project.
+
+```bash
+bash scripts/setup-dev-macos.sh
+```
+
+Elsewhere, install Node 24 and pnpm 10, then run `pnpm install` and create the dev environment from its template:
+
+```bash
+cp .env.dev.example .env.dev
+```
+
+The dev server reads `.env.dev`, which git ignores, so local values and secrets like an OIDC client stay out of the repository. `.env.dev.example` holds the defaults for development and is the file to update when a variable is added. `pnpm setup:worktree` copies `.env.dev` of the primary checkout into a new git worktree, or creates it from the template.
+
+New work happens on a branch off `dev`, and its pull request goes back into `dev`, never into `main`. See [Branches and Pull Requests](/developer-guide/#branches-and-pull-requests).
 
 ## Development
 

@@ -1,4 +1,5 @@
 import { GITHUB_REPO } from "@/lib/content";
+import type { MessageKey, Messages } from "@/i18n/translate";
 
 export type RoadmapStatus = "idea" | "planned" | "in-progress";
 
@@ -9,18 +10,14 @@ export type RoadmapCategory =
   | "security"
   | "developer-experience";
 
-export const ROADMAP_CATEGORIES: { value: RoadmapCategory; label: string }[] = [
-  { value: "core-sharing", label: "Core Sharing" },
-  { value: "storage", label: "Storage" },
-  { value: "monitoring", label: "Monitoring" },
-  { value: "security", label: "Security" },
-  { value: "developer-experience", label: "Developer Experience" },
-];
+// The title and the description of an entry live in the messages under
+// roadmap.items.<slug> and roadmap.shipped.<slug>, so a slug without them does
+// not compile.
+type ItemSlug = keyof Messages["roadmap"]["items"];
+type ShippedSlug = keyof Messages["roadmap"]["shipped"];
 
 export interface RoadmapItem {
-  slug: string;
-  title: string;
-  description: string;
+  slug: ItemSlug;
   status: RoadmapStatus;
   category: RoadmapCategory;
   issueNumber?: number;
@@ -28,171 +25,130 @@ export interface RoadmapItem {
 
 export const ROADMAP_ITEMS: RoadmapItem[] = [
   {
-    slug: "docker-deployment-hardening",
-    title: "Docker & Deployment Hardening",
-    description:
-      "A finalized multi-stage Dockerfile with optimized layers, a Docker Compose health check, graceful shutdown improvements, and production optimizations like compression and caching headers.",
-    status: "in-progress",
-    category: "developer-experience",
-  },
-  {
     slug: "download-speed-limit",
-    title: "Download Speed Limit",
-    description:
-      "A configurable download speed limit for the filesystem storage backend, matching the upload speed limit already available today (not needed for S3-compatible storage).",
     status: "planned",
     category: "storage",
   },
   {
     slug: "e2e-test-suite",
-    title: "End-to-End Test Suite",
-    description:
-      "A Playwright test suite covering critical flows - upload, share, download, verify, password-protected uploads, and multi-file uploads - running in CI.",
     status: "planned",
     category: "developer-experience",
   },
   {
     slug: "notification-on-download",
-    title: "Notification on Download",
-    description:
-      "An optional notification, via webhook or email, sent when a shared file is downloaded.",
     status: "idea",
     category: "monitoring",
   },
   {
     slug: "prometheus-metrics-endpoint",
-    title: "Prometheus Metrics Endpoint",
-    description:
-      "A /metrics endpoint exposing upload count, storage usage, active uploads, and download rate for monitoring.",
     status: "idea",
     category: "monitoring",
   },
 ];
 
 export interface ShippedItem {
-  slug: string;
-  title: string;
-  description: string;
+  slug: ShippedSlug;
+  /** A release has a version and takes its date from the changelog. */
   version?: string;
-  releaseDate: string;
-  changelogAnchor?: string;
-  link?: { href: string; label: string };
-  star?: boolean;
+  /** YYYY-MM-DD, for community milestones, which have no changelog entry. */
+  releaseDate?: string;
+  /** The headline features of a big release, listed on its card under "Now". */
+  highlights?: MessageKey[];
+  /** Where a community milestone links to. A release links to its changelog block. */
+  link?: string;
+  /** The star count of a community milestone. */
+  stars?: number;
 }
 
+// Bigger releases and community milestones, newest first. A release takes its
+// date and its link from docs/changelog.md, so the newest one appears with its
+// date as soon as `pnpm version:bump` writes it.
 export const SHIPPED_ITEMS: ShippedItem[] = [
   {
+    slug: "version-3",
+    version: "v3.0.0",
+    highlights: [
+      "roadmap.shipped.version-3.highlight1",
+      "roadmap.shipped.version-3.highlight2",
+      "roadmap.shipped.version-3.highlight3",
+      "roadmap.shipped.version-3.highlight4",
+    ],
+  },
+  {
+    slug: "download-integrity",
+    version: "v2.12.2",
+  },
+  {
+    slug: "link-previews",
+    version: "v2.12.1",
+  },
+  {
     slug: "300-github-stars",
-    title: "300 GitHub Stars",
-    description: "SkySend crossed 300 stars on GitHub, thank you for the continued support.",
+    stars: 300,
     releaseDate: "2026-08-10",
-    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
-    star: true,
+    link: `https://github.com/${GITHUB_REPO}/stargazers`,
+  },
+  {
+    slug: "new-website",
+    version: "v2.12.0",
   },
   {
     slug: "adaptive-zip-compression",
-    title: "Adaptive ZIP Compression",
-    description:
-      "Multi-file uploads now use store-only compression for already-compressed formats (audio, video, images, archives, office documents), reducing CPU load on mobile devices without affecting output size.",
     version: "v2.11.1",
-    releaseDate: "2026-05-31",
   },
   {
     slug: "200-github-stars",
-    title: "200 GitHub Stars",
-    description: "SkySend crossed 200 stars on GitHub, thanks to everyone in the community.",
+    stars: 200,
     releaseDate: "2026-05-28",
-    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
-    star: true,
+    link: `https://github.com/${GITHUB_REPO}/stargazers`,
   },
   {
     slug: "multi-block-code-notes",
-    title: "Multi-Block Code Notes and UI Improvements",
-    description: "Code notes support multiple language-tagged blocks in a single note.",
     version: "v2.9.0",
-    releaseDate: "2026-05-15",
   },
   {
     slug: "oidc-sso-authentication",
-    title: "OIDC / SSO Authentication",
-    description:
-      "Sign in to admin areas via any OIDC-compatible identity provider, alongside general improvements and security patches.",
     version: "v2.8.0",
-    releaseDate: "2026-05-14",
   },
   {
     slug: "100-github-stars",
-    title: "100 GitHub Stars",
-    description: "SkySend crossed 100 stars on GitHub.",
+    stars: 100,
     releaseDate: "2026-05-10",
-    link: { href: `https://github.com/${GITHUB_REPO}/stargazers`, label: "View on GitHub" },
-    star: true,
+    link: `https://github.com/${GITHUB_REPO}/stargazers`,
   },
   {
     slug: "native-os-share-button",
-    title: "Native OS Share Button",
-    description: "Share links directly through the operating system's native share sheet on supported devices.",
     version: "v2.7.0",
-    releaseDate: "2026-05-08",
   },
   {
     slug: "custom-branding-chinese-language",
-    title: "Custom Branding & Chinese Language",
-    description:
-      "New customization options for self-hosted instances (logo, title, accent color) plus Chinese language support.",
     version: "v2.6.0",
-    releaseDate: "2026-05-06",
   },
   {
     slug: "cli-client-pwa-support",
-    title: "CLI Client & PWA Support",
-    description:
-      "A cross-platform CLI binary for uploading and downloading with end-to-end encryption (single/multi-file, notes, password protection, WebSocket and HTTP chunked transports), plus installable PWA support for the web app.",
     version: "v2.4.0",
-    releaseDate: "2026-04-19",
   },
   {
     slug: "s3-storage-backend",
-    title: "S3 Storage Backend",
-    description: "S3-compatible object storage as a second storage backend alongside the local filesystem.",
     version: "v2.2.0",
-    releaseDate: "2026-04-15",
   },
   {
-    slug: "encrypted-notes-text-passwords-code-snippets-ssh-keys",
-    title: "Encrypted Notes, Text, Passwords, Code Snippets & SSH Keys",
-    description:
-      "SkySend's sharing model expands beyond files - encrypted plain text, passwords, code snippets, and SSH keys, all with the same zero-knowledge encryption as file uploads.",
+    slug: "encrypted-notes",
     version: "v2.0.0",
-    releaseDate: "2026-04-13",
+  },
+  {
+    slug: "docker-hardening",
+    version: "v1.0.0",
   },
   {
     slug: "first-stable-release",
-    title: "First Stable Release",
-    description: "The first stable release of SkySend, end-to-end encrypted file sharing with no accounts and no tracking.",
     version: "v1.0.0",
-    releaseDate: "2026-04-12",
   },
 ];
 
 export interface Milestone {
-  slug: string;
-  title: string;
-  description: string;
+  /** The star count the goal is reached at. */
   target: number;
-  unit: string;
-  liveSource?: "github-stars";
-  fallbackCurrent: number;
 }
 
-export const MILESTONES: Milestone[] = [
-  {
-    slug: "500-github-stars",
-    title: "500 GitHub Stars",
-    description: "Help SkySend reach its next community milestone.",
-    target: 500,
-    unit: "stars",
-    liveSource: "github-stars",
-    fallbackCurrent: 395,
-  },
-];
+export const MILESTONES: Milestone[] = [{ target: 500 }];

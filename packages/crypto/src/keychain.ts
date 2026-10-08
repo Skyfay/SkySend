@@ -48,9 +48,9 @@ export function generateSalt(): Uint8Array {
  * Import the raw secret as an HKDF base key.
  *
  * The secret is imported as non-extractable to prevent
- * accidental exposure via `exportKey()`.
+ * accidental exposure via `exportKey()`. request.ts reuses it, index.ts does not export it.
  */
-async function importHkdfKey(secret: Uint8Array): Promise<CryptoKey> {
+export async function importHkdfKey(secret: Uint8Array): Promise<CryptoKey> {
   if (secret.length !== SECRET_LENGTH) {
     throw new Error(`Secret must be exactly ${SECRET_LENGTH} bytes`);
   }

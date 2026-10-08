@@ -1,20 +1,58 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Info, X, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  File,
+  Globe,
+  HardDrive,
+  TriangleAlert,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DownloadDebugInfo } from "@/hooks/useDownload";
 import type { UploadDebugInfo } from "@/hooks/useUpload";
+import { cn, formatBytes } from "@/lib/utils";
 
 interface DebugPanelProps {
   downloadInfo?: DownloadDebugInfo | null;
   uploadInfo?: UploadDebugInfo | null;
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+/** One value in the tiles. `live` marks the path that is in use with a dot. */
+interface Fact {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  live?: boolean;
+  note?: string;
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/** How long after the first event, in the unit that reads best. */
+function sinceStart(ms: number): string {
+  if (ms < 1000) return `+${Math.round(ms)} ms`;
+  if (ms < 60_000) return `+${(ms / 1000).toFixed(1)} s`;
+  const seconds = Math.round(ms / 1000);
+  return `+${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+}
+
+/**
+ * What an upload or a download used, for a bug report: a row that sums it up and opens the
+ * details, the paths as tiles, and the timeline. It holds no key and no file name.
+ */
 export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -32,145 +70,205 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
     });
   };
 
-  const tierLabel = (tier: DownloadDebugInfo["tier"]) => {
-    if (tier === "sw") return t("debug.tierSw");
-    if (tier === "file-picker") return t("debug.tierFilePicker");
-    if (tier === "blob") return t("debug.tierBlob");
-    return "–";
-  };
+  const facts: Fact[] = [];
+  const summary: string[] = [];
+  let alert: string | null = null;
 
-  const transportLabel = (transport: UploadDebugInfo["transport"]) => {
-    if (transport === "ws") return t("debug.transportWs");
-    if (transport === "http") return t("debug.transportHttp");
-    return "–";
-  };
+  if (downloadInfo) {
+    const method = downloadInfo.tier
+      ? {
+          sw: t("debug.tierSw"),
+          "file-picker": t("debug.tierFilePicker"),
+          blob: t("debug.tierBlob"),
+        }[downloadInfo.tier]
+      : "–";
+    facts.push({ icon: Zap, label: t("debug.tier"), value: method, live: !!downloadInfo.tier });
+    if (downloadInfo.swPath) {
+      facts.push({ icon: ArrowRight, label: t("debug.swPath"), value: t("debug.swPathStream") });
+    }
+    facts.push({ icon: Globe, label: t("debug.browser"), value: downloadInfo.browser });
+    if (downloadInfo.fileSize != null) {
+      facts.push({
+        icon: File,
+        label: t("debug.fileSize"),
+        value: formatBytes(downloadInfo.fileSize),
+      });
+    }
+    summary.push(method, downloadInfo.browser);
+    if (downloadInfo.devtools) alert = t("debug.devtoolsOpen");
+  }
 
-  const allEvents = [
-    ...(downloadInfo?.events ?? []),
-    ...(uploadInfo?.events ?? []),
-  ].sort((a, b) => a.time.localeCompare(b.time));
+  if (uploadInfo) {
+    const transport =
+      uploadInfo.transport === "ws"
+        ? t("debug.transportWs")
+        : uploadInfo.transport === "http"
+          ? t("debug.transportHttp")
+          : "–";
+    facts.push({
+      icon: Zap,
+      label: t("debug.transport"),
+      value: transport,
+      live: uploadInfo.transport !== null && !uploadInfo.fallback,
+      note: uploadInfo.fallback ? t("debug.fallbackWsFailed") : undefined,
+    });
+    summary.push(transport);
+    if (uploadInfo.storage) {
+      const storage =
+        uploadInfo.storage === "s3" ? t("debug.storageS3") : t("debug.storageFilesystem");
+      facts.push({ icon: HardDrive, label: t("debug.storage"), value: storage });
+      summary.push(storage);
+    }
+    facts.push({ icon: Globe, label: t("debug.browser"), value: uploadInfo.browser });
+    summary.push(uploadInfo.browser);
+    if (uploadInfo.fallback) alert = t("debug.fallbackWsFailed");
+  }
+
+  const events = [...(downloadInfo?.events ?? []), ...(uploadInfo?.events ?? [])].sort((a, b) =>
+    a.time.localeCompare(b.time),
+  );
+  const failed = events.at(-1)?.failed === true;
+  const start = events.length > 0 ? new Date(events[0]!.time).getTime() : 0;
 
   return (
-    <div className="mt-2">
+    <div className="space-y-2.5 border-t border-border pt-4">
       <Button
         variant="ghost"
-        size="sm"
         onClick={() => setOpen((v) => !v)}
-        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
         aria-expanded={open}
-        aria-label={t("debug.title")}
+        className="h-auto min-h-12 w-full justify-start gap-3 rounded-[14px] px-2 py-2 text-left"
       >
-        <Info className="h-3.5 w-3.5" />
-        {t("debug.title")}
-        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+          <Activity />
+        </span>
+        <span>{t("debug.title")}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-normal text-muted-foreground">
+          <span className="truncate">{summary.join(" · ")}</span>
+          {alert && (
+            <span className="flex shrink-0 items-center gap-1.5 text-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              {alert}
+            </span>
+          )}
+          {failed && (
+            <span className="flex shrink-0 items-center gap-1.5 text-destructive-text">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              {t("debug.failed")}
+            </span>
+          )}
+        </span>
+        {open ? (
+          <ChevronUp className="text-muted-foreground" />
+        ) : (
+          <ChevronDown className="text-muted-foreground" />
+        )}
       </Button>
 
       {open && (
-        <div className="mt-1 rounded-lg border border-border/60 bg-muted/30 p-4 text-xs">
-          {/* Header row */}
-          <div className="mb-3 flex items-center justify-between">
-            <span className="font-semibold text-foreground">{t("debug.title")}</span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+        <div className="space-y-5 rounded-[20px] border border-border bg-well p-4 sm:p-[18px]">
+          <div className={cn("grid grid-cols-2 gap-2.5", facts.length === 3 && "sm:grid-cols-3")}>
+            {facts.map((fact) => (
+              <div
+                key={fact.label}
+                className="min-w-0 rounded-[14px] border border-border bg-card px-3.5 py-3 shadow-chip"
               >
-                {copied ? (
-                  <><Check className="h-3 w-3" />{t("debug.copied")}</>
-                ) : (
-                  <><Copy className="h-3 w-3" />{t("debug.copy")}</>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setOpen(false)}
-                className="h-6 w-6 p-0 text-muted-foreground"
-                aria-label={t("debug.close")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <fact.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{fact.label}</span>
+                </span>
+                <span className="mt-1.5 flex items-center gap-2 text-sm font-medium tabular-nums">
+                  {fact.live && (
+                    <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-primary ring-[3px] ring-primary-soft" />
+                  )}
+                  <span className="truncate">{fact.value}</span>
+                </span>
+                {fact.note && <span className="mt-1 block text-xs text-warning">{fact.note}</span>}
+              </div>
+            ))}
           </div>
 
-          {/* Download section */}
-          {downloadInfo && (
-            <div className="mb-3">
-              <p className="mb-1.5 font-medium text-foreground">{t("debug.download")}</p>
-              <div className="space-y-1 text-muted-foreground">
-                <DebugRow label={t("debug.tier")} value={tierLabel(downloadInfo.tier)} />
-                {downloadInfo.swPath && (
-                  <DebugRow label={t("debug.swPath")} value={t("debug.swPathStream")} />
-                )}
-                <DebugRow label={t("debug.browser")} value={downloadInfo.browser} />
-                {downloadInfo.devtools && (
-                  <DebugRow label={t("debug.devtools")} value={t("debug.devtoolsDetected")} />
-                )}
-                {downloadInfo.fileSize != null && (
-                  <DebugRow label={t("debug.fileSize")} value={formatBytes(downloadInfo.fileSize)} />
-                )}
+          {downloadInfo?.devtools && (
+            <div className="flex gap-3 rounded-[14px] border border-warning/25 bg-warning-soft px-3.5 py-3">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <div className="space-y-0.5 text-[13px] leading-relaxed">
+                <p className="font-medium text-warning">{t("debug.devtoolsWarningTitle")}</p>
+                <p className="text-foreground/80">{t("debug.devtoolsWarningText")}</p>
               </div>
             </div>
           )}
 
-          {/* Divider between sections */}
-          {downloadInfo && uploadInfo && (
-            <hr className="my-3 border-border/40" />
-          )}
-
-          {/* Upload section */}
-          {uploadInfo && (
-            <div className="mb-3">
-              <p className="mb-1.5 font-medium text-foreground">{t("debug.upload")}</p>
-              <div className="space-y-1 text-muted-foreground">
-                <DebugRow label={t("debug.transport")} value={transportLabel(uploadInfo.transport)} />
-                {uploadInfo.fallback && (
-                  <DebugRow label={t("debug.fallback")} value={t("debug.fallbackWsFailed")} />
-                )}
-                <DebugRow label={t("debug.browser")} value={uploadInfo.browser} />
+          {events.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13px] font-medium">{t("debug.timeline")}</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {t("debug.started", { time: formatTime(events[0]!.time) })}
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute bottom-2 left-1 top-2 w-px bg-border" />
+                <ol className="space-y-3.5 pl-[22px]">
+                  {events.map((event, i) => {
+                    // The last event is where it stands, an event that failed stands out anywhere.
+                    const tone = event.failed
+                      ? "failed"
+                      : i === events.length - 1
+                        ? "last"
+                        : "past";
+                    return (
+                      <li key={i} className="relative flex items-center gap-3 text-[13px]">
+                        <span
+                          className={cn(
+                            "absolute -left-[22px] top-1 h-[9px] w-[9px] rounded-full ring-[3px] ring-well",
+                            tone === "failed" &&
+                              "bg-destructive shadow-[0_0_0_6px_var(--color-destructive-soft)]",
+                            tone === "last" &&
+                              "bg-primary shadow-[0_0_0_6px_var(--color-primary-soft)]",
+                            tone === "past" && "bg-input",
+                          )}
+                        />
+                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                          {event.message}
+                          {event.detail && (
+                            <span
+                              className={cn(
+                                "max-w-full px-2 py-0.5 text-xs font-medium tabular-nums wrap-anywhere",
+                                tone === "failed"
+                                  ? "rounded-lg bg-destructive-soft text-destructive-text"
+                                  : "rounded-full",
+                                tone === "last" && "bg-primary-soft text-primary-text",
+                                tone === "past" && "bg-secondary text-muted-foreground",
+                              )}
+                            >
+                              {event.detail}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">
+                          {sinceStart(new Date(event.time).getTime() - start)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
             </div>
           )}
 
-          {/* Timeline */}
-          {allEvents.length > 0 && (
-            <>
-              <hr className="my-3 border-border/40" />
-              <p className="mb-1.5 font-medium text-foreground">{t("debug.timeline")}</p>
-              <ul className="space-y-0.5 text-muted-foreground">
-                {allEvents.map((ev, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="shrink-0 tabular-nums text-muted-foreground/60">
-                      {formatTime(ev.time)}
-                    </span>
-                    <span>{ev.message}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <div className="flex flex-col gap-3 border-t border-border pt-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-relaxed text-muted-foreground">{t("debug.note")}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              className="shrink-0 self-start sm:self-auto"
+            >
+              {copied ? <Check className="text-primary-text" /> : <Copy />}
+              {copied ? t("common.copied") : t("common.copy")}
+            </Button>
+          </div>
         </div>
       )}
     </div>
   );
-}
-
-function DebugRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-2">
-      <span className="w-24 shrink-0">{label}</span>
-      <span className="font-mono text-foreground/80">{value}</span>
-    </div>
-  );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const k = 1024;
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
-  const value = bytes / k ** i;
-  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }

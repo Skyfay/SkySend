@@ -1,0 +1,76 @@
+---
+title: "Anfragen: Dateien und Notizen, die nur Sie öffnen können"
+excerpt: "SkySend 3.0 dreht das Teilen um. Schicken Sie jemandem einen Upload-Link, und die Dateien, die Notiz oder beides, was zurückkommt, sind nur für Sie verschlüsselt."
+tags: ["Release", "Anfragen", "Notizen", "Verschlüsselung"]
+---
+
+Bisher funktionierte SkySend in eine Richtung. Sie hatten etwas, haben es im Browser verschlüsselt und den Link verschickt. Genauso oft läuft es aber andersherum: Sie brauchen einen unterschriebenen Vertrag von einem Kunden, die Zugangsdaten eines Routers von jemandem vor Ort oder den Scan eines Ausweises zusammen mit den Kontodaten einer neuen Kollegin. Das landet dann meist als E-Mail-Anhang oder Nachricht in einem Chat und liegt dort jahrelang.
+
+SkySend 3.0 bringt **Anfragen**. Sie fordern Dateien, eine Notiz oder beides an, geben den Upload-Link weiter, und was ankommt, ist nur für Sie verschlüsselt. Wer sendet, braucht kein Konto, und der Server kann den Posteingang nicht öffnen.
+
+## So funktioniert eine Anfrage
+
+1. Öffnen Sie **Anfordern** in der App und wählen Sie, was Sie anfordern: **Dateien**, eine **Notiz** oder **Beides**.
+2. Schreiben Sie bei Bedarf eine Zeile dazu, was Sie brauchen, etwa „Unterlagen für die Steuererklärung“. Die sendende Person sieht sie, der Server speichert sie nur verschlüsselt.
+3. Legen Sie fest, wie lange die Anfrage offen bleibt, wie viele Uploads sie annimmt, wie groß einer sein darf und, wenn Sie möchten, ein Passwort für den Posteingang.
+4. Klicken Sie auf **Anfrage erstellen**, und Sie erhalten zwei Links.
+
+Wer sendet, öffnet den Upload-Link, zieht die Dateien hinein, füllt die Notiz aus oder macht beides und klickt auf **Verschlüsseln und senden**. Der Browser verschlüsselt alles, bevor es das Gerät verlässt, und es bleibt nichts zum Aufbewahren zurück. Sie öffnen den Posteingangs-Link, und Ihr Browser entschlüsselt, was angekommen ist.
+
+## Zwei Links, zwei Aufgaben
+
+Der **Upload-Link** erlaubt das Senden in die Anfrage und sonst nichts. Geben Sie ihn allen, die Ihnen etwas schicken sollen.
+
+Der **Posteingangs-Link** öffnet, lädt herunter und löscht alles, was ankommt. Er ist der einzige Weg hinein.
+
+<Callout title="Behalten Sie den Posteingangs-Link für sich.">
+Niemand kann ihn wiederherstellen, auch nicht der Betreiber der Instanz. Speichern Sie ihn, bevor Sie die Seite verlassen, oder setzen Sie ein Passwort, damit der Link allein nichts öffnet.
+</Callout>
+
+## Dateien anfordern
+
+Die sendende Person zieht eine oder mehrere Dateien in die Upload-Seite. Mehrere Dateien in einem Upload kommen als ein ZIP-Archiv an, wie bei einem normalen Upload mit mehreren Dateien. Sie legen fest, wie groß ein Upload sein darf, bis zum Limit der Instanz, und wie oft Sie jeden herunterladen können.
+
+## Eine Notiz anfordern
+
+Manches ist keine Datei: ein Passwort, ein API-Schlüssel, die Daten eines WLANs. Eine Anfrage kann stattdessen eine Notiz anfordern, damit so etwas nie durch einen Chat gehen muss.
+
+Legen Sie die Felder der Notiz in einer Vorlage an, etwa einen Benutzernamen und ein Passwort. Die sendende Person sieht Ihre Felder mit festen Bezeichnungen und füllt die Werte aus. SkySend bringt Vorlagen für Zugangsdaten, einen SSH-Schlüssel, ein WLAN und einen API-Schlüssel mit, und Sie können eigene speichern. Ohne Vorlage schreibt die sendende Person frei, mit denselben Blöcken wie jede Notiz in SkySend: Text, Passwörter, Code und SSH-Schlüssel.
+
+Im Posteingang zeigt **Öffnen** die Notiz direkt in der Seite, mit Knöpfen, um alles zu kopieren oder als Text zu speichern. Vorlagen liegen in Ihrem Browser und enthalten nie einen Wert, nur die Felder.
+
+## Beides anfordern
+
+Eine Anfrage für beides nimmt Dateien und eine Notiz derselben Person in einem Zug an. Sie fügt die Dateien hinzu und füllt die Notiz aus, bevor sie senden kann, und beides kommt zusammen als eine Einsendung an, nebeneinander in Ihrem Posteingang. Bricht die Verbindung ab, nachdem die Dateien angekommen sind, sendet der nächste Versuch nur noch die Notiz.
+
+Das passt überall dort, wo ein Dokument allein nicht reicht, etwa ein Ausweis-Scan zusammen mit einer Steuernummer oder ein Zertifikat zusammen mit seiner Passphrase.
+
+## Im Vergleich zu den üblichen Wegen
+
+<Compare left="E-Mail oder Chat" right="Eine SkySend-Anfrage">
+  <Row label="Wer es lesen kann" left="Sie und der Anbieter" right="Nur Sie" />
+  <Row label="Dateinamen und Notizfelder" left="Für den Anbieter lesbar" right="Im Browser der sendenden Person verschlüsselt" />
+  <Row label="Ein Passwort darin" left="Bleibt jahrelang im Verlauf" right="Wird mit dem Upload gelöscht" />
+  <Row label="Was die sendende Person braucht" left="Ein Konto beim selben Dienst" right="Den Upload-Link" />
+</Compare>
+
+## Die Kryptografie in Kürze
+
+Wenn Sie eine Anfrage erstellen, erzeugt Ihr Browser ein P-256-Schlüsselpaar. Der öffentliche Schlüssel kommt in den Teil des Upload-Links nach dem `#`, den Browser nie an einen Server senden. Der private Schlüssel wird in einem Tresor versiegelt, den nur der Posteingangs-Link öffnet.
+
+Der Browser der sendenden Person verschlüsselt die Dateien oder die Notiz mit einem frischen Schlüssel, wie bei jedem Upload in SkySend, und versiegelt diesen Schlüssel mit HPKE nach RFC 9180 für Ihren öffentlichen Schlüssel. Eine Notiz wird vorher auf ganze Kilobyte aufgefüllt, damit ihre Größe wenig darüber verrät, wie lang ein Passwort darin ist. Der Server speichert den Chiffretext, den versiegelten Schlüssel und den Tresor, erfährt aber nie das Geheimnis eines der Links oder den öffentlichen Schlüssel. Dass der öffentliche Schlüssel dem Server fehlt, ist ebenfalls wichtig: Ein Server, der ihn kennt, könnte eigene Uploads in Ihren Posteingang schmuggeln.
+
+Das vollständige Design steht auf der [Seite zur Kryptografie der Anfragen](https://docs.skysend.app/developer-guide/crypto/file-requests).
+
+## Was Sie beachten sollten
+
+- Wer den Upload-Link hat, kann senden und die Plätze der Anfrage aufbrauchen. Teilen Sie ihn nur mit den Personen, die Sie anfragen.
+- Jeder Upload ist als ungeprüft markiert. Öffnen Sie nur, was Sie erwartet haben.
+- Eine Notiz zu öffnen zählt als ein Aufruf. Löschen Sie eine Notiz mit einem Passwort darin also, sobald Sie sie gelesen haben.
+- Uploads werden nach der Aufbewahrungszeit der Instanz gelöscht oder sobald ihre Downloads aufgebraucht sind. Eine Anfrage nimmt keine Uploads mehr an, wenn ihre Zeit abläuft oder Sie sie schließen.
+
+## Für Betreiber
+
+Anfragen sind standardmäßig aktiv. Eine Instanz, die `ENABLED_SERVICES` setzt, ergänzt `request`, um sie anzubieten. Eine Anfrage für eine Notiz funktioniert auch, wenn `note` fehlt, und ihre Größe richtet sich nach `NOTE_MAX_SIZE`. Mit `OIDC_PROTECT_REQUESTS` braucht das Erstellen einer Anfrage eine Anmeldung, das Senden in eine Anfrage nie. Eine öffentliche Instanz sollte `FILE_REQUEST_DAILY_LIMIT` und ein Upload-Kontingent setzen.
+
+Alles Weitere steht in der [Anleitung zu Anfragen](https://docs.skysend.app/user-guide/file-requests).

@@ -5,6 +5,9 @@ import {
   CHANGELOG,
   FRAGMENT_DIR,
   SECTIONS,
+  creditAll,
+  creditFragment,
+  findContribution,
   insertBlock,
   parseFragment,
   readFragments,
@@ -255,6 +258,30 @@ describe("the version block of a release", () => {
   });
 });
 
+describe("the entries of a section", () => {
+  it("are grouped by scope in the order of the scopes, each keeping the order of its fragments", () => {
+    const first = parseFragment(
+      "### ✨ Features\n\n- **web**: Web one.\n- **infra**: Infra one.\n- **server**: Server one.",
+      "a.md",
+    );
+    const second = parseFragment(
+      "### ✨ Features\n\n- **client**: Client one.\n- **web**: Web two.\n- **server**: Server two.",
+      "b.md",
+    );
+
+    const block = renderBlock("3.0.0", "`latest`, `v3`", [first, second]);
+    const features = block.split("\n").filter((line) => line.startsWith("- **"));
+    expect(features.slice(0, 6)).toEqual([
+      "- **server**: Server one.",
+      "- **server**: Server two.",
+      "- **web**: Web one.",
+      "- **web**: Web two.",
+      "- **client**: Client one.",
+      "- **infra**: Infra one.",
+    ]);
+  });
+});
+
 describe("a release", () => {
   it("writes the block into the changelog and deletes the fragments, but keeps the README", () => {
     const files = memoryFiles({
@@ -311,5 +338,118 @@ describe("a release", () => {
       release({ version: "2.12.1", tags: "`latest`, `v2`", dir: DIR, changelog: MEMORY_CHANGELOG }),
     ).toThrow(/already lists v2\.12\.1/);
     expect(files.has(`${DIR}/Skyfay-fix.md`)).toBe(true);
+  });
+});
+
+describe("the thanks of an outside contribution", () => {
+  const PR_81 = "Thanks @NotAFlightRisk ([#81](https://github.com/Skyfay/SkySend/pull/81))";
+  const contribution = { author: "NotAFlightRisk", number: 81 };
+
+  it("goes at the end of every entry of the fragment", () => {
+    const fragment = parseFragment(
+      "### 🐛 Bug Fixes\n\n- **client**: Kept the file.\n\n### 🧪 Tests\n\n- **client**: Covered it.",
+      "fix-keep-file-on-failed-download.md",
+    );
+    const credited = creditFragment(fragment, contribution);
+    expect(credited.sections.get("### 🐛 Bug Fixes")).toEqual([
+      `- **client**: Kept the file. ${PR_81}`,
+    ]);
+    expect(credited.sections.get("### 🧪 Tests")).toEqual([`- **client**: Covered it. ${PR_81}`]);
+    // The fragment read from disk stays as it was.
+    expect(fragment.sections.get("### 🐛 Bug Fixes")).toEqual(["- **client**: Kept the file."]);
+  });
+
+  it("leaves an entry that thanks someone already, and a fragment without a contribution", () => {
+    const advisory =
+      "- **server**: Fixed. Thanks @rajnisht7 ([GHSA-9rmm-v3p2-c26g](https://github.com/Skyfay/SkySend/security/advisories/GHSA-9rmm-v3p2-c26g))";
+    const fragment = parseFragment(`### 🔒 Security\n\n${advisory}`, "fix.md");
+    expect(creditFragment(fragment, contribution).sections.get("### 🔒 Security")).toEqual([
+      advisory,
+    ]);
+    expect(creditFragment(fragment, null)).toBe(fragment);
+  });
+
+  it("ends up in the version block of the release", () => {
+    const files = memoryFiles({
+      [MEMORY_CHANGELOG]: RELEASED,
+      [`${DIR}/fix-keep-file-on-failed-download.md`]:
+        "### 🐛 Bug Fixes\n\n- **client**: Kept the file.",
+    });
+
+    release({
+      version: "2.13.0",
+      tags: "`latest`, `v2`",
+      dir: DIR,
+      changelog: MEMORY_CHANGELOG,
+      credit: (fragments) => creditAll(fragments, () => contribution).fragments,
+    });
+
+    expect(files.get(MEMORY_CHANGELOG)).toContain(`- **client**: Kept the file. ${PR_81}`);
+  });
+
+  it("is left out for a fragment whose lookup fails, which the release names", () => {
+    const fragments = [
+      parseFragment("### 🐛 Bug Fixes\n\n- **client**: One.", "a.md"),
+      parseFragment("### 🐛 Bug Fixes\n\n- **web**: Two.", "b.md"),
+    ];
+    const { fragments: credited, missing } = creditAll(fragments, (name) => {
+      if (name === "a.md") throw new Error("gh: not logged in");
+      return contribution;
+    });
+    expect(missing).toEqual(["a.md"]);
+    expect(credited[0]).toBe(fragments[0]);
+    expect(credited[1]?.sections.get("### 🐛 Bug Fixes")).toEqual([`- **web**: Two. ${PR_81}`]);
+  });
+});
+
+describe("the pull request behind a fragment", () => {
+  const SHA = "5e3d2206161668ba7e428dd0e6550dfc7ddbfd5c";
+
+  /** Answers git with the commit that added the fragment and gh with the pull request. */
+  function answers(git: string, gh: string) {
+    const calls: Array<[string, string[]]> = [];
+    const run = (command: string, args: string[]) => {
+      calls.push([command, args]);
+      return command === "git" ? git : gh;
+    };
+    return { run, calls };
+  }
+
+  it("is the pull request of the commit that added the file, with its author", () => {
+    const { run, calls } = answers(`${SHA}\n`, "81\tNotAFlightRisk\tUser\n");
+    expect(findContribution("fix.md", { dir: DIR, run })).toEqual({
+      author: "NotAFlightRisk",
+      number: 81,
+    });
+    expect(calls[0]).toEqual([
+      "git",
+      ["log", "-1", "--diff-filter=A", "--format=%H", "--", `${DIR}/fix.md`],
+    ]);
+    expect(calls[1]?.[1]).toContain(`repos/Skyfay/SkySend/commits/${SHA}/pulls`);
+  });
+
+  it("thanks nobody for a maintainer's pull request, a bot's, or a fragment without one", () => {
+    expect(findContribution("a.md", { dir: DIR, ...answers(SHA, "80\tSkyfay\tUser") })).toBeNull();
+    expect(
+      findContribution("a.md", { dir: DIR, ...answers(SHA, "90\tdependabot[bot]\tBot") }),
+    ).toBeNull();
+    expect(findContribution("a.md", { dir: DIR, ...answers(SHA, "") })).toBeNull();
+    // A fragment that is not committed yet.
+    expect(findContribution("a.md", { dir: DIR, ...answers("", "unused") })).toBeNull();
+  });
+
+  it("turns down an answer that does not look like what GitHub hands out", () => {
+    for (const gh of [
+      "81\tevil)](https://x.example)\tUser",
+      "0\tsomeone\tUser",
+      "81\t-dash\tUser",
+    ]) {
+      expect(() => findContribution("a.md", { dir: DIR, ...answers(SHA, gh) })).toThrow(
+        /no pull request/,
+      );
+    }
+    expect(() => findContribution("a.md", { dir: DIR, ...answers("not-a-sha", "") })).toThrow(
+      /no commit/,
+    );
   });
 });

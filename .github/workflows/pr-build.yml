@@ -1,0 +1,184 @@
+# ─── PR Build ────────────────────────────────────────────────
+# On a pull request into main, builds what the release ships, without
+# publishing any of it, so a broken build shows up before the merge instead
+# of after the tag:
+#   - the Docker image for both platforms, started once and checked through
+#     the health endpoint like the Build Test of the release
+#   - the CLI binaries for all five targets, signed like the release and
+#     each started once with --version where the runner can execute it
+#
+# Its own workflow rather than jobs of Validate, since the release calls
+# Validate and would list these jobs as skipped. Pull requests into dev only
+# run Validate.
+#
+# One job, Approve, waits for an approval through the environment pr-build,
+# whose required reviewers are set in the settings of the repository, and every
+# build job waits for Approve. GitHub asks for a review once per job that names
+# the environment, so only Approve names it: a run sends one request, not one
+# per build job. Until someone approves it the jobs wait, so the build stays
+# optional.
+
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: pr-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  approve:
+    name: Approve
+    environment: pr-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approved
+        run: echo "The build jobs start now."
+
+  docker:
+    name: Docker (${{ matrix.suffix }})
+    needs: approve
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build (${{ matrix.suffix }})
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: skysend:pr-${{ matrix.suffix }}
+          # A pull request reads its own cache from earlier pushes, and writes
+          # it under a scope of its own so the release cache stays untouched.
+          cache-from: |
+            type=gha,scope=build-${{ matrix.suffix }}
+            type=gha,scope=pr-build-${{ matrix.suffix }}
+          cache-to: type=gha,scope=pr-build-${{ matrix.suffix }},mode=max
+
+      - name: Start container
+        run: |
+          docker run -d --name smoke \
+            -p 3000:3000 \
+            -e BASE_URL=http://localhost:3000 \
+            "skysend:pr-${{ matrix.suffix }}"
+
+      - name: Wait for healthy
+        run: |
+          echo "Waiting for container to become healthy..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "Health check passed after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Container failed to start within 60s"
+          echo "--- Container logs ---"
+          docker logs smoke
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f smoke || true
+
+  cli:
+    name: CLI (${{ matrix.target }})
+    needs: approve
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+            binary: skysend-linux-x64
+            runnable: true
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            binary: skysend-linux-arm64
+            runnable: true
+          # Built on an arm64 macOS runner like the release, which cannot
+          # start an x64 binary, so this one is only compiled.
+          - target: macos-x64
+            runner: macos-latest
+            binary: skysend-macos-x64
+            runnable: false
+          - target: macos-arm64
+            runner: macos-latest
+            binary: skysend-macos-arm64
+            runnable: true
+          - target: windows-x64
+            runner: windows-latest
+            binary: skysend-windows-x64.exe
+            runnable: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm --filter @skysend/crypto --filter @skysend/note-format build && pnpm --filter @skysend/client build
+
+      - name: Compile binary
+        run: pnpm --filter @skysend/client build:${{ matrix.target }}
+
+      # Bun leaves the signature of a macOS binary invalid, and Apple Silicon
+      # kills a binary with an invalid signature as soon as it starts. An
+      # ad-hoc signature, signed the same way as in the release, is enough for a binary installed by install.sh or
+      # skysend update, which download it without a quarantine flag.
+      - name: Sign macOS binary
+        if: startsWith(matrix.target, 'macos-')
+        run: |
+          codesign --sign - --force apps/client/dist/skysend-${{ matrix.target }}
+          codesign --verify --verbose apps/client/dist/skysend-${{ matrix.target }}
+
+      - name: Start binary
+        if: matrix.runnable
+        shell: bash
+        run: |
+          expected=$(node -p "require('./package.json').version")
+          actual=$("apps/client/dist/${{ matrix.binary }}" --version)
+          echo "skysend --version: ${actual}"
+          if [ "$actual" != "$expected" ]; then
+            echo "Expected version ${expected}"
+            exit 1
+          fi
+
+      # Kept for a few days, so the binary of a pull request can be tried by hand.
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.target }}
+          path: apps/client/dist/${{ matrix.binary }}
+          retention-days: 7

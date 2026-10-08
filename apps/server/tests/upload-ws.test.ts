@@ -1,9 +1,9 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import type { WSContext, WSEvents, WSMessageReceive } from "hono/ws";
-import type { UpgradeWebSocket } from "hono/ws";
 import { createTestDb, createTestStorage } from "./helpers.js";
+import { createFakeWs, createMockUpgrade, msgEvent } from "./ws-helpers.js";
 import { uploads } from "../src/db/schema.js";
 import type { FileStorage } from "../src/storage/filesystem.js";
 
@@ -19,7 +19,7 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { createUploadWsRoute } from "../src/routes/upload-ws.js";
+import { createUploadWsRoute, type UploadWsRouteDeps } from "../src/routes/upload-ws.js";
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -57,93 +57,6 @@ const DEFAULT_CONFIG = {
   S3_PART_SIZE: 25 * 1024 * 1024,
   S3_CONCURRENCY: 4,
 };
-
-/**
- * Create a fake WSContext pair (ws + captured messages) compatible
- * enough with the route's code path.
- */
-function createFakeWs() {
-  const sent: Array<string | Uint8Array> = [];
-  let closeInfo: { code?: number; reason?: string } | null = null;
-
-  const ws = {
-    send: (data: string | ArrayBuffer | Uint8Array) => {
-      if (typeof data === "string") {
-        sent.push(data);
-      } else if (data instanceof ArrayBuffer) {
-        sent.push(new Uint8Array(data));
-      } else {
-        sent.push(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
-      }
-    },
-    close: (code?: number, reason?: string) => {
-      if (closeInfo) return;
-      closeInfo = { code, reason };
-    },
-    readyState: 1,
-    binaryType: "arraybuffer" as BinaryType,
-    url: null,
-    protocol: null,
-    raw: undefined,
-  } as unknown as WSContext;
-
-  return {
-    ws,
-    sent,
-    get closed() { return closeInfo; },
-    lastJson(): Record<string, unknown> | null {
-      for (let i = sent.length - 1; i >= 0; i--) {
-        const item = sent[i];
-        if (typeof item === "string") {
-          try { return JSON.parse(item); } catch { /* keep looking */ }
-        }
-      }
-      return null;
-    },
-    allJson(): Array<Record<string, unknown>> {
-      const out: Array<Record<string, unknown>> = [];
-      for (const item of sent) {
-        if (typeof item === "string") {
-          try { out.push(JSON.parse(item)); } catch { /* skip */ }
-        }
-      }
-      return out;
-    },
-  };
-}
-
-/**
- * Build a message event compatible with the Hono WS helper.
- */
-function msgEvent(data: WSMessageReceive): MessageEvent<WSMessageReceive> {
-  return { data } as unknown as MessageEvent<WSMessageReceive>;
-}
-
-/**
- * Install a mock upgradeWebSocket that captures the event handlers and
- * returns a no-op middleware.  The returned handlers are invoked manually
- * by the tests to exercise the protocol logic.
- */
-function createMockUpgrade(): {
-  upgrade: UpgradeWebSocket;
-  getEvents: () => WSEvents;
-} {
-  let events: WSEvents | null = null;
-  const upgrade = ((createEvents: (c: unknown) => WSEvents | Promise<WSEvents>) => {
-    return async (c: unknown, next: () => Promise<void>) => {
-      const res = await createEvents(c);
-      events = res;
-      await next();
-    };
-  }) as unknown as UpgradeWebSocket;
-  return {
-    upgrade,
-    getEvents: () => {
-      if (!events) throw new Error("events not installed yet");
-      return events;
-    },
-  };
-}
 
 /** Build a valid upload-init payload. */
 function buildHeaders(overrides: Record<string, unknown> = {}) {
@@ -189,21 +102,17 @@ describe("upload-ws route", () => {
 
   async function bootstrap() {
     const mock = createMockUpgrade();
-    const recordUsage = vi.fn();
     const route = createUploadWsRoute({
       storage,
       upgradeWebSocket: mock.upgrade,
-      quota: {
-        check: () => ({ ok: true, hashedIp: null }),
-        record: recordUsage,
-      },
+      quota: { reserve: () => ({ ok: true, reservation: null }) },
     });
     // Trigger the middleware to install the event handlers.
     await route.request("/", {
       method: "GET",
       headers: { "X-Forwarded-For": "127.0.0.1" },
     });
-    return { events: mock.getEvents(), recordUsage };
+    return { events: mock.getEvents() };
   }
 
   it("completes a happy-path upload", async () => {
@@ -245,6 +154,49 @@ describe("upload-ws route", () => {
     // File content matches
     const written = await readFile(storageCtx.tempDir + "/" + uploadId + ".bin");
     expect(new Uint8Array(written)).toEqual(payload);
+  });
+
+  it("answers a frame that is JSON but not an object instead of crashing", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    await events.onMessage!(msgEvent("null"), fake.ws);
+    expect(fake.lastJson()).toMatchObject({
+      type: "error",
+      message: "First message must be of type 'init'",
+    });
+  });
+
+  it("leaves no file behind when the socket closes while the init is checked", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    const opening = events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders() })),
+      fake.ws,
+    );
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+    await opening;
+    const { readdirSync } = await import("node:fs");
+    expect(readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"))).toHaveLength(0);
+  });
+
+  it("stores nothing when the socket closes during finalize", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "64" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(64).buffer), fake.ws);
+    // The close lands while finalize writes the last bytes to storage.
+    const append = storage.appendChunk.bind(storage);
+    vi.spyOn(storage, "appendChunk").mockImplementationOnce(async (id, stream) => {
+      await events.onClose!(new CloseEvent("close"), fake.ws);
+      return append(id, stream);
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+    expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+    const { readdirSync } = await import("node:fs");
+    expect(readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"))).toHaveLength(0);
   });
 
   it("rejects invalid init payload", async () => {
@@ -298,8 +250,7 @@ describe("upload-ws route", () => {
       storage,
       upgradeWebSocket: mock.upgrade,
       quota: {
-        check: () => ({ ok: false, reason: "Upload quota exceeded. Try again later." }),
-        record: vi.fn(),
+        reserve: () => ({ ok: false, status: 429, reason: "Upload quota exceeded. Try again later." }),
       },
     });
     await route.request("/", { method: "GET" });
@@ -355,16 +306,75 @@ describe("upload-ws route", () => {
     expect(done).toBeTruthy();
   });
 
-  it("records quota usage on successful finalize", async () => {
+  it("writes a buffer below the flush threshold out after a second", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { events } = await bootstrap();
+      const fake = createFakeWs();
+      const append = vi.spyOn(storage, "appendChunk");
+      await events.onMessage!(
+        msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "64" }) })),
+        fake.ws,
+      );
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      // A later frame does not push the deadline back.
+      await vi.advanceTimersByTimeAsync(600);
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      expect(append).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(400);
+      expect(append).toHaveBeenCalledTimes(1);
+
+      await events.onMessage!(msgEvent(new Uint8Array(44).buffer), fake.ws);
+      await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+      expect(fake.lastJson()).toMatchObject({ type: "done" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a stored upload when recording the quota fails", async () => {
     const mock = createMockUpgrade();
-    const recordUsage = vi.fn();
     const route = createUploadWsRoute({
       storage,
       upgradeWebSocket: mock.upgrade,
       quota: {
-        check: () => ({ ok: true, hashedIp: "hashed-ip-1" }),
-        record: recordUsage,
+        reserve: () => ({
+          ok: true,
+          reservation: {
+            commit: () => {
+              throw new Error("SQLITE_BUSY");
+            },
+            release: vi.fn(),
+          },
+        }),
       },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    expect(await storage.exists(done.id)).toBe(true);
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row?.size).toBe(16);
+  });
+
+  it("commits the quota reservation on successful finalize", async () => {
+    const mock = createMockUpgrade();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve: () => ({ ok: true, reservation }) },
     });
     await route.request("/", { method: "GET" });
     const events = mock.getEvents();
@@ -380,6 +390,169 @@ describe("upload-ws route", () => {
       fake.ws,
     );
 
-    expect(recordUsage).toHaveBeenCalledWith("hashed-ip-1", 16);
+    expect(reservation.commit).toHaveBeenCalledWith(16);
+  });
+
+  it("gives the quota reservation back when the socket closes before finalize", async () => {
+    const mock = createMockUpgrade();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve: () => ({ ok: true, reservation }) },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onMessage!(msgEvent(new Uint8Array(8).buffer), fake.ws);
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+
+    expect(reservation.release).toHaveBeenCalled();
+    expect(reservation.commit).not.toHaveBeenCalled();
+  });
+
+  // ── Init frame checks ───────────────────────────────
+
+  /** The route with a quota whose reservations the test can count. */
+  async function bootstrapCountingReserve() {
+    const mock = createMockUpgrade();
+    const reserve = vi.fn<UploadWsRouteDeps["quota"]["reserve"]>(() => ({
+      ok: true,
+      reservation: null,
+    }));
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve },
+    });
+    await route.request("/", { method: "GET" });
+    return { events: mock.getEvents(), reserve };
+  }
+
+  const storedBlobs = () => readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+
+  it("refuses an init frame without a headers object", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    for (const init of [{ type: "init" }, { type: "init", headers: "authToken=a" }]) {
+      const fake = createFakeWs();
+      await events.onMessage!(msgEvent(JSON.stringify(init)), fake.ws);
+      expect(fake.lastJson()).toEqual({
+        type: "error",
+        message: "First message must be of type 'init'",
+      });
+      expect(fake.closed?.code).toBe(1003);
+    }
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("refuses init headers that fail the schema before reserving any quota", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    const headers = buildHeaders({ authToken: "not base64url!" });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    expect(fake.lastJson()).toEqual({ type: "error", message: "Invalid upload headers" });
+    expect(fake.closed?.code).toBe(1008);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("refuses init headers that break a server limit before reserving any quota", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ expireSec: "999" }) })),
+      fake.ws,
+    );
+    expect(fake.lastJson()).toEqual({
+      type: "error",
+      message: "Invalid expiry time. Must be one of the allowed options.",
+    });
+    expect(fake.closed?.code).toBe(1008);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("accepts numbers and booleans in the init headers and skips null fields", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    // "null" as a string would fail the passwordAlgo enum, so a skipped field is what lets it pass.
+    const headers = buildHeaders({
+      maxDownloads: 3,
+      expireSec: 3600,
+      fileCount: 2,
+      contentLength: 16,
+      hasPassword: false,
+      passwordSalt: null,
+      passwordAlgo: null,
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    expect(fake.allJson().some((frame) => frame.type === "ready")).toBe(true);
+    expect(reserve).toHaveBeenCalledWith(expect.any(String), 16);
+
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row).toMatchObject({
+      size: 16,
+      maxDownloads: 3,
+      fileCount: 2,
+      hasPassword: false,
+      passwordSalt: null,
+      passwordAlgo: null,
+    });
+  });
+
+  it("stores the password salt and algorithm of a password-protected upload", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    const passwordSalt = crypto.getRandomValues(new Uint8Array(16));
+    const headers = buildHeaders({
+      contentLength: "16",
+      hasPassword: "true",
+      passwordSalt: Buffer.from(passwordSalt).toString("base64url"),
+      passwordAlgo: "argon2id-v2",
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row?.hasPassword).toBe(true);
+    expect(row?.passwordAlgo).toBe("argon2id-v2");
+    expect(new Uint8Array(row!.passwordSalt!)).toEqual(passwordSalt);
+  });
+
+  it("gives the quota reservation back when the socket closes while init runs", async () => {
+    const mock = createMockUpgrade();
+    const reservation = { commit: vi.fn(), release: vi.fn() };
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve: () => ({ ok: true, reservation }) },
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const fake = createFakeWs();
+
+    const init = events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ contentLength: "16" }) })),
+      fake.ws,
+    );
+    await events.onClose!(new CloseEvent("close"), fake.ws);
+    await init;
+
+    expect(reservation.release).toHaveBeenCalled();
+    expect(reservation.commit).not.toHaveBeenCalled();
   });
 });

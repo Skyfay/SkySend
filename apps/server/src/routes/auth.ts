@@ -20,6 +20,7 @@ import {
   pkceCookieOptions,
   clearCookieOptions,
 } from "../auth/session.js";
+import { describeError } from "../lib/log-error.js";
 
 /**
  * Create the OIDC auth route group (/auth/*).
@@ -81,7 +82,7 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
     try {
       oidcConfig = await fetchOidcConfig();
     } catch (err) {
-      console.error("[oidc] Discovery failed:", err);
+      console.error("[oidc] Discovery failed:", describeError(err));
       return c.json({ error: "OIDC provider is currently unreachable - try again later" }, 503);
     }
 
@@ -147,7 +148,7 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
     try {
       oidcConfig = await fetchOidcConfig();
     } catch (err) {
-      console.error("[oidc] Discovery failed during callback:", err);
+      console.error("[oidc] Discovery failed during callback:", describeError(err));
       return c.json({ error: "OIDC provider is currently unreachable - try again later" }, 503);
     }
 
@@ -164,7 +165,7 @@ export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Ho
         expectedNonce: pkce.nonce,
       });
     } catch (err) {
-      console.error("[oidc] Token exchange failed:", err);
+      console.error("[oidc] Token exchange failed:", describeError(err));
       return c.json({ error: "Token exchange failed" }, 400);
     }
 

@@ -5,22 +5,24 @@ This guide walks you through uploading and sharing your first file with SkySend.
 ## Upload a File
 
 1. Open SkySend in your browser (default: [http://localhost:3000](http://localhost:3000))
-2. **Drag & drop** a file onto the upload zone, or **click** to select a file
-3. Optionally configure:
-   - **Expiry time** - How long the upload should be available
-   - **Download limit** - Maximum number of downloads
-   - **Password** - Optional password protection
-4. Click **Upload**
+2. **Drag & drop** files or a folder onto the upload zone, or use **Browse files** or **Browse folder**
+3. Optionally change the settings below the files. Each pill shows its value, and a click opens its choices, on a phone in a sheet from the bottom:
+   - **Expires after** - One of the offered times
+   - **Downloads** - How often the file can be downloaded before it is deleted
+   - **Password** - A switch for optional password protection, with a password of at least 8 characters
+4. Click **Encrypt and upload**. The line next to the button sums up when the upload will be deleted.
 5. Wait for the encryption and upload to complete
-6. Copy the share link
+6. Copy the share link, or open its QR code
 
 ## Share the Link
 
 The share link looks like this:
 
 ```
-https://your-instance.com/#base64url_encoded_secret
+https://your-instance.com/file/<id>#<secret>
 ```
+
+Notes use `/note/<id>#<secret>` instead.
 
 ::: warning Important
 The part after `#` is the encryption key. Anyone with this link can download and decrypt the file. Share it only with intended recipients through a secure channel.
@@ -39,6 +41,10 @@ When uploading multiple files, they are automatically zipped in your browser usi
 
 The recipient downloads a `.zip` file containing all original files with their names preserved.
 
+## Request Files
+
+To get files from someone instead, open **Request**, set how long the request stays open and how much it takes, and send them the upload link. What they upload is encrypted in their browser for you alone, and you open it with your inbox link. See [File Requests](/user-guide/file-requests).
+
 ## Download a File
 
 1. Open the share link in your browser
@@ -48,30 +54,34 @@ The recipient downloads a `.zip` file containing all original files with their n
 
 ## Share a Note
 
-SkySend also supports sharing encrypted text notes - no file needed.
+SkySend also shares encrypted notes, no file needed. A note is made of blocks, so text, passwords, code and SSH keys can travel together in one link.
 
 1. Open SkySend and switch to the **Note** tab
-2. Choose a note type:
-   - **Text** - Plain text content, with an optional Markdown mode (live preview and rendered GFM output)
-   - **Password** - One or more passwords displayed as masked fields with individual reveal and copy buttons. Includes a built-in password generator with configurable length, character types, and entropy display.
-   - **Code** - Code snippets with automatic syntax highlighting (43 languages) and line numbers
-   - **SSH Key** - Generate Ed25519 or RSA (1024-4096 bit) key pairs in the browser, or paste existing keys. Shared as a structured note with separate Public Key and Private Key sections.
-   - **Markdown** - Available as a sub-toggle in the Text tab. Write Markdown with a live preview and view it rendered with full GitHub Flavored Markdown support.
+2. Pick the block to start with:
+   - **Text** - Plain text, or Markdown with a preview, rendered with full GitHub Flavored Markdown support
+   - **Password** - One or more passwords, each with an optional label. Includes a built-in password generator with configurable length, character types, and entropy display.
+   - **Code** - A code snippet with an optional title and syntax highlighting for over 40 languages
+   - **SSH Key** - Generate an Ed25519 or RSA (1024, 2048 or 4096 bit) key pair in the browser, or paste existing keys
 3. Enter your content
-4. Optionally configure:
-   - **Expiry time** - How long the note should be available
-   - **View limit** - Maximum number of views (including unlimited)
-   - **Password** - Optional password protection
-   - **Burn after reading** - Destroy the note after a single view
-5. Click **Create Note**
-6. Copy the share link
+4. Optionally add more blocks from the **Add a block** row below the blocks. Blocks can be moved up and down and removed.
+5. Optionally change the settings below the note, the same pills as for a file:
+   - **Expires after** - How long the note should be available
+   - **Views** - Maximum number of views, from unlimited (∞) down to 1, which is burn after reading
+   - **Password** - A switch for optional password protection, with a password of at least 8 characters
+6. Click **Encrypt and share**
+7. Copy the share link
+
+Empty blocks are left out of the note. The size limit applies to the whole note, and the counter in the **Add a block** row shows how much of it is used.
 
 ### View a Note
 
 1. Open the note share link in your browser
 2. If password-protected, enter the password
-3. Click **View Note** to decrypt and display the content
-4. If burn after reading is enabled, the note is permanently destroyed after viewing
+3. Click **View note** to decrypt and display the content
+4. Each block is shown in a frame of its own with a copy button. **Copy all** copies the whole note as text.
+5. If burn after reading is enabled, the note is permanently destroyed after viewing
+
+Notes created before v3 still open, and are shown the same way.
 
 ::: warning Burn After Reading
 When burn after reading is enabled, the note content is deleted from the server the moment it is viewed. There is no way to recover it.
@@ -81,18 +91,23 @@ When burn after reading is enabled, the note content is deleted from the server 
 
 SkySend stores your upload and note history locally in your browser (IndexedDB). No account is needed.
 
-Navigate to **My Uploads** to:
+Navigate to **My Links** to:
 
-- Filter by **All**, **Files**, or **Notes**
+- Filter by **All**, **Files**, or a note type
 - View all uploads and notes you created from this browser
 - See download/view count and remaining downloads/views
 - See expiry countdown
 - Re-copy the share link
-- Delete uploads or notes manually
+- Open, rename or delete an upload, or show its QR code, from the **⋯** menu. Notes cannot be renamed.
+- Switch to the **Requests** tab for the file requests made in this browser
 
 ::: info Browser-Local Data
 Upload and note history is stored only in your browser. Switching browsers or clearing browser data will lose the list. The uploads and notes themselves remain on the server until they expire.
 :::
+
+## See How the Encryption Works
+
+Every instance has a **How it works** page at `/how`. It shows where the key travels, what the server stores, and lets you encrypt a sample text in your own browser. The full design is in [Encryption Design](/user-guide/security/encryption).
 
 ## Upload from the Terminal
 

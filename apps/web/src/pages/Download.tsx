@@ -1,18 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { useTranslation } from "react-i18next";
-import {
-  Shield,
-  AlertCircle,
-  Clock,
-  Ban,
-  FileQuestion,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Trans, useTranslation } from "react-i18next";
+import { AlertCircle, Clock, Ban, FileQuestion } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReceiveShell } from "@/components/ReceiveShell";
+import { LinkGone } from "@/components/LinkGone";
 import { DownloadCard } from "@/components/DownloadCard";
 import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { SafariWarning } from "@/components/SafariWarning";
@@ -68,38 +60,29 @@ export function DownloadPage() {
   }, [downloadHook.phase, downloadHook.error]);
 
   if (!id || !secret) {
-    return (
-      <ErrorDisplay
-        icon={<FileQuestion className="h-8 w-8" />}
-        title={t("download.notFound")}
-      />
-    );
+    return <LinkGone icon={FileQuestion} title={t("download.notFound")} />;
   }
+
+  const title = (
+    <Trans
+      i18nKey="share.receivedFile"
+      components={{ a: <span data-slot="accent" className="text-primary-text" /> }}
+    />
+  );
 
   if (downloadHook.phase === "loading-info") {
     return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-7 w-7 rounded" />
-            <Skeleton className="h-8 w-56" />
+      <ReceiveShell title={title}>
+        <div className="space-y-4" aria-busy="true">
+          <Skeleton className="h-[60px] w-full rounded-[20px]" />
+          <div className="grid grid-cols-3 gap-2">
+            <Skeleton className="h-14 rounded-2xl" />
+            <Skeleton className="h-14 rounded-2xl" />
+            <Skeleton className="h-14 rounded-2xl" />
           </div>
-          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-12 w-full rounded-xl" />
         </div>
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-11 w-full rounded-md" />
-          </CardContent>
-        </Card>
-      </div>
+      </ReceiveShell>
     );
   }
 
@@ -112,16 +95,8 @@ export function DownloadPage() {
     const isLimitReached = error.includes("limit");
 
     return (
-      <ErrorDisplay
-        icon={
-          isExpired ? (
-            <Clock className="h-8 w-8" />
-          ) : isLimitReached ? (
-            <Ban className="h-8 w-8" />
-          ) : (
-            <AlertCircle className="h-8 w-8" />
-          )
-        }
+      <LinkGone
+        icon={isExpired ? Clock : isLimitReached ? Ban : AlertCircle}
         title={
           isExpired
             ? t("download.expired")
@@ -147,79 +122,57 @@ export function DownloadPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-        <Shield className="h-7 w-7 text-primary" />
-        {t("download.title")}
-      </h1>
+    <ReceiveShell title={title}>
+      <div className="space-y-5">
+        {/* Password prompt - stays mounted during the Argon2id stretch */}
+        {(downloadHook.phase === "needs-password" ||
+          downloadHook.phase === "verifying-password") && (
+          <PasswordPrompt
+            onSubmit={handlePasswordSubmit}
+            loading={downloadHook.phase === "verifying-password"}
+            error={downloadHook.error}
+          />
+        )}
 
-      <Card>
-        <CardContent className="space-y-6 pt-6">
-          {/* Password prompt - stays mounted during the Argon2id stretch */}
-          {(downloadHook.phase === "needs-password" ||
-            downloadHook.phase === "verifying-password") && (
-            <PasswordPrompt
-              onSubmit={handlePasswordSubmit}
-              loading={downloadHook.phase === "verifying-password"}
-              error={downloadHook.error}
+        {/* Safari large-file warning */}
+        {downloadHook.phase === "safari-warning" && downloadHook.info && (
+          <SafariWarning
+            fileSize={downloadHook.info.size}
+            onContinue={downloadHook.confirmSafariDownload}
+            onDismiss={downloadHook.dismissSafariWarning}
+          />
+        )}
+
+        {/* Firefox DevTools warning */}
+        {downloadHook.phase === "firefox-devtools-warning" && (
+          <FirefoxDevToolsWarning
+            onRetry={downloadHook.retryDevToolsCheck}
+            onForce={downloadHook.forceDownloadWithDevTools}
+            onDismiss={downloadHook.dismissDevToolsWarning}
+          />
+        )}
+
+        {/* Download card when info is available and no password needed (or already unlocked) */}
+        {downloadHook.info &&
+          downloadHook.phase !== "needs-password" &&
+          downloadHook.phase !== "verifying-password" &&
+          downloadHook.phase !== "safari-warning" &&
+          downloadHook.phase !== "firefox-devtools-warning" && (
+            <DownloadCard
+              info={downloadHook.info}
+              metadata={downloadHook.metadata}
+              phase={downloadHook.phase}
+              progress={downloadHook.progress}
+              speed={downloadHook.speed}
+              averageSpeed={downloadHook.averageSpeed}
+              error={null}
+              onDownload={handleDownload}
+              onCancel={downloadHook.cancel}
             />
           )}
 
-          {/* Safari large-file warning */}
-          {downloadHook.phase === "safari-warning" && downloadHook.info && (
-            <SafariWarning
-              fileSize={downloadHook.info.size}
-              onContinue={downloadHook.confirmSafariDownload}
-              onDismiss={downloadHook.dismissSafariWarning}
-            />
-          )}
-
-          {/* Firefox DevTools warning */}
-          {downloadHook.phase === "firefox-devtools-warning" && (
-            <FirefoxDevToolsWarning
-              onRetry={downloadHook.retryDevToolsCheck}
-              onForce={downloadHook.forceDownloadWithDevTools}
-              onDismiss={downloadHook.dismissDevToolsWarning}
-            />
-          )}
-
-          {/* Download card when info is available and no password needed (or already unlocked) */}
-          {downloadHook.info &&
-            downloadHook.phase !== "needs-password" &&
-            downloadHook.phase !== "verifying-password" &&
-            downloadHook.phase !== "safari-warning" &&
-            downloadHook.phase !== "firefox-devtools-warning" && (
-              <DownloadCard
-                info={downloadHook.info}
-                metadata={downloadHook.metadata}
-                phase={downloadHook.phase}
-                progress={downloadHook.progress}
-                speed={downloadHook.speed}
-                averageSpeed={downloadHook.averageSpeed}
-                error={null}
-                onDownload={handleDownload}
-                onCancel={downloadHook.cancel}
-              />
-            )}
-
-          <DebugPanel downloadInfo={downloadHook.debugInfo} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function ErrorDisplay({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center text-muted-foreground">
-      {icon}
-      <p className="text-lg font-medium">{title}</p>
-    </div>
+        <DebugPanel downloadInfo={downloadHook.debugInfo} />
+      </div>
+    </ReceiveShell>
   );
 }

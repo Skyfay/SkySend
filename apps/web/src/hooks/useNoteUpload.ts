@@ -11,10 +11,11 @@ import {
   deriveKeyFromPassword,
   randomBytes,
   PASSWORD_SALT_LENGTH,
-  type NoteContentType,
 } from "@skysend/crypto";
+import { NOTE_KIND, padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { createNote } from "@/lib/api";
+import { noteKinds } from "@/lib/note-editor";
 import { saveNote } from "@/lib/upload-store";
 
 /** Convert Uint8Array to standard base64 string (browser-safe, no Buffer needed). */
@@ -40,8 +41,8 @@ interface NoteState {
 }
 
 interface NoteUploadOptions {
-  content: string;
-  contentType: NoteContentType;
+  /** The blocks to share, already without empty ones. */
+  blocks: NoteBlock[];
   maxViews: number;
   expireSec: number;
   password: string;
@@ -59,7 +60,7 @@ export function useNoteUpload() {
   }, []);
 
   const upload = useCallback(async (options: NoteUploadOptions) => {
-    const { content, contentType, maxViews, expireSec, password } = options;
+    const { blocks, maxViews, expireSec, password } = options;
 
     try {
       setState({ phase: "encrypting", shareLink: null, error: null });
@@ -69,8 +70,10 @@ export function useNoteUpload() {
       const salt = generateSalt();
       const keys = await deriveKeys(secret, salt);
 
-      // Encrypt note content with metaKey
-      const encrypted = await encryptNoteContent(content, keys.metaKey);
+      // The whole document is the plaintext. Which blocks it holds is encrypted with it, the
+      // server only ever sees NOTE_KIND. Padded to whole blocks, so the length of the note
+      // does not give away how long a password in it is.
+      const encrypted = await encryptNoteContent(padNote(serializeNote(blocks)), keys.metaKey);
 
       // Password protection
       let effectiveSecret: Uint8Array = secret;
@@ -103,7 +106,7 @@ export function useNoteUpload() {
         salt: toBase64url(salt),
         ownerToken: toBase64url(ownerToken),
         authToken: toBase64url(authToken),
-        contentType,
+        contentType: NOTE_KIND,
         maxViews,
         expireSec,
         hasPassword,
@@ -119,7 +122,8 @@ export function useNoteUpload() {
         id: result.id,
         ownerToken: toBase64url(ownerToken),
         secret: toBase64url(effectiveSecret),
-        contentType,
+        contentType: NOTE_KIND,
+        kinds: noteKinds(blocks),
         createdAt: new Date().toISOString(),
       });
 

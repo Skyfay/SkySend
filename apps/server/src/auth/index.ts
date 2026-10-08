@@ -24,8 +24,11 @@ export function createOidcAdapter(config: Config): OidcAdapterProfile {
   adapter.validateConfig?.();
   console.log(`[oidc] OIDC enabled - using "${adapter.name}" adapter`);
   console.log(`[oidc] Issuer: ${config.OIDC_ISSUER}`);
-  if (!config.OIDC_PROTECT_FILES && !config.OIDC_PROTECT_NOTES) {
-    console.warn("[oidc] WARNING: No upload routes are protected (both OIDC_PROTECT_FILES and OIDC_PROTECT_NOTES are false).");
+  if (!config.OIDC_PROTECT_FILES && !config.OIDC_PROTECT_NOTES && !config.OIDC_PROTECT_REQUESTS) {
+    console.warn(
+      "[oidc] WARNING: No upload routes are protected "
+      + "(OIDC_PROTECT_FILES, OIDC_PROTECT_NOTES and OIDC_PROTECT_REQUESTS are false).",
+    );
   }
   return adapter;
 }

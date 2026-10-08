@@ -26,7 +26,7 @@ An attacker who gains access to the server's filesystem or database.
 
 **Mitigation**: All files are encrypted client-side with AES-256-GCM before upload. The encryption key is never sent to the server - it exists only in the URL fragment. The server stores only ciphertext.
 
-**Result**: Even with full database and filesystem access, an attacker cannot decrypt files without the share link.
+**Result**: Even with full database and filesystem access, an attacker cannot decrypt files without the share link. Changing the code the instance serves is a different attack, see [A Malicious Instance Serving Modified Code](#a-malicious-instance-serving-modified-code).
 
 ### Passive Network Observation
 **Threat**: An attacker intercepts traffic between the client and server.
@@ -45,9 +45,9 @@ An attacker who gains access to the server's filesystem or database.
 ### Brute-Force Password Guessing
 **Threat**: An attacker tries to brute-force the password on a password-protected upload.
 
-**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). Rate limiting applies to all endpoints.
+**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). The server releases the encrypted metadata of a password-protected upload only after a correct password, so someone with the link has nothing to test guesses against offline. Every guess has to pass the password check or the download, which share one lockout per IP and upload. New passwords need at least 8 characters.
 
-**Result**: Online brute-force is impractical due to rate limiting. Offline brute-force is expensive due to memory-hard KDF.
+**Result**: Online brute-force is impractical due to the lockout and rate limiting. Offline brute-force needs the link and the server's database together, and even then costs one Argon2id run per guess, which puts 8 random characters out of reach for years.
 
 ### Upload Abuse (Storage Exhaustion)
 **Threat**: An attacker uploads large amounts of data to fill the server's disk.
@@ -67,6 +67,14 @@ An attacker who gains access to the server's filesystem or database.
 
 ### Compromised Client
 If the uploader's or recipient's device is compromised (malware, keylogger), the attacker can access plaintext files. SkySend cannot protect against endpoint compromise.
+
+### A Malicious Instance Serving Modified Code
+The web app, its scripts and its Service Worker come from the instance you open. An operator who changes that code, or anyone who takes over the server or its reverse proxy, can make the browser hand over what it decrypts: the key in a link, a password you type, the files and notes you open and an inbox you open. Everything stored before stays encrypted, and nothing is at risk while the instance serves the published code. Every end-to-end encrypted web app shares this limit, because a browser runs whatever code the site sends.
+
+What to do about it:
+
+- Use an instance whose operator you trust, or [run your own](/user-guide/self-hosting/docker). The official instances are operated by the SkySend project.
+- For files and notes, the [CLI client](/user-guide/client-cli/) is shipped on its own and runs no code from the instance. It does not cover file requests yet.
 
 ### Share Link Interception
 If the share link is sent over an insecure channel (e.g., unencrypted email, public chat) and intercepted, the attacker can download and decrypt the file. Users should share links through secure channels.
@@ -94,7 +102,7 @@ Decrypting an upload takes three separate pieces, and a rewritten link puts all 
 
 **Without a password, that is enough.** An operator who holds the access log plus backups of the database and the blob storage can decrypt the upload, including after the sender deleted it. Deleting removes the live copy, it does not reach into a backup.
 
-**With a password, it is not enough.** The URL fragment carries only the raw secret. The keys that actually decrypt anything are derived from that secret combined with an Argon2id hash of the password, and the password never leaves the browser, so the server stores neither it nor a hash of it. The same operator would have to brute force the password at 64 MiB of memory and three iterations per guess.
+**With a password, it is not enough.** The URL fragment carries only the raw secret. The keys that actually decrypt anything are derived from that secret combined with an Argon2id hash of the password, and the password never leaves the browser, so the server stores neither it nor a hash of it. The same operator would have to brute force the password offline at 64 MiB of memory and three iterations per guess, which is why new passwords need at least 8 characters. A short password from before that rule falls far faster.
 
 #### What to do
 
@@ -105,8 +113,11 @@ Decrypting an upload takes three separate pieces, and a rewritten link puts all 
 ### Malicious File Content
 SkySend does not inspect or scan file contents. It encrypts and stores whatever the user uploads. SkySend is not responsible for malicious file content.
 
+### Unknown Senders in a File Request
+Anyone with the upload link of a [file request](/user-guide/file-requests) can upload into it, and nothing identifies them. The inbox marks every upload as unverified and cleans file names before showing them, but it cannot tell a wanted file from an unwanted one. Equally, a sender cannot verify who wrote the title of a request, which is why the upload page marks it as not checked. Hand out upload links only to the people you ask, and open only what you expected.
+
 ### Metadata Leakage (File Size)
-The server knows the encrypted file size, which reveals the approximate original file size. This is inherent to any file transfer system. File names and types are encrypted.
+The server knows the encrypted file size, which reveals the approximate original file size. This is inherent to any file transfer system. File names and types are encrypted, and their metadata is padded to whole kilobytes, so its length does not reveal how long a file name is. Notes are padded the same way, so a note's size does not reveal how long a password in it is.
 
 ### Server Availability
 SkySend does not provide redundancy or high availability. If the server goes down, files are unavailable until it recovers.

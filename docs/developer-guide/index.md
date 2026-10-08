@@ -42,3 +42,38 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 - [API Reference](/developer-guide/api/) - REST API documentation
 - [Cryptography](/developer-guide/crypto/) - Encryption library details
 - [Database Schema](/developer-guide/reference/schema) - SQLite schema reference
+
+## Contributing
+
+### Branches and Pull Requests
+
+| Branch | What it holds |
+| :--- | :--- |
+| `main` | The released code. Each release merges `dev` into `main` and is tagged `vX.Y.Z` |
+| `dev` | Everything that is finished, waiting for the next release |
+| Feature branches | One feature or fix each, branched off `dev` |
+
+Pull requests go into `dev`, never into `main`. Only the maintainer merges `dev` into `main` for a release.
+
+```bash
+git checkout dev
+git pull
+git checkout -b feat/short-description
+# ... commit your work
+git push -u origin feat/short-description
+# then open the pull request with dev as its base
+```
+
+Every pull request into `dev` or `main` runs lint, type check, unit tests and the builds of the docs and the website.
+
+### PR Guidelines
+
+1. Create a feature branch off `dev`
+2. Write tests for new features
+3. Update documentation
+4. Write the changelog entry into a fragment under `changelog/unreleased/`, named after your branch
+5. Run `pnpm validate` before submitting
+6. Open the pull request against `dev`
+
+Security vulnerabilities are never reported in a pull request or an issue. See [SECURITY.md](https://github.com/Skyfay/SkySend/blob/main/SECURITY.md).
+

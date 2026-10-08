@@ -4,15 +4,13 @@ import { describe, expect, it, afterEach, beforeAll, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { toast } from "sonner";
 import { Toaster } from "../src/components/Toaster";
-import { ThemeProvider } from "../src/hooks/useTheme";
+import { ColorSchemeProvider } from "../src/hooks/useColorScheme";
 
 /**
- * Sonner delivers a toast only to subscribers that exist at publish time, and its
- * Toaster subscribes in a mount effect. Sibling effects run in tree order, so a
- * page that toasts while mounting is only heard when the Toaster mounted first.
- *
- * The rewritten-link warning is exactly such a toast, which is why App.tsx keeps
- * the Toaster ahead of the router.
+ * A page can toast while it mounts, like the rewritten-link warning does. The Toaster
+ * subscribes in a mount effect, and sibling effects run in tree order. App.tsx keeps
+ * the Toaster ahead of the router, and since Sonner 2.0.8 a Toaster that subscribes
+ * later also gets the toasts that are still active, so the warning arrives either way.
  */
 function TogglesOnMount({ message }: { message: string }) {
   useEffect(() => {
@@ -21,7 +19,7 @@ function TogglesOnMount({ message }: { message: string }) {
   return null;
 }
 
-// ThemeProvider reads a stored preference and the OS colour scheme on mount.
+// ColorSchemeProvider reads a stored preference and the OS colour scheme on mount.
 // This jsdom build ships localStorage without its methods and no matchMedia.
 beforeAll(() => {
   vi.stubGlobal("localStorage", {
@@ -36,29 +34,32 @@ beforeAll(() => {
   }));
 });
 
-afterEach(cleanup);
+// A toast that is still active would otherwise be replayed into the next test.
+afterEach(() => {
+  toast.dismiss();
+  cleanup();
+});
 
 describe("a toast fired while a page mounts", () => {
   it("is delivered when the Toaster mounts first, as App.tsx arranges it", async () => {
     render(
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <Toaster />
         <TogglesOnMount message="mounted-first" />
-      </ThemeProvider>,
+      </ColorSchemeProvider>,
     );
 
     expect(await screen.findByText("mounted-first")).toBeDefined();
   });
 
-  it("is lost when the Toaster mounts after the page, which is the bug this guards", async () => {
+  it("is still delivered when the Toaster mounts after the page", async () => {
     render(
-      <ThemeProvider>
+      <ColorSchemeProvider>
         <TogglesOnMount message="mounted-last" />
         <Toaster />
-      </ThemeProvider>,
+      </ColorSchemeProvider>,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.queryByText("mounted-last")).toBeNull();
+    expect(await screen.findByText("mounted-last")).toBeDefined();
   });
 });

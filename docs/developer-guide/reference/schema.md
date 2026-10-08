@@ -52,7 +52,7 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | `salt` | BLOB NOT NULL | - | HKDF salt (16 bytes) |
 | `encryptedContent` | BLOB NOT NULL | - | AES-256-GCM encrypted note content |
 | `nonce` | BLOB NOT NULL | - | AES-GCM IV (12 bytes) |
-| `contentType` | TEXT NOT NULL | - | `"text"`, `"password"`, `"code"`, `"markdown"`, or `"sshkey"` |
+| `contentType` | TEXT NOT NULL | - | `"blocks"`, or for a note from before v3 `"text"`, `"password"`, `"code"`, `"markdown"` or `"sshkey"` |
 | `hasPassword` | INTEGER NOT NULL | 0 | Whether password protection is active |
 | `passwordSalt` | BLOB | NULL | Password KDF salt (16 bytes) |
 | `passwordAlgo` | TEXT | NULL | `"argon2id-v2"` |
@@ -66,6 +66,60 @@ WAL (Write-Ahead Logging) mode allows concurrent reads while writes are serializ
 | Index | Column | Purpose |
 | --- | --- | --- |
 | `idx_notes_expires_at` | `expiresAt` | Efficient cleanup queries |
+
+### file_requests
+
+| Column | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT (PK) | - | UUID v4 |
+| `vault` | BLOB NOT NULL | - | The requester's private key, sealed with a key from the inbox link (146 bytes) |
+| `vaultNonce` | BLOB NOT NULL | - | Vault IV (12 bytes) |
+| `inboxAuthToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for reading, base64url |
+| `inboxOwnerToken` | TEXT NOT NULL | - | SHA-256 of the token from the inbox link for managing, base64url |
+| `uploadToken` | TEXT NOT NULL | - | SHA-256 of the token from the upload link, base64url |
+| `briefCiphertext` | BLOB | NULL | AES-256-GCM encrypted brief: title, what is asked for, note template. Set for every request, nullable because migration 0004 renamed the title columns. |
+| `briefNonce` | BLOB | NULL | Brief IV (12 bytes) |
+| `hasPassword` | INTEGER NOT NULL | 0 | Whether the inbox link is password protected |
+| `maxUploads` | INTEGER NOT NULL | - | Uploads the request takes |
+| `maxSize` | INTEGER NOT NULL | - | Most bytes one upload may have |
+| `downloads` | INTEGER NOT NULL | 5 | How often the requester can download each upload. Rows from before migration 0005 got 5. |
+| `reservedUploads` | INTEGER NOT NULL | 0 | Uploads running or finished. Set back to `finishedUploads` at startup. |
+| `finishedUploads` | INTEGER NOT NULL | 0 | Uploads that finished. Never goes down, so a deleted upload keeps its slot. |
+| `finishedBytes` | INTEGER NOT NULL | 0 | Bytes of uploads that finished |
+| `closed` | INTEGER NOT NULL | 0 | Closed by the requester |
+| `closesAt` | TIMESTAMP NOT NULL | - | When the request stops taking uploads |
+| `createdAt` | TIMESTAMP NOT NULL | `current_unix_time` | Creation timestamp |
+
+The public key of a request is never stored. It only exists in the upload link and inside the vault.
+
+### request_uploads
+
+| Column | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT (PK) | - | UUID v4 |
+| `requestId` | TEXT NOT NULL | - | The request, deleted with it (`ON DELETE CASCADE`) |
+| `size` | INTEGER NOT NULL | - | Encrypted size in bytes |
+| `fileCount` | INTEGER NOT NULL | 1 | Number of files (1 = single, >1 = archive) |
+| `salt` | BLOB NOT NULL | - | HKDF salt of the file (32 bytes) |
+| `wrapEnc` | BLOB NOT NULL | - | HPKE encapsulated key (65 bytes) |
+| `wrapCiphertext` | BLOB NOT NULL | - | The file secret sealed to the request's public key (48 bytes) |
+| `encryptedMeta` | BLOB NOT NULL | - | AES-256-GCM encrypted metadata |
+| `metaNonce` | BLOB NOT NULL | - | Metadata IV (12 bytes) |
+| `maxDownloads` | INTEGER NOT NULL | - | The `downloads` of its request at the time of the upload |
+| `downloadCount` | INTEGER NOT NULL | 0 | Current download count |
+| `expiresAt` | TIMESTAMP NOT NULL | - | `FILE_REQUEST_RETENTION_SEC` after the upload arrived |
+| `createdAt` | TIMESTAMP NOT NULL | `current_unix_time` | Creation timestamp |
+| `storagePath` | TEXT NOT NULL | - | Filename on disk (UUID.bin) |
+
+Files of a request live in this table and never in `uploads`, so no route of a normal upload can serve one.
+
+### Indexes (file requests)
+
+| Index | Column | Purpose |
+| --- | --- | --- |
+| `idx_file_requests_closes_at` | `closesAt` | Cleanup of requests that are over |
+| `idx_request_uploads_request_id` | `requestId` | Listing an inbox |
+| `idx_request_uploads_expires_at` | `expiresAt` | Efficient cleanup queries |
 
 ## Concurrency
 

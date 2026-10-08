@@ -1,6 +1,6 @@
 {
   "name": "skysend",
-  "version": "2.12.2",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
@@ -9,19 +9,19 @@
     "dev": "pnpm --parallel --filter=!@skysend/instances-worker --filter=!@skysend/report-worker dev",
     "build": "pnpm --recursive build",
     "test": "pnpm --recursive test && pnpm test:scripts",
-    "test:coverage": "pnpm --recursive --filter=@skysend/server --filter=@skysend/web --filter=@skysend/crypto --filter=@skysend/client test:coverage && pnpm test:scripts",
+    "test:coverage": "pnpm --recursive --filter=@skysend/server --filter=@skysend/web --filter=@skysend/crypto --filter=@skysend/note-format --filter=@skysend/client test:coverage && pnpm test:scripts",
     "test:scripts": "vitest run --root scripts",
     "lint": "eslint . && pnpm --filter @skysend/website lint",
     "lint:fix": "eslint . --fix && pnpm --filter @skysend/website lint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "pnpm --filter @skysend/crypto --filter @skysend/server build && pnpm --recursive typecheck",
+    "typecheck": "pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/server build && pnpm --recursive typecheck",
     "validate": "bash scripts/validate.sh",
     "version:sync": "bash scripts/sync-version.sh --sync-only",
     "version:bump": "bash scripts/sync-version.sh",
     "changelog:check": "node scripts/changelog.mjs check",
     "changelog:preview": "node scripts/changelog.mjs preview",
-    "client:build": "pnpm --filter @skysend/crypto build && pnpm --filter @skysend/client build",
+    "client:build": "pnpm --filter @skysend/crypto --filter @skysend/note-format build && pnpm --filter @skysend/client build",
     "client:run": "tsx apps/client/src/index.ts",
     "client:compile": "pnpm client:build && pnpm --filter @skysend/client build:compile",
     "update:check": "bash scripts/check-updates.sh",
@@ -34,9 +34,19 @@
   "packageManager": "pnpm@10.29.3",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3",
       "esbuild"
     ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-import>eslint": "10",
+        "eslint-plugin-jsx-a11y>eslint": "10",
+        "eslint-plugin-react>eslint": "10",
+        "@hono/node-ws>@hono/node-server": "2"
+      }
+    },
     "overrides": {
       "fast-xml-parser": ">=5.7.2",
       "postcss": ">=8.5.25",
@@ -46,27 +56,30 @@
       "tsx>esbuild": ">=0.28.1",
       "wrangler>esbuild": ">=0.28.1",
       "@babel/core": ">=7.29.6",
-      "sharp": ">=0.35.4",
-      "brace-expansion": ">=5.0.9",
-      "minimatch@3>brace-expansion": "^1.1.18"
+      "sharp": ">=0.35.5",
+      "brace-expansion": "^5.0.12",
+      "minimatch@3>brace-expansion": "^1.1.21",
+      "@tailwindcss/typography>postcss-selector-parser": "^7.1.6",
+      "js-yaml@3>argparse": "^2.0.1"
     },
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg"
+        "GHSA-mh99-v99m-4gvg",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^10.5.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.6.0",
-    "prettier": "^3.8.4",
-    "tsx": "^4.22.4",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
-    "vitest": "^4.1.11"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
   }
 }

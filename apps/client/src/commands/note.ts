@@ -1,9 +1,5 @@
 import type { Command } from "commander";
-import {
-  encryptNoteContent,
-  toBase64url,
-  type NoteContentType,
-} from "@skysend/crypto";
+import { encryptNoteContent, toBase64url } from "@skysend/crypto";
 import { fetchConfig, createNote } from "../lib/api.js";
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
@@ -17,6 +13,15 @@ import {
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
+import { CLI_NOTE_TYPES, isCliNoteType, prepareNote, textToBlock } from "../lib/note.js";
+import { forTerminal } from "../lib/terminal.js";
+import {
+  asksForPassword,
+  checkNewPassword,
+  noteSource,
+  readAll,
+  withoutFinalNewline,
+} from "../lib/input.js";
 
 interface NoteOptions {
   server?: string;
@@ -27,20 +32,21 @@ interface NoteOptions {
   json?: boolean;
 }
 
-const VALID_TYPES: NoteContentType[] = ["text", "password", "code", "markdown", "sshkey"];
-
 export function registerNoteCommand(program: Command): void {
   program
     .command("note")
     .description("Create an encrypted note")
-    .argument("<text>", "Note content")
+    .argument(
+      "[text]",
+      "Note content. Leave it out, or pass -, to type it at a prompt or pipe it in, which keeps it out of the shell history",
+    )
     .option("-s, --server <url>", "Server URL")
     .option("-t, --type <type>", "Content type (text, password, code, markdown, sshkey)", "text")
     .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
     .option("-v, --views <count>", "Max view count (0 = unlimited)")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
     .option("--json", "Output as JSON")
-    .action(async (text: string, options: NoteOptions) => {
+    .action(async (text: string | undefined, options: NoteOptions) => {
       try {
         const server = resolveServer(options.server);
         const config = await fetchConfig(server);
@@ -53,13 +59,42 @@ export function registerNoteCommand(program: Command): void {
         }
 
         // Validate content type
-        const contentType = (options.type ?? "text") as NoteContentType;
-        if (!VALID_TYPES.includes(contentType)) {
-          throw new Error(`Invalid content type: ${contentType}. Options: ${VALID_TYPES.join(", ")}`);
+        const contentType = options.type ?? "text";
+        if (!isCliNoteType(contentType)) {
+          throw new Error(`Invalid content type: ${contentType}. Options: ${CLI_NOTE_TYPES.join(", ")}`);
         }
 
+        // `-p -` reads as the password "-", not as "the note comes from stdin".
+        if (options.password === "-") {
+          throw new Error("Pass -p without a value to be asked for the password.");
+        }
+
+        // Read the content before anything else asks for input.
+        let content: string;
+        if (text !== undefined && text !== "-") {
+          content = text;
+        } else {
+          const source = noteSource(contentType, Boolean(process.stdin.isTTY));
+          if (source === "pipe" && asksForPassword(options.password, config.forceNotePassword)) {
+            throw new Error(
+              "The note comes from a pipe, so no terminal is left to ask for the password. Type the note at the prompt instead, or use the TUI.",
+            );
+          }
+          if (source === "pipe" && !options.json) {
+            writeLine("Reading the note from standard input, end it with Ctrl+D.");
+          }
+          content =
+            source === "pipe"
+              ? withoutFinalNewline(await readAll(process.stdin))
+              : await promptPassword("Note: ");
+        }
+        if (content === "") throw new Error("Note cannot be empty");
+
+        // The note is one block. A server from before v3 gets it in the legacy format.
+        const note = prepareNote(textToBlock(contentType, content), config.noteBlocks);
+
         // Validate size
-        const contentBytes = new TextEncoder().encode(text);
+        const contentBytes = new TextEncoder().encode(note.plaintext);
         if (contentBytes.byteLength > config.noteMaxSize) {
           throw new Error(`Note too large (${contentBytes.byteLength} bytes). Max: ${config.noteMaxSize}`);
         }
@@ -68,13 +103,17 @@ export function registerNoteCommand(program: Command): void {
         let password: string | undefined;
         if (options.password === true) {
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
         } else if (typeof options.password === "string") {
           password = options.password;
         } else if (config.forceNotePassword) {
           if (!options.json) writeLine("Password is required by server policy.");
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
+        }
+
+        // A new password has to hold against guessing with the link and the server's database.
+        if (password !== undefined) {
+          const problem = checkNewPassword(password);
+          if (problem !== true) throw new Error(problem);
         }
 
         // Resolve expiry
@@ -102,7 +141,7 @@ export function registerNoteCommand(program: Command): void {
         const creds = await prepareUpload(password);
 
         // Encrypt note content
-        const encrypted = await encryptNoteContent(text, creds.keys.metaKey);
+        const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
 
         // Create note
         const result = await createNote(server, {
@@ -111,7 +150,7 @@ export function registerNoteCommand(program: Command): void {
           salt: toBase64url(creds.salt),
           ownerToken: creds.ownerTokenB64,
           authToken: creds.authTokenB64,
-          contentType,
+          contentType: note.contentType,
           maxViews,
           expireSec,
           hasPassword: creds.hasPassword,
@@ -162,7 +201,7 @@ export function registerNoteCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

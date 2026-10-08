@@ -4,58 +4,117 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Light mode. The light scheme of the Graphite theme of the app, with the
+   accent darkened until text and buttons read on white. */
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.985 0.004 167);
-  --foreground: oklch(0.17 0.015 167);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.015 167);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.015 167);
-  --primary: oklch(0.5 0.13 167);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.006 167);
-  --secondary-foreground: oklch(0.25 0.012 167);
-  --muted: oklch(0.95 0.006 167);
-  --muted-foreground: oklch(0.48 0.014 167);
-  --accent: oklch(0.94 0.03 167);
-  --accent-foreground: oklch(0.3 0.05 167);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.6 0.14 154);
-  --success-foreground: oklch(0.99 0 0);
-  --border: oklch(0.9 0.008 167);
-  --input: oklch(0.9 0.008 167);
-  --ring: oklch(0.5 0.13 167);
+  --background: #efeff1;
+  --foreground: #111113;
+  --card: #ffffff;
+  --card-foreground: #111113;
+  --surface: #f4f4f6;
+  --surface-2: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #111113;
+  --primary: #207f62;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #111113;
+  --muted: #e9e9ec;
+  --muted-foreground: #5f5f68;
+  --subtle: #3f3f46;
+  --faint: #6b6b73;
+  --fainter: #a1a1aa;
+  --accent: #ececef;
+  --accent-foreground: #111113;
+  --destructive: #dc2626;
+  --success: #207f62;
+  --success-foreground: #ffffff;
+  --border: #e2e2e6;
+  --border-strong: #e2e2e6;
+  --input: #cfcfd5;
+  --ring: #2eb68c;
+
+  --tone-green: #207f62;
+  --tone-blue: #2563eb;
+  --tone-blue-soft: #1d4ed8;
+  --tone-cyan: #0e7490;
+  --tone-violet: #7c3aed;
+  --tone-amber: #b45309;
+  --tone-red: #dc2626;
+  --tone-ink: #ffffff;
+
+  --shine: #1f9e76;
+  --glow-strength: 0.5;
+  --grid-dot: rgb(17 17 19 / 0.09);
+  --grid-line: rgb(17 17 19 / 0.06);
+  --header-bg: rgb(255 255 255 / 0.72);
+  --header-border: rgb(17 17 19 / 0.08);
+  --highlight: rgb(255 255 255 / 0.9);
+  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+  --chip-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgb(0 0 0 / 0.08);
+  --lift-shadow: 0 24px 48px -24px rgb(17 17 19 / 0.3);
+  --deep-shadow: 0 40px 70px -30px rgb(17 17 19 / 0.3);
+  --hero-shadow: 0 60px 120px -40px rgb(31 158 118 / 0.3);
 }
 
+/* Dark mode. The dark scheme of the Graphite theme, the look of the canvas. */
 .dark {
-  --background: oklch(0.145 0.008 167);
-  --foreground: oklch(0.96 0.004 167);
-  --card: oklch(0.19 0.012 167);
-  --card-foreground: oklch(0.96 0.004 167);
-  --popover: oklch(0.17 0.01 167);
-  --popover-foreground: oklch(0.96 0.004 167);
-  --primary: oklch(0.6 0.1 167);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.24 0.014 167);
-  --secondary-foreground: oklch(0.96 0.004 167);
-  --muted: oklch(0.22 0.012 167);
-  --muted-foreground: oklch(0.65 0.014 167);
-  --accent: oklch(0.26 0.03 167);
-  --accent-foreground: oklch(0.96 0.004 167);
-  --destructive: oklch(0.6 0.22 25);
-  --success: oklch(0.72 0.17 154);
-  --success-foreground: oklch(0.15 0 0);
-  --border: oklch(1 0 0 / 0.09);
-  --input: oklch(1 0 0 / 0.16);
-  --ring: oklch(0.6 0.1 167);
+  --background: #101012;
+  --foreground: #f2f2f3;
+  --card: #1b1b1e;
+  --card-foreground: #f2f2f3;
+  --surface: #141416;
+  --surface-2: #1e1e21;
+  --popover: #1e1e21;
+  --popover-foreground: #f2f2f3;
+  --primary: #46c89d;
+  --primary-foreground: #000000;
+  --secondary: #1e1e21;
+  --secondary-foreground: #f2f2f3;
+  --muted: #222225;
+  --muted-foreground: #9c9ca4;
+  --subtle: #c8c8cd;
+  --faint: #82828a;
+  --fainter: #6b6b73;
+  --accent: #26262a;
+  --accent-foreground: #f2f2f3;
+  --destructive: #f0555a;
+  --success: #46c89d;
+  --success-foreground: #000000;
+  --border: #2a2a2e;
+  --border-strong: #2f2f34;
+  --input: #36363b;
+  --ring: #46c89d;
+
+  --tone-green: #46c89d;
+  --tone-blue: #60a5fa;
+  --tone-blue-soft: #93c5fd;
+  --tone-cyan: #22d3ee;
+  --tone-violet: #a78bfa;
+  --tone-amber: #fbbf24;
+  --tone-red: #f0555a;
+  --tone-ink: #000000;
+
+  --shine: #7ee6c1;
+  --glow-strength: 1;
+  --grid-dot: rgb(242 242 243 / 0.08);
+  --grid-line: rgb(242 242 243 / 0.06);
+  --header-bg: rgb(30 30 33 / 0.62);
+  --header-border: rgb(255 255 255 / 0.1);
+  --highlight: rgb(255 255 255 / 0.06);
+  --card-shadow: 0 0 0 0 transparent;
+  --chip-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 1px rgb(0 0 0 / 0.5);
+  --lift-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.85);
+  --deep-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.9);
+  --hero-shadow: 0 60px 120px -40px rgb(23 163 122 / 0.45);
 }
 
-.code-highlight span {
+.code-highlight code span {
   color: var(--shiki-light);
 }
-.dark .code-highlight span {
+.dark .code-highlight code span {
   color: var(--shiki-dark);
 }
 
@@ -64,6 +123,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
@@ -72,14 +133,29 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-fainter: var(--fainter);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-tone-green: var(--tone-green);
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-blue-soft: var(--tone-blue-soft);
+  --color-tone-cyan: var(--tone-cyan);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-red: var(--tone-red);
+  --color-tone-ink: var(--tone-ink);
+  --color-post: var(--post-tone);
+  --color-post-2: var(--post-tone-2);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -94,54 +170,547 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-padding-top: 96px;
+  }
   body {
     @apply bg-background text-foreground;
+    font-size: 14px;
+  }
+  button {
+    cursor: pointer;
   }
 }
 
 @layer utilities {
   .bg-dot-grid {
-    background-image: radial-gradient(
-      circle at center,
-      var(--border) 1px,
-      transparent 1px
+    background-image: radial-gradient(var(--grid-dot) 1px, transparent 1.5px);
+    background-size: 22px 22px;
+  }
+
+  /* A card of the design: lit from above in dark, a white sheet with a soft
+     shadow in light. */
+  .panel {
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card), #ffffff 3%),
+      var(--card)
     );
-    background-size: 16px 16px;
+    box-shadow:
+      inset 0 1px 0 var(--highlight),
+      var(--card-shadow);
   }
 
-  .bg-hero-glow {
-    background-image: radial-gradient(
-        60% 55% at 50% -10%,
-        oklch(0.5 0.12 167 / 0.35),
-        transparent 70%
-      ),
-      radial-gradient(
-        35% 25% at 85% 15%,
-        oklch(0.7 0.15 200 / 0.12),
-        transparent 70%
-      );
+  .glass {
+    border: 1px solid var(--header-border);
+    background-color: var(--header-bg);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 var(--highlight);
   }
 
-  .bg-grain::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    opacity: 0.04;
-    mix-blend-mode: overlay;
-    pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* The main button of the Graphite theme: the accent with a light top edge. */
+  .btn-primary {
+    background-color: var(--primary);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--primary), #ffffff 8%),
+      var(--primary)
+    );
+    color: var(--primary-foreground);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 10px 22px -10px var(--primary);
+    transition:
+      transform 0.15s ease,
+      filter 0.15s ease;
+  }
+  @media (hover: hover) {
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+  }
+
+  /* A secondary button or chip, lit from above like the app. */
+  .btn-chip {
+    border: 1px solid var(--input);
+    background-color: var(--secondary);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--secondary), #ffffff 6%),
+      var(--secondary)
+    );
+    box-shadow: var(--chip-shadow);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .btn-chip:hover {
+      border-color: color-mix(in srgb, var(--input), var(--foreground) 12%);
+      background-color: var(--accent);
+    }
+  }
+
+  /* SpotlightCard sets --spot-x and --spot-y from the mouse. */
+  @media (hover: hover) {
+    .spotlight:hover {
+      border-color: rgb(var(--spot-rgb) / 0.35);
+      background-image:
+        radial-gradient(
+          var(--spot-reach) circle at var(--spot-x, 50%) var(--spot-y, 50%),
+          rgb(var(--spot-rgb) / 0.1),
+          transparent 62%
+        ),
+        linear-gradient(180deg, color-mix(in srgb, var(--card), #ffffff 3%), var(--card));
+    }
+  }
+
+  .fx-lift {
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+  @media (hover: hover) {
+    .fx-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--lift-shadow);
+    }
+  }
+
+  .fx-shine {
+    background: linear-gradient(
+      90deg,
+      var(--foreground) 0%,
+      var(--foreground) 40%,
+      var(--shine) 50%,
+      var(--foreground) 60%,
+      var(--foreground) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: fx-shine 6s linear infinite;
+  }
+
+  /* The grid of the floor is one cell taller than its frame and slides down by
+     one cell, so the loop is a transform the compositor runs alone. */
+  .fx-floor {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    animation: fx-floor 3s linear infinite;
+  }
+
+  .fx-spin {
+    animation: fx-spin 6s linear infinite;
+  }
+  .fx-spin-slow {
+    animation: fx-spin 12s linear infinite;
+  }
+  .fx-spin-slower {
+    animation: fx-spin 40s linear infinite;
+  }
+  .fx-ping {
+    animation: fx-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  .fx-marquee {
+    animation: fx-marquee 70s linear infinite;
+  }
+  .fx-marquee-rev {
+    animation: fx-marquee-rev 70s linear infinite;
+  }
+  .fx-drift {
+    animation: fx-drift 16s ease-in-out infinite;
+  }
+  .fx-drift-2 {
+    animation: fx-drift-2 19s ease-in-out infinite;
+  }
+  .fx-ticker {
+    animation: fx-ticker 11s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+  }
+  .fx-twinkle {
+    animation: fx-twinkle 3s ease-in-out infinite;
+  }
+  .fx-in {
+    animation: fx-in 0.35s ease-out both;
+  }
+  .fx-blink {
+    animation: fx-blink 1s steps(1) infinite;
+  }
+  .fx-drop {
+    animation: fx-drop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .fx-rise {
+    animation: fx-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 }
 
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+/* The lens over the app window in the hero. From lg on the server layer sits
+   in a frame moved right by --lens-split, and the layer inside moves back by
+   the same amount, so the frame cuts it at the split. The handle moves with the
+   frame. Only transforms move, so the sweep needs no repaint. Without the mouse
+   on the window the split sweeps on its own. Below lg two buttons switch the
+   layers. */
+@media (min-width: 1024px) {
+  .lens-clip,
+  .lens-handle {
+    transform: translateX(var(--lens-split, 52%));
+  }
+  .lens-clip-inner {
+    transform: translateX(calc(-1 * var(--lens-split, 52%)));
+  }
+  .lens-auto .lens-clip,
+  .lens-auto .lens-handle {
+    animation: fx-lens 10s ease-in-out infinite;
+  }
+  .lens-auto .lens-clip-inner {
+    animation: fx-lens-back 10s ease-in-out infinite;
+  }
 }
 
-[data-reveal][data-visible="true"] {
-  opacity: 1;
-  transform: translateY(0);
+@keyframes fx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fx-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@keyframes fx-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes fx-marquee-rev {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes fx-floor {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(64px);
+  }
+}
+@keyframes fx-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(60px, -40px) scale(1.15);
+  }
+}
+@keyframes fx-drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-70px, 30px) scale(0.95);
+  }
+}
+/* Five words plus the first one again, so the jump back to the start is
+   invisible. Each step moves the column by one sixth of its height. */
+@keyframes fx-ticker {
+  0%,
+  16% {
+    transform: translateY(0);
+  }
+  20%,
+  36% {
+    transform: translateY(-16.6667%);
+  }
+  40%,
+  56% {
+    transform: translateY(-33.3333%);
+  }
+  60%,
+  76% {
+    transform: translateY(-50%);
+  }
+  80%,
+  96% {
+    transform: translateY(-66.6667%);
+  }
+  100% {
+    transform: translateY(-83.3333%);
+  }
+}
+@keyframes fx-shine {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes fx-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+@keyframes fx-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The mobile menu drops out of the header, its rows rise one after the other. */
+@keyframes fx-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The cursor of the terminals. */
+@keyframes fx-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes fx-lens {
+  0%,
+  100% {
+    transform: translateX(28%);
+  }
+  50% {
+    transform: translateX(74%);
+  }
+}
+@keyframes fx-lens-back {
+  0%,
+  100% {
+    transform: translateX(-28%);
+  }
+  50% {
+    transform: translateX(-74%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-spin,
+  .fx-spin-slow,
+  .fx-spin-slower,
+  .fx-ping,
+  .fx-marquee,
+  .fx-marquee-rev,
+  .fx-floor,
+  .fx-drift,
+  .fx-drift-2,
+  .fx-ticker,
+  .fx-shine,
+  .fx-twinkle,
+  .fx-in,
+  .fx-blink,
+  .fx-drop,
+  .fx-rise,
+  .lens-auto .lens-clip,
+  .lens-auto .lens-clip-inner,
+  .lens-auto .lens-handle {
+    animation: none;
+  }
+}
+
+/* Touch screens keep the heavy decoration still. iOS Safari tiles every layer
+   wider than 1280px, and a tiled layer under a running animation makes it redo
+   its rendering on the main thread every frame, which can freeze the page on
+   an iPhone. The large spinning layers (fx-border), the marquees, the floor
+   grid, the shine, the stars, the drifting glows and the lens sweep stop here.
+   Small loops like fx-ping, fx-ticker and fx-blink keep running on purpose,
+   they move a few pixels of transform or opacity. */
+@media (hover: none) {
+  .fx-border,
+  .fx-marquee,
+  .fx-marquee-rev,
+  .fx-floor,
+  .fx-shine,
+  .fx-twinkle,
+  .fx-drift,
+  .fx-drift-2,
+  .lens-auto .lens-clip,
+  .lens-auto .lens-clip-inner,
+  .lens-auto .lens-handle {
+    animation: none;
+  }
+}
+
+/* Blog articles. Rules reach only the direct children of the article, so the
+   MDX components keep their own look. */
+.post-prose > p,
+.post-prose > ul > li,
+.post-prose > ol > li {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--subtle);
+}
+.post-prose > p {
+  margin: 0 0 22px;
+}
+.post-prose > h2 {
+  margin: 56px 0 18px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+}
+.post-prose > h2:first-child {
+  margin-top: 0;
+}
+.post-prose > h3 {
+  margin: 36px 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.post-prose strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+.post-prose em {
+  color: var(--foreground);
+}
+.post-prose :not(pre) > code {
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--foreground);
+}
+/*
+ * The color of a post page, from the tone of its cover, with green everywhere
+ * else. A band with its own .dark class declares it again, so it takes the
+ * dark value of the tone in light mode too.
+ */
+:root,
+.dark,
+[data-post-tone="green"],
+[data-post-tone="green"] .dark {
+  --post-tone: var(--tone-green);
+  --post-tone-2: var(--tone-cyan);
+  --post-glow: #17a37a;
+  --post-glow-2: #0e7490;
+}
+[data-post-tone="cyan"],
+[data-post-tone="cyan"] .dark {
+  --post-tone: var(--tone-cyan);
+  --post-tone-2: var(--tone-blue);
+  --post-glow: #0e7490;
+  --post-glow-2: #0369a1;
+}
+[data-post-tone="violet"],
+[data-post-tone="violet"] .dark {
+  --post-tone: var(--tone-violet);
+  --post-tone-2: var(--tone-blue);
+  --post-glow: #7c3aed;
+  --post-glow-2: #4f46e5;
+}
+[data-post-tone="blue"],
+[data-post-tone="blue"] .dark {
+  --post-tone: var(--tone-blue);
+  --post-tone-2: var(--tone-cyan);
+  --post-glow: #2563eb;
+  --post-glow-2: #0e7490;
+}
+[data-post-tone="amber"],
+[data-post-tone="amber"] .dark {
+  --post-tone: var(--tone-amber);
+  --post-tone-2: var(--tone-red);
+  --post-glow: #b45309;
+  --post-glow-2: #c2410c;
+}
+
+.post-prose a {
+  color: var(--post-tone);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--post-tone) 40%, transparent);
+}
+.post-prose > ul {
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.post-prose > ul > li {
+  position: relative;
+  padding-left: 22px;
+}
+.post-prose > ul > li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--post-tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--post-tone) 80%, transparent);
+}
+.post-prose > ol {
+  margin: 0 0 22px;
+  padding-left: 1.4em;
+  list-style: decimal;
+}
+.post-prose > ol > li::marker {
+  color: var(--faint);
+}
+.post-prose figure {
+  margin: 0 0 22px;
 }

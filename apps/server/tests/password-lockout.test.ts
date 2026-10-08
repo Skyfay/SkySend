@@ -40,4 +40,51 @@ describe("password lockout", () => {
     const result = lockout.check("upload:abc", "1.2.3.4");
     expect(result.locked).toBe(false);
   });
+
+  it("cleanup keeps a lock that has not run out yet", () => {
+    vi.useFakeTimers();
+    // 2 attempts, 1 s lockout - cleanup runs every 2 s
+    const lockout = createPasswordLockout(2, 1000);
+
+    // Locked at 1.5 s until 2.5 s, so the cleanup at 2 s finds it still running.
+    vi.advanceTimersByTime(1500);
+    lockout.recordFailure("upload:abc", "1.2.3.4");
+    lockout.recordFailure("upload:abc", "1.2.3.4");
+    vi.advanceTimersByTime(501);
+
+    expect(lockout.check("upload:abc", "1.2.3.4")).toEqual({ locked: true, retryAfter: 1 });
+  });
+
+  it("cleanup keeps recent failures that led to no lock yet", () => {
+    vi.useFakeTimers();
+    // 3 attempts, 1 s lockout - cleanup runs every 2 s
+    const lockout = createPasswordLockout(3, 1000);
+
+    // Half a second old when the cleanup at 2 s runs, so it still counts.
+    vi.advanceTimersByTime(1500);
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    vi.advanceTimersByTime(501);
+
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(false);
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(true);
+  });
+
+  it("forgets failures that led to no lock once lockoutMs passed", () => {
+    vi.useFakeTimers();
+    // 3 attempts, 1 s lockout - cleanup runs every 2 s
+    const lockout = createPasswordLockout(3, 1000);
+
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    vi.advanceTimersByTime(2001);
+
+    // The two old failures are gone, so two new ones do not lock yet.
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(false);
+    lockout.recordFailure("request:abc", "1.2.3.4");
+    expect(lockout.check("request:abc", "1.2.3.4").locked).toBe(true);
+  });
 });

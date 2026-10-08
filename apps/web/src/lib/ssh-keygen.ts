@@ -9,7 +9,13 @@ export interface SSHKeyPair {
   privateKey: string;
   algorithm: "ed25519" | "rsa";
   fingerprint: string;
-  warning?: string;
+  /** Set when the browser could not add the comment and passphrase, so the key has neither. */
+  extrasDropped?: boolean;
+}
+
+/** This browser cannot generate an Ed25519 key. The interface suggests RSA instead. */
+export class Ed25519UnsupportedError extends Error {
+  override name = "Ed25519UnsupportedError";
 }
 
 // ---------------------------------------------------------------------------
@@ -27,9 +33,7 @@ export async function generateEd25519KeyPair(
       "verify",
     ]);
   } catch {
-    throw new Error(
-      "Ed25519 is not supported in this browser. Please use RSA or try a different browser (Chrome 113+, Firefox 130+, Safari 17+).",
-    );
+    throw new Ed25519UnsupportedError("Ed25519 is not supported in this browser");
   }
 
   const publicKeyRaw = new Uint8Array(
@@ -75,9 +79,7 @@ export async function generateEd25519KeyPair(
   } catch {
     // If no extras were requested, there is nothing to fall back to
     if (!hasExtras) {
-      throw new Error(
-        "Ed25519 key generation failed in this browser. Please use RSA or try a different browser.",
-      );
+      throw new Ed25519UnsupportedError("Ed25519 key generation failed in this browser");
     }
   }
 
@@ -92,8 +94,7 @@ export async function generateEd25519KeyPair(
     privateKey: privateKeyStr,
     algorithm: "ed25519",
     fingerprint,
-    warning:
-      "Ed25519 keys with comment or passphrase are not supported in this browser. The key was generated without them.",
+    extrasDropped: true,
   };
 }
 

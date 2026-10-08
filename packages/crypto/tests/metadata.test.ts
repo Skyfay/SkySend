@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   encryptMetadata,
   decryptMetadata,
+  decryptRequestMetadata,
   expectedPlaintextSize,
   META_IV_LENGTH,
+  METADATA_PAD_BLOCK,
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
+import { asBytes } from "../src/util.js";
+import { flipped } from "./helpers.js";
 
 /**
  * Encrypts arbitrary JSON directly via Web Crypto, bypassing the type-safe
@@ -32,7 +36,7 @@ async function encryptRawBytes(
   metaKey: CryptoKey,
 ): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
   const iv = crypto.getRandomValues(new Uint8Array(META_IV_LENGTH));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, bytes);
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, metaKey, asBytes(bytes));
   return { ciphertext: new Uint8Array(ciphertext), iv };
 }
 
@@ -150,8 +154,7 @@ describe("metadata encryption/decryption", () => {
     };
 
     const encrypted = await encryptMetadata(metadata, metaKey);
-    const tampered = new Uint8Array(encrypted.ciphertext);
-    tampered[0] ^= 0xff;
+    const tampered = flipped(encrypted.ciphertext);
     await expect(
       decryptMetadata(tampered, encrypted.iv, metaKey),
     ).rejects.toThrow("corrupted or tampered");
@@ -187,6 +190,95 @@ describe("metadata encryption/decryption", () => {
       mimeType: "text/plain",
     });
     expect(Object.keys(decrypted).sort()).toEqual(["mimeType", "name", "size", "type"]);
+  });
+});
+
+describe("metadata padding", () => {
+  const single = (name: string): SingleFileMetadata => ({
+    type: "single",
+    name,
+    size: 1234,
+    mimeType: "application/pdf",
+  });
+
+  /** The plaintext the server never sees, read with the key the way a reader does. */
+  async function plaintextOf(
+    encrypted: { ciphertext: Uint8Array; iv: Uint8Array },
+    metaKey: CryptoKey,
+  ): Promise<Uint8Array> {
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: asBytes(encrypted.iv), tagLength: 128 },
+      metaKey,
+      asBytes(encrypted.ciphertext),
+    );
+    return new Uint8Array(plain);
+  }
+
+  it("should pad the JSON with spaces to whole blocks", async () => {
+    const metaKey = await getMetaKey();
+    const encrypted = await encryptMetadata(single("report.pdf"), metaKey);
+    const plaintext = await plaintextOf(encrypted, metaKey);
+    expect(plaintext.length).toBe(METADATA_PAD_BLOCK);
+    expect(encrypted.ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    const json = JSON.stringify(single("report.pdf"));
+    expect(new TextDecoder().decode(plaintext)).toBe(json + " ".repeat(METADATA_PAD_BLOCK - json.length));
+  });
+
+  it("should give file names of different lengths the same ciphertext length", async () => {
+    const metaKey = await getMetaKey();
+    const short = await encryptMetadata(single("a.txt"), metaKey);
+    const long = await encryptMetadata(single(`${"x".repeat(200)}.docx`), metaKey);
+    expect(short.ciphertext.length).toBe(long.ciphertext.length);
+  });
+
+  it("should take as many blocks as the JSON needs and still round-trip", async () => {
+    const metaKey = await getMetaKey();
+    const files = Array.from({ length: 20 }, (_, i) => ({ name: `${"n".repeat(80)}-${i}.bin`, size: i }));
+    const archive: ArchiveMetadata = { type: "archive", files, totalSize: 190, archiveSize: 4096 };
+    const json = JSON.stringify(archive);
+    expect(json.length).toBeGreaterThan(METADATA_PAD_BLOCK);
+
+    const encrypted = await encryptMetadata(archive, metaKey);
+    const blocks = Math.ceil(json.length / METADATA_PAD_BLOCK);
+    expect(encrypted.ciphertext.length).toBe(blocks * METADATA_PAD_BLOCK + 16);
+    expect(await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(archive);
+  });
+
+  it("should pad JSON of exactly one block to that block, and one byte more to two", async () => {
+    const metaKey = await getMetaKey();
+    const base = JSON.stringify(single("")).length;
+    const exact = single("e".repeat(METADATA_PAD_BLOCK - base));
+    const over = single("o".repeat(METADATA_PAD_BLOCK - base + 1));
+    expect((await encryptMetadata(exact, metaKey)).ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    expect((await encryptMetadata(over, metaKey)).ciphertext.length).toBe(2 * METADATA_PAD_BLOCK + 16);
+  });
+
+  it("should count bytes, not characters, when a file name is not ASCII", async () => {
+    const metaKey = await getMetaKey();
+    const base = new TextEncoder().encode(JSON.stringify(single(""))).length;
+    // "ü" is two bytes in UTF-8, so half as many characters fill the block exactly.
+    const exact = single("ü".repeat((METADATA_PAD_BLOCK - base) / 2));
+    const over = single(`${"ü".repeat((METADATA_PAD_BLOCK - base) / 2)}x`);
+    expect(new TextEncoder().encode(JSON.stringify(exact)).length).toBe(METADATA_PAD_BLOCK);
+    const encrypted = await encryptMetadata(exact, metaKey);
+    expect(encrypted.ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    expect(await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(exact);
+    expect((await encryptMetadata(over, metaKey)).ciphertext.length).toBe(2 * METADATA_PAD_BLOCK + 16);
+  });
+
+  it("should still read the unpadded metadata of older clients", async () => {
+    const metaKey = await getMetaKey();
+    const legacy = await encryptRawJson(single("old.pdf"), metaKey);
+    expect(legacy.ciphertext.length).toBeLessThan(METADATA_PAD_BLOCK);
+    expect(await decryptMetadata(legacy.ciphertext, legacy.iv, metaKey)).toEqual(single("old.pdf"));
+  });
+
+  it("should refuse padded metadata with a flipped byte", async () => {
+    const metaKey = await getMetaKey();
+    const encrypted = await encryptMetadata(single("report.pdf"), metaKey);
+    await expect(
+      decryptMetadata(flipped(encrypted.ciphertext, METADATA_PAD_BLOCK - 1), encrypted.iv, metaKey),
+    ).rejects.toThrow();
   });
 });
 
@@ -379,6 +471,89 @@ describe("expectedPlaintextSize", () => {
     expect(
       expectedPlaintextSize({ type: "archive", files: [{ name: "a.txt", size: 10 }], totalSize: 10 }),
     ).toBeUndefined();
+  });
+
+  it("should be the padded size of a note", () => {
+    expect(expectedPlaintextSize({ type: "note", size: 2048 })).toBe(2048);
+  });
+});
+
+describe("metadata of uploads into a file request", () => {
+  it("should round-trip the metadata of a note, and of a file as before", async () => {
+    const metaKey = await getMetaKey();
+    const note = await encryptMetadata({ type: "note", size: 1024 }, metaKey);
+    expect(await decryptRequestMetadata(note.ciphertext, note.iv, metaKey)).toEqual({
+      type: "note",
+      size: 1024,
+    });
+    const file = { type: "single", name: "a.pdf", size: 3, mimeType: "application/pdf" } as const;
+    const encrypted = await encryptMetadata(file, metaKey);
+    expect(await decryptRequestMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(file);
+  });
+
+  it("should keep a note away from the reader of normal uploads", async () => {
+    const metaKey = await getMetaKey();
+    const note = await encryptMetadata({ type: "note", size: 1024 }, metaKey);
+    await expect(decryptMetadata(note.ciphertext, note.iv, metaKey)).rejects.toThrow(
+      "unknown type",
+    );
+  });
+
+  it("should reject a note without a sound size, and keep extra fields out", async () => {
+    const metaKey = await getMetaKey();
+    for (const size of [undefined, -1, 1.5, "1024", Number.MAX_SAFE_INTEGER + 1]) {
+      const raw = await encryptRawJson({ type: "note", size }, metaKey);
+      await expect(decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey)).rejects.toThrow(
+        "invalid note size",
+      );
+    }
+    const extra = await encryptRawJson({ type: "note", size: 1, name: "<b>" }, metaKey);
+    expect(await decryptRequestMetadata(extra.ciphertext, extra.iv, metaKey)).toEqual({
+      type: "note",
+      size: 1,
+    });
+  });
+
+  it("should keep the submission that ties uploads together, and only one of the right form", async () => {
+    const metaKey = await getMetaKey();
+    const submission = "0123456789abcdef0123456789abcdef";
+    const read = async (data: unknown) => {
+      const raw = await encryptRawJson(data, metaKey);
+      return decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey);
+    };
+    expect(await read({ type: "note", size: 1024, submission })).toEqual({
+      type: "note",
+      size: 1024,
+      submission,
+    });
+    expect(
+      await read({ type: "single", name: "a", size: 1, mimeType: "text/plain", submission }),
+    ).toMatchObject({ submission });
+    expect(
+      await read({ type: "archive", files: [], totalSize: 0, archiveSize: 22, submission }),
+    ).toMatchObject({ submission });
+    for (const wrong of ["", "XYZ", submission.toUpperCase(), 42, `${submission}0`]) {
+      expect(await read({ type: "note", size: 1, submission: wrong })).toEqual({
+        type: "note",
+        size: 1,
+      });
+    }
+  });
+
+  it("should fail like decryptMetadata on a wrong key or broken JSON", async () => {
+    const metaKey = await getMetaKey();
+    const raw = await encryptRawBytes(new TextEncoder().encode("{"), metaKey);
+    await expect(decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey)).rejects.toThrow(
+      "invalid JSON",
+    );
+    const nul = await encryptRawJson(null, metaKey);
+    await expect(decryptRequestMetadata(nul.ciphertext, nul.iv, metaKey)).rejects.toThrow(
+      "not an object",
+    );
+    const note = await encryptMetadata({ type: "note", size: 1 }, metaKey);
+    await expect(
+      decryptRequestMetadata(note.ciphertext, note.iv, await getMetaKey()),
+    ).rejects.toThrow("decryption failed");
   });
 });
 

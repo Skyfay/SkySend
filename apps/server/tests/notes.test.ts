@@ -62,7 +62,7 @@ function validNotePayload(overrides: Record<string, unknown> = {}) {
     salt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url"),
     ownerToken: fakeBase64urlToken(),
     authToken: fakeBase64urlToken(),
-    contentType: "text",
+    contentType: "blocks",
     maxViews: 1,
     expireSec: 3600,
     hasPassword: false,
@@ -107,21 +107,42 @@ describe("note routes", () => {
         where: eq(notes.id, body.id),
       });
       expect(note).toBeDefined();
-      expect(note!.contentType).toBe("text");
+      expect(note!.contentType).toBe("blocks");
       expect(note!.maxViews).toBe(1);
       expect(note!.viewCount).toBe(0);
     });
 
-    it("should create notes for all content types", async () => {
+    it("should store a note made of blocks under its own content type", async () => {
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ contentType: "blocks" })),
+      });
+      expect(res.status).toBe(201);
+      const { id } = await res.json();
+
+      const note = await dbCtx.db.query.notes.findFirst({ where: eq(notes.id, id) });
+      expect(note!.contentType).toBe("blocks");
+
+      const info = await (await app.request(`/api/note/${id}`)).json();
+      expect(info.contentType).toBe("blocks");
+    });
+
+    // LEGACY(notes-v1): CLI clients from before v3 still send these. Drop with the legacy types.
+    it("should still accept every content type from before v3", async () => {
       const app = createApp();
 
-      for (const contentType of ["text", "password", "code"]) {
+      for (const contentType of ["text", "password", "code", "markdown", "sshkey"]) {
         const res = await app.request("/api/note", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(validNotePayload({ contentType })),
         });
         expect(res.status).toBe(201);
+        const { id } = await res.json();
+        const note = await dbCtx.db.query.notes.findFirst({ where: eq(notes.id, id) });
+        expect(note!.contentType).toBe(contentType);
       }
     });
 
@@ -147,12 +168,14 @@ describe("note routes", () => {
 
     it("should reject invalid content type", async () => {
       const app = createApp();
-      const res = await app.request("/api/note", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validNotePayload({ contentType: "invalid" })),
-      });
-      expect(res.status).toBe(400);
+      for (const contentType of ["invalid", "BLOCKS", "", "unsupported"]) {
+        const res = await app.request("/api/note", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validNotePayload({ contentType })),
+        });
+        expect(res.status).toBe(400);
+      }
     });
 
     it("should reject invalid expiry time", async () => {
@@ -337,7 +360,7 @@ describe("note routes", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.id).toBe(TEST_UUID);
-      expect(body.contentType).toBe("text");
+      expect(body.contentType).toBe("blocks");
       expect(body.hasPassword).toBe(false);
       expect(body.maxViews).toBe(10);
       expect(body.viewCount).toBe(0);

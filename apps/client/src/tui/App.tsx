@@ -13,6 +13,7 @@ import { NoteCreateView } from "./views/NoteCreate.js";
 import { NoteViewView } from "./views/NoteView.js";
 import { MyUploadsView } from "./views/MyUploads.js";
 import { SettingsView } from "./views/Settings.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface AppProps {
   initialServer?: string;
@@ -128,7 +129,7 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
     return (
       <Box flexDirection="column">
         <Box marginY={1} marginX={2}>
-          <Text color="red">Error: {error}</Text>
+          <Text color="red">Error: {forTerminal(error)}</Text>
         </Box>
         <Box marginX={2} gap={2}>
           <Text dimColor>Press <Text bold>s</Text> to select server</Text>
@@ -147,7 +148,7 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
 
       {error && (
         <Box marginX={2}>
-          <Text color="red">Error: {error}</Text>
+          <Text color="red">Error: {forTerminal(error)}</Text>
         </Box>
       )}
 

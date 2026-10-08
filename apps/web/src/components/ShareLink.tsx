@@ -1,10 +1,9 @@
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Link, Plus, Share2 } from "lucide-react";
+import { Check, Copy, Lock, Plus, QrCode, Share2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SplitLink } from "@/components/SplitLink";
 
 interface ShareLinkProps {
   link: string;
@@ -13,18 +12,20 @@ interface ShareLinkProps {
   children?: ReactNode;
 }
 
+/**
+ * The finished share: the link with its key shown apart from the rest, copy, share and
+ * QR code. data-share-done lets the share form hide its tabs while this is shown.
+ */
 export function ShareLink({ link, averageSpeed, onNewUpload, children }: ShareLinkProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const [qrExpanded, setQrExpanded] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrLarge, setQrLarge] = useState(false);
 
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const input = document.createElement("input");
@@ -33,87 +34,75 @@ export function ShareLink({ link, averageSpeed, onNewUpload, children }: ShareLi
       input.select();
       document.execCommand("copy");
       input.remove();
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg text-success">
-          <Check className="h-5 w-5" />
-          {t("upload.uploadComplete")}
-          {averageSpeed && (
-            <span className="ml-auto text-xs font-normal text-muted-foreground">
-              Ø {averageSpeed}
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="share-link">
-            <Link className="mr-1 inline h-4 w-4" />
+    <div data-share-done className="space-y-5 p-3 sm:p-5">
+      <div className="flex items-center gap-3.5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary-text">
+          <Check className="h-5 w-5" strokeWidth={2.5} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight">{t("upload.uploadComplete")}</h2>
+          <p className="text-[13px] text-muted-foreground">
             {t("upload.shareLink")}
-          </label>
-          <div className="flex gap-2">
-            <Input
-              id="share-link"
-              value={link}
-              readOnly
-              className="font-mono text-xs"
-              onClick={(e) => e.currentTarget.select()}
-            />
-            <Button onClick={copyToClipboard} variant="secondary" size="default">
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t("common.copied")}</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t("common.copy")}</span>
-                </>
-              )}
-            </Button>
-            {canShare && (
-              <Button
-                onClick={() => navigator.share({ title: t("common.appName"), url: link })}
-                variant="secondary"
-                size="default"
-              >
-                <Share2 className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("common.share")}</span>
-              </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t("upload.shareLinkHint")}
+            {averageSpeed && <span> · Ø {averageSpeed}</span>}
           </p>
         </div>
+      </div>
 
+      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-well p-2 sm:flex-row sm:items-center sm:pl-4">
+        <SplitLink link={link} label={t("upload.shareLink")} />
+        <div className="flex gap-2">
+          <Button onClick={copyToClipboard} className="flex-1 sm:flex-none">
+            {copied ? <Check /> : <Copy />}
+            {copied ? t("common.copied") : t("common.copy")}
+          </Button>
+          {canShare && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigator.share({ title: t("common.appName"), url: link })}
+              aria-label={t("common.share")}
+            >
+              <Share2 />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        {t("upload.shareLinkHint")}
+      </p>
+
+      {qrOpen && (
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => setQrExpanded((v) => !v)}
-            className="cursor-pointer rounded-lg bg-white p-2 transition-transform hover:scale-105"
+            onClick={() => setQrLarge((v) => !v)}
+            aria-label={t("share.qrResize")}
+            className="cursor-pointer rounded-2xl bg-white p-3 shadow-chip transition-transform hover:scale-[1.02]"
           >
-            <QRCodeSVG
-              value={link}
-              size={qrExpanded ? 256 : 96}
-              level="L"
-            />
+            <QRCodeSVG value={link} size={qrLarge ? 256 : 152} level="L" />
           </button>
         </div>
+      )}
 
-        <Button onClick={onNewUpload} variant="outline" className="w-full">
-          <Plus className="mr-1 h-4 w-4" />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => setQrOpen((v) => !v)} aria-expanded={qrOpen}>
+          <QrCode />
+          {t("share.qrCode")}
+        </Button>
+        <Button variant="ghost" onClick={onNewUpload}>
+          <Plus />
           {t("upload.newUpload")}
         </Button>
-        {children}
-      </CardContent>
-    </Card>
+      </div>
+      {children}
+    </div>
   );
 }

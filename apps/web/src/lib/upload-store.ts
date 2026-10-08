@@ -1,5 +1,8 @@
 import { get, set, del, keys } from "idb-keyval";
-import type { NoteContentType } from "@skysend/crypto";
+import type { RequestAsk } from "@skysend/crypto";
+import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
+import type { NoteKindKey } from "@/lib/note-editor";
+import { readStoredTemplate, type RequestTemplate } from "@/lib/request-templates";
 
 export interface StoredUpload {
   id: string;
@@ -7,7 +10,7 @@ export interface StoredUpload {
   secret: string;
   fileNames: string[];
   createdAt: string;
-  /** Optional label the owner set in "My Uploads". Never leaves this browser. */
+  /** Optional label the owner set in "My Links". Never leaves this browser. */
   name?: string;
 }
 
@@ -18,7 +21,10 @@ export interface StoredNote {
   id: string;
   ownerToken: string;
   secret: string;
-  contentType: NoteContentType;
+  /** "blocks". LEGACY(notes-v1): or the content type of a note created before v3. */
+  contentType: typeof NOTE_KIND | LegacyNoteKind;
+  /** The kinds of blocks a note made of blocks holds, for "My Links". Never leaves this browser. */
+  kinds?: NoteKindKey[];
   createdAt: string;
 }
 
@@ -134,4 +140,106 @@ export async function clearExpiredNotes(activeIds: Set<string>): Promise<void> {
       }
     }
   }
+}
+
+// ── File Request Storage ───────────────────────────────
+
+/**
+ * A file request created in this browser, for My Links. The two fragments are
+ * what the two links carry. With a password the inbox fragment holds the protected
+ * secret, so it opens nothing without the password, and no token is kept beside it.
+ */
+export interface StoredRequest {
+  id: string;
+  /** What follows "#" in the inbox link. */
+  inboxFragment: string;
+  /** What follows "#" in the upload link. */
+  uploadFragment: string;
+  hasPassword: boolean;
+  /** The title in plain text. Never leaves this browser unencrypted. */
+  title?: string;
+  closesAt: string;
+  createdAt: string;
+  /** IDs of the uploads the inbox listed when it was last open here. Any other one is new. */
+  seenUploads?: string[];
+  /** What the request asks for, so a submission of files and a note counts as one. */
+  asks?: RequestAsk[];
+}
+
+const REQUEST_PREFIX = "request:";
+
+function requestKey(id: string): string {
+  return `${REQUEST_PREFIX}${id}`;
+}
+
+export async function saveRequest(request: StoredRequest): Promise<void> {
+  await set(requestKey(request.id), request);
+}
+
+export async function getRequest(id: string): Promise<StoredRequest | undefined> {
+  return get<StoredRequest>(requestKey(id));
+}
+
+export async function removeRequest(id: string): Promise<void> {
+  await del(requestKey(id));
+}
+
+/**
+ * Remembers which uploads the inbox listed, so only later ones count as new. Only for the
+ * link this browser stored, so a made-up link to the same ID changes nothing. Returns the
+ * IDs it knew before, or null when it changed nothing.
+ */
+export async function markUploadsSeen(
+  id: string,
+  inboxFragment: string,
+  uploadIds: string[],
+): Promise<Set<string> | null> {
+  const request = await getRequest(id);
+  if (!request || request.inboxFragment !== inboxFragment) return null;
+  await saveRequest({ ...request, seenUploads: uploadIds });
+  return new Set(request.seenUploads ?? []);
+}
+
+export async function getAllRequests(): Promise<StoredRequest[]> {
+  const allKeys = await keys();
+  const requests: StoredRequest[] = [];
+  for (const k of allKeys) {
+    if (typeof k !== "string" || !k.startsWith(REQUEST_PREFIX)) continue;
+    const request = await get<StoredRequest>(k);
+    if (request) requests.push(request);
+  }
+  requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return requests;
+}
+
+// ── Request Template Storage ───────────────────────────
+
+const TEMPLATE_PREFIX = "template:";
+
+function templateKey(id: string): string {
+  return `${TEMPLATE_PREFIX}${id}`;
+}
+
+export async function saveTemplate(template: RequestTemplate): Promise<void> {
+  await set(templateKey(template.id), template);
+}
+
+export async function removeTemplate(id: string): Promise<void> {
+  await del(templateKey(id));
+}
+
+/**
+ * The templates kept in this browser, by name. Each one is read like a template from
+ * elsewhere, so one that does not read is left out instead of breaking the list.
+ */
+export async function getAllTemplates(): Promise<RequestTemplate[]> {
+  const allKeys = await keys();
+  const templates: RequestTemplate[] = [];
+  for (const k of allKeys) {
+    if (typeof k !== "string" || !k.startsWith(TEMPLATE_PREFIX)) continue;
+    const template = readStoredTemplate(await get(k));
+    if (template) templates.push(template);
+  }
+  templates.sort((a, b) => a.name.localeCompare(b.name));
+  return templates;
 }

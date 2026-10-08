@@ -47,7 +47,7 @@ Two sidebars, defined in `.vitepress/config.mts`. A new page must be added there
 
 Never into `docs/changelog.md`. Every branch writes its entries into a fragment of its own, `changelog/unreleased/<branch>.md` with the `/` of the branch name replaced by `-`, so pull requests that run side by side never touch the same file. A change made without a branch of its own names its fragment after the change.
 
-A fragment is a version block without the version header and without the Docker section: notes like breaking changes above the first section, then sections with entries. The release (`pnpm version:bump`) collects all fragments into one version block of `docs/changelog.md`, sorts the sections into the order below and deletes the fragments. `scripts/changelog.test.ts` checks every fragment against the rules of this part (sections, scopes, at most two sentences, no `;`, no hyphen used as a dash), and `pnpm changelog:preview` prints the block the next release writes. Format and example: [changelog/unreleased/README.md](../changelog/unreleased/README.md).
+A fragment is a version block without the version header and without the Docker section: notes like breaking changes above the first section, then sections with entries. The release (`pnpm version:bump`) collects all fragments into one version block of `docs/changelog.md`, sorts the sections into the order below, groups the entries of each section by scope in the order of the scope table and deletes the fragments. `scripts/changelog.test.ts` checks every fragment against the rules of this part (sections, scopes, at most two sentences, no `;`, no hyphen used as a dash), and `pnpm changelog:preview` prints the block the next release writes. Format and example: [changelog/unreleased/README.md](../changelog/unreleased/README.md).
 
 ## What never gets an entry
 
@@ -89,7 +89,7 @@ A change spanning several scopes becomes several entries, one per scope. Never `
 
 **One entry per user-visible change.** A pull request touching 20 files to deliver one behavior change is one line. Two unrelated changes in one pull request are two lines.
 
-Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link.
+Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link, which the release adds by itself: `scripts/changelog.mjs` looks up the pull request that added a fragment with git and `gh` and appends `Thanks @author ([#N](url))` to every entry of a fragment from outside the project. Contributors write no thanks, and a reviewer does not ask for one.
 
 ## Section order
 

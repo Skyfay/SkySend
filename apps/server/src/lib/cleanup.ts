@@ -1,10 +1,43 @@
-import { lte, or, sql } from "drizzle-orm";
+import { and, eq, lte, notExists, or, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { notes, uploads } from "../db/schema.js";
+import { fileRequests, notes, requestUploads, uploads } from "../db/schema.js";
+import { SESSION_MAX_LIFETIME_MS } from "./chunked-upload.js";
 import type { StorageBackend } from "../storage/types.js";
+import { describeError } from "./log-error.js";
 
 /**
- * Delete expired uploads and uploads that have reached their download limit.
+ * An upload into a request can still finish as long as its session lives, because the
+ * session started before the request closed. The request row stays until then, with a
+ * margin for the finalize itself.
+ */
+export const REQUEST_GRACE_MS = SESSION_MAX_LIFETIME_MS + 5 * 60 * 1000;
+
+/**
+ * Deletes a file request with every upload in it, for the inbox and the admin CLI.
+ *
+ * The IDs are read and the request row deleted in one synchronous step, so an upload that
+ * finishes meanwhile either is among the IDs or fails on the foreign key and drops its own
+ * blob. The blobs go after that. Returns whether there was such a request.
+ */
+export async function deleteFileRequest(storage: StorageBackend, id: string): Promise<boolean> {
+  const db = getDb();
+  const { uploadIds, deleted } = db.transaction((tx) => {
+    const rows = tx
+      .select({ id: requestUploads.id })
+      .from(requestUploads)
+      .where(eq(requestUploads.requestId, id))
+      .all();
+    // The upload rows go with the request through the foreign key.
+    const result = tx.delete(fileRequests).where(eq(fileRequests.id, id)).run();
+    return { uploadIds: rows.map((row) => row.id), deleted: result.changes > 0 };
+  });
+  await Promise.allSettled(uploadIds.map((uploadId) => storage.delete(uploadId)));
+  return deleted;
+}
+
+/**
+ * Delete expired uploads and uploads that have reached their download limit, the same
+ * for notes and for files uploaded into a request, and requests that are over and empty.
  * Returns the number of deleted records.
  */
 export async function runCleanup(storage: StorageBackend): Promise<number> {
@@ -67,6 +100,42 @@ export async function runCleanup(storage: StorageBackend): Promise<number> {
     deleted += result.changes;
   }
 
+  // Files uploaded into a request, blob first like above
+  const expiredRequestUploads = db
+    .select({ id: requestUploads.id })
+    .from(requestUploads)
+    .where(
+      or(
+        lte(requestUploads.expiresAt, now),
+        sql`${requestUploads.downloadCount} >= ${requestUploads.maxDownloads}`,
+      ),
+    )
+    .all();
+
+  if (expiredRequestUploads.length > 0) {
+    await Promise.allSettled(expiredRequestUploads.map((u) => storage.delete(u.id)));
+    for (const { id } of expiredRequestUploads) {
+      deleted += db.delete(requestUploads).where(eq(requestUploads.id, id)).run().changes;
+    }
+  }
+
+  // A request goes once it is over and no upload is left in it. Until then its inbox
+  // still lists the uploads that are kept.
+  deleted += db
+    .delete(fileRequests)
+    .where(
+      and(
+        lte(fileRequests.closesAt, new Date(now.getTime() - REQUEST_GRACE_MS)),
+        notExists(
+          db
+            .select({ id: requestUploads.id })
+            .from(requestUploads)
+            .where(eq(requestUploads.requestId, fileRequests.id)),
+        ),
+      ),
+    )
+    .run().changes;
+
   return deleted;
 }
 
@@ -87,7 +156,7 @@ export function startCleanupJob(
         console.log(`[cleanup] Removed ${deleted} expired record(s)`);
       }
     } catch (err) {
-      console.error("[cleanup] Error during cleanup:", err);
+      console.error("[cleanup] Error during cleanup:", describeError(err));
     }
   }, intervalMs);
 

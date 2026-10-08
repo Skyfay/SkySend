@@ -48,7 +48,7 @@ describe("config", () => {
       expect(config.NOTE_DEFAULT_EXPIRE_SEC).toBe(86400);
       expect(config.NOTE_VIEW_OPTIONS).toEqual([0, 1, 2, 3, 5, 10, 20, 50, 100]);
       expect(config.NOTE_DEFAULT_VIEWS).toBe(0);
-      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note", "request"]);
       expect(config.FILE_UPLOAD_WS).toBe(true);
       expect(config.FILE_UPLOAD_WS_MAX_BUFFER).toBe(16 * 1024 * 1024);
     });
@@ -193,10 +193,10 @@ describe("config", () => {
       await expect(loadFreshConfig()).rejects.toThrow("must be one of NOTE_VIEW_OPTIONS");
     });
 
-    it("should treat empty ENABLED_SERVICES as default (both enabled)", async () => {
+    it("should treat empty ENABLED_SERVICES as default (all enabled)", async () => {
       process.env.ENABLED_SERVICES = "";
       const config = await loadFreshConfig();
-      expect(config.ENABLED_SERVICES).toEqual(["file", "note"]);
+      expect(config.ENABLED_SERVICES).toEqual(["file", "note", "request"]);
     });
 
     it("should reject ENABLED_SERVICES with only invalid values", async () => {
@@ -366,6 +366,53 @@ describe("config", () => {
     });
   });
 
+  describe("DEFAULT_THEME and DEFAULT_COLOR_SCHEME", () => {
+    it("should default to the graphite theme and the system color scheme", async () => {
+      const config = await loadFreshConfig();
+      expect(config.DEFAULT_THEME).toBe("graphite");
+      expect(config.DEFAULT_COLOR_SCHEME).toBe("system");
+    });
+
+    it("should accept the other themes and color schemes", async () => {
+      process.env.DEFAULT_THEME = "graphite";
+      process.env.DEFAULT_COLOR_SCHEME = "dark";
+      const config = await loadFreshConfig();
+      expect(config.DEFAULT_THEME).toBe("graphite");
+      expect(config.DEFAULT_COLOR_SCHEME).toBe("dark");
+    });
+
+    it("should point a pre-v3 color scheme in DEFAULT_THEME to DEFAULT_COLOR_SCHEME", async () => {
+      process.env.DEFAULT_THEME = "dark";
+      await expect(loadFreshConfig()).rejects.toThrow("Set DEFAULT_COLOR_SCHEME=dark instead");
+    });
+
+    it("should reject an unknown theme", async () => {
+      process.env.DEFAULT_THEME = "neon";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+  });
+
+  describe("DEFAULT_TAB", () => {
+    it("should default to the file tab", async () => {
+      const config = await loadFreshConfig();
+      expect(config.DEFAULT_TAB).toBe("file");
+    });
+
+    it("should accept the note tab and each block type, including the values from before v3", async () => {
+      for (const tab of ["note", "text", "password", "code", "sshkey"]) {
+        vi.resetModules();
+        process.env.DEFAULT_TAB = tab;
+        const config = await loadFreshConfig();
+        expect(config.DEFAULT_TAB).toBe(tab);
+      }
+    });
+
+    it("should reject a tab that does not exist", async () => {
+      process.env.DEFAULT_TAB = "markdown";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+  });
+
   describe("CUSTOM_COLOR", () => {
     it("should keep the value unchanged when # prefix is already present", async () => {
       process.env.CUSTOM_COLOR = "#46c89d";
@@ -441,6 +488,170 @@ describe("config", () => {
       expect(config.OIDC_ENABLED).toBe(true);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no upload routes are protected"));
       warnSpy.mockRestore();
+    });
+
+    it("should not warn when only file requests stay protected", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      process.env.OIDC_PROTECT_REQUESTS = "true";
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const config = await loadFreshConfig();
+
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("no upload routes are protected"),
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe("OIDC_PROTECT_REQUESTS", () => {
+    beforeEach(() => {
+      delete process.env.OIDC_PROTECT_FILES;
+      delete process.env.OIDC_PROTECT_NOTES;
+      delete process.env.OIDC_PROTECT_REQUESTS;
+    });
+
+    it("should protect requests by default, like files and notes", async () => {
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+    });
+
+    it("should stay protected while files or notes are", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      expect((await loadFreshConfig()).OIDC_PROTECT_REQUESTS).toBe(true);
+
+      vi.resetModules();
+      process.env.OIDC_PROTECT_FILES = "true";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      expect((await loadFreshConfig()).OIDC_PROTECT_REQUESTS).toBe(true);
+    });
+
+    it("should follow files and notes when both are open", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(false);
+    });
+
+    it("should let an explicit false open requests while files and notes stay protected", async () => {
+      process.env.OIDC_PROTECT_REQUESTS = "false";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(false);
+      expect(config.OIDC_PROTECT_FILES).toBe(true);
+      expect(config.OIDC_PROTECT_NOTES).toBe(true);
+    });
+
+    it("should let an explicit true protect requests while files and notes are open", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      process.env.OIDC_PROTECT_REQUESTS = "TRUE";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+    });
+  });
+
+  describe("file requests", () => {
+    it("should load the defaults", async () => {
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 259200, 604800]);
+      expect(config.FILE_REQUEST_DEFAULT_EXPIRE_SEC).toBe(259200);
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20, 50, 100]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(10);
+      expect(config.FILE_REQUEST_MAX_SIZE).toBe(config.FILE_MAX_SIZE);
+      expect(config.FILE_REQUEST_RETENTION_SEC).toBe(604800);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 2, 3, 5, 10, 20]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(5);
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(false);
+    });
+
+    it("should parse FILE_REQUEST_MAX_SIZE with units", async () => {
+      process.env.FILE_REQUEST_MAX_SIZE = "1GB";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_MAX_SIZE).toBe(1024 ** 3);
+    });
+
+    it("should refuse a duration that would not make a valid date", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,9000000000000";
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC;
+      delete process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC;
+      process.env.FILE_REQUEST_RETENTION_SEC = "3153600001";
+      await expect(loadFreshConfig()).rejects.toThrow();
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_RETENTION_SEC;
+      process.env.FILE_EXPIRE_OPTIONS_SEC = "300,9000000000000";
+      process.env.FILE_DEFAULT_EXPIRE_SEC = "300";
+      await expect(loadFreshConfig()).rejects.toThrow("100 years");
+    });
+
+    it("should leave the longest expiry and retention to the operator", async () => {
+      process.env.FILE_REQUEST_EXPIRE_OPTIONS_SEC = "86400,7776000";
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "86400";
+      process.env.FILE_REQUEST_RETENTION_SEC = "31536000";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_EXPIRE_OPTIONS_SEC).toEqual([86400, 7776000]);
+      expect(config.FILE_REQUEST_RETENTION_SEC).toBe(31536000);
+    });
+
+    it("should reject a default expiry that is not an option", async () => {
+      process.env.FILE_REQUEST_DEFAULT_EXPIRE_SEC = "3600";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_EXPIRE_OPTIONS_SEC");
+    });
+
+    it("should reject an upload size that FILE_MAX_SIZE would refuse anyway", async () => {
+      process.env.FILE_MAX_SIZE = "1GB";
+      process.env.FILE_REQUEST_MAX_SIZE = "2GB";
+      await expect(loadFreshConfig()).rejects.toThrow("must not exceed FILE_MAX_SIZE");
+    });
+
+    it("should reject options out of range", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "0,10";
+      await expect(loadFreshConfig()).rejects.toThrow();
+      vi.resetModules();
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "10,1001";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 1000");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_UPLOAD_OPTIONS;
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "5,101";
+      await expect(loadFreshConfig()).rejects.toThrow("at most 100");
+    });
+
+    it("should reject a default number of uploads or downloads that is not an option", async () => {
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "7";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_UPLOAD_OPTIONS");
+      vi.resetModules();
+      delete process.env.FILE_REQUEST_DEFAULT_UPLOADS;
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "4";
+      await expect(loadFreshConfig()).rejects.toThrow("must be one of FILE_REQUEST_DOWNLOAD_OPTIONS");
+    });
+
+    it("should parse custom options and a forced password", async () => {
+      process.env.FILE_REQUEST_UPLOAD_OPTIONS = "5, 25, 250";
+      process.env.FILE_REQUEST_DEFAULT_UPLOADS = "25";
+      process.env.FILE_REQUEST_DOWNLOAD_OPTIONS = "1,3";
+      process.env.FILE_REQUEST_DEFAULT_DOWNLOADS = "3";
+      process.env.FORCE_REQUEST_PASSWORD = "true";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_UPLOAD_OPTIONS).toEqual([5, 25, 250]);
+      expect(config.FILE_REQUEST_DEFAULT_UPLOADS).toBe(25);
+      expect(config.FILE_REQUEST_DOWNLOAD_OPTIONS).toEqual([1, 3]);
+      expect(config.FILE_REQUEST_DEFAULT_DOWNLOADS).toBe(3);
+      expect(config.FORCE_REQUEST_PASSWORD).toBe(true);
+    });
+
+    it("should turn the daily limit off at 0", async () => {
+      process.env.FILE_REQUEST_DAILY_LIMIT = "0";
+      const config = await loadFreshConfig();
+      expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
     });
   });
 });

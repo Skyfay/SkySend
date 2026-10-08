@@ -4,7 +4,7 @@ import { isPreviewImage, renderIndexHtml, resolveOgImage } from "../src/lib/inde
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const TEMPLATE = `<html data-default-theme="__DEFAULT_THEME__">
+const TEMPLATE = `<html data-theme="__DEFAULT_THEME__" data-default-color-scheme="__DEFAULT_COLOR_SCHEME__">
   <head>
     <meta property="og:site_name" content="__CUSTOM_TITLE__" />
     <meta property="og:image" content="__OG_IMAGE__" />
@@ -20,7 +20,8 @@ const BASE_CONFIG = {
   CUSTOM_LOGO: undefined,
   CUSTOM_OG_IMAGE: undefined,
   CUSTOM_OG_IMAGE_STYLE: "logo",
-  DEFAULT_THEME: "system",
+  DEFAULT_THEME: "aurora",
+  DEFAULT_COLOR_SCHEME: "system",
 } as const;
 
 function makeConfig(overrides: Partial<Parameters<typeof renderIndexHtml>[1]> = {}) {
@@ -85,7 +86,8 @@ describe("renderIndexHtml", () => {
     const html = renderIndexHtml(TEMPLATE, makeConfig());
 
     expect(html).not.toMatch(/__[A-Z_]+__/);
-    expect(html).toContain('data-default-theme="system"');
+    expect(html).toContain('data-theme="aurora"');
+    expect(html).toContain('data-default-color-scheme="system"');
     expect(html).toContain('<meta property="og:site_name" content="SkySend" />');
     expect(html).toContain('<meta property="og:image" content="https://send.example.com/logo.png" />');
     expect(html).toContain('<meta name="twitter:card" content="summary" />');

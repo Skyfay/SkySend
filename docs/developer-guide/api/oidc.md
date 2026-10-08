@@ -155,8 +155,12 @@ The `X-Auth-Token` header used for downloads and note views is derived from the 
 | `POST /api/upload/init` | `OIDC_PROTECT_FILES=true` |
 | `WS /api/upload/ws` | `OIDC_PROTECT_FILES=true` |
 | `POST /api/note` | `OIDC_PROTECT_NOTES=true` |
+| `POST /api/request` | `OIDC_PROTECT_REQUESTS=true` |
+| `GET /api/request/limit` | `OIDC_PROTECT_REQUESTS=true` |
 
 Chunk uploads (`POST /api/upload/:id/chunk`) and finalization (`POST /api/upload/:id/finalize`) are **not** individually re-guarded. Once the init step has been authorized, the upload session token acts as the credential for the rest of the sequence.
+
+Only creating a file request and reading the daily limit of new ones need the login. Everything a sender does with the upload link (`/api/request/:id` and `/api/request/:id/upload/*`) and everything a requester does with the inbox link (`/api/inbox/*`) works without a session, the tokens from the links are the credential.
 
 ## Provider Adapters
 

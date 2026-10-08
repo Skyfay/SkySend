@@ -1,71 +1,141 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @plugin "@tailwindcss/typography";
+
+/* The visual themes. Aurora is the base below, the others override it. */
+@import "./styles/theme-aurora.css";
+@import "./styles/theme-midnight.css";
+@import "./styles/theme-graphite.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens. The values here are the Aurora theme in light mode, `.dark` below is
+ * Aurora in dark mode. Midnight and Graphite override the surface tokens through
+ * `[data-theme]` in their own files.
+ *
+ * The primary tokens are the accent. They are derived from one color by
+ * src/lib/accent.ts, which also writes them for CUSTOM_COLOR. The defaults here are
+ * SkySend green and tests/lib/accent.test.ts checks that they match what
+ * deriveAccent() makes of it.
+ */
 @theme {
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.696 0.130 167.275);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.965 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.965 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.965 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
-  --color-destructive: oklch(0.55 0.18 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.696 0.130 167.275);
-  --color-success: oklch(0.696 0.130 167.275);
-  --color-success-foreground: oklch(0.985 0 0);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  /* Surfaces, from back to front: page, card, well (an inset area inside a card). */
+  --color-page: #eef0f6;
+  --color-background: #ffffff;
+  --color-foreground: #0b0d17;
+  --color-card: rgba(255, 255, 255, 0.6);
+  --color-card-foreground: #0b0d17;
+  --color-well: rgba(15, 17, 30, 0.04);
+  /* Inputs take a light tint of the surface they sit on instead of a white or black box. */
+  --color-field: rgba(15, 17, 30, 0.025);
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0b0d17;
 
-  --animate-toast-in: toast-in 0.2s ease-out;
-  --animate-toast-out: toast-out 0.15s ease-in;
+  /* Neutral tints for tracks, hovers and placeholders, transparent so they work on glass. */
+  --color-secondary: rgba(15, 17, 30, 0.07);
+  --color-secondary-foreground: #0b0d17;
+  --color-muted: rgba(15, 17, 30, 0.05);
+  --color-muted-foreground: #555a6e;
+  --color-accent: rgba(15, 17, 30, 0.06);
+  --color-accent-foreground: #0b0d17;
 
-  @keyframes toast-in {
-    from { opacity: 0; transform: translateY(100%); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes toast-out {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(100%); }
+  --color-border: rgba(15, 17, 30, 0.09);
+  --color-input: rgba(15, 17, 30, 0.16);
+
+  /* The accent. Same values as deriveAccent() for SkySend green. */
+  --color-primary: #2eb68c;
+  --color-primary-foreground: #000000;
+  --color-primary-text: #207f62;
+  --color-primary-soft: rgba(46, 182, 140, 0.12);
+  --color-primary-line: rgba(46, 182, 140, 0.42);
+  --color-primary-glow: rgba(46, 182, 140, 0.28);
+  /* The main button. In light it takes the darker text shade of the accent with white
+     text, which reads calmer than the bare accent. The text shade keeps 4.8:1 on white. */
+  --color-action: var(--color-primary-text);
+  --color-action-foreground: #ffffff;
+  --color-ring: #2eb68c;
+
+  /* Status colors keep their meaning whatever the accent is. */
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-text: #b91c1c;
+  --color-destructive-soft: rgba(220, 38, 38, 0.08);
+  --color-success: #15803d;
+  --color-success-foreground: #ffffff;
+  --color-warning: #92400e;
+  --color-warning-foreground: #ffffff;
+  --color-warning-soft: rgba(245, 158, 11, 0.12);
+  --color-success-soft: rgba(21, 128, 61, 0.1);
+
+  /* Tailwind copies a shadow value into its utility instead of pointing at the variable,
+     so .dark and the theme files set --lift-shadow and --chip-shadow below instead. */
+  --shadow-lift: var(--lift-shadow);
+  --shadow-chip: var(--chip-shadow);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+}
+
+/* In the theme layer like the @theme tokens, so .dark and the theme files win over it. */
+@layer theme {
+  :root {
+    --lift-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 30px 60px -30px rgba(30, 32, 70, 0.35);
+    --chip-shadow: 0 1px 2px rgba(15, 17, 30, 0.06);
   }
 }
 
 .dark {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.205 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.205 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.750 0.130 167.275);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.60 0.16 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.750 0.130 167.275);
-  --color-success: oklch(0.750 0.130 167.275);
-  --color-success-foreground: oklch(0.985 0 0);
+  --color-page: #06070c;
+  --color-background: #0d0e15;
+  --color-foreground: #f4f5fa;
+  --color-card: rgba(255, 255, 255, 0.055);
+  --color-card-foreground: #f4f5fa;
+  --color-well: rgba(255, 255, 255, 0.045);
+  --color-field: rgba(255, 255, 255, 0.055);
+  --color-popover: #12131b;
+  --color-popover-foreground: #f4f5fa;
+
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-foreground: #f4f5fa;
+  --color-muted: rgba(255, 255, 255, 0.06);
+  --color-muted-foreground: #a3a7b8;
+  --color-accent: rgba(255, 255, 255, 0.07);
+  --color-accent-foreground: #f4f5fa;
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.16);
+
+  --color-primary: #46c89d;
+  --color-primary-foreground: #000000;
+  --color-primary-text: #46c89d;
+  --color-primary-soft: rgba(70, 200, 157, 0.16);
+  --color-primary-line: rgba(70, 200, 157, 0.5);
+  --color-primary-glow: rgba(70, 200, 157, 0.22);
+  --color-action: var(--color-primary);
+  --color-action-foreground: var(--color-primary-foreground);
+  --color-ring: #46c89d;
+
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #000000;
+  --color-destructive-text: #f87171;
+  --color-destructive-soft: rgba(248, 113, 113, 0.1);
+  --color-success: #4ade80;
+  --color-success-foreground: #000000;
+  --color-warning: #fcd34d;
+  --color-warning-foreground: #000000;
+  --color-warning-soft: rgba(251, 191, 36, 0.1);
+  --color-success-soft: rgba(74, 222, 128, 0.1);
+
+  --lift-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+  --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @layer base {
@@ -73,9 +143,14 @@
     @apply border-border;
   }
 
+  html {
+    background-color: var(--color-page);
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-page font-sans text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-attachment: fixed;
   }
 }
 
@@ -92,21 +167,21 @@
 .dark .hljs-doctag,.dark .hljs-strong { font-weight: bold; }
 .dark .hljs-emphasis { font-style: italic; }
 
-/* Override typography plugin accent colors to follow the project primary color.
+/* Override typography plugin accent colors to follow the accent.
    Must be outside any @layer so it wins over the plugin's @layer components rules.
    This ensures CUSTOM_COLOR also affects Markdown prose elements. */
 .prose,
 .prose-invert {
-  --tw-prose-links: var(--color-primary);
+  --tw-prose-links: var(--color-primary-text);
   --tw-prose-bullets: var(--color-primary);
-  --tw-prose-counters: var(--color-primary);
-  --tw-prose-quote-borders: var(--color-primary);
+  --tw-prose-counters: var(--color-primary-text);
+  --tw-prose-quote-borders: var(--color-primary-line);
   --tw-prose-hr: var(--color-border);
   --tw-prose-th-borders: var(--color-border);
   --tw-prose-td-borders: var(--color-border);
 }
 
-/* Style task list checkboxes with the primary brand color */
+/* Style task list checkboxes with the accent */
 .prose input[type="checkbox"],
 .prose-invert input[type="checkbox"] {
   accent-color: var(--color-primary);
@@ -127,6 +202,32 @@
   }
 }
 
+/* The flow diagram on the How it works page: data packets between the nodes and the
+   key's path over the server. Reduced motion stops both with motion-reduce:. */
+@keyframes how-packet-x {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(4rem);
+  }
+}
+
+@keyframes how-packet-y {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(2rem);
+  }
+}
+
+@keyframes how-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
 /* Custom scrollbar matching shadcn ScrollArea style */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -144,26 +245,10 @@
   border: 1px solid transparent;
 }
 
-/* Sonner toast - match app design tokens */
-[data-sonner-toaster] {
-  /* Move close button to the right */
-  --toast-close-button-start: unset !important;
-  --toast-close-button-end: 0 !important;
-  --toast-close-button-transform: translate(35%, -35%) !important;
-  /* Background, border, and text use app card colors */
-  --normal-bg: var(--color-card) !important;
-  --normal-border: var(--color-border) !important;
-  --normal-text: var(--color-card-foreground) !important;
-  --error-bg: var(--color-card) !important;
-  --error-border: var(--color-border) !important;
-  --error-text: var(--color-card-foreground) !important;
-  --success-bg: var(--color-card) !important;
-  --success-border: var(--color-border) !important;
-  --success-text: var(--color-card-foreground) !important;
-  --warning-bg: var(--color-card) !important;
-  --warning-border: var(--color-border) !important;
-  --warning-text: var(--color-card-foreground) !important;
-  --info-bg: var(--color-card) !important;
-  --info-border: var(--color-border) !important;
-  --info-text: var(--color-card-foreground) !important;
+/* Glass needs a backdrop to be readable. Without one, surfaces turn opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --color-card: var(--color-popover);
+    --color-well: var(--color-background);
+  }
 }

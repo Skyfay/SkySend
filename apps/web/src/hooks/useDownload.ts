@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from "react";
 import {
   deriveKeys,
   computeAuthToken,
-  createDecryptStream,
   decryptMetadata,
   expectedPlaintextSize,
   toBase64url,
@@ -14,8 +13,8 @@ import {
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import * as api from "@/lib/api";
-import { ensureSwController, streamDownloadViaSw } from "@/lib/opfs-download";
-import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes, getBrowserInfo } from "@/lib/utils";
+import { saveDecryptedDownload, type DownloadDebugInfo } from "@/lib/download-tiers";
+import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
 
 export type DownloadPhase =
   | "idle"
@@ -28,14 +27,7 @@ export type DownloadPhase =
   | "done"
   | "error";
 
-export interface DownloadDebugInfo {
-  tier: "sw" | "file-picker" | "blob" | null;
-  swPath: string | null;
-  browser: string;
-  devtools: boolean;
-  fileSize: number | null;
-  events: Array<{ time: string; message: string }>;
-}
+export type { DownloadDebugInfo };
 
 interface DownloadState {
   phase: DownloadPhase;
@@ -98,6 +90,18 @@ async function prepareKeys(
   return deriveFromSecret(secret, saltB64);
 }
 
+/**
+ * The info with the metadata a password check released. GET /api/info holds it back for a
+ * password-protected upload, so it arrives with a correct password only.
+ */
+function withUnlockedMeta(info: api.UploadInfo, unlocked: api.UnlockedMeta): api.UploadInfo {
+  return {
+    ...info,
+    encryptedMeta: unlocked.encryptedMeta ?? info.encryptedMeta,
+    nonce: unlocked.nonce ?? info.nonce,
+  };
+}
+
 /** Decrypts the upload metadata. Returns null for uploads that carry none. */
 async function decryptMeta(
   info: api.UploadInfo,
@@ -110,14 +114,6 @@ async function decryptMeta(
   );
   const nonce = Uint8Array.from(atob(info.nonce), (c) => c.charCodeAt(0));
   return decryptMetadata(ciphertext, nonce, metaKey);
-}
-
-/**
- * True for a download the server cut short. Every tier fetches the same
- * ciphertext, so falling back to the next one would only repeat the download.
- */
-function isTruncated(err: unknown): boolean {
-  return err instanceof Error && err.message.startsWith("Stream truncation detected");
 }
 
 export function useDownload() {
@@ -186,7 +182,7 @@ export function useDownload() {
       argon2id: Argon2idHashFn,
     ) => {
       try {
-        const info = state.info ?? (await api.fetchInfo(id));
+        let info = state.info ?? (await api.fetchInfo(id));
         // Clearing the error lets PasswordPrompt toast again on a repeated failure.
         setState((s) => ({ ...s, phase: "verifying-password", info, error: null }));
 
@@ -198,8 +194,8 @@ export function useDownload() {
           argon2id,
         );
 
-        const valid = await api.verifyPassword(id, authTokenB64);
-        if (!valid) {
+        const unlocked = await api.verifyPassword(id, authTokenB64);
+        if (!unlocked) {
           setState((s) => ({
             ...s,
             phase: "needs-password",
@@ -209,6 +205,7 @@ export function useDownload() {
         }
 
         unlockedSecretRef.current = secret;
+        info = withUnlockedMeta(info, unlocked);
 
         let metadata: FileMetadata | null = null;
         try {
@@ -248,7 +245,7 @@ export function useDownload() {
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
       try {
-        const info = state.info ?? (await api.fetchInfo(id));
+        let info = state.info ?? (await api.fetchInfo(id));
         if (!info) throw new Error("Upload not found");
 
         // Firefox DevTools warning - open DevTools during a download cause lag/freezes.
@@ -297,8 +294,8 @@ export function useDownload() {
 
           // Verify password if protected
           if (info.hasPassword) {
-            const valid = await api.verifyPassword(id, prepared.authTokenB64);
-            if (!valid) {
+            const unlocked = await api.verifyPassword(id, prepared.authTokenB64);
+            if (!unlocked) {
               setState((s) => ({
                 ...s,
                 phase: "needs-password",
@@ -306,6 +303,7 @@ export function useDownload() {
               }));
               return;
             }
+            info = withUnlockedMeta(info, unlocked);
           }
         }
 
@@ -339,11 +337,16 @@ export function useDownload() {
           error: null,
         }));
 
-        // Speed calculation helper - shared across all download tiers
+        // Speed calculation helper - shared across all download tiers. A tier that
+        // falls back starts again at 0, which also resets the speed baseline.
         let lastLoaded = 0;
         let lastTime = performance.now();
         const updateProgress = (progress: number, loaded: number) => {
           const now = performance.now();
+          if (loaded < lastLoaded) {
+            lastLoaded = loaded;
+            lastTime = now;
+          }
           const elapsed = (now - lastTime) / 1000;
           let speed: string | null = null;
           if (elapsed >= 0.5) {
@@ -359,274 +362,25 @@ export function useDownload() {
           }));
         };
 
-        // ── Safari: skip SW streaming (like Mozilla Send) ──────
-        // Safari terminates Service Workers aggressively and buffers
-        // ReadableStream responses in RAM instead of streaming to disk.
-        // For files > 256 MB we show a warning first (handled by caller).
-        const safari = isSafari();
         const downloadStartTime = performance.now();
-
-        // ── Download Strategy (ordered by preference) ──────────
-        // Tier 1: SW stream - fastest (Chrome, Edge, Brave, Firefox)
-        // Tier 2: showSaveFilePicker - zero RAM fallback (Chrome, Edge)
-        // Tier 3: Blob - last resort / Safari default (uses full file size in RAM)
-        let downloaded = false;
-
-        // Tier 1: Service Worker streaming decryption (non-Safari browsers)
-        try {
-          const sw = !safari ? await ensureSwController() : null;
-          if (sw) {
-            console.info("[SkySend] Download tier: 1 (SW stream)");
-
-            const tier1DebugInfo: DownloadDebugInfo = {
-              tier: "sw",
-              swPath: null,
-              browser: getBrowserInfo(),
-              devtools: isDevToolsOpen(),
-              fileSize: info.size,
-              events: [{ time: new Date().toISOString(), message: "SW stream started" }],
-            };
-            setState((s) => ({ ...s, debugInfo: tier1DebugInfo }));
-
-            const apiBase = import.meta.env.DEV
-              ? (import.meta.env.VITE_API_BASE ?? "http://localhost:3000")
-              : window.location.origin;
-            const downloadUrl = `${apiBase}/api/download/${id}`;
-
-            const secretBuf = secret.buffer.slice(
-              secret.byteOffset,
-              secret.byteOffset + secret.byteLength,
-            ) as ArrayBuffer;
-            const saltBuf = salt.buffer.slice(
-              salt.byteOffset,
-              salt.byteOffset + salt.byteLength,
-            ) as ArrayBuffer;
-
-            await streamDownloadViaSw(
-              downloadUrl,
-              authTokenB64,
-              secretBuf,
-              saltBuf,
-              filename,
-              mimeType,
-              info.size,
-              (progress) => {
-                const loaded = Math.round((progress / 100) * info.size);
-                updateProgress(progress, loaded);
-              },
-              (swPath) => {
-                setState((s) => ({
-                  ...s,
-                  debugInfo: s.debugInfo
-                    ? { ...s.debugInfo, swPath }
-                    : null,
-                }));
-              },
-              abortCtrl.signal,
-              () => {
-                setState((s) => ({
-                  ...s,
-                  debugInfo: s.debugInfo
-                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
-                    : null,
-                }));
-              },
-              plaintextSize,
-            );
-            downloaded = true;
-          }
-        } catch (swErr) {
-          // User-initiated cancel - do not fall through to Tier 2/3
-          if (swErr instanceof DOMException && swErr.name === "AbortError") throw swErr;
-          if (isTruncated(swErr)) throw swErr;
-          console.warn("[SkySend] SW stream failed, trying fallback:", swErr);
-        }
-
-        // Tier 2: showSaveFilePicker fallback (Chrome, Edge - if SW failed)
-        if (!downloaded && typeof window.showSaveFilePicker === "function") {
-          try {
-            console.info("[SkySend] Download tier: 2 (showSaveFilePicker)");
-            setState((s) => ({ ...s, progress: 0 }));
-            setState((s) => ({
-              ...s,
-              debugInfo: {
-                tier: "file-picker",
-                swPath: null,
-                browser: getBrowserInfo(),
-                devtools: isDevToolsOpen(),
-                fileSize: info.size,
-                events: [
-                  ...(s.debugInfo?.events ?? []),
-                  { time: new Date().toISOString(), message: "Save File Picker started" },
-                ],
-              },
-            }));
-            const fileHandle = await window.showSaveFilePicker({
-              suggestedName: filename,
-              types: mimeType !== "application/octet-stream"
-                ? [{ accept: { [mimeType]: [] } }]
-                : undefined,
-            });
-            const writable = await fileHandle.createWritable();
-
-            const { stream, size, storageBackend } = await api.downloadFile(id, authTokenB64);
-            if (storageBackend === "s3") {
-              setState((s) => ({
-                ...s,
-                debugInfo: s.debugInfo
-                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
-                  : null,
-              }));
-            }
-
-            let loaded = 0;
-            let tier2StallTimer: ReturnType<typeof setTimeout> | null = null;
-            let tier2StallFired = false;
-            const resetTier2Stall = () => {
-              if (tier2StallFired) {
-                setState((s) => ({
-                  ...s,
-                  debugInfo: s.debugInfo
-                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download resumed" }] }
-                    : null,
-                }));
-                tier2StallFired = false;
-              }
-              if (tier2StallTimer) clearTimeout(tier2StallTimer);
-              tier2StallTimer = setTimeout(() => {
-                tier2StallFired = true;
-                const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
-                setState((s) => ({
-                  ...s,
-                  debugInfo: s.debugInfo
-                    ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: `Download stalled at ${pct}%` }] }
-                    : null,
-                }));
-              }, 5000);
-            };
-            resetTier2Stall();
-
-            const progressStream = stream.pipeThrough(
-              new TransformStream<Uint8Array, Uint8Array>({
-                transform(chunk, controller) {
-                  loaded += chunk.byteLength;
-                  const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
-                  updateProgress(pct, loaded);
-                  resetTier2Stall();
-                  controller.enqueue(chunk);
-                },
-              }),
-            );
-
-            await progressStream
-              .pipeThrough(createDecryptStream(keys.fileKey, plaintextSize))
-              .pipeTo(writable, { signal: abortCtrl.signal });
-            if (tier2StallTimer) clearTimeout(tier2StallTimer);
-            downloaded = true;
-          } catch (pickerErr) {
-            // User cancelled = AbortError, rethrow to be caught by outer handler
-            if (pickerErr instanceof DOMException && pickerErr.name === "AbortError") {
-              throw pickerErr;
-            }
-            // A failed pipeTo() aborts the writable, which discards the partial file.
-            if (isTruncated(pickerErr)) throw pickerErr;
-            console.warn("[SkySend] showSaveFilePicker failed:", pickerErr);
-          }
-        }
-
-        // Tier 3: Blob fallback (uses RAM - last resort / Safari default)
-        if (!downloaded) {
-          console.warn(`[SkySend] Download tier: 3 (Blob fallback${safari ? " - Safari" : ""})`);
-          setState((s) => ({ ...s, progress: 0 }));
-          setState((s) => ({
-            ...s,
-            debugInfo: {
-              tier: "blob",
-              swPath: null,
-              browser: getBrowserInfo(),
-              devtools: isDevToolsOpen(),
-              fileSize: info.size,
-              events: [
-                ...(s.debugInfo?.events ?? []),
-                { time: new Date().toISOString(), message: `Blob fallback started${safari ? " (Safari)" : ""}` },
-              ],
-            },
-          }));
-          const { stream, size, storageBackend } = await api.downloadFile(id, authTokenB64);
-          if (storageBackend === "s3") {
-            setState((s) => ({
-              ...s,
-              debugInfo: s.debugInfo
-                ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "S3 presigned URL received" }] }
-                : null,
-            }));
-          }
-
-          let loaded = 0;
-          let blobStallTimer: ReturnType<typeof setTimeout> | null = null;
-          let blobStallFired = false;
-          const resetBlobStall = () => {
-            if (blobStallFired) {
-              setState((s) => ({
-                ...s,
-                debugInfo: s.debugInfo
-                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: "Download resumed" }] }
-                  : null,
-              }));
-              blobStallFired = false;
-            }
-            if (blobStallTimer) clearTimeout(blobStallTimer);
-            blobStallTimer = setTimeout(() => {
-              blobStallFired = true;
-              const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
-              setState((s) => ({
-                ...s,
-                debugInfo: s.debugInfo
-                  ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: `Download stalled at ${pct}%` }] }
-                  : null,
-              }));
-            }, 5000);
-          };
-          resetBlobStall();
-
-          const progressStream = stream.pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(chunk, controller) {
-                loaded += chunk.byteLength;
-                const pct = size > 0 ? Math.round((loaded / size) * 100) : 0;
-                updateProgress(pct, loaded);
-                resetBlobStall();
-                controller.enqueue(chunk);
-              },
-            }),
-          );
-
-          const decryptedStream = progressStream.pipeThrough(
-            createDecryptStream(keys.fileKey, plaintextSize),
-          );
-
-          const reader = decryptedStream.getReader();
-          const chunks: Uint8Array[] = [];
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (abortCtrl.signal.aborted) {
-              reader.cancel();
-              throw new DOMException("Download cancelled by user", "AbortError");
-            }
-            chunks.push(value);
-          }
-          if (blobStallTimer) clearTimeout(blobStallTimer);
-          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        }
+        await saveDecryptedDownload({
+          source: {
+            path: `/api/download/${id}`,
+            token: authTokenB64,
+            tokenHeader: "X-Auth-Token",
+            fetchCiphertext: () => api.downloadFile(id, authTokenB64),
+          },
+          secret,
+          salt,
+          fileKey: keys.fileKey,
+          filename,
+          mimeType,
+          size: info.size,
+          plaintextSize,
+          signal: abortCtrl.signal,
+          onProgress: updateProgress,
+          onDebug: (update) => setState((s) => ({ ...s, debugInfo: update(s.debugInfo) })),
+        });
 
         let averageSpeed: string | null = null;
         if (info.size > 0) {
@@ -642,7 +396,17 @@ export function useDownload() {
           progress: 100,
           averageSpeed,
           debugInfo: s.debugInfo
-            ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Download complete · Ø ${averageSpeed}` : "Download complete" }] }
+            ? {
+                ...s.debugInfo,
+                events: [
+                  ...s.debugInfo.events,
+                  {
+                    time: new Date().toISOString(),
+                    message: "Download complete",
+                    ...(averageSpeed ? { detail: `Ø ${averageSpeed}` } : {}),
+                  },
+                ],
+              }
             : null,
         }));
       } catch (err) {
@@ -661,7 +425,25 @@ export function useDownload() {
           : err instanceof Error
             ? err.message
             : "Download failed";
-        setState((s) => ({ ...s, phase: "error", error: message }));
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error: message,
+          debugInfo: s.debugInfo
+            ? {
+                ...s.debugInfo,
+                events: [
+                  ...s.debugInfo.events,
+                  {
+                    time: new Date().toISOString(),
+                    message: "Download failed",
+                    detail: message,
+                    failed: true,
+                  },
+                ],
+              }
+            : null,
+        }));
       }
     },
     [state.info, state.metadata],

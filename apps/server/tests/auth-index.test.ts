@@ -10,6 +10,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     OIDC_ISSUER: "https://provider.example",
     OIDC_PROTECT_FILES: true,
     OIDC_PROTECT_NOTES: true,
+    OIDC_PROTECT_REQUESTS: true,
     ...overrides,
   } as unknown as Config;
 }
@@ -42,7 +43,13 @@ describe("createOidcAdapter", () => {
 
   it("emits a warning when neither protect flag is set", () => {
     const warnSpy = vi.spyOn(console, "warn");
-    createOidcAdapter(makeConfig({ OIDC_PROTECT_FILES: false, OIDC_PROTECT_NOTES: false }));
+    createOidcAdapter(
+      makeConfig({
+        OIDC_PROTECT_FILES: false,
+        OIDC_PROTECT_NOTES: false,
+        OIDC_PROTECT_REQUESTS: false,
+      }),
+    );
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("No upload routes are protected"),
     );
@@ -51,6 +58,18 @@ describe("createOidcAdapter", () => {
   it("does not warn when at least one protect flag is true", () => {
     const warnSpy = vi.spyOn(console, "warn");
     createOidcAdapter(makeConfig({ OIDC_PROTECT_FILES: true, OIDC_PROTECT_NOTES: false }));
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when only file requests are protected", () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    createOidcAdapter(
+      makeConfig({
+        OIDC_PROTECT_FILES: false,
+        OIDC_PROTECT_NOTES: false,
+        OIDC_PROTECT_REQUESTS: true,
+      }),
+    );
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });

@@ -30,6 +30,24 @@ describe("redactSensitivePath", () => {
     expect(redactSensitivePath(`<-- GET /d/${ID}%23${SECRET}`)).toBe(`<-- GET /d/${ID}`);
   });
 
+  it("covers request and inbox links", () => {
+    expect(redactSensitivePath(`<-- GET /request/${ID}%23${SECRET}`)).toBe(`<-- GET /request/${ID}`);
+    expect(redactSensitivePath(`<-- GET /inbox/${ID}%23${SECRET}`)).toBe(`<-- GET /inbox/${ID}`);
+  });
+
+  it("covers templates links, which carry an export instead of an ID", () => {
+    expect(redactSensitivePath(`<-- GET /templates%23${SECRET}`)).toBe("<-- GET /templates");
+    expect(redactSensitivePath(`--> GET /templates%2523${SECRET}/ 200 3ms`)).toBe(
+      "--> GET /templates 200 3ms",
+    );
+    expect(redactSensitivePath("--> GET /templates 200 1ms")).toBe("--> GET /templates 200 1ms");
+    // Only the page itself, not a path that merely starts the same.
+    const asset = "--> GET /assets/templates-Bx1.js 200 1ms";
+    expect(redactSensitivePath(asset)).toBe(asset);
+    const other = "--> GET /templates-old/x 200 1ms";
+    expect(redactSensitivePath(other)).toBe(other);
+  });
+
   it("drops a query string appended to a share-link path", () => {
     expect(redactSensitivePath(`<-- GET /file/${ID}%23${SECRET}?utm_source=mail`)).toBe(
       `<-- GET /file/${ID}`,
@@ -47,6 +65,8 @@ describe("redactSensitivePath", () => {
     expect(redactSensitivePath("--> POST /api/upload/abc/chunk?index=3 200 9ms")).toBe(
       "--> POST /api/upload/abc/chunk?index=3 200 9ms",
     );
+    const request = `--> POST /api/request/${ID}/upload/${ID}/chunk?index=3 413 2ms`;
+    expect(redactSensitivePath(request)).toBe(request);
   });
 });
 

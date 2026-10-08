@@ -43,6 +43,16 @@ Response headers:
 }
 ```
 
+**429 Too Many Requests** (too many wrong tokens from this IP, with a `Retry-After` header):
+
+```json
+{
+  "error": "Too many failed attempts. Try again later."
+}
+```
+
+A sent but wrong `X-Auth-Token` counts against the same lockout as [`POST /api/password/:id`](./password.md), `PASSWORD_MAX_ATTEMPTS` per IP and upload. A request without the header does not count, so another site cannot lock a visitor out.
+
 ### Notes
 
 - Each successful download atomically increments the download counter

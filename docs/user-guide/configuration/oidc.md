@@ -109,3 +109,14 @@ You can require login for one service type while allowing anonymous access to th
 OIDC_PROTECT_FILES: "true"
 OIDC_PROTECT_NOTES: "false"
 ```
+
+Creating a [file request](/user-guide/file-requests) follows `OIDC_PROTECT_REQUESTS`. Unset, it needs a login while `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` is on. Set it to protect requests apart from the other two:
+
+```yaml
+# Anyone may share files and notes, creating a file request needs a login
+OIDC_PROTECT_FILES: "false"
+OIDC_PROTECT_NOTES: "false"
+OIDC_PROTECT_REQUESTS: "true"
+```
+
+Uploading into a request and opening its inbox never need a login. The upload link and the inbox link are the credential.

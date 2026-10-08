@@ -6,7 +6,9 @@ Do not confuse it with `apps/client`, which is the end-user CLI that talks to th
 
 ## What it can and cannot do
 
-It sees database rows and blob sizes. It cannot decrypt anything - the secrets only exist in share links, which never reach the server. `list --json` deliberately strips `salt`, `encryptedMeta`, `nonce`, and `passwordSalt` from its output. Keep that filter when adding a column, and never widen it to include `ownerToken` or `authToken`.
+It sees database rows and blob sizes. It cannot decrypt anything - the secrets only exist in share links, which never reach the server. `list --json` deliberately strips `salt`, `encryptedMeta`, `nonce`, and `passwordSalt` from its output. Keep that filter when adding a column, and never widen it to include `ownerToken` or `authToken`. File requests are listed field by field for the same reason: never add the vault, any of the three tokens, the encrypted title or the wrapped file keys.
+
+Deleting a file request goes through `deleteFileRequest` from `@skysend/server/lib/cleanup`, which removes the rows before the blobs. The dry run of `cleanup` uses `REQUEST_GRACE_MS` from the same module, so it names the requests the real run removes.
 
 ## Layout
 

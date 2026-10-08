@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { HardDrive } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { QuotaStatus } from "@/lib/api";
-import { formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 
 function formatTimeRemaining(resetsAt: string): string {
   const remaining = Math.max(0, new Date(resetsAt).getTime() - Date.now());
@@ -25,23 +25,23 @@ export function QuotaBar({ quota }: QuotaBarProps) {
   const exceeded = quota.used >= quota.limit;
 
   return (
-    <div className="rounded-lg border bg-card px-4 py-3 text-card-foreground">
-      <div className="flex items-center justify-between text-sm">
+    <div className="rounded-2xl bg-well px-4 py-3">
+      <div className="flex items-center justify-between text-[13px]">
         <span className="flex items-center gap-1.5 font-medium">
-          <HardDrive className="h-4 w-4" />
+          <HardDrive className="h-4 w-4 text-primary-text" />
           {t("quota.title")}
         </span>
-        <span className="text-muted-foreground">
+        <span className="text-xs tabular-nums text-muted-foreground">
           {formatBytes(quota.used)} / {formatBytes(quota.limit)}
         </span>
       </div>
       <Progress
         value={percentage}
-        className={`mt-2 h-2 ${exceeded ? "[&>div]:bg-destructive" : ""}`}
+        className={cn("mt-2 h-1.5", exceeded && "[&>div]:bg-destructive")}
       />
       <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
         {exceeded ? (
-          <span className="text-destructive-foreground font-medium">
+          <span className="font-medium text-destructive-text">
             {t("quota.exceeded")}
           </span>
         ) : (

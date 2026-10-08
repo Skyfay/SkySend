@@ -9,6 +9,7 @@ type IndexHtmlConfig = Pick<
   | "CUSTOM_OG_IMAGE"
   | "CUSTOM_OG_IMAGE_STYLE"
   | "DEFAULT_THEME"
+  | "DEFAULT_COLOR_SCHEME"
 >;
 
 /** Image types that messengers and social networks render in link previews. SVG is not one. */
@@ -62,8 +63,10 @@ export function renderIndexHtml(template: string, config: IndexHtmlConfig): stri
 
   return html
     .replace(/__CUSTOM_TITLE__/g, () => escapeHtml(config.CUSTOM_TITLE))
-    // DEFAULT_THEME is a Zod enum. public/theme-init.js reads it before the first paint.
+    // Both are Zod enums. The theme styles the page through <html data-theme>, and
+    // public/theme-init.js reads the color scheme before the first paint.
     .replace(/__DEFAULT_THEME__/g, () => config.DEFAULT_THEME)
+    .replace(/__DEFAULT_COLOR_SCHEME__/g, () => config.DEFAULT_COLOR_SCHEME)
     .replace(/__OG_IMAGE__/g, () => escapeHtml(ogImage ?? ""))
     .replace(/__TWITTER_CARD__/g, () => twitterCard);
 }

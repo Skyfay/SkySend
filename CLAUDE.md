@@ -21,6 +21,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 | API routes, middleware, storage, database, OIDC | [apps/server/CLAUDE.md](apps/server/CLAUDE.md) |
 | React SPA, UI components, hooks, i18n, toasts | [apps/web/CLAUDE.md](apps/web/CLAUDE.md) |
 | Encryption, key derivation, ECE streams | [packages/crypto/CLAUDE.md](packages/crypto/CLAUDE.md) |
+| Note content format, legacy notes | [packages/note-format/CLAUDE.md](packages/note-format/CLAUDE.md) |
 | End-user CLI and the Ink TUI | [apps/client/CLAUDE.md](apps/client/CLAUDE.md) |
 | Admin CLI (runs on the server, direct DB access) | [apps/cli/CLAUDE.md](apps/cli/CLAUDE.md) |
 | Docs site and the changelog | [docs/CLAUDE.md](docs/CLAUDE.md) |
@@ -37,6 +38,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 6. **Typography**: no em dashes, no semicolons joining clauses. Use a hyphen where a dash is needed, and end sentences with a period. Applies to code comments, docs, changelog entries, and commit messages.
 7. **Language**: all code, comments, and documentation in English. User-facing strings go through i18n, never inline.
 8. **Never log secrets, keys, tokens, plaintext, or IP addresses.** The request logger records method, path, status, and duration only. Quota tracking uses HMAC-hashed IPs with a daily rotating key.
+9. **Branches: feature branch, then `dev`, then `main`.** Work happens on a feature branch off `dev`, its pull request goes into `dev`, and a release merges `dev` into `main`. A pull request or a base branch suggested to anyone points at `dev`, never at `main`.
 
 ## Architecture
 
@@ -46,6 +48,7 @@ apps/web/        React 19 SPA. Owns all encryption and decryption in the browser
 apps/client/     End-user CLI + Ink TUI. Talks to the API the same way a browser does.
 apps/cli/        Admin CLI. Runs beside the server, reads the DB directly.
 packages/crypto/ Shared Web Crypto library. Imported by web, client, and server.
+packages/note-format/ What a note holds before encryption. Imported by web and client.
 docs/            VitePress docs site (docs.skysend.app).
 website/         Next.js marketing site (skysend.app).
 workers/         Cloudflare Workers: instance registry and abuse reports.
@@ -70,6 +73,7 @@ The server is single-instance by design. Rate limiting, upload sessions, and pas
 ## Commands
 
 ```bash
+bash scripts/setup-dev-macos.sh  # First setup on a Mac: fnm, Node from .node-version, pnpm, dependencies
 pnpm dev                  # All workspaces in parallel, except the two Cloudflare Workers
 pnpm build                # Recursive build
 pnpm validate             # Lint + typecheck + tests, same as CI (scripts/validate.sh)
@@ -92,7 +96,7 @@ pnpm changelog:check      # Check every fragment under changelog/unreleased/
 
 Single workspace: `pnpm --filter @skysend/web build`, `pnpm --filter @skysend/docs dev`, and so on. Package names are `@skysend/server`, `-web`, `-client`, `-cli`, `-crypto`, `-docs`, `@skysend/website`, `@skysend/instances-worker`, `@skysend/report-worker`.
 
-`pnpm dev` runs the server against `.env.dev` at the repo root. Vite serves the SPA on `:5173` and proxies `/api`, `/auth`, and `/branding` to the server on `:3000`. `BASE_URL` and `CORS_ORIGINS` in `.env.dev` therefore point at the Vite origin, not the server one.
+`pnpm dev` runs the server against `.env.dev` at the repo root. Git ignores it, `.env.dev.example` is its tracked template and `scripts/setup-dev-macos.sh` and `scripts/setup-worktree.sh` create it. Vite serves the SPA on `:5173` and proxies `/api`, `/auth`, and `/branding` to the server on `:3000`. `BASE_URL` and `CORS_ORIGINS` in `.env.dev` therefore point at the Vite origin, not the server one.
 
 ## Changelog workflow
 
@@ -133,7 +137,7 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 
 - **Naming**: `kebab-case` for server, CLI, crypto, and website files (`upload-validation.ts`, `report-form.tsx`). `PascalCase` for React components in `apps/web/src/components/` and `apps/client/src/tui/`, `camelCase` for web hooks (`useDownload.ts`).
 - **Imports**: server, client, cli, and crypto are ESM and need the `.js` extension on relative imports (`./lib/config.js`). The web app and website use the `@/` alias with no extension.
-- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts`, which is that package's public API.
+- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts` and `packages/note-format/src/index.ts`, the public APIs of those packages.
 - **Prettier**: double quotes, semicolons, 2-space indent, trailing commas, 100 columns. Run `pnpm format` instead of hand-aligning.
 - **Keep functions short.** If something is used once, inline it - no abstractions for their own sake.
 
@@ -152,13 +156,13 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 | Changelog fragments (unreleased) | [changelog/unreleased/](changelog/unreleased/README.md) |
 | Changelog (released) | [docs/changelog.md](docs/changelog.md) |
 | Published env var reference | [docs/user-guide/configuration/environment-variables.md](docs/user-guide/configuration/environment-variables.md) |
-| Dev environment | [.env.dev](.env.dev), [.env.example](.env.example) |
-| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [docker-build.yml](.github/workflows/docker-build.yml) |
+| Dev environment | [.env.dev.example](.env.dev.example), [.env.example](.env.example) |
+| CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [pr-build.yml](.github/workflows/pr-build.yml) |
 
 ## Before finishing a change
 
 1. `pnpm validate` passes (lint, typecheck, tests).
 2. The fragment of the branch under `changelog/unreleased/` has an entry, unless the change is AI tooling only.
-3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, and the published env var reference.
+3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, `.env.dev.example`, and the published env var reference.
 4. New user-facing strings exist in `en.json` and `de.json`, plus the 11 AI-translated locales.
 5. Nothing new is logged that identifies a user or reveals plaintext.

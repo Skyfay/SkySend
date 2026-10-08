@@ -16,10 +16,12 @@
  * tell the recipient what happened.
  */
 
-// A file or note ID is a randomUUID(), a secret is base64url without padding.
-// Neither alphabet contains "%", so this pattern cannot match a legitimate link.
-// "%2523" covers gateways that hand over the wrapper parameter without decoding it.
-const REWRITTEN_PATH = /^\/(file|note|d)\/([0-9a-fA-F-]{36})%(?:25)?23([A-Za-z0-9_-]+)\/?$/;
+// A file, note or request ID is a randomUUID(), a key is base64url without padding, and a
+// templates link has no ID but carries its export as base64url too. Neither alphabet
+// contains "%", so this pattern cannot match a legitimate link. "%2523" covers gateways that
+// hand over the wrapper parameter without decoding it.
+const REWRITTEN_PATH =
+  /^(\/(?:file|note|d|request|inbox)\/[0-9a-fA-F-]{36}|\/templates)%(?:25)?23([A-Za-z0-9_-]+)\/?$/;
 
 let rewritten = false;
 
@@ -30,7 +32,7 @@ let rewritten = false;
 export function normalizeRewrittenPath(pathname: string): string | null {
   const match = REWRITTEN_PATH.exec(pathname);
   if (!match) return null;
-  return `/${match[1]}/${match[2]}#${match[3]}`;
+  return `${match[1]}#${match[2]}`;
 }
 
 /**

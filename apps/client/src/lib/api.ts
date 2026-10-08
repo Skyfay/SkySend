@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { NoteContentType } from "@skysend/crypto";
+import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
 import { ApiError } from "./errors.js";
 
 // ── Response Schemas ───────────────────────────────────
@@ -22,6 +22,8 @@ const configResponseSchema = z.object({
   noteDefaultExpire: z.number(),
   noteViewOptions: z.array(z.number()),
   noteDefaultViews: z.number(),
+  // Since v3. Missing on an older server, which only takes the legacy content types.
+  noteBlocks: z.boolean().optional().default(false),
   customTitle: z.string(),
   customColor: z.string().nullable(),
   customLogo: z.string().nullable(),
@@ -59,7 +61,8 @@ export type UploadInfo = z.infer<typeof infoResponseSchema>;
 
 const noteInfoResponseSchema = z.object({
   id: z.string(),
-  contentType: z.enum(["text", "password", "code", "markdown", "sshkey"]),
+  // "blocks" since v3. LEGACY(notes-v1): the other values are notes from before v3.
+  contentType: z.enum(["blocks", "text", "password", "code", "markdown", "sshkey"]),
   hasPassword: z.boolean(),
   passwordAlgo: z.enum(["argon2id-v2"]).optional(),
   passwordSalt: z.string().optional(),
@@ -257,19 +260,43 @@ export async function downloadFile(
 
 // ── Password ───────────────────────────────────────────
 
+// A server before GHSA-rxxj-c5wr-phqp answers { ok: true } and still sends the metadata in the info.
+const passwordCheckSchema = z.object({
+  ok: z.literal(true),
+  encryptedMeta: z.string().nullable().optional(),
+  nonce: z.string().nullable().optional(),
+});
+
+/** The metadata of a password-protected upload, which the server releases after the check. */
+export type UnlockedMeta = Pick<UploadInfo, "encryptedMeta" | "nonce">;
+
+/**
+ * Checks the auth token derived from a password. Null for a wrong password, otherwise the
+ * encrypted metadata, which the info of a password-protected upload holds back.
+ */
 export async function verifyPassword(
   server: string,
   id: string,
   authToken: string,
-): Promise<boolean> {
+): Promise<UnlockedMeta | null> {
   const res = await fetch(apiUrl(server, `/api/password/${encodeURIComponent(id)}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ authToken }),
   });
-  if (res.status === 401) return false;
+  if (res.status === 401) return null;
   if (!res.ok) throw new ApiError(res.status, "Password verification failed");
-  return true;
+  const { encryptedMeta = null, nonce = null } = await handleResponse(res, passwordCheckSchema);
+  return { encryptedMeta, nonce };
+}
+
+/** The info with the metadata a password check released, or the info's own from an older server. */
+export function withUnlockedMeta(info: UploadInfo, unlocked: UnlockedMeta): UploadInfo {
+  return {
+    ...info,
+    encryptedMeta: unlocked.encryptedMeta ?? info.encryptedMeta,
+    nonce: unlocked.nonce ?? info.nonce,
+  };
 }
 
 // ── Delete ─────────────────────────────────────────────
@@ -300,7 +327,8 @@ export interface CreateNoteRequest {
   salt: string;
   ownerToken: string;
   authToken: string;
-  contentType: NoteContentType;
+  /** "blocks". LEGACY(notes-v1): or a legacy type for a server that does not report noteBlocks. */
+  contentType: typeof NOTE_KIND | LegacyNoteKind;
   maxViews: number;
   expireSec: number;
   hasPassword: boolean;

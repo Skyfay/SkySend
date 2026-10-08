@@ -1,13 +1,31 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { Link, Navigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Inbox, File, FileText, Layers, KeyRound, Code, Heading, Terminal } from "lucide-react";
+import {
+  ArrowRight,
+  Inbox,
+  File,
+  FileText,
+  Layers,
+  KeyRound,
+  Code,
+  Heading,
+  Share2,
+  Terminal,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RequestList } from "@/components/RequestList";
 import { UploadCard } from "@/components/UploadCard";
 import { NoteCard } from "@/components/NoteCard";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
 import { useNoteHistory } from "@/hooks/useNoteHistory";
 import { useServerConfig } from "@/hooks/useServerConfig";
-import type { NoteContentType } from "@skysend/crypto";
+import { storedNoteKinds, type NoteKindKey } from "@/lib/note-editor";
+import { subscribeUnseen, unseenTotal } from "@/lib/unseen-uploads";
 import { toast } from "sonner";
 
 type Filter = "all" | "files" | "notes-text" | "notes-password" | "notes-code" | "notes-markdown" | "notes-sshkey";
@@ -22,9 +40,15 @@ const FILTER_ICONS: Record<Filter, React.ComponentType<{ className?: string }>> 
   "notes-sshkey": Terminal,
 };
 
+/**
+ * My Links: everything this browser shared, and the file requests it made, each in its own
+ * tab when the instance offers both.
+ */
 export function MyUploadsPage() {
   const { t } = useTranslation();
   const { config } = useServerConfig();
+  const [params, setParams] = useSearchParams();
+  const unseen = useSyncExternalStore(subscribeUnseen, unseenTotal);
   const {
     uploads,
     loading: uploadsLoading,
@@ -67,8 +91,8 @@ export function MyUploadsPage() {
 
   // Build combined list sorted by createdAt
   const isNoteFilter = filter.startsWith("notes-");
-  const noteContentFilter: NoteContentType | null =
-    filter.startsWith("notes-") ? (filter.replace("notes-", "") as NoteContentType) : null;
+  const noteContentFilter: NoteKindKey | null =
+    filter.startsWith("notes-") ? (filter.replace("notes-", "") as NoteKindKey) : null;
 
   const items: Array<
     | { type: "upload"; data: (typeof uploads)[number] }
@@ -80,7 +104,7 @@ export function MyUploadsPage() {
   }
   if (filter === "all" || isNoteFilter) {
     for (const n of notes) {
-      if (noteContentFilter && n.contentType !== noteContentFilter) continue;
+      if (noteContentFilter && !storedNoteKinds(n).includes(noteContentFilter)) continue;
       items.push({ type: "note", data: n });
     }
   }
@@ -92,10 +116,10 @@ export function MyUploadsPage() {
 
   const isEmpty = items.length === 0 && !loading;
 
-  // Build content type counts for note sub-filters
+  // How many notes hold each kind. A note made of several kinds counts for each of them.
   const noteTypeCounts: Record<string, number> = {};
   for (const n of notes) {
-    noteTypeCounts[n.contentType] = (noteTypeCounts[n.contentType] ?? 0) + 1;
+    for (const kind of storedNoteKinds(n)) noteTypeCounts[kind] = (noteTypeCounts[kind] ?? 0) + 1;
   }
 
   const noteSubFilters: Filter[] = (
@@ -117,88 +141,146 @@ export function MyUploadsPage() {
     return noteTypeCounts[ct] ?? 0;
   };
 
-  return (
-    <div className="space-y-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-        <FolderOpen className="h-7 w-7 text-primary" />
-        {t("myUploads.title")}
-      </h1>
+  // Templates moved to the settings, where an old bookmark of their tab goes on to.
+  if (params.get("tab") === "templates") return <Navigate to="/settings?tab=templates" replace />;
 
-      {/* Filter tabs */}
+  // The same rule as the navigation: an instance with only file requests shares nothing.
+  const sharing = !config || config.enabledServices.length > 0;
+  const requests = config?.fileRequestsEnabled ?? false;
+  const section = !sharing || (requests && params.get("tab") === "requests") ? "requests" : "shared";
+  const intro =
+    sharing && requests
+      ? t("myUploads.intro")
+      : sharing
+        ? t("myUploads.emptyHint")
+        : t("requests.localHint");
+
+  const shared = (
+    <>
       {(uploads.length > 0 || notes.length > 0) && (
-        <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1">
+        <ToggleGroup
+          type="single"
+          value={filter}
+          onValueChange={(v) => v && setFilter(v as Filter)}
+          aria-label={t("share.filter")}
+        >
           {filters.map((f) => {
             const Icon = FILTER_ICONS[f];
-            const count = getFilterCount(f);
             return (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{t(`myUploads.filter.${f}`)}</span>
-                <span className="ml-0.5 text-xs text-muted-foreground">
-                  {count}
-                </span>
-              </button>
+              <ToggleGroupItem key={f} value={f}>
+                <Icon />
+                {t(`myUploads.filter.${f}`)}
+                <span className="text-xs tabular-nums opacity-70">{getFilterCount(f)}</span>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-border bg-card p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-9 w-9 rounded" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
+        <Card className="overflow-hidden" aria-busy="true">
+          <ul className="divide-y divide-border">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i} className="flex items-center gap-3.5 px-4 py-3.5 sm:px-5">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <Skeleton className="h-8 w-8 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
+                <Skeleton className="h-8 w-24 rounded-xl" />
+              </li>
+            ))}
+          </ul>
+        </Card>
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-muted-foreground">
-          <Inbox className="h-12 w-12" />
-          <div>
-            <p className="text-lg font-medium">{t("myUploads.empty")}</p>
-            <p className="text-sm">{t("myUploads.emptyHint")}</p>
-          </div>
-        </div>
+        <Card className="flex flex-col items-center gap-4 px-6 py-14 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary-text">
+            <Inbox className="h-6 w-6" />
+          </span>
+          <p className="text-lg font-semibold tracking-tight">{t("myUploads.empty")}</p>
+          <Button asChild>
+            <Link to="/">
+              {t("share.goneAction")}
+              <ArrowRight />
+            </Link>
+          </Button>
+        </Card>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) =>
-            item.type === "upload" ? (
-              <UploadCard
-                key={`upload-${item.data.id}`}
-                upload={item.data}
-                onDelete={handleDeleteUpload}
-                onRename={handleRenameUpload}
-              />
-            ) : (
-              <NoteCard
-                key={`note-${item.data.id}`}
-                note={item.data}
-                onDelete={handleDeleteNote}
-              />
-            ),
-          )}
-        </div>
+        <Card className="overflow-hidden">
+          <ul className="divide-y divide-border" role="list">
+            {items.map((item) =>
+              item.type === "upload" ? (
+                <UploadCard
+                  key={`upload-${item.data.id}`}
+                  upload={item.data}
+                  onDelete={handleDeleteUpload}
+                  onRename={handleRenameUpload}
+                />
+              ) : (
+                <NoteCard
+                  key={`note-${item.data.id}`}
+                  note={item.data}
+                  onDelete={handleDeleteNote}
+                />
+              ),
+            )}
+          </ul>
+        </Card>
       )}
+    </>
+  );
+
+  let body;
+  if (sharing && requests) {
+    body = (
+      <Tabs
+        value={section}
+        onValueChange={(v) => setParams(v === "requests" ? { tab: "requests" } : {}, { replace: true })}
+        className="space-y-6"
+      >
+        <TabsList aria-label={t("myUploads.title")}>
+          <TabsTrigger value="shared">
+            <Share2 />
+            {t("myUploads.tabShared")}
+          </TabsTrigger>
+          <TabsTrigger value="requests">
+            <Inbox />
+            {t("myUploads.tabRequests")}
+            {unseen > 0 && (
+              <>
+                <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span className="sr-only">{t("nav.requestsUnseen")}</span>
+              </>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="shared" className="space-y-6">
+          {shared}
+        </TabsContent>
+        <TabsContent value="requests">
+          <RequestList />
+        </TabsContent>
+      </Tabs>
+    );
+  } else if (sharing) {
+    body = shared;
+  } else {
+    // The intro says where the list lives already.
+    body = <RequestList hint={false} />;
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header>
+        <h1
+          data-slot="hero-title"
+          className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[38px]"
+        >
+          {t("myUploads.title")}
+        </h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{intro}</p>
+      </header>
+      {body}
     </div>
   );
 }

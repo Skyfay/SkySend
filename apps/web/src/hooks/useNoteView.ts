@@ -7,9 +7,9 @@ import {
   fromBase64url,
   applyPasswordProtection,
   deriveKeyFromPassword,
-  type NoteContentType,
   type Argon2idHashFn,
 } from "@skysend/crypto";
+import { readNote, type ReadBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
 
 export type NoteViewPhase =
@@ -25,8 +25,10 @@ interface NoteViewState {
   phase: NoteViewPhase;
   error: string | null;
   info: api.NoteInfo | null;
-  content: string | null;
-  contentType: NoteContentType | null;
+  /** The decrypted note, in the order the sender put its blocks. */
+  blocks: ReadBlock[] | null;
+  /** True when the note could not be read in its format and is shown as it arrived. */
+  unreadable: boolean;
   viewCount: number;
   maxViews: number;
 }
@@ -36,8 +38,8 @@ export function useNoteView() {
     phase: "idle",
     error: null,
     info: null,
-    content: null,
-    contentType: null,
+    blocks: null,
+    unreadable: false,
     viewCount: 0,
     maxViews: 0,
   });
@@ -119,6 +121,17 @@ export function useNoteView() {
         // Decrypt
         const content = await decryptNoteContent(ciphertext, nonce, keys.metaKey);
 
+        // The view is already used up at this point, and with a limit of one the note is gone.
+        // A note that does not parse is shown as plain text, so its content is never lost.
+        let blocks: ReadBlock[];
+        let unreadable = false;
+        try {
+          blocks = readNote(info.contentType, content);
+        } catch {
+          blocks = [{ type: "text", format: "plain", text: content }];
+          unreadable = true;
+        }
+
         // Check if this was the last allowed view (maxViews === 0 means unlimited)
         const isDestroyed = result.maxViews > 0 && result.viewCount >= result.maxViews;
 
@@ -126,8 +139,8 @@ export function useNoteView() {
           phase: isDestroyed ? "destroyed" : "viewing",
           error: null,
           info,
-          content,
-          contentType: info.contentType as NoteContentType,
+          blocks,
+          unreadable,
           viewCount: result.viewCount,
           maxViews: result.maxViews,
         });

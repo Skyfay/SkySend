@@ -26,11 +26,13 @@ import {
   applyPasswordProtection,
   deriveKeyFromPassword,
   randomBytes,
+  wrapFileSecret,
   PASSWORD_SALT_LENGTH,
-  type FileMetadata,
+  type RequestUploadMetadata,
   type Argon2idHashFn,
 } from "@skysend/crypto";
 import { argon2id } from "hash-wasm";
+import { z } from "zod";
 import { streamingZip } from "./zip";
 
 const hashWasmArgon2: Argon2idHashFn = async (
@@ -50,6 +52,25 @@ const hashWasmArgon2: Argon2idHashFn = async (
   return new Uint8Array(result);
 };
 
+/**
+ * Chrome and Brave serialize large HTTP/2 POST bodies through reverse proxies, so the
+ * chunked transport sends 10 MB per request, with server-configurable parallel requests.
+ */
+const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024;
+
+/** Upload IDs come from randomUUID() on the server, and the wrap binds this one. */
+const UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** The token of a slot the server holds for the second part of a submission. */
+const SLOT_HOLD = /^[A-Za-z0-9_-]{22}$/;
+
+const holdAnswer = z.object({ hold: z.string().regex(SLOT_HOLD) });
+
+/** The held slot a finalize answer hands over, if it is a well-formed one. */
+function holdOf(answer: unknown): string | undefined {
+  const parsed = holdAnswer.safeParse(answer);
+  return parsed.success ? parsed.data.hold : undefined;
+}
+
 // ── Message Types ──────────────────────────────────────
 
 export interface UploadWorkerRequest {
@@ -68,11 +89,25 @@ export interface UploadWorkerRequest {
   /** Optional password (empty string = no password). */
   password: string;
   /** File metadata for encrypted meta blob. */
-  metadata: FileMetadata;
+  metadata: RequestUploadMetadata;
   /** Number of files in the upload. */
   fileCount: number;
   /** Base URL for API requests (e.g. "http://localhost:3000" in dev). */
   apiBase: string;
+  /**
+   * Upload into a file request. The file secret is wrapped to `publicKey`, which comes from
+   * the upload link, and travels with the metadata at finalize. Same transports as a
+   * normal upload: WebSocket first, chunked HTTP as the fallback.
+   */
+  request?: {
+    id: string;
+    uploadToken: string;
+    publicKey: ArrayBuffer;
+    /** The first part of a submission, which reserves the slot of its second part too. */
+    reserveNext?: boolean;
+    /** The slot the first part of a submission held for this one. */
+    hold?: string;
+  };
 }
 
 export type UploadWorkerMessage =
@@ -87,6 +122,13 @@ export type UploadWorkerMessage =
       ownerToken: string;
       effectiveSecret: string;
     }
+  /** An upload into a file request opened its session, so a cancel can end it. */
+  | { type: "session"; id: string }
+  /**
+   * An upload into a file request arrived. The sender gets nothing back to share, only the
+   * slot held for the next part of its submission.
+   */
+  | { type: "delivered"; id: string; hold?: string }
   | { type: "error"; message: string };
 
 // ── Worker Logic ───────────────────────────────────────
@@ -187,6 +229,33 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     const encryptedSize = calculateEncryptedSize(plaintextSize);
 
+    // The archive size is only known once the zip is built. The recipient needs
+    // it to tell a complete download from one the server cut short.
+    const metadata: RequestUploadMetadata =
+      msg.metadata.type === "archive"
+        ? { ...msg.metadata, archiveSize: plaintextSize }
+        : msg.metadata;
+
+    if (msg.request) {
+      const delivered = await uploadIntoRequest({
+        apiBase,
+        request: msg.request,
+        secret,
+        salt,
+        metadata,
+        metaKey: keys.metaKey,
+        fileCount: msg.fileCount,
+        encryptedStream: plaintextStream.pipeThrough(createEncryptStream(keys.fileKey)),
+        encryptedSize,
+        maxConcurrentUploads,
+        wsEnabled,
+        speedLimit,
+        post,
+      });
+      post({ type: "delivered", ...delivered });
+      return;
+    }
+
     // Compute auth tokens
     const authToken = await computeAuthToken(keys.authKey);
     const ownerToken = await computeOwnerToken(effectiveSecret, salt);
@@ -215,7 +284,6 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // encrypt and upload in CHUNK_UPLOAD_SIZE pieces via parallel requests.
     // Chrome/Brave serialize large HTTP/2 POST bodies through reverse proxies,
     // so we use smaller chunks (10 MB) with server-configurable concurrent uploads.
-    const CHUNK_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB per request
     const encryptedStream = plaintextStream.pipeThrough(
       createEncryptStream(keys.fileKey),
     );
@@ -245,17 +313,19 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       post({ type: "transport", transport: "ws", fallback: false });
       uploadResult = await uploadViaWebSocket({
         ws: wsInstance,
-        headers: {
-          authToken: headers["X-Auth-Token"]!,
-          ownerToken: ownerTokenB64,
-          salt: headers["X-Salt"]!,
-          maxDownloads: msg.maxDownloads,
-          expireSec: msg.expireSec,
-          fileCount: msg.fileCount,
-          contentLength: encryptedSize,
-          hasPassword,
-          passwordSalt: hasPassword && passwordSalt ? toBase64url(passwordSalt) : undefined,
-          passwordAlgo: hasPassword ? passwordAlgo : undefined,
+        init: {
+          headers: {
+            authToken: headers["X-Auth-Token"]!,
+            ownerToken: ownerTokenB64,
+            salt: headers["X-Salt"]!,
+            maxDownloads: msg.maxDownloads,
+            expireSec: msg.expireSec,
+            fileCount: msg.fileCount,
+            contentLength: encryptedSize,
+            hasPassword,
+            passwordSalt: hasPassword && passwordSalt ? toBase64url(passwordSalt) : undefined,
+            passwordAlgo: hasPassword ? passwordAlgo : undefined,
+          } satisfies WsInitHeaders,
         },
         encryptedStream,
         encryptedSize,
@@ -266,9 +336,17 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
       console.info("[upload-worker] transport=http");
       post({ type: "transport", transport: "http", fallback: wsEnabled && !wsUsable });
       uploadResult = await uploadViaHttpChunks({
-        apiBase,
+        paths: {
+          init: `${apiBase}/api/upload/init`,
+          chunk: (id, index) =>
+            `${apiBase}/api/upload/${encodeURIComponent(id)}/chunk?index=${index}`,
+          finalize: (id) => `${apiBase}/api/upload/${encodeURIComponent(id)}/finalize`,
+        },
         headers,
-        ownerTokenB64,
+        finalizeRequest: async () => ({
+          method: "POST",
+          headers: { "X-Owner-Token": ownerTokenB64 },
+        }),
         encryptedStream,
         encryptedSize,
         maxConcurrentUploads,
@@ -280,12 +358,6 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // ── Save Encrypted Metadata ──────────────────────
     post({ type: "phase", phase: "saving-meta" });
 
-    // The archive size is only known once the zip is built. The recipient needs
-    // it to tell a complete download from one the server cut short.
-    const metadata: FileMetadata =
-      msg.metadata.type === "archive"
-        ? { ...msg.metadata, archiveSize: plaintextSize }
-        : msg.metadata;
     const encMeta = await encryptMetadata(metadata, keys.metaKey);
     const encryptedMeta = btoa(
       String.fromCharCode(...encMeta.ciphertext),
@@ -331,9 +403,19 @@ function post(msg: UploadWorkerMessage) {
 // ── HTTP Chunked Upload (fallback transport) ──────────
 
 interface HttpUploadOpts {
-  apiBase: string;
+  /** The init endpoint, its chunks and its finalize, as full URLs. */
+  paths: {
+    init: string;
+    chunk: (uploadId: string, index: number) => string;
+    finalize: (uploadId: string) => string;
+  };
   headers: Record<string, string>;
-  ownerTokenB64: string;
+  /** The finalize request, which may need the upload ID. */
+  finalizeRequest: (uploadId: string) => Promise<RequestInit>;
+  /** Turns a failed init or finalize into the message the page shows. */
+  httpError?: (status: number, message: string) => string;
+  /** Called with the upload ID once the session is open. */
+  onSession?: (uploadId: string) => void;
   encryptedStream: ReadableStream<Uint8Array>;
   encryptedSize: number;
   maxConcurrentUploads: number;
@@ -341,11 +423,13 @@ interface HttpUploadOpts {
   post: (m: UploadWorkerMessage) => void;
 }
 
-async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }> {
+async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string; hold?: string }> {
   const {
-    apiBase,
+    paths,
     headers,
-    ownerTokenB64,
+    finalizeRequest,
+    httpError,
+    onSession,
     encryptedStream,
     encryptedSize,
     maxConcurrentUploads,
@@ -355,15 +439,20 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
 
   const reader = encryptedStream.getReader();
 
-  const initRes = await fetch(`${apiBase}/api/upload/init`, {
+  const initRes = await fetch(paths.init, {
     method: "POST",
     headers,
   });
   if (!initRes.ok) {
     const data = await initRes.json().catch(() => ({ error: "Upload init failed" }));
-    throw new Error((data as { error?: string }).error ?? "Upload init failed");
+    const message = (data as { error?: string }).error ?? "Upload init failed";
+    throw new Error(httpError ? httpError(initRes.status, message) : message);
   }
-  const { id: uploadId } = (await initRes.json()) as { id: string };
+  const { id: uploadId } = (await initRes.json()) as { id?: unknown };
+  if (typeof uploadId !== "string" || !UPLOAD_ID.test(uploadId)) {
+    throw new Error("Upload init failed");
+  }
+  onSession?.(uploadId);
 
   let loaded = 0;
   let chunkParts: Uint8Array[] = [];
@@ -373,10 +462,7 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
   const active: Array<Promise<void>> = [];
 
   const uploadChunk = async (data: Blob, index: number) => {
-    const res = await fetch(
-      `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
-      { method: "POST", body: data },
-    );
+    const res = await fetch(paths.chunk(uploadId, index), { method: "POST", body: data });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ error: "Chunk upload failed" }));
       throw new Error((errData as { error?: string }).error ?? "Chunk upload failed");
@@ -439,19 +525,141 @@ async function uploadViaHttpChunks(opts: HttpUploadOpts): Promise<{ id: string }
   await Promise.all(active);
   if (uploadError) throw uploadError;
 
-  const finalizeRes = await fetch(
-    `${apiBase}/api/upload/${encodeURIComponent(uploadId)}/finalize`,
-    {
-      method: "POST",
-      headers: { "X-Owner-Token": ownerTokenB64 },
-    },
-  );
+  const finalizeRes = await fetch(paths.finalize(uploadId), await finalizeRequest(uploadId));
   if (!finalizeRes.ok) {
     const data = await finalizeRes.json().catch(() => ({ error: "Upload finalize failed" }));
-    throw new Error((data as { error?: string }).error ?? "Upload finalize failed");
+    const message = (data as { error?: string }).error ?? "Upload finalize failed";
+    throw new Error(httpError ? httpError(finalizeRes.status, message) : message);
+  }
+  const hold = holdOf(await finalizeRes.json().catch(() => null));
+
+  return hold ? { id: uploadId, hold } : { id: uploadId };
+}
+
+// ── Upload Into a File Request ────────────────────────
+
+interface RequestUploadOpts {
+  apiBase: string;
+  request: NonNullable<UploadWorkerRequest["request"]>;
+  secret: Uint8Array;
+  salt: Uint8Array;
+  metadata: RequestUploadMetadata;
+  metaKey: CryptoKey;
+  fileCount: number;
+  encryptedStream: ReadableStream<Uint8Array>;
+  encryptedSize: number;
+  maxConcurrentUploads: number;
+  /** Whether the server offers the WebSocket transport (fileUploadWs). */
+  wsEnabled: boolean;
+  /** Server-configured speed limit in bytes/sec.  0 = unlimited. */
+  speedLimit: number;
+  post: (m: UploadWorkerMessage) => void;
+}
+
+/** Why the server refused to open an upload into a request, as the key the page shows. */
+function requestHttpError(status: number, message: string): string {
+  // The upload quota of the sender answers with 413 or 429 too, and names itself.
+  if ((status === 413 || status === 429) && /quota/i.test(message)) return "quota";
+  if (status === 404 || status === 403) return "gone";
+  if (status === 409) return "full";
+  if (status === 410) return "closed";
+  if (status === 413) return "tooLarge";
+  return message;
+}
+
+/**
+ * Uploads into a file request with the same transports as a normal upload: WebSocket when
+ * the server offers it, chunked HTTP when it does not or the handshake fails. Init reserves
+ * a slot and returns the upload ID, which the wrap of the file secret binds, so the box
+ * cannot be moved to another upload or request. Finalize carries the box and the encrypted
+ * metadata together.
+ */
+async function uploadIntoRequest(opts: RequestUploadOpts): Promise<{ id: string; hold?: string }> {
+  const { apiBase, request, secret, salt, metadata, metaKey, fileCount, encryptedSize, post } =
+    opts;
+  const base = `/api/request/${encodeURIComponent(request.id)}/upload`;
+  const publicKey = new Uint8Array(request.publicKey);
+  const encMeta = await encryptMetadata(metadata, metaKey);
+  const { reserveNext, hold } = request;
+
+  /** What finalize sends over either transport. */
+  const finalizeFields = async (uploadId: string) => {
+    const wrapped = await wrapFileSecret(publicKey, request.id, uploadId, secret);
+    return {
+      wrapEnc: toBase64url(wrapped.enc),
+      wrapCiphertext: toBase64url(wrapped.ciphertext),
+      encryptedMeta: toBase64url(encMeta.ciphertext),
+      metaNonce: toBase64url(encMeta.iv),
+    };
+  };
+
+  // Same handshake and fallback as a normal upload. The stream is untouched until the
+  // WebSocket is open, so a failed handshake can still go over HTTP.
+  let ws: WebSocket | null = null;
+  if (opts.wsEnabled) {
+    try {
+      ws = await openUploadWebSocket(apiBase, `${base}/ws`);
+    } catch (err) {
+      console.warn(
+        "[upload-worker] WebSocket handshake failed, falling back to HTTP chunks:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+  if (ws) {
+    console.info("[upload-worker] transport=ws");
+    post({ type: "transport", transport: "ws", fallback: false });
+    return uploadViaWebSocket({
+      ws,
+      init: {
+        request: {
+          uploadToken: request.uploadToken,
+          salt: toBase64url(salt),
+          contentLength: encryptedSize,
+          fileCount,
+          ...(reserveNext ? { reserveNext: true } : {}),
+          ...(hold ? { hold } : {}),
+        },
+      },
+      finalize: finalizeFields,
+      wsError: requestHttpError,
+      encryptedStream: opts.encryptedStream,
+      encryptedSize,
+      speedLimit: opts.speedLimit,
+      post,
+    });
   }
 
-  return { id: uploadId };
+  console.info("[upload-worker] transport=http");
+  post({ type: "transport", transport: "http", fallback: opts.wsEnabled });
+  return uploadViaHttpChunks({
+    paths: {
+      init: `${apiBase}${base}/init`,
+      chunk: (uploadId, index) =>
+        `${apiBase}${base}/${encodeURIComponent(uploadId)}/chunk?index=${index}`,
+      finalize: (uploadId) => `${apiBase}${base}/${encodeURIComponent(uploadId)}/finalize`,
+    },
+    headers: {
+      "X-Upload-Token": request.uploadToken,
+      "X-Salt": toBase64url(salt),
+      "X-Content-Length": String(encryptedSize),
+      "X-File-Count": String(fileCount),
+      ...(reserveNext ? { "X-Reserve-Next": "1" } : {}),
+      ...(hold ? { "X-Slot-Hold": hold } : {}),
+    },
+    finalizeRequest: async (uploadId) => ({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(await finalizeFields(uploadId)),
+    }),
+    httpError: requestHttpError,
+    onSession: (uploadId) => post({ type: "session", id: uploadId }),
+    encryptedStream: opts.encryptedStream,
+    encryptedSize,
+    maxConcurrentUploads: opts.maxConcurrentUploads,
+    chunkSize: CHUNK_UPLOAD_SIZE,
+    post,
+  });
 }
 
 // ── WebSocket Upload (primary transport) ──────────────
@@ -475,13 +683,13 @@ interface WsInitHeaders {
  * to retry via HTTP chunks because no data has been consumed from the
  * encrypted stream yet.
  */
-function openUploadWebSocket(apiBase: string): Promise<WebSocket> {
+function openUploadWebSocket(apiBase: string, path = "/api/upload/ws"): Promise<WebSocket> {
   const WS_HANDSHAKE_TIMEOUT_MS = 10_000;
   return new Promise<WebSocket>((resolve, reject) => {
     let url: URL;
     try {
       const base = apiBase && apiBase.length > 0 ? apiBase : self.location.origin;
-      url = new URL("/api/upload/ws", base);
+      url = new URL(path, base);
       url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     } catch (err) {
       reject(err instanceof Error ? err : new Error("Invalid apiBase for WS"));
@@ -522,7 +730,12 @@ function openUploadWebSocket(apiBase: string): Promise<WebSocket> {
 
 interface WsUploadOpts {
   ws: WebSocket;
-  headers: WsInitHeaders;
+  /** What the init frame carries besides its type: the upload headers, or the request. */
+  init: Record<string, unknown>;
+  /** What the finalize frame carries besides its type, once the upload ID is known. */
+  finalize?: (uploadId: string) => Promise<Record<string, unknown>>;
+  /** Turns an error frame that names an HTTP status into the message the page shows. */
+  wsError?: (status: number, message: string) => string;
   encryptedStream: ReadableStream<Uint8Array>;
   encryptedSize: number;
   /** Server-configured speed limit in bytes/sec.  0 = unlimited. */
@@ -530,8 +743,8 @@ interface WsUploadOpts {
   post: (m: UploadWorkerMessage) => void;
 }
 
-async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
-  const { ws, headers, encryptedStream, encryptedSize, speedLimit, post } = opts;
+async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string; hold?: string }> {
+  const { ws, init, finalize, wsError, encryptedStream, encryptedSize, speedLimit, post } = opts;
 
   const FRAME_SIZE = 256 * 1024; // 256 KB per WebSocket frame
   const HIGH_WATER = 8 * 1024 * 1024; // pause sending above this
@@ -541,6 +754,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
 
   let fatalError: Error | null = null;
   let doneId: string | null = null;
+  let doneHold: string | undefined;
   let readyId: string | null = null;
   const readyWaiters: Array<() => void> = [];
   const doneWaiters: Array<() => void> = [];
@@ -550,7 +764,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
 
   ws.addEventListener("message", (evt) => {
     if (typeof evt.data !== "string") return;
-    let msg: { type?: string; id?: string; message?: string };
+    let msg: { type?: string; id?: string; message?: string; status?: unknown };
     try {
       msg = JSON.parse(evt.data);
     } catch {
@@ -561,10 +775,14 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
       notifyReady();
     } else if (msg.type === "done" && typeof msg.id === "string") {
       doneId = msg.id;
+      doneHold = holdOf(msg);
       notifyReady();
       notifyDone();
     } else if (msg.type === "error") {
-      fatalError = new Error(msg.message ?? "Server error");
+      const message = msg.message ?? "Server error";
+      fatalError = new Error(
+        wsError && typeof msg.status === "number" ? wsError(msg.status, message) : message,
+      );
       notifyReady();
       notifyDone();
     } else if (msg.type === "storage") {
@@ -592,7 +810,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
 
   try {
     // Send init message.
-    ws.send(JSON.stringify({ type: "init", headers }));
+    ws.send(JSON.stringify({ type: "init", ...init }));
 
     // Wait for ready.
     await new Promise<void>((resolve, reject) => {
@@ -604,6 +822,8 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
     });
     if (fatalError) throw fatalError;
     if (!readyId) throw new Error("Server did not return an upload id");
+    // A request upload wraps its secret to this ID, so it has to look like one the server makes.
+    if (!UPLOAD_ID.test(readyId)) throw new Error("Server returned an invalid upload id");
 
     // Stream encrypted data in small frames with backpressure.
     const reader = encryptedStream.getReader();
@@ -672,7 +892,7 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
     if (fatalError) throw fatalError;
 
     // Send finalize and wait for done.
-    ws.send(JSON.stringify({ type: "finalize" }));
+    ws.send(JSON.stringify({ type: "finalize", ...(finalize ? await finalize(readyId) : {}) }));
     await new Promise<void>((resolve, reject) => {
       if (doneId || fatalError) { resolve(); return; }
       const timer = setTimeout(() => {
@@ -683,7 +903,8 @@ async function uploadViaWebSocket(opts: WsUploadOpts): Promise<{ id: string }> {
 
     if (fatalError) throw fatalError;
     if (!doneId) throw new Error("Server did not confirm upload completion");
-    return { id: doneId };
+    if (doneId !== readyId) throw new Error("Server confirmed a different upload");
+    return doneHold ? { id: doneId, hold: doneHold } : { id: doneId };
   } finally {
     if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
       try { ws.close(); } catch { /* ignore */ }
