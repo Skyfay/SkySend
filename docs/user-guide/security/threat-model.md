@@ -45,9 +45,9 @@ An attacker who gains access to the server's filesystem or database.
 ### Brute-Force Password Guessing
 **Threat**: An attacker tries to brute-force the password on a password-protected upload.
 
-**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). Rate limiting applies to all endpoints.
+**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). The server releases the encrypted metadata of a password-protected upload only after a correct password, so someone with the link has nothing to test guesses against offline. Every guess has to pass the password check or the download, which share one lockout per IP and upload. New passwords need at least 8 characters.
 
-**Result**: Online brute-force is impractical due to rate limiting. Offline brute-force is expensive due to memory-hard KDF.
+**Result**: Online brute-force is impractical due to the lockout and rate limiting. Offline brute-force needs the link and the server's database together, and even then costs one Argon2id run per guess, which puts 8 random characters out of reach for years.
 
 ### Upload Abuse (Storage Exhaustion)
 **Threat**: An attacker uploads large amounts of data to fill the server's disk.
@@ -102,7 +102,7 @@ Decrypting an upload takes three separate pieces, and a rewritten link puts all 
 
 **Without a password, that is enough.** An operator who holds the access log plus backups of the database and the blob storage can decrypt the upload, including after the sender deleted it. Deleting removes the live copy, it does not reach into a backup.
 
-**With a password, it is not enough.** The URL fragment carries only the raw secret. The keys that actually decrypt anything are derived from that secret combined with an Argon2id hash of the password, and the password never leaves the browser, so the server stores neither it nor a hash of it. The same operator would have to brute force the password at 64 MiB of memory and three iterations per guess.
+**With a password, it is not enough.** The URL fragment carries only the raw secret. The keys that actually decrypt anything are derived from that secret combined with an Argon2id hash of the password, and the password never leaves the browser, so the server stores neither it nor a hash of it. The same operator would have to brute force the password offline at 64 MiB of memory and three iterations per guess, which is why new passwords need at least 8 characters. A short password from before that rule falls far faster.
 
 #### What to do
 

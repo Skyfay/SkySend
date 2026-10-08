@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import { MIN_PASSWORD_LENGTH, meetsPasswordMinimum } from "@skysend/crypto";
 
 /** Note types whose content spans lines, which a prompt that ends at the first line cannot take. */
 const MULTILINE_TYPES = new Set(["code", "markdown", "sshkey"]);
@@ -31,6 +32,15 @@ export function asksForPassword(
   required: boolean,
 ): boolean {
   return password === true || (required && typeof password !== "string");
+}
+
+/**
+ * True for a new file or note password that is long enough, else why not, in the shape the
+ * TUI's TextPrompt takes. Only a new password is checked. An older, shorter one still opens.
+ */
+export function checkNewPassword(password: string): true | string {
+  if (password === "") return "Password cannot be empty";
+  return meetsPasswordMinimum(password) ? true : `Use at least ${MIN_PASSWORD_LENGTH} characters`;
 }
 
 /** Everything a stream holds until it ends, as UTF-8. */

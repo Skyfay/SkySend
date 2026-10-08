@@ -45,14 +45,14 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | :--- | :--- | :--- |
 | `GET /api/config` | none | Public config for the SPA and the CLI |
 | `GET /api/health` | none | Docker healthcheck, CORS open to `*` |
-| `GET /api/info/:id` | none | Public upload info, no tokens or storage path |
+| `GET /api/info/:id` | none | Public upload info, no tokens or storage path, and no metadata of a password-protected upload |
 | `GET /api/exists/:id` | none | Lightweight availability check |
 | `POST /api/upload/init`, `/:id/chunk`, `/:id/finalize` | upload session | Chunked HTTP upload |
 | `POST /api/upload` | header tokens | Single-request upload, legacy fallback |
 | `GET /api/upload/ws` | upload session | WebSocket upload, primary path when `FILE_UPLOAD_WS=true` |
 | `POST /api/meta/:id` | owner token | Store encrypted metadata |
 | `GET /api/download/:id` | auth token | Stream ciphertext or hand out a presigned S3 URL |
-| `POST /api/password/:id` | auth token | Password check, rate limited by lockout |
+| `POST /api/password/:id` | auth token | Password check, rate limited by lockout, returns the metadata of a password-protected upload |
 | `DELETE /api/upload/:id` | owner token | Delete blob and row |
 | `GET /api/quota` | none | Remaining upload quota for the caller |
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
@@ -145,7 +145,7 @@ Chunk requests are intentionally exempt from the global rate limiter - the reaso
 - **Rate limiter** (`middleware/rate-limit.ts`): in-memory sliding window keyed by client IP, `RATE_LIMIT_WINDOW` / `RATE_LIMIT_MAX`, emits `X-RateLimit-*` headers. Also applied to `/auth/*`. `getClientIp` honours `TRUST_PROXY` - only trust forwarded headers when the operator opted in.
 - **Quota** (`middleware/quota.ts`): per-IP byte budget over `FILE_UPLOAD_QUOTA_WINDOW`, disabled when `FILE_UPLOAD_QUOTA_BYTES=0`. IPs are HMAC-hashed with a key that rotates every 24 hours, and state is persisted in `quota_state` so restarts do not reset budgets. Never store or log a raw IP here.
   An upload reserves its declared size when it starts (`reserve()`, or the middleware on the chunked init and the single-request upload, never on chunk or finalize requests). Every transport ends the reservation exactly one way: `commit()` once the upload is stored, `release()` when it ends without being stored. A reservation also lapses with its quota window, so a missed release cannot block a sender for good. Parallel uploads used to pass the check against the same used bytes, so never go back to counting only finished uploads.
-- **Password lockout** (`lib/password-lockout.ts`): one shared instance for the password, note and inbox routes, `PASSWORD_MAX_ATTEMPTS` failures lock a resource for `PASSWORD_LOCKOUT_MS`. Failures that led to no lock are forgotten after `PASSWORD_LOCKOUT_MS`. The inbox counts a wrong token for a request that does not exist as well, so the lockout does not reveal which IDs exist.
+- **Password lockout** (`lib/password-lockout.ts`): one shared instance for the password, download, note and inbox routes, `PASSWORD_MAX_ATTEMPTS` failures lock a resource for `PASSWORD_LOCKOUT_MS`. Failures that led to no lock are forgotten after `PASSWORD_LOCKOUT_MS`. The inbox counts a wrong token for a request that does not exist as well, so the lockout does not reveal which IDs exist. The password check and the download share the key `file:<id>`, so a guesser cannot switch between them. The metadata of a password-protected upload never goes out before a correct password, or anyone with the link could test guesses offline against its GCM tag (GHSA-rxxj-c5wr-phqp).
 - **Daily request limit** (`lib/request-limit.ts`): `FILE_REQUEST_DAILY_LIMIT` new requests per OIDC user or IP, HMAC-hashed, in memory only. A restart resets it.
 
 ## Security headers and middleware order

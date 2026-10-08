@@ -8,7 +8,7 @@ import {
   expectedPlaintextSize,
   type FileMetadata,
 } from "@skysend/crypto";
-import { fetchInfo, downloadFile, verifyPassword } from "../../lib/api.js";
+import { fetchInfo, downloadFile, verifyPassword, withUnlockedMeta } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
 import { parseShareUrl } from "../../lib/url.js";
 import { availablePath, sanitizeFilename } from "../../lib/filename.js";
@@ -84,16 +84,19 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       const creds = await prepareDownload(
         parsedUrl.secret, fileInfo.salt, pw, fileInfo.passwordSalt, fileInfo.passwordAlgo,
       );
-      const valid = await verifyPassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
-      if (!valid) {
+      const unlocked = await verifyPassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
+      if (!unlocked) {
         setErrorMsg("Invalid password");
         setPhase("error");
         return;
       }
+      // Only a right password makes the server release the metadata.
+      const opened = withUnlockedMeta(fileInfo, unlocked);
+      setFileInfo(opened);
       let meta: FileMetadata | undefined;
-      if (fileInfo.encryptedMeta && fileInfo.nonce) {
-        const ct = new Uint8Array(Buffer.from(fileInfo.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
-        const iv = new Uint8Array(Buffer.from(fileInfo.nonce, "base64")) as Uint8Array<ArrayBuffer>;
+      if (opened.encryptedMeta && opened.nonce) {
+        const ct = new Uint8Array(Buffer.from(opened.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
+        const iv = new Uint8Array(Buffer.from(opened.nonce, "base64")) as Uint8Array<ArrayBuffer>;
         meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
       }
       setMetadata(meta);

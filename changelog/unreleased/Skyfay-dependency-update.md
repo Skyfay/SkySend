@@ -1,5 +1,11 @@
+> ⚠️ **Breaking:** A CLI from before this release cannot download a password-protected file from an updated server. Run `skysend update` first.
+
 ### 🔒 Security
 
+- **server**: The metadata of a password-protected file is released only after a correct password, so a link holder can no longer test password guesses offline. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **server**: A wrong token at the download of a password-protected file counts against the password lockout like a wrong password. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **web**: A new file or note password needs at least 8 characters. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **client**: The CLI and the TUI ask for at least 8 characters for a new file or note password and take the metadata from the password check. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
 - **web**: Notes are padded to whole kilobytes before they are encrypted, so the server no longer learns how long a password in a note is.
 - **client**: The CLI and the TUI pad notes to whole kilobytes like the web app.
 - **crypto**: File metadata is padded to whole kilobytes before it is encrypted, so its length no longer reveals how long a file name is.

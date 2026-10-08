@@ -338,6 +338,7 @@
     "summary": "Deleted after <b>{{expiry}}</b>.",
     "summaryLimit": "Deleted after <b>{{expiry}}</b> or <b>{{limit}}</b>, whichever comes first.",
     "passwordForced": "The server requires a password.",
+    "passwordTooShort": "Use at least {{count}} characters.",
     "encryptUpload": "Encrypt and upload",
     "encryptShare": "Encrypt and share",
     "signInText": "This server only lets signed-in people share. Sign in to continue.",

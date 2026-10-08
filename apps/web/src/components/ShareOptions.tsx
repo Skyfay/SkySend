@@ -4,6 +4,7 @@ import { Clock, Download, Eye, Lock } from "lucide-react";
 import { OptionPill, SwitchPill } from "@/components/OptionPill";
 import { PasswordProtectionInput } from "@/components/PasswordProtectionInput";
 import { formatDuration } from "@/lib/utils";
+import { MIN_PASSWORD_LENGTH, meetsPasswordMinimum } from "@skysend/crypto";
 
 export type ShareKind = "file" | "note";
 
@@ -142,7 +143,13 @@ export function ShareOptions({
             placeholder={t(forcePassword ? "upload.passwordPlaceholderRequired" : "upload.passwordPlaceholder")}
             disabled={disabled}
           />
-          <p className="text-xs text-muted-foreground">{t("share.passwordHint")}</p>
+          {password !== "" && !meetsPasswordMinimum(password) ? (
+            <p className="text-xs text-destructive-text">
+              {t("share.passwordTooShort", { count: MIN_PASSWORD_LENGTH })}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("share.passwordHint")}</p>
+          )}
           {forcePassword && <p className="text-xs text-muted-foreground">{t("share.passwordForced")}</p>}
         </div>
       )}

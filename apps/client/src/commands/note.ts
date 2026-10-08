@@ -15,7 +15,13 @@ import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
 import { CLI_NOTE_TYPES, isCliNoteType, prepareNote, textToBlock } from "../lib/note.js";
 import { forTerminal } from "../lib/terminal.js";
-import { asksForPassword, noteSource, readAll, withoutFinalNewline } from "../lib/input.js";
+import {
+  asksForPassword,
+  checkNewPassword,
+  noteSource,
+  readAll,
+  withoutFinalNewline,
+} from "../lib/input.js";
 
 interface NoteOptions {
   server?: string;
@@ -97,13 +103,17 @@ export function registerNoteCommand(program: Command): void {
         let password: string | undefined;
         if (options.password === true) {
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
         } else if (typeof options.password === "string") {
           password = options.password;
         } else if (config.forceNotePassword) {
           if (!options.json) writeLine("Password is required by server policy.");
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
+        }
+
+        // A new password has to hold against guessing with the link and the server's database.
+        if (password !== undefined) {
+          const problem = checkNewPassword(password);
+          if (problem !== true) throw new Error(problem);
         }
 
         // Resolve expiry

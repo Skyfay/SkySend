@@ -38,6 +38,7 @@ import { ApiError } from "../lib/errors.js";
 import { addUpload } from "../lib/history.js";
 import { uploadWsTransport } from "../lib/ws-upload.js";
 import { forTerminal } from "../lib/terminal.js";
+import { checkNewPassword } from "../lib/input.js";
 
 interface UploadOptions {
   server?: string;
@@ -250,13 +251,17 @@ export function registerUploadCommand(program: Command): void {
         let password: string | undefined;
         if (options.password === true) {
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
         } else if (typeof options.password === "string") {
           password = options.password;
         } else if (config.forceFilePassword) {
           if (!options.json) writeLine("Password is required by server policy.");
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
+        }
+
+        // A new password has to hold against guessing with the link and the server's database.
+        if (password !== undefined) {
+          const problem = checkNewPassword(password);
+          if (problem !== true) throw new Error(problem);
         }
 
         // Resolve expiry

@@ -5,6 +5,8 @@ import {
   applyPasswordProtection,
   DERIVED_KEY_LENGTH,
   PASSWORD_SALT_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  meetsPasswordMinimum,
 } from "../src/password.js";
 import { constantTimeEqual, randomBytes } from "../src/util.js";
 
@@ -98,5 +100,25 @@ describe("deriveKeyFromPasswordArgon2", () => {
       mockArgon2id,
     );
     expect(constantTimeEqual(result, expectedKey)).toBe(true);
+  });
+});
+
+describe("meetsPasswordMinimum", () => {
+  it("should ask for at least eight characters", () => {
+    expect(MIN_PASSWORD_LENGTH).toBe(8);
+    expect(meetsPasswordMinimum("1234")).toBe(false);
+    expect(meetsPasswordMinimum("abcdefg")).toBe(false);
+    expect(meetsPasswordMinimum("abcdefgh")).toBe(true);
+  });
+
+  it("should count characters, not UTF-16 units, so an emoji counts once", () => {
+    // Seven code points, fourteen UTF-16 units.
+    expect(meetsPasswordMinimum("\u{1F510}".repeat(7))).toBe(false);
+    expect(meetsPasswordMinimum("\u{1F510}".repeat(8))).toBe(true);
+    expect(meetsPasswordMinimum("Passwört")).toBe(true);
+  });
+
+  it("should turn down an empty password", () => {
+    expect(meetsPasswordMinimum("")).toBe(false);
   });
 });

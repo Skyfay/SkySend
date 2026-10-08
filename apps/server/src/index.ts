@@ -264,7 +264,7 @@ api.route("/info", infoRoute);
 api.route("/exists", existsRoute);
 api.route("/password", passwordRoute);
 api.route("/meta", metaRoute);
-api.route("/download", createDownloadRoute(storage));
+api.route("/download", createDownloadRoute(storage, passwordLockout));
 
 // Quota status endpoint
 api.get("/quota", (c) => {

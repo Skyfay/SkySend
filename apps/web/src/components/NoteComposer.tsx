@@ -12,6 +12,7 @@ import { noteStart } from "@/lib/defaults";
 import { blocksToSend, emptyBlock, type DraftBlock } from "@/lib/note-editor";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn, formatBytes } from "@/lib/utils";
+import { meetsPasswordMinimum } from "@skysend/crypto";
 
 /** The start of an empty note: one card per block type. A click starts the note with it. */
 export function BlockCards({
@@ -82,8 +83,10 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
   // 16-byte tag. The padded size has to fit, so the note fits any version of the server.
   const tooLarge =
     serialized !== "" && encoder.encode(padNote(serialized)).length > config.noteMaxSize;
-  // A password that is switched on has to be typed, or the link would go out without one.
-  const canSubmit = toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || password.length > 0);
+  // A password that is switched on has to be typed, or the link would go out without one, and
+  // long enough to hold against guessing with the link and the server's database.
+  const canSubmit =
+    toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || meetsPasswordMinimum(password));
 
   const add = (type: NoteBlockType) => setDrafts((current) => addDraft(current, type));
 

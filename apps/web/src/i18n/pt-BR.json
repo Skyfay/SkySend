@@ -3,6 +3,7 @@
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGenerated": false,
     "aiGeneratedKeys": [
+      "share.passwordTooShort",
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
@@ -729,6 +730,7 @@
     "summary": "Excluído após <b>{{expiry}}</b>.",
     "summaryLimit": "Excluído após <b>{{expiry}}</b> ou <b>{{limit}}</b>, o que ocorrer primeiro.",
     "passwordForced": "O servidor exige uma senha.",
+    "passwordTooShort": "Use pelo menos {{count}} caracteres.",
     "encryptUpload": "Criptografar e enviar",
     "encryptShare": "Criptografar e compartilhar",
     "signInText": "Este servidor só permite compartilhar a pessoas conectadas. Entre para continuar.",

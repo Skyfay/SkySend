@@ -1,6 +1,12 @@
 import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { asksForPassword, noteSource, readAll, withoutFinalNewline } from "../../src/lib/input.js";
+import {
+  asksForPassword,
+  checkNewPassword,
+  noteSource,
+  readAll,
+  withoutFinalNewline,
+} from "../../src/lib/input.js";
 
 describe("noteSource", () => {
   it("reads a pipe or a redirected file whenever stdin is no terminal", () => {
@@ -58,5 +64,18 @@ describe("withoutFinalNewline", () => {
   it("keeps every other line break and a note without one", () => {
     expect(withoutFinalNewline("a\nb\n\n")).toBe("a\nb\n");
     expect(withoutFinalNewline("a\nb")).toBe("a\nb");
+  });
+});
+
+describe("checkNewPassword", () => {
+  it("turns down an empty password and one under eight characters", () => {
+    expect(checkNewPassword("")).toBe("Password cannot be empty");
+    expect(checkNewPassword("1234")).toBe("Use at least 8 characters");
+    expect(checkNewPassword("seven77")).toBe("Use at least 8 characters");
+  });
+
+  it("takes eight characters or more, counted as characters", () => {
+    expect(checkNewPassword("eight888")).toBe(true);
+    expect(checkNewPassword("Passwört")).toBe(true);
   });
 });

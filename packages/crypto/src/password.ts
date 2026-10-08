@@ -26,6 +26,19 @@ export const DERIVED_KEY_LENGTH = 32;
 /** Salt length for password KDF. */
 export const PASSWORD_SALT_LENGTH = 16;
 
+/**
+ * The fewest characters a new file or note password may have. Whoever holds the link and the
+ * server's database can test guesses offline, at the cost of one Argon2id run each, and eight
+ * random characters keep that out of reach for years where a PIN falls in seconds. Only the
+ * clients can check it, since the server never sees the password.
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+
+/** Whether a new password has at least MIN_PASSWORD_LENGTH characters, counted as code points. */
+export function meetsPasswordMinimum(password: string): boolean {
+  return Array.from(password).length >= MIN_PASSWORD_LENGTH;
+}
+
 /** Argon2id parameters (OWASP strong recommendation: 64 MiB, 3 iterations). */
 export const ARGON2_PARAMS = {
   memory: 65_536, // 64 MiB (OWASP strong recommendation)

@@ -50,7 +50,7 @@ When the limit is used up, creating a request returns `429 Too Many Requests`, a
 
 ## Password Attempt Lockout
 
-SkySend tracks failed password attempts per upload/note and per client IP. After too many failures, that specific IP is locked out from that specific resource for a configurable duration. Controlled via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`.
+SkySend tracks failed password attempts per upload/note and per client IP. For an upload, the password check and a download with a wrong token count together, so a guesser cannot switch between them. After too many failures, that specific IP is locked out from that specific resource for a configurable duration. Controlled via `PASSWORD_MAX_ATTEMPTS` and `PASSWORD_LOCKOUT_MS`.
 
 This is intentionally per-resource, not per-IP globally: a user mis-typing a password cannot block others from accessing unrelated uploads, and a shared IP (corporate NAT, VPN) cannot trigger a lockout for a resource they have not tried.
 

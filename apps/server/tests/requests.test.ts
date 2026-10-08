@@ -156,7 +156,7 @@ describe("file requests", () => {
       }),
     );
     app.route("/api/inbox", createInboxRoute({ storage, lockout }));
-    app.route("/api/download", createDownloadRoute(storage));
+    app.route("/api/download", createDownloadRoute(storage, lockout));
     app.route("/api/info", infoRoute);
     app.route("/api/exists", existsRoute);
     return app;

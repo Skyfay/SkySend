@@ -208,21 +208,32 @@ export async function saveMeta(
   }
 }
 
-export async function verifyPassword(
-  id: string,
-  authToken: string,
-): Promise<boolean> {
+const passwordCheckSchema = z.object({
+  ok: z.literal(true),
+  encryptedMeta: z.string().nullable(),
+  nonce: z.string().nullable(),
+});
+
+/** The metadata of a password-protected upload, which the server releases after the check. */
+export type UnlockedMeta = Pick<UploadInfo, "encryptedMeta" | "nonce">;
+
+/**
+ * Checks the auth token derived from a password. Null for a wrong password, otherwise the
+ * encrypted metadata, which GET /api/info holds back for a password-protected upload.
+ */
+export async function verifyPassword(id: string, authToken: string): Promise<UnlockedMeta | null> {
   const res = await fetch(`/api/password/${encodeURIComponent(id)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ authToken }),
   });
-  if (res.status === 401) return false;
+  if (res.status === 401) return null;
   if (res.status === 429) throw new ApiError(429, "rate-limited");
   if (!res.ok) {
     throw new ApiError(res.status, "Password verification failed");
   }
-  return true;
+  const { encryptedMeta, nonce } = passwordCheckSchema.parse(await res.json());
+  return { encryptedMeta, nonce };
 }
 
 const presignedResponseSchema = z.object({

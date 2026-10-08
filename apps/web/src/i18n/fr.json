@@ -343,6 +343,7 @@
     "summary": "Supprimé après <b>{{expiry}}</b>.",
     "summaryLimit": "Supprimé après <b>{{expiry}}</b> ou <b>{{limit}}</b>, selon ce qui survient en premier.",
     "passwordForced": "Le serveur exige un mot de passe.",
+    "passwordTooShort": "Utilisez au moins {{count}} caractères.",
     "encryptUpload": "Chiffrer et téléverser",
     "encryptShare": "Chiffrer et partager",
     "signInText": "Ce serveur n'autorise le partage qu'aux personnes connectées. Connectez-vous pour continuer.",

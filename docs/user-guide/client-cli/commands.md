@@ -23,7 +23,7 @@ skysend upload <files...> [options]
 | `-s, --server <url>` | Server URL (overrides config) |
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
-| `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
+| `-p, --password [password]` | Password protect the upload, at least 8 characters. Prompts interactively if no value is given. |
 | `--no-ws` | Use HTTP chunked upload instead of WebSocket. Currently the default anyway, see below |
 | `--json` | Output result as JSON |
 
@@ -147,7 +147,7 @@ A note given as an argument stays in your shell history, and on Linux other user
 | `-t, --type <type>` | `text` | Note type: `text`, `password`, `code`, `markdown`, `sshkey` |
 | `-e, --expires <duration>` | | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-v, --views <count>` | | Maximum view count (`0` = unlimited) |
-| `-p, --password [password]` | | Password protect. Prompts interactively if no value is given. |
+| `-p, --password [password]` | | Password protect, at least 8 characters. Prompts interactively if no value is given. |
 | `--json` | | Output result as JSON |
 
 ### Examples

@@ -343,6 +343,7 @@
     "summary": "Slettes etter <b>{{expiry}}</b>.",
     "summaryLimit": "Slettes etter <b>{{expiry}}</b> eller <b>{{limit}}</b>, avhengig av hva som inntreffer først.",
     "passwordForced": "Serveren krever et passord.",
+    "passwordTooShort": "Bruk minst {{count}} tegn.",
     "encryptUpload": "Krypter og last opp",
     "encryptShare": "Krypter og del",
     "signInText": "Denne serveren lar bare innloggede personer dele. Logg inn for å fortsette.",

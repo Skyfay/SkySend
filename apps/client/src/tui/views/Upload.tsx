@@ -26,6 +26,7 @@ import { getWebSocket } from "../../lib/config.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
 import { createPrivateTempFile } from "../../lib/temp-file.js";
 import { forTerminal } from "../../lib/terminal.js";
+import { checkNewPassword } from "../../lib/input.js";
 
 type Phase =
   | "file-select"
@@ -419,7 +420,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
           mask="*"
           onSubmit={(val) => { setPassword(val); setPhase("confirm"); }}
           onCancel={() => setPhase("downloads")}
-          validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
+          validate={checkNewPassword}
         />
       );
     }
@@ -447,7 +448,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         mask="*"
         onSubmit={(val) => { setPassword(val); setPhase("confirm"); }}
         onCancel={() => setPhase("password-ask")}
-        validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
+        validate={checkNewPassword}
       />
     );
   }

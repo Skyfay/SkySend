@@ -11,6 +11,7 @@ import {
   fetchInfo,
   downloadFile,
   verifyPassword,
+  withUnlockedMeta,
 } from "../lib/api.js";
 import { prepareDownload } from "../lib/auth.js";
 import { parseShareUrl } from "../lib/url.js";
@@ -58,7 +59,7 @@ export function registerDownloadCommand(program: Command): void {
 
         // Fetch upload info
         if (!options.json) writeLine("Fetching file info...");
-        const info = await fetchInfo(server, parsed.id);
+        let info = await fetchInfo(server, parsed.id);
 
         // Handle password
         let password: string | undefined;
@@ -83,10 +84,11 @@ export function registerDownloadCommand(program: Command): void {
           info.passwordAlgo,
         );
 
-        // Verify password if needed
+        // Verify the password. Only then does the server release the metadata.
         if (info.hasPassword) {
-          const valid = await verifyPassword(server, parsed.id, creds.authTokenB64);
-          if (!valid) throw new Error("Invalid password");
+          const unlocked = await verifyPassword(server, parsed.id, creds.authTokenB64);
+          if (!unlocked) throw new Error("Invalid password");
+          info = withUnlockedMeta(info, unlocked);
         }
 
         // Decrypt metadata
