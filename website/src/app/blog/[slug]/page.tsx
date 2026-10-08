@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
-import { PageBackdrop } from "@/components/site/blog/page-backdrop";
+import { PageBackdrop } from "@/components/site/page-backdrop";
 import { AuthorAvatar } from "@/components/site/blog/author-avatar";
 import { MDX_COMPONENTS } from "@/components/site/blog/mdx-components";
 import { CopyLinkButton, ReadingProgress, TableOfContents } from "@/components/site/blog/post-client";

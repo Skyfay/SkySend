@@ -1,6 +1,6 @@
 import { Bell } from "lucide-react";
 import { BlogIndex } from "@/components/site/blog/blog-index";
-import { PageBackdrop } from "@/components/site/blog/page-backdrop";
+import { PageBackdrop } from "@/components/site/page-backdrop";
 import { Eyebrow, Glow } from "@/components/site/fx";
 import { getAllPosts } from "@/lib/blog";
 import { formatDate } from "@/lib/utils";

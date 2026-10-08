@@ -34,9 +34,9 @@ src/components/site/       Header, mobile menu, footer and the effects in fx.tsx
 src/components/site/home/  The sections of the home page
 src/components/site/blog/  Blog index, post parts and the MDX components
 src/components/site/       roadmap/ and report/ for those pages
-src/components/ui/         Radix + cva primitives for this site only
+src/components/ui/         Radix primitives for this site only
 src/content/blog/*.mdx     Blog posts, frontmatter parsed by gray-matter
-src/lib/                   blog, content, countries, format, github, instances, report, roadmap, site, utils, version
+src/lib/                   blog, content, countries, format, github, instances, releases, report, roadmap, site, utils, version
 ```
 
 Server Components are the default. `"use client"` only where interactivity actually lives - the report form, the theme toggle, the demos of the home page, the blog filter.
@@ -64,7 +64,7 @@ Dates are `YYYY-MM-DD`. The slug is the filename.
 
 ## Instances and roadmap
 
-Both are data-driven. The instance list originates from `docs/public/instances.json`. The home page reads it with status and limits from the instances Worker (`instances.skysend.app`, checked every 30 minutes) and parses every instance on its own, the report form reads it from the report Worker. The roadmap is defined in `src/lib/roadmap.ts` and rendered by the components under `components/site/roadmap/`. Update the data module, not the JSX.
+Both are data-driven. The instance list originates from `docs/public/instances.json`. The home page reads it with status and limits from the instances Worker (`instances.skysend.app`, checked every 30 minutes) and parses every instance on its own, the report form reads it from the report Worker. The roadmap is defined in `src/lib/roadmap.ts` and rendered by the components under `components/site/roadmap/`. Update the data module, not the JSX. A release in `SHIPPED_ITEMS` carries only its version: `src/lib/releases.ts` reads `docs/changelog.md` at build time for its anchor, its date and the count of all releases. A version links to its block once `pnpm version:bump` writes it, and shows its date once that block says `*Released: ...*`, before that it shows as New. Community milestones have no changelog block and keep their own `releaseDate`.
 
 ## SEO
 

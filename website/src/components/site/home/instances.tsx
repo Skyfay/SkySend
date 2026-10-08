@@ -6,11 +6,10 @@ import { AlertTriangle, ArrowUpRight, ChevronRight, Flag, Plus, RotateCcw } from
 import { Eyebrow, Glow } from "@/components/site/fx";
 import { fetchWithCache } from "@/lib/github";
 import { formatBytes, formatCount, formatDuration, formatWindow, plural } from "@/lib/format";
-import { getCountryCode, getFlagClass } from "@/lib/countries";
+import { CountryFlag } from "@/components/site/country-flag";
 import { INSTANCES_API_URL, isOfficialInstance, parseInstancesResponse, type Instance } from "@/lib/instances";
 import { INSTANCES_DOCS_URL } from "@/lib/content";
 import { cn } from "@/lib/utils";
-import "flag-icons/css/flag-icons.min.css";
 
 const CACHE_KEY = "skysend-instances";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -49,31 +48,6 @@ function limitsOf(inst: Instance) {
     noteSize: formatBytes(inst.noteMaxSize),
     noteMeta: noteParts,
   };
-}
-
-/** The flag of the country of an instance, or its code for a country flag-icons does not know. */
-function CountryTile({ country, emoji, size = "md" }: { country: string; emoji: string; size?: "md" | "lg" }) {
-  const flag = getFlagClass(country, emoji);
-  const px = size === "lg" ? 40 : 38;
-  if (flag) {
-    // flag-icons sets the width of .fi itself, so the size goes inline to win over it.
-    return (
-      <span
-        aria-hidden="true"
-        className={cn("fi fis shrink-0 rounded-[10px] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12),var(--chip-shadow)]", flag)}
-        style={{ width: px, height: px, backgroundSize: "cover" }}
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-[10px] bg-accent text-xs font-semibold shadow-[var(--chip-shadow)]"
-      style={{ width: px, height: px }}
-    >
-      {getCountryCode(country) ?? "?"}
-    </span>
-  );
 }
 
 function Kind({ official }: { official: boolean }) {
@@ -124,7 +98,7 @@ function TableRow({ inst }: { inst: Instance }) {
   return (
     <div className={cn(COLUMNS, "h-20 border-b border-border px-5")}>
       <span className="flex min-w-0 items-center gap-3">
-        <CountryTile country={inst.country} emoji={inst.flag} />
+        <CountryFlag country={inst.country} emoji={inst.flag} />
         <span className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[15px] font-semibold">{inst.name}</span>
           <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -169,7 +143,7 @@ function InstanceCard({ inst }: { inst: Instance }) {
   return (
     <div className="panel flex flex-col gap-3.5 rounded-[18px] p-4">
       <div className="flex items-center gap-3">
-        <CountryTile country={inst.country} emoji={inst.flag} size="lg" />
+        <CountryFlag country={inst.country} emoji={inst.flag} size={40} />
         <span className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[15px] font-semibold">{inst.name}</span>
           <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">

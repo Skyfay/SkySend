@@ -1,6 +1,6 @@
 import { DotGrid, Glow, Stars } from "@/components/site/fx";
 
-/** The glows, dots and stars behind the head of the blog pages. */
+/** The glows, dots and stars behind the head of the blog and roadmap pages. */
 export function PageBackdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[700px] overflow-hidden">

@@ -10,7 +10,6 @@
     "preview": "npx wrangler dev"
   },
   "dependencies": {
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "flag-icons": "^7.5.0",
     "gray-matter": "^4.0.3",

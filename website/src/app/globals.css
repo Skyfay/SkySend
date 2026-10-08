@@ -669,17 +669,3 @@
 .post-prose figure {
   margin: 0 0 22px;
 }
-
-/* The roadmap still uses the reveal-on-scroll wrapper. */
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
-}
-
-[data-reveal][data-visible="true"] {
-  opacity: 1;
-  transform: translateY(0);
-}
