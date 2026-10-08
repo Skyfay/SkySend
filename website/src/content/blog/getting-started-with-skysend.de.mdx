@@ -1,0 +1,55 @@
+---
+title: "SkySend in 5 Minuten einrichten"
+excerpt: "Starten Sie SkySend mit einer einzigen docker-compose-Datei und teilen Sie Ihre erste Ende-zu-Ende verschlüsselte Datei."
+tags: ["Anleitung", "Docker", "Schnellstart"]
+---
+
+SkySend erscheint als ein einziges Docker-Image für mehrere Architekturen (amd64/arm64) und braucht keine externe Datenbank, um die App selbst zu betreiben - es verwaltet intern seine eigene SQLite-Datenbank. Hier ist die ganze Einrichtung.
+
+## 1. Eine docker-compose.yml anlegen
+
+```yaml
+# docker-compose.yml
+services:
+  skysend:
+    image: skyfay/skysend:latest
+    container_name: skysend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data              # Datenbank und interner Zustand
+      - ./uploads:/uploads        # Verschlüsselte Uploads (mit dem Dateisystem-Backend)
+    environment:
+      - BASE_URL=http://localhost:3000
+```
+
+Die eine Umgebungsvariable, die vor dem Start des Containers zählt, ist `BASE_URL` - setzen Sie sie auf die öffentliche URL, unter der diese Instanz erreichbar sein wird. Sie wird für CORS und zum Erzeugen der Freigabelinks verwendet, muss also zu der Adresse passen, die Sie tatsächlich im Browser öffnen.
+
+## 2. Den Container starten
+
+```bash
+docker-compose up -d
+```
+
+SkySend lauscht auf Port 3000 und ist bereit, sobald der Container als healthy gemeldet wird.
+
+## 3. Die erste Datei teilen
+
+Öffnen Sie `http://localhost:3000`, ziehen Sie eine Datei hinein und legen Sie bei Bedarf eine Ablaufzeit und ein Download-Limit fest. SkySend verschlüsselt die Datei mit AES-256-GCM in Ihrem Browser, bevor sie den Server überhaupt erreicht, erzeugt einen Freigabelink und lädt erst dann den Chiffretext hoch.
+
+Der Schlüssel zum Entschlüsseln steht im Fragment der URL (dem Teil nach dem `#`), das Browser nie an einen Server senden - der Link selbst ist also das Einzige, was die Datei öffnen kann.
+
+## 4. Die anderen Freigabearten ausprobieren
+
+Dateien sind nur eines der Dinge, die SkySend teilen kann, alle mit demselben Verschlüsselungsmodell:
+
+- **Notizen** - einfacher Text oder Code-Schnipsel aus mehreren Blöcken
+- **Passwörter** - Passwörter einmalig teilen
+- **SSH-Schlüssel** - ein Schlüsselpaar teilen, ohne es in einen Chat einzufügen
+
+## 5. Optional: auf S3-kompatiblen Speicher wechseln
+
+Für mehrere Instanzen oder größere Installationen stellen Sie `STORAGE_BACKEND` vom lokalen Dateisystem auf einen beliebigen S3-kompatiblen Bucket um (AWS S3, Cloudflare R2, MinIO und andere). Die vollständige Liste der `S3_*`-Optionen steht in der Referenz der Umgebungsvariablen.
+
+Vollständige Konfigurationsreferenz, Einrichtung eines Reverse Proxys und Hinweise zum Härten für den Produktivbetrieb: [docs.skysend.app/user-guide/getting-started](https://docs.skysend.app/user-guide/getting-started)

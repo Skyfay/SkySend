@@ -1,124 +1,46 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Menu } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { GithubStarsWidget } from "@/components/site/github-stars-widget";
-import { DiscordIcon } from "@/components/site/discord-icon";
 import { ThemeToggle } from "@/components/site/theme-toggle";
-import { DOCS_URL, DISCORD_URL, GETTING_STARTED_URL } from "@/lib/content";
+import { NavLinks } from "@/components/site/nav-links";
+import { MobileMenu } from "@/components/site/mobile-menu";
+import { SponsorButton } from "@/components/site/sponsor-button";
+import { LanguageSwitcher } from "@/components/site/language-switcher";
+import { getReleaseVersion } from "@/lib/version";
+import { localePath, type Locale } from "@/i18n/config";
+import { createTranslator } from "@/i18n/translate";
 
-const NAV_LINKS = [
-  { href: "/#features", label: "Features" },
-  { href: "/#instances", label: "Server Instances" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/blog", label: "Blog" },
-  { href: "/roadmap", label: "Roadmap" },
-  { href: "/report", label: "Report Abuse" },
-  { href: DOCS_URL, label: "Docs", external: true },
-];
-
-export function Nav() {
+// The header floats over the top of every page as a glass pill, so each page
+// starts its first section with room for it (pt-[124px] sm:pt-[172px]).
+export function Nav({ locale }: { locale: Locale }) {
+  const t = createTranslator(locale);
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.svg" alt="SkySend" width={28} height={28} />
-          <span className="font-semibold">SkySend</span>
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-5">
+      <div className="glass pointer-events-auto mx-auto flex h-14 max-w-[1100px] items-center gap-5 rounded-[14px] pr-2 pl-3.5 sm:pr-2.5 sm:pl-4">
+        <Link href={localePath(locale, "/")} className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold">
+          <Image src="/logo.svg" alt="" width={26} height={26} />
+          SkySend
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              target={link.external ? "_blank" : undefined}
-              rel={link.external ? "noreferrer" : undefined}
-              className="relative py-1 transition-colors after:absolute after:-bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:scale-0 after:rounded-full after:bg-primary after:transition-transform hover:text-foreground hover:after:scale-100"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <NavLinks className="hidden gap-0.5 lg:flex" />
 
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-3 lg:flex">
-            <GithubStarsWidget />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a
-                  href={DISCORD_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Join our Discord"
-                  className={buttonVariants({ variant: "ghost", size: "icon" })}
-                >
-                  <DiscordIcon className="size-4" />
-                </a>
-              </TooltipTrigger>
-              <TooltipContent>Join our Discord</TooltipContent>
-            </Tooltip>
+        <div className="ml-auto flex items-center gap-2">
+          <SponsorButton />
+          <span className="hidden sm:block">
             <ThemeToggle />
-            <Button asChild size="sm">
-              <Link href={GETTING_STARTED_URL} target="_blank" rel="noreferrer">
-                Get Started
-              </Link>
-            </Button>
-          </div>
+          </span>
+          <span className="hidden sm:block">
+            <LanguageSwitcher />
+          </span>
+          <GithubStarsWidget className="hidden xl:flex" />
+          <Link
+            href={localePath(locale, "/#start")}
+            className="btn-primary hidden h-9 items-center rounded-lg px-3.5 font-medium whitespace-nowrap sm:flex"
+          >
+            {t("nav.getStarted")}
+          </Link>
 
-          <div className="lg:hidden">
-            <ThemeToggle />
-          </div>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="lg:hidden">
-                <Menu className="size-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>SkySend</SheetTitle>
-              </SheetHeader>
-              <nav className="flex flex-col gap-4 px-4 text-sm">
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    target={link.external ? "_blank" : undefined}
-                    rel={link.external ? "noreferrer" : undefined}
-                    className="text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <div className="flex items-center gap-3">
-                  <GithubStarsWidget />
-                  <a
-                    href={DISCORD_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Join our Discord"
-                    className={buttonVariants({ variant: "ghost", size: "icon" })}
-                  >
-                    <DiscordIcon className="size-4" />
-                  </a>
-                </div>
-                <Button asChild size="sm">
-                  <Link href={GETTING_STARTED_URL} target="_blank" rel="noreferrer">
-                    Get Started
-                  </Link>
-                </Button>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <MobileMenu version={getReleaseVersion()} />
         </div>
       </div>
     </header>

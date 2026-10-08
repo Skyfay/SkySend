@@ -11,7 +11,7 @@ const ContactSchema = z
 
 export const InstanceSchema = z.object({
   name: z.string(),
-  url: z.string(),
+  url: z.url({ protocol: /^https$/ }),
   country: z.string(),
   flag: z.string(),
   contact: ContactSchema,
@@ -34,12 +34,28 @@ export const InstancesResponseSchema = z.object({
   lastUpdated: z.string().nullable(),
 });
 
+/**
+ * Reads the response of the instances worker. Every instance is checked on its
+ * own, so one instance that reports something odd is left out instead of
+ * emptying the whole list.
+ */
+export function parseInstancesResponse(raw: unknown): InstancesResponse | null {
+  const outer = z.object({ instances: z.array(z.unknown()), lastUpdated: z.string().nullable() }).safeParse(raw);
+  if (!outer.success) return null;
+  const instances = outer.data.instances.flatMap((item) => {
+    const parsed = InstanceSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+  return { instances, lastUpdated: outer.data.lastUpdated };
+}
+
 export type Instance = z.infer<typeof InstanceSchema>;
 export type InstancesResponse = z.infer<typeof InstancesResponseSchema>;
 
 export function isOfficialInstance(url: string): boolean {
   try {
-    return new URL(url).hostname.endsWith("skysend.app");
+    const host = new URL(url).hostname;
+    return host === "skysend.app" || host.endsWith(".skysend.app");
   } catch {
     return false;
   }

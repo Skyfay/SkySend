@@ -5,6 +5,7 @@
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
-    "directory": "./out"
+    "directory": "./out",
+    "not_found_handling": "404-page"
   }
 }

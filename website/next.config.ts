@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
+  // Each language has its own root layout, so the 404 page brings its own document.
+  experimental: {
+    globalNotFound: true,
+  },
   // This package is a member of the SkySend pnpm workspace (root one level up),
   // not a standalone project - point Turbopack at the actual monorepo root so
   // it can resolve dependencies hoisted into the shared pnpm virtual store.
