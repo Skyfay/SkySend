@@ -396,7 +396,17 @@ export function useDownload() {
           progress: 100,
           averageSpeed,
           debugInfo: s.debugInfo
-            ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Download complete · Ø ${averageSpeed}` : "Download complete" }] }
+            ? {
+                ...s.debugInfo,
+                events: [
+                  ...s.debugInfo.events,
+                  {
+                    time: new Date().toISOString(),
+                    message: "Download complete",
+                    ...(averageSpeed ? { detail: `Ø ${averageSpeed}` } : {}),
+                  },
+                ],
+              }
             : null,
         }));
       } catch (err) {

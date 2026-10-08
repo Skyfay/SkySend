@@ -8,7 +8,8 @@ export interface DownloadDebugInfo {
   browser: string;
   devtools: boolean;
   fileSize: number | null;
-  events: Array<{ time: string; message: string }>;
+  /** `detail` is a measured value shown beside the message, like the average speed. */
+  events: Array<{ time: string; message: string; detail?: string }>;
 }
 
 /** The encrypted file as the main thread receives it, for tier 2 and 3. */

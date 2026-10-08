@@ -19,8 +19,10 @@ export type UploadPhase =
 export interface UploadDebugInfo {
   transport: "ws" | "http" | null;
   fallback: boolean;
+  storage: "s3" | "filesystem" | null;
   browser: string;
-  events: Array<{ time: string; message: string }>;
+  /** `detail` is a measured value shown beside the message, like the average speed. */
+  events: Array<{ time: string; message: string; detail?: string }>;
 }
 
 interface UploadState {
@@ -213,6 +215,7 @@ export function useUpload() {
         debugInfo: {
           transport: null,
           fallback: false,
+          storage: null,
           browser: getBrowserInfo(),
           events: [],
         },
@@ -296,7 +299,11 @@ export function useUpload() {
               const avgPackSpeed = msg.durationMs > 0
                 ? `${formatBytes(Math.round(msg.inputBytes / (msg.durationMs / 1000)))}/s`
                 : null;
-              const packEvent = { time: new Date().toISOString(), message: avgPackSpeed ? `Packing complete \u00b7 \u00d8 ${avgPackSpeed}` : "Packing complete" };
+              const packEvent = {
+                time: new Date().toISOString(),
+                message: "Packing complete",
+                ...(avgPackSpeed ? { detail: `\u00d8 ${avgPackSpeed}` } : {}),
+              };
               setState((s) => ({
                 ...s,
                 /* v8 ignore next */
@@ -342,7 +349,7 @@ export function useUpload() {
                 ...s,
                 /* v8 ignore next */
                 debugInfo: s.debugInfo
-                  ? { ...s.debugInfo, events: [...s.debugInfo.events, event] }
+                  ? { ...s.debugInfo, storage: msg.backend, events: [...s.debugInfo.events, event] }
                   /* v8 ignore next */
                   : null,
               }));
@@ -419,7 +426,17 @@ export function useUpload() {
         uploadId: result.id,
         /* v8 ignore next */
         debugInfo: s.debugInfo
-          ? { ...s.debugInfo, events: [...s.debugInfo.events, { time: new Date().toISOString(), message: averageSpeed ? `Upload complete · Ø ${averageSpeed}` : "Upload complete" }] }
+          ? {
+              ...s.debugInfo,
+              events: [
+                ...s.debugInfo.events,
+                {
+                  time: new Date().toISOString(),
+                  message: "Upload complete",
+                  ...(averageSpeed ? { detail: `Ø ${averageSpeed}` } : {}),
+                },
+              ],
+            }
           /* v8 ignore next */
           : null,
       }));

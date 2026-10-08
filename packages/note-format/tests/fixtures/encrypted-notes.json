@@ -256,6 +256,40 @@
           ]
         }
       ]
+    },
+    {
+      "name": "a v3 note with titled blocks and a field that is no secret, padded",
+      "kind": "blocks",
+      "link": "3rV6x9Ltk5mOsv8Gqg2H7_yBYd-7UsCsbIZkHSMdE7U",
+      "salt": "Z4eQcGet4t1wN_mLIEG6VrVDA6ryR_mm0d_eOybRTJ8",
+      "nonce": "OoDVELFYXyhoZkls",
+      "ciphertext": "4blFR0++4UZNacVA3a5IwW/W1StQZNoT4q2DLVWkg+4MLK1SyinEPU1cpe7V4yxywjJPQOEvGcXBN9ZmKXQtK5ROBt11ZuKnkny1xjLS6MvTyw8Dq3nhnA2VSDnrUTZTI5HnFVvECT6nnZFem1p/5VZiN5OsCmEcJGZSFBts08dPdkEbF7kYezcHlv729DCjs1t6pql1lxpPClGO17cVZHNY6on8VKNGR33kTpcAOojIEkaL2RmZQipYS5WD5D/YK1xmHQThVb2jntIcuneUBAU1ETs0TLbTRR/fFfMSCiHFhdt+TiaEXiAq/7HdYMxfhjVZV6Fb8e42s1PgZPwqPX3RkHQMiKynPvZpFKkBfKgYJxreGD0oI6HbTVfTdPLQdvoPvpjuyZqs5EASOscjcLA4ZyO//7rYE4WUd/njDSfvB5X19EKQCyFuzipMh40SHpYpYaEnNo6MGbuQLQDSa1wWxjpcSRtT2pAP8nRZ69iDSb+rTjwXUt8ALdDrGVFT8q6hLSfnCXG7Vae3qnSBjIT79s1kPrvmQ0obOl45TuEvMPwMWY2ce5cg1ivahQr8pCEu2LgloX9oSlx0/V4GX3+S+EPypyq8TqAL8vD5vp/bKnE0o+efz8P+rdA1FX0rTwLqI1GqcliDlDEPunE3013TYkjt20e7qfqae9wxb2+R/YnIqUtGRBG7dv8PdZ3ph9/RGuD0e+6dUQ6h8pqAo6X+eV/Jlyt8mJl5W3DpawN+y1M6umfh6zgwPi/98GemwUDJN20OHl9f+KyyoSgPyQuQGPcgvYlYJtGaHy1TMZmpfIdum9kJ7mHtUJh965+KoFIumlmYA3v81eh2H2T4QSuq2GmIbhMpgeYKLUfeact+aEzqt/eLT5mTkwk8qTrovRY27diUfSGvOHuUQm2aq0gNQucY+Wsdam+LYgVIinDjrgm1Xi7slHWbGxM+3ku+QvpQC+gRrEKtodmOokDtC6o/vXofWEw5mmHlCpt4EyHGatHkOQBGYjgFxfMLvcT+FCi0ZvwUEhKezy9X4mxpsX8J0EOZHEoyDw3R+tROZxRQnS97t1j4bTJD7JhxHWfO4YI/kTiLBPeqES+BunKYAjhsZDqOHYOD2Qnjm0/xAgzrcacOBE0lJCcOothWeN/Qpq/Lkac/i9Ony2AtpFzIW5fF0PL1eIFNby9vvkwqVUXdAvVdJTITmwCweD3Clg1ZSPg+VbRbPG1g2D5qSOybgTwL8GYz0mU8bXPd2nYpE4K17CgjOfBO4UMCN7IPDq234f6BpFeQEQuDfiPDQ9kxFvrFAmDHO2bZY/NhF2wJbsF45p/peS1Sz5cuQtlYeoUwgmtEXeVR7ON2vXhYRPYanMtcWRHA9Y23YNc8WsucOYc=",
+      "authToken": "vWJhznUxRtgscEfg3RQ1dYLI7rzd6-4X9WrL__vCv6E",
+      "ownerToken": "sOF7nziFx9c4_qGlBtF9RcEjig-k_PAW27CxmL0x_GM",
+      "blocks": [
+        {
+          "type": "password",
+          "label": "Server access",
+          "entries": [
+            {
+              "label": "Username",
+              "value": "deploy",
+              "secret": false
+            },
+            {
+              "label": "Password",
+              "value": "Xq8!pL2#vN7@kR4m"
+            }
+          ]
+        },
+        {
+          "type": "sshkey",
+          "label": "Deploy key",
+          "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyForTestsOnlyNotARealKey0000000 deploy@example.com",
+          "privateKey": "",
+          "passphrase": ""
+        }
+      ]
     }
   ]
 }

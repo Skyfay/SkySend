@@ -577,8 +577,8 @@ describe("useUpload", () => {
       worker.emit({ type: "pack-done", durationMs: 1000, inputBytes: 5000 });
     });
 
-    expect(result.current.debugInfo?.events.some((e) => e.message.startsWith("Packing complete"))).toBe(true);
-    expect(result.current.debugInfo?.events.some((e) => e.message.includes("/s"))).toBe(true);
+    const packed = result.current.debugInfo?.events.find((e) => e.message === "Packing complete");
+    expect(packed?.detail).toMatch(/^Ø .+\/s$/);
   });
 
   it("Worker 'pack-done' mit durationMs = 0 → debugInfo enthält 'Packing complete' ohne Speed", async () => {
@@ -595,7 +595,9 @@ describe("useUpload", () => {
       worker.emit({ type: "pack-done", durationMs: 0, inputBytes: 0 });
     });
 
-    expect(result.current.debugInfo?.events.some((e) => e.message === "Packing complete")).toBe(true);
+    const packed = result.current.debugInfo?.events.find((e) => e.message === "Packing complete");
+    expect(packed).toBeDefined();
+    expect(packed?.detail).toBeUndefined();
   });
 
   it("Worker 'storage' mit backend='s3' → debugInfo enthält 'S3 upload active'", async () => {
@@ -613,6 +615,7 @@ describe("useUpload", () => {
     });
 
     expect(result.current.debugInfo?.events.some((e) => e.message === "S3 upload active")).toBe(true);
+    expect(result.current.debugInfo?.storage).toBe("s3");
   });
 
   it("Worker 'storage' mit backend='filesystem' → debugInfo enthält 'Filesystem upload active'", async () => {
@@ -630,6 +633,7 @@ describe("useUpload", () => {
     });
 
     expect(result.current.debugInfo?.events.some((e) => e.message === "Filesystem upload active")).toBe(true);
+    expect(result.current.debugInfo?.storage).toBe("filesystem");
   });
 
   it("Worker 'progress'-Message mit < 500ms → Speed bleibt null", async () => {
