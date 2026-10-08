@@ -21,8 +21,11 @@ export interface UploadDebugInfo {
   fallback: boolean;
   storage: "s3" | "filesystem" | null;
   browser: string;
-  /** `detail` is a measured value shown beside the message, like the average speed. */
-  events: Array<{ time: string; message: string; detail?: string }>;
+  /**
+   * `detail` is a measured value or an error shown beside the message, like the average
+   * speed. `failed` marks the event an upload ended with when it did not arrive.
+   */
+  events: Array<{ time: string; message: string; detail?: string; failed?: boolean }>;
 }
 
 interface UploadState {
@@ -101,6 +104,8 @@ export function useUpload() {
   const requestSessionRef = useRef<{ requestId: string; uploadId: string } | null>(null);
   /** Counts cancels, so a cancel before the worker exists still ends the upload. */
   const cancelsRef = useRef(0);
+  /** The submission of the last upload into a request, whose note continues its timeline. */
+  const lastSubmissionRef = useRef<string | undefined>(undefined);
 
   /** Ends the session on the server, best effort. Its reservation is free again at once. */
   const endRequestSession = useCallback(() => {
@@ -157,6 +162,9 @@ export function useUpload() {
     const maxDownloads = request ? 0 : options.maxDownloads;
     const expireSec = request ? 0 : options.expireSec;
     const password = request ? "" : options.password;
+    // The note of a submission goes out after its files, so the panel keeps their timeline.
+    const continues = submission !== undefined && submission === lastSubmissionRef.current;
+    lastSubmissionRef.current = submission;
 
     try {
       // Pre-flight: verify all files are still readable
@@ -217,7 +225,7 @@ export function useUpload() {
           fallback: false,
           storage: null,
           browser: getBrowserInfo(),
-          events: [],
+          events: continues && s.debugInfo ? s.debugInfo.events : [],
         },
       }));
 
@@ -447,10 +455,25 @@ export function useUpload() {
       workerRef.current?.terminate();
       workerRef.current = null;
       endRequestSession();
+      const message = err instanceof Error ? err.message : "Upload failed";
       setState((s) => ({
         ...s,
         phase: "error",
-        error: err instanceof Error ? err.message : "Upload failed",
+        error: message,
+        debugInfo: s.debugInfo
+          ? {
+              ...s.debugInfo,
+              events: [
+                ...s.debugInfo.events,
+                {
+                  time: new Date().toISOString(),
+                  message: "Upload failed",
+                  detail: message,
+                  failed: true,
+                },
+              ],
+            }
+          : null,
       }));
       return null;
     }

@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Historial",
     "started": "Inicio {{time}}",
-    "note": "No contiene ninguna clave ni nombre de archivo, se puede pegar en un informe de errores."
+    "note": "No contiene ninguna clave ni nombre de archivo, se puede pegar en un informe de errores.",
+    "failed": "Falló"
   },
   "language": {
     "search": "Buscar idioma..."

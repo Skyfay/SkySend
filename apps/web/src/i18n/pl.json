@@ -311,7 +311,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Oś czasu",
     "started": "Start {{time}}",
-    "note": "Nie zawiera klucza ani nazwy pliku, można go wkleić do zgłoszenia błędu."
+    "note": "Nie zawiera klucza ani nazwy pliku, można go wkleić do zgłoszenia błędu.",
+    "failed": "Niepowodzenie"
   },
   "language": {
     "search": "Wyszukaj język..."

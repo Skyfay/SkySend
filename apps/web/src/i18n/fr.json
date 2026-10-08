@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Historique",
     "started": "Début {{time}}",
-    "note": "Ne contient ni clé ni nom de fichier, à coller sans risque dans un rapport de bug."
+    "note": "Ne contient ni clé ni nom de fichier, à coller sans risque dans un rapport de bug.",
+    "failed": "Échec"
   },
   "language": {
     "search": "Rechercher une langue..."

@@ -127,6 +127,7 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
   const events = [...(downloadInfo?.events ?? []), ...(uploadInfo?.events ?? [])].sort((a, b) =>
     a.time.localeCompare(b.time),
   );
+  const failed = events.at(-1)?.failed === true;
   const start = events.length > 0 ? new Date(events[0]!.time).getTime() : 0;
 
   return (
@@ -147,6 +148,12 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
             <span className="flex shrink-0 items-center gap-1.5 text-warning">
               <span className="h-1.5 w-1.5 rounded-full bg-warning" />
               {alert}
+            </span>
+          )}
+          {failed && (
+            <span className="flex shrink-0 items-center gap-1.5 text-destructive-text">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              {t("debug.failed")}
             </span>
           )}
         </span>
@@ -202,15 +209,22 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
                 <span className="absolute bottom-2 left-1 top-2 w-px bg-border" />
                 <ol className="space-y-3.5 pl-[22px]">
                   {events.map((event, i) => {
-                    const last = i === events.length - 1;
+                    // The last event is where it stands, an event that failed stands out anywhere.
+                    const tone = event.failed
+                      ? "failed"
+                      : i === events.length - 1
+                        ? "last"
+                        : "past";
                     return (
                       <li key={i} className="relative flex items-center gap-3 text-[13px]">
                         <span
                           className={cn(
                             "absolute -left-[22px] top-1 h-[9px] w-[9px] rounded-full ring-[3px] ring-well",
-                            last
-                              ? "bg-primary shadow-[0_0_0_6px_var(--color-primary-soft)]"
-                              : "bg-input",
+                            tone === "failed" &&
+                              "bg-destructive shadow-[0_0_0_6px_var(--color-destructive-soft)]",
+                            tone === "last" &&
+                              "bg-primary shadow-[0_0_0_6px_var(--color-primary-soft)]",
+                            tone === "past" && "bg-input",
                           )}
                         />
                         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
@@ -218,10 +232,12 @@ export function DebugPanel({ downloadInfo, uploadInfo }: DebugPanelProps) {
                           {event.detail && (
                             <span
                               className={cn(
-                                "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-                                last
-                                  ? "bg-primary-soft text-primary-text"
-                                  : "bg-secondary text-muted-foreground",
+                                "max-w-full px-2 py-0.5 text-xs font-medium tabular-nums wrap-anywhere",
+                                tone === "failed"
+                                  ? "rounded-lg bg-destructive-soft text-destructive-text"
+                                  : "rounded-full",
+                                tone === "last" && "bg-primary-soft text-primary-text",
+                                tone === "past" && "bg-secondary text-muted-foreground",
                               )}
                             >
                               {event.detail}

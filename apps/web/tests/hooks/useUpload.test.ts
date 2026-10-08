@@ -162,6 +162,60 @@ describe("useUpload", () => {
     expect(result.current.phase).toBe("idle");
   });
 
+  it("keeps the timeline of the files while the note of their submission goes out", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    const request = { id: "req-1", uploadToken: "token", publicKey: new Uint8Array(65) };
+    const submission = "0123456789abcdef0123456789abcdef";
+    const hold = "AbCdEfGhIjKlMnOpQrStUv";
+    const messages = () => result.current.debugInfo?.events.map((e) => e.message);
+
+    let files: Promise<UploadResult | null> = Promise.resolve(null);
+    act(() => {
+      files = result.current.upload({ files: [makeFile()], submission, reserveNext: true, request });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => MockWorker.lastInstance!.emit({ type: "storage", backend: "filesystem" }));
+    act(() => MockWorker.lastInstance!.emit({ type: "delivered", id: "upload-1", hold }));
+    await act(async () => {
+      await files;
+    });
+    expect(messages()).toEqual(["Filesystem upload active", "Upload complete"]);
+
+    let note: Promise<UploadResult | null> = Promise.resolve(null);
+    act(() => {
+      note = result.current.upload({ files: [], note: "{}", submission, hold, request });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => MockWorker.lastInstance!.emit({ type: "error", message: "full" }));
+    await act(async () => {
+      await note;
+    });
+    expect(messages()).toEqual(["Filesystem upload active", "Upload complete", "Upload failed"]);
+
+    // Another submission starts a timeline of its own.
+    act(() => {
+      void result.current.upload({ files: [makeFile()], submission: "f".repeat(32), request });
+    });
+    await waitFor(() => expect(messages()).toEqual([]));
+  });
+
+  it("ends the timeline of a failed upload with the reason", async () => {
+    const { useUpload } = await import("../../src/hooks/useUpload.js");
+    const { result } = renderHook(() => useUpload());
+    act(() => {
+      void result.current.upload({ files: [makeFile()], maxDownloads: 1, expireSec: 3600, password: "" });
+    });
+    await waitFor(() => expect(MockWorker.lastInstance).not.toBeNull());
+    act(() => MockWorker.lastInstance!.emit({ type: "error", message: "Origin not allowed" }));
+    await waitFor(() => expect(result.current.phase).toBe("error"));
+    expect(result.current.debugInfo?.events.at(-1)).toMatchObject({
+      message: "Upload failed",
+      detail: "Origin not allowed",
+      failed: true,
+    });
+  });
+
   it("starts no worker when the upload was cancelled while its files were read", async () => {
     const { useUpload } = await import("../../src/hooks/useUpload.js");
     const { result } = renderHook(() => useUpload());

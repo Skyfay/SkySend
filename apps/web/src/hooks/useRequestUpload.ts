@@ -265,6 +265,8 @@ export function useRequestUpload(id: string, fragment: string) {
     progress: uploadState.progress,
     speed: uploadState.speed,
     uploadError: failed ? uploadState.error : null,
+    /** What the last upload used and when, for the technical info of the page. */
+    debugInfo: uploadState.debugInfo,
     /** The files of a two-part send arrived, the note did not yet. */
     filesSent,
     /** How many more sends the request takes, a submission of files and a note as one. */

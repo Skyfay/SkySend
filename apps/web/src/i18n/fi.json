@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Aikajana",
     "started": "Alkoi {{time}}",
-    "note": "Ei sisällä avainta eikä tiedostonimeä, joten sen voi liittää virheraporttiin."
+    "note": "Ei sisällä avainta eikä tiedostonimeä, joten sen voi liittää virheraporttiin.",
+    "failed": "Epäonnistui"
   },
   "language": {
     "search": "Hae kieltä..."

@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Tidslinje",
     "started": "Startade {{time}}",
-    "note": "Innehåller varken nyckel eller filnamn och kan klistras in i en felrapport."
+    "note": "Innehåller varken nyckel eller filnamn och kan klistras in i en felrapport.",
+    "failed": "Misslyckades"
   },
   "language": {
     "search": "Sök språk..."

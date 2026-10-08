@@ -294,7 +294,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Verlauf",
     "started": "Gestartet {{time}}",
-    "note": "Enthält weder Schlüssel noch Dateinamen und kann in einen Fehlerbericht kopiert werden."
+    "note": "Enthält weder Schlüssel noch Dateinamen und kann in einen Fehlerbericht kopiert werden.",
+    "failed": "Fehlgeschlagen"
   },
   "language": {
     "search": "Sprache suchen..."

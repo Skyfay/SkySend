@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Cronologia",
     "started": "Avvio {{time}}",
-    "note": "Non contiene chiavi né nomi di file, si può incollare in una segnalazione di bug."
+    "note": "Non contiene chiavi né nomi di file, si può incollare in una segnalazione di bug.",
+    "failed": "Non riuscito"
   },
   "language": {
     "search": "Cerca lingua..."

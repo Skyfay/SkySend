@@ -537,7 +537,8 @@
       "debug.devtoolsWarningTitle",
       "debug.devtoolsWarningText",
       "debug.started",
-      "debug.note"
+      "debug.note",
+      "debug.failed"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -836,7 +837,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "タイムライン",
     "started": "開始 {{time}}",
-    "note": "鍵もファイル名も含まないため、不具合報告にそのまま貼り付けられます。"
+    "note": "鍵もファイル名も含まないため、不具合報告にそのまま貼り付けられます。",
+    "failed": "失敗"
   },
   "language": {
     "search": "言語を検索..."

@@ -47,7 +47,9 @@ describe("DebugPanel", () => {
   it("sums up the upload while closed and opens on the row", () => {
     render(<DebugPanel uploadInfo={upload} />);
     expect(toggle().getAttribute("aria-expanded")).toBe("false");
-    expect(screen.getByText("debug.transportWs · debug.storageFilesystem · Safari 27")).toBeTruthy();
+    expect(
+      screen.getByText("debug.transportWs · debug.storageFilesystem · Safari 27"),
+    ).toBeTruthy();
     expect(screen.queryByText("debug.timeline")).toBeNull();
 
     fireEvent.click(toggle());
@@ -79,6 +81,26 @@ describe("DebugPanel", () => {
     expect(screen.getByText("debug.devtoolsWarningTitle")).toBeTruthy();
     expect(screen.getByText("debug.swPathStream")).toBeTruthy();
     expect(screen.getByText("+2.4 s")).toBeTruthy();
+  });
+
+  it("marks a failed upload in the row and its reason in the timeline", () => {
+    const failed: UploadDebugInfo = {
+      ...upload,
+      events: [
+        upload.events[0]!,
+        {
+          time: "2026-10-08T15:42:03.000Z",
+          message: "Upload failed",
+          detail: "Origin not allowed",
+          failed: true,
+        },
+      ],
+    };
+    render(<DebugPanel uploadInfo={failed} />);
+    expect(screen.getByText("debug.failed")).toBeTruthy();
+    fireEvent.click(toggle());
+    expect(screen.getByText("Origin not allowed")).toBeTruthy();
+    expect(screen.getByText("+1.0 s")).toBeTruthy();
   });
 
   it("copies the debug info as JSON", async () => {

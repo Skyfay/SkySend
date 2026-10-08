@@ -299,7 +299,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Tijdlijn",
     "started": "Gestart {{time}}",
-    "note": "Bevat geen sleutel en geen bestandsnaam, dus veilig om in een bugmelding te plakken."
+    "note": "Bevat geen sleutel en geen bestandsnaam, dus veilig om in een bugmelding te plakken.",
+    "failed": "Mislukt"
   },
   "language": {
     "search": "Taal zoeken..."

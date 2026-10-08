@@ -8,8 +8,11 @@ export interface DownloadDebugInfo {
   browser: string;
   devtools: boolean;
   fileSize: number | null;
-  /** `detail` is a measured value shown beside the message, like the average speed. */
-  events: Array<{ time: string; message: string; detail?: string }>;
+  /**
+   * `detail` is a measured value or an error shown beside the message, like the average
+   * speed. `failed` marks the event a download ended with when it did not finish.
+   */
+  events: Array<{ time: string; message: string; detail?: string; failed?: boolean }>;
 }
 
 /** The encrypted file as the main thread receives it, for tier 2 and 3. */

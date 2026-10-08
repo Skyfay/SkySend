@@ -388,7 +388,8 @@
       "debug.devtoolsWarningTitle",
       "debug.devtoolsWarningText",
       "debug.started",
-      "debug.note"
+      "debug.note",
+      "debug.failed"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -687,7 +688,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Histórico",
     "started": "Início {{time}}",
-    "note": "Não contém chave nem nome de arquivo, pode ser colado em um relatório de bug."
+    "note": "Não contém chave nem nome de arquivo, pode ser colado em um relatório de bug.",
+    "failed": "Falhou"
   },
   "language": {
     "search": "Buscar idioma..."

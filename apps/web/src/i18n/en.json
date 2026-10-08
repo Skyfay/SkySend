@@ -294,7 +294,8 @@
     "swPathStream": "ReadableStream",
     "timeline": "Timeline",
     "started": "Started {{time}}",
-    "note": "Holds no key and no file name, safe to paste into a bug report."
+    "note": "Holds no key and no file name, safe to paste into a bug report.",
+    "failed": "Failed"
   },
   "language": {
     "search": "Search language..."

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DebugPanel } from "@/components/DebugPanel";
 import { RequestNoteForm } from "@/components/RequestNoteForm";
 import { Glow } from "@/components/Glow";
 import { LinkGone } from "@/components/LinkGone";
@@ -344,6 +345,12 @@ export function RequestUploadPage() {
 
         <Card data-emphasis="main" className="p-3 sm:p-5">
           {body}
+          {/* A sender who runs into a problem can hand the requester what the upload used. */}
+          {(delivered || sender.phase === "uploading" || sender.uploadPhase === "error") && (
+            <div className="mt-4">
+              <DebugPanel uploadInfo={sender.debugInfo} />
+            </div>
+          )}
         </Card>
 
         <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">

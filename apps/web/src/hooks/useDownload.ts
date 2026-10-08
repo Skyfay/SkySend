@@ -425,7 +425,25 @@ export function useDownload() {
           : err instanceof Error
             ? err.message
             : "Download failed";
-        setState((s) => ({ ...s, phase: "error", error: message }));
+        setState((s) => ({
+          ...s,
+          phase: "error",
+          error: message,
+          debugInfo: s.debugInfo
+            ? {
+                ...s.debugInfo,
+                events: [
+                  ...s.debugInfo.events,
+                  {
+                    time: new Date().toISOString(),
+                    message: "Download failed",
+                    detail: message,
+                    failed: true,
+                  },
+                ],
+              }
+            : null,
+        }));
       }
     },
     [state.info, state.metadata],

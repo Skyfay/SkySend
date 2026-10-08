@@ -310,6 +310,12 @@ export function UploadPage() {
                 disabled={!canUpload}
                 onSubmit={handleUpload}
               />
+              {/* After a failed upload the form comes back, with what the upload used. */}
+              {uploadHook.phase === "error" && (
+                <div className="px-2 sm:px-3">
+                  <DebugPanel uploadInfo={uploadHook.debugInfo} />
+                </div>
+              )}
             </>
           )}
         </TabsContent>
