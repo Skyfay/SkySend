@@ -76,6 +76,11 @@ describe("sanitizeFilename", () => {
     expect(wide).not.toContain("\uFFFD");
   });
 
+  it("drops an extension too long to be one when it has to shorten the name", () => {
+    const name = sanitizeFilename(`${"a".repeat(300)}.${"b".repeat(40)}`);
+    expect(name).toBe("a".repeat(255));
+  });
+
   it("handles a megabyte of name without stalling", () => {
     const start = Date.now();
     const safe = sanitizeFilename(`${"x".repeat(1_000_000)}.txt`);

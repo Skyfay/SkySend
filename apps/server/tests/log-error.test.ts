@@ -46,6 +46,17 @@ describe("describeError", () => {
     );
   });
 
+  it("says no cause was given for a failed query that carries none, and still no value", () => {
+    const authToken = "AUTH-TOKEN-THAT-MUST-NOT-BE-LOGGED";
+    const err = new DrizzleQueryError("select * from uploads where id = ?", [authToken]);
+    expect(describeError(err)).toBe("Database query failed: no cause given");
+  });
+
+  it("logs the cause of a failed query without a code when the database gave none", () => {
+    const err = new DrizzleQueryError("select 1", [], new Error("disk I/O error"));
+    expect(describeError(err)).toBe("Database query failed: disk I/O error");
+  });
+
   it("leaves out what openid-client keeps beside the message, and keeps the OAuth error code", () => {
     const err = Object.assign(new Error("server responded with an error in the response body"), {
       name: "ResponseBodyError",
@@ -64,6 +75,20 @@ describe("describeError", () => {
     const logged = describeError(new TypeError("boom"));
     expect(logged).toContain("TypeError: boom");
     expect(logged).toContain("log-error.test.ts");
+  });
+
+  it("falls back to the name and message of an error without a stack", () => {
+    const err = new RangeError("out of range");
+    err.stack = undefined;
+    expect(describeError(err)).toBe("RangeError: out of range");
+  });
+
+  it("never prints an error field that is no OAuth error code", () => {
+    const err = Object.assign(new Error("token request failed"), {
+      error: { id_token: "eyJ.secret.jwt" },
+    });
+    err.stack = undefined;
+    expect(describeError(err)).toBe("Error: token request failed");
   });
 
   it("does not print an object that is no error", () => {

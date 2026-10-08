@@ -11,10 +11,12 @@
 # Validate and would list these jobs as skipped. Pull requests into dev only
 # run Validate.
 #
-# Every job waits for an approval through the environment pr-build, whose
-# required reviewers are set in the settings of the repository. Both kinds of
-# job run in one workflow, so a single approval starts all of them. Until
-# someone approves it the jobs wait, so the build stays optional.
+# One job, Approve, waits for an approval through the environment pr-build,
+# whose required reviewers are set in the settings of the repository, and every
+# build job waits for Approve. GitHub asks for a review once per job that names
+# the environment, so only Approve names it: a run sends one request, not one
+# per build job. Until someone approves it the jobs wait, so the build stays
+# optional.
 
 name: PR Build
 
@@ -31,9 +33,17 @@ permissions:
   contents: read
 
 jobs:
+  approve:
+    name: Approve
+    environment: pr-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approved
+        run: echo "The build jobs start now."
+
   docker:
     name: Docker (${{ matrix.suffix }})
-    environment: pr-build
+    needs: approve
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -93,7 +103,7 @@ jobs:
 
   cli:
     name: CLI (${{ matrix.target }})
-    environment: pr-build
+    needs: approve
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

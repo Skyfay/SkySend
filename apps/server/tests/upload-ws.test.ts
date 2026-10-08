@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createTestDb, createTestStorage } from "./helpers.js";
 import { createFakeWs, createMockUpgrade, msgEvent } from "./ws-helpers.js";
@@ -18,7 +19,7 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { createUploadWsRoute } from "../src/routes/upload-ws.js";
+import { createUploadWsRoute, type UploadWsRouteDeps } from "../src/routes/upload-ws.js";
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -413,6 +414,123 @@ describe("upload-ws route", () => {
 
     expect(reservation.release).toHaveBeenCalled();
     expect(reservation.commit).not.toHaveBeenCalled();
+  });
+
+  // ── Init frame checks ───────────────────────────────
+
+  /** The route with a quota whose reservations the test can count. */
+  async function bootstrapCountingReserve() {
+    const mock = createMockUpgrade();
+    const reserve = vi.fn<UploadWsRouteDeps["quota"]["reserve"]>(() => ({
+      ok: true,
+      reservation: null,
+    }));
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      quota: { reserve },
+    });
+    await route.request("/", { method: "GET" });
+    return { events: mock.getEvents(), reserve };
+  }
+
+  const storedBlobs = () => readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+
+  it("refuses an init frame without a headers object", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    for (const init of [{ type: "init" }, { type: "init", headers: "authToken=a" }]) {
+      const fake = createFakeWs();
+      await events.onMessage!(msgEvent(JSON.stringify(init)), fake.ws);
+      expect(fake.lastJson()).toEqual({
+        type: "error",
+        message: "First message must be of type 'init'",
+      });
+      expect(fake.closed?.code).toBe(1003);
+    }
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("refuses init headers that fail the schema before reserving any quota", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    const headers = buildHeaders({ authToken: "not base64url!" });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    expect(fake.lastJson()).toEqual({ type: "error", message: "Invalid upload headers" });
+    expect(fake.closed?.code).toBe(1008);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("refuses init headers that break a server limit before reserving any quota", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    await events.onMessage!(
+      msgEvent(JSON.stringify({ type: "init", headers: buildHeaders({ expireSec: "999" }) })),
+      fake.ws,
+    );
+    expect(fake.lastJson()).toEqual({
+      type: "error",
+      message: "Invalid expiry time. Must be one of the allowed options.",
+    });
+    expect(fake.closed?.code).toBe(1008);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(storedBlobs()).toEqual([]);
+  });
+
+  it("accepts numbers and booleans in the init headers and skips null fields", async () => {
+    const { events, reserve } = await bootstrapCountingReserve();
+    const fake = createFakeWs();
+    // "null" as a string would fail the passwordAlgo enum, so a skipped field is what lets it pass.
+    const headers = buildHeaders({
+      maxDownloads: 3,
+      expireSec: 3600,
+      fileCount: 2,
+      contentLength: 16,
+      hasPassword: false,
+      passwordSalt: null,
+      passwordAlgo: null,
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    expect(fake.allJson().some((frame) => frame.type === "ready")).toBe(true);
+    expect(reserve).toHaveBeenCalledWith(expect.any(String), 16);
+
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row).toMatchObject({
+      size: 16,
+      maxDownloads: 3,
+      fileCount: 2,
+      hasPassword: false,
+      passwordSalt: null,
+      passwordAlgo: null,
+    });
+  });
+
+  it("stores the password salt and algorithm of a password-protected upload", async () => {
+    const { events } = await bootstrap();
+    const fake = createFakeWs();
+    const passwordSalt = crypto.getRandomValues(new Uint8Array(16));
+    const headers = buildHeaders({
+      contentLength: "16",
+      hasPassword: "true",
+      passwordSalt: Buffer.from(passwordSalt).toString("base64url"),
+      passwordAlgo: "argon2id-v2",
+    });
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), fake.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), fake.ws);
+
+    const done = fake.lastJson() as { type: string; id: string };
+    expect(done.type).toBe("done");
+    const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, done.id)).get();
+    expect(row?.hasPassword).toBe(true);
+    expect(row?.passwordAlgo).toBe("argon2id-v2");
+    expect(new Uint8Array(row!.passwordSalt!)).toEqual(passwordSalt);
   });
 
   it("gives the quota reservation back when the socket closes while init runs", async () => {

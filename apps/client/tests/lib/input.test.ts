@@ -50,6 +50,11 @@ describe("readAll", () => {
     expect(await readAll(stream)).toBe("line one\nzweite Zeile mit Ümlaut\n");
   });
 
+  it("joins a stream that delivers text instead of bytes", async () => {
+    // A stream with an encoding set, like stdin after setEncoding, hands out strings.
+    expect(await readAll(Readable.from(["first ", "second"]))).toBe("first second");
+  });
+
   it("returns an empty string for an empty stream", async () => {
     expect(await readAll(Readable.from([]))).toBe("");
   });

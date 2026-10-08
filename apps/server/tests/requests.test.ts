@@ -3,7 +3,8 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Hono, type MiddlewareHandler } from "hono";
 import type { UpgradeWebSocket, WSEvents } from "hono/ws";
-import { eq } from "drizzle-orm";
+import { DrizzleQueryError, eq } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/sqlite-core";
 import {
   createFileRequest,
   deriveInboxKeys,
@@ -318,6 +319,64 @@ describe("file requests", () => {
       const request = await createFileRequest();
       const res = await app.request("/api/request", json(createBody(request, { publicKey: "x" })));
       expect(res.status).toBe(400);
+    });
+
+    it("rejects a body that is no JSON and stores nothing", async () => {
+      const app = createApp();
+      const res = await app.request("/api/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not json",
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Invalid JSON body" });
+      expect(dbCtx.db.select().from(fileRequests).all()).toHaveLength(0);
+    });
+
+    it("rejects a body above 16 KiB before it reads it as a request", async () => {
+      const app = createApp();
+      const request = await createFileRequest();
+      const res = await app.request(
+        "/api/request",
+        json(createBody(request, { padding: "x".repeat(16 * 1024) })),
+      );
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ error: "Request body too large" });
+      expect(dbCtx.db.select().from(fileRequests).all()).toHaveLength(0);
+    });
+
+    it("counts the daily limit per signed-in user, not per IP", async () => {
+      limiter = createRequestLimiter(1);
+      // What the OIDC guard puts on the context once a session is valid.
+      const guard: MiddlewareHandler = async (c, next) => {
+        const sub = c.req.header("X-Test-User");
+        if (!sub) return c.json({ error: "Authentication required" }, 401);
+        c.set("oidcUser", { sub, name: sub, email: "" });
+        await next();
+      };
+      const app = createApp({ createGuard: guard });
+      const request = await createFileRequest();
+      const create = (sub: string) => {
+        const body = json(createBody(request));
+        return app.request("/api/request", {
+          ...body,
+          headers: { ...body.headers, "X-Test-User": sub },
+        });
+      };
+      const left = async (sub: string) =>
+        (
+          (await (
+            await app.request("/api/request/limit", { headers: { "X-Test-User": sub } })
+          ).json()) as { remaining: number }
+        ).remaining;
+
+      // Everyone here shares one IP, and each user still has a request of their own.
+      expect((await create("alice")).status).toBe(201);
+      expect((await create("alice")).status).toBe(429);
+      expect(await left("alice")).toBe(0);
+      expect(await left("bob")).toBe(1);
+      expect((await create("bob")).status).toBe(201);
+      expect(dbCtx.db.select().from(fileRequests).all()).toHaveLength(2);
     });
 
     it("rejects an expiry that is not one of the options", async () => {
@@ -720,6 +779,39 @@ describe("file requests", () => {
         expect(requestRow(created.id).reservedUploads).toBe(0);
       });
 
+      it("refuses a note too large for its held slot and keeps the hold for it", async () => {
+        const app = createApp();
+        const created = await createRequest(app, { maxUploads: 2, maxSize: 100 });
+        const { hold } = await sendPart(app, created, { "X-Reserve-Next": "1" });
+        const withHold = { ...created.headers.upload, "X-Slot-Hold": hold! };
+        expect((await init(app, created.id, withHold, 101)).status).toBe(413);
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+        // The request is full, so only the hold that went back can take this one.
+        expect((await init(app, created.id, withHold, 100)).status).toBe(201);
+        expect(requestRow(created.id).reservedUploads).toBe(2);
+      });
+
+      it("refuses the held slot of a closed request and still lets the hold run out", async () => {
+        vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+        try {
+          const app = createApp();
+          const created = await createRequest(app, { maxUploads: 2 });
+          const { hold } = await sendPart(app, created, { "X-Reserve-Next": "1" });
+          await app.request(`/api/inbox/${created.id}/close`, {
+            method: "POST",
+            headers: created.headers.owner,
+          });
+          const withHold = { ...created.headers.upload, "X-Slot-Hold": hold! };
+          expect((await init(app, created.id, withHold, 10)).status).toBe(410);
+          expect(requestRow(created.id).reservedUploads).toBe(2);
+          // The hold went back, so it runs out after 30 minutes and frees its slot.
+          await vi.advanceTimersByTimeAsync(31 * 60 * 1000);
+          expect(requestRow(created.id).reservedUploads).toBe(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
       it("refuses a malformed hold or reservation header", async () => {
         const app = createApp();
         const created = await createRequest(app);
@@ -817,6 +909,149 @@ describe("file requests", () => {
         generateSecret(),
       );
       expect((await app.request(finalize, json(body))).status).toBe(200);
+    });
+
+    /** Opens a session and sends all its bytes, so only the finalize is left. */
+    async function openFilled(
+      app: Hono,
+      created: Awaited<ReturnType<typeof createRequest>>,
+      size: number,
+    ) {
+      const opened = await init(app, created.id, created.headers.upload, size);
+      expect(opened.status).toBe(201);
+      const { id: uid } = (await opened.json()) as { id: string };
+      const chunk = await app.request(`/api/request/${created.id}/upload/${uid}/chunk?index=0`, {
+        method: "POST",
+        body: new Uint8Array(size),
+      });
+      expect(chunk.status).toBe(200);
+      const body = await finalizeBody(
+        created.request.local.publicKey,
+        created.id,
+        uid,
+        generateSecret(),
+      );
+      return { uid, finalize: `/api/request/${created.id}/upload/${uid}/finalize`, body };
+    }
+
+    function uploadRows() {
+      return dbCtx.db.select().from(requestUploads).all();
+    }
+
+    it("keeps the session when the finalize body is no JSON", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const { finalize, body } = await openFilled(app, created, 10);
+      const res = await app.request(finalize, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not json",
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Invalid JSON body" });
+      expect((await app.request(finalize, json(body))).status).toBe(200);
+    });
+
+    it("refuses a finalize body above 128 KiB and keeps the session", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const { finalize, body } = await openFilled(app, created, 10);
+      const res = await app.request(finalize, json({ ...body, padding: "x".repeat(128 * 1024) }));
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ error: "Request body too large" });
+      expect((await app.request(finalize, json(body))).status).toBe(200);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 1, finishedUploads: 1 });
+    });
+
+    it("stores an upload once when the sender finalizes it twice at the same time", async () => {
+      const app = createApp({ quota: true });
+      const created = await createRequest(app);
+      const { uid, finalize, body } = await openFilled(app, created, 10);
+      const results = await Promise.all([
+        app.request(finalize, json(body)),
+        app.request(finalize, json(body)),
+      ]);
+      expect(results.map((res) => res.status).sort()).toEqual([200, 404]);
+      expect(uploadRows()).toHaveLength(1);
+      expect(requestRow(created.id)).toMatchObject({
+        reservedUploads: 1,
+        finishedUploads: 1,
+        finishedBytes: 10,
+      });
+      expect(await storage.exists(uid)).toBe(true);
+      expect(recorded).toEqual([["hashed-ip", 10]]);
+      expect(released).toBe(0);
+    });
+
+    it("gives the slots and the quota back when storage cannot open the upload", async () => {
+      const app = createApp({ quota: true });
+      const created = await createRequest(app, { maxUploads: 2 });
+      const both = { ...created.headers.upload, "X-Reserve-Next": "1" };
+      vi.spyOn(storage, "createEmpty").mockRejectedValueOnce(new Error("disk full"));
+      expect((await init(app, created.id, both, 10)).status).toBe(500);
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+      expect(released).toBe(1);
+      // Both slots are free again for the next try.
+      expect((await init(app, created.id, both, 10)).status).toBe(201);
+      expect(requestRow(created.id).reservedUploads).toBe(2);
+    });
+
+    it("aborts the upload and gives the slot and the quota back when storage cannot finish it", async () => {
+      const app = createApp({ quota: true });
+      const created = await createRequest(app);
+      const { uid, finalize, body } = await openFilled(app, created, 10);
+      vi.spyOn(storage, "finalizeChunkedUpload").mockRejectedValueOnce(
+        new Error("multipart upload failed"),
+      );
+      const abort = vi.spyOn(storage, "abortChunkedUpload");
+      expect((await app.request(finalize, json(body))).status).toBe(500);
+      expect(abort).toHaveBeenCalledWith(uid);
+      expect(await storage.exists(uid)).toBe(false);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, finishedUploads: 0 });
+      expect(uploadRows()).toHaveLength(0);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
+    });
+
+    it("drops the blob and gives the slot and the quota back when the row cannot be stored", async () => {
+      const app = createApp({ quota: true });
+      const created = await createRequest(app);
+      const { uid, finalize, body } = await openFilled(app, created, 10);
+      vi.spyOn(dbCtx.db, "transaction").mockImplementationOnce(() => {
+        throw new Error("disk I/O error");
+      });
+      expect((await app.request(finalize, json(body))).status).toBe(500);
+      expect(await storage.exists(uid)).toBe(false);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, finishedUploads: 0 });
+      expect(uploadRows()).toHaveLength(0);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
+    });
+
+    it("knows a deleted request by its foreign key error when Drizzle wraps it", async () => {
+      const app = createApp({ quota: true });
+      const created = await createRequest(app);
+      const { uid, finalize, body } = await openFilled(app, created, 10);
+      await app.request(`/api/inbox/${created.id}`, {
+        method: "DELETE",
+        headers: created.headers.owner,
+      });
+      // An async driver wraps the error of SQLite, so its code sits on the cause.
+      const transaction = dbCtx.db.transaction.bind(dbCtx.db);
+      vi.spyOn(dbCtx.db, "transaction").mockImplementationOnce((run) => {
+        try {
+          return transaction(run);
+        } catch (err) {
+          throw new DrizzleQueryError("insert into request_uploads", [], err as Error);
+        }
+      });
+      const res = await app.request(finalize, json(body));
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "File request not found" });
+      expect(await storage.exists(uid)).toBe(false);
+      expect(uploadRows()).toHaveLength(0);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
     });
 
     it("keeps sessions of one request away from another", async () => {
@@ -1052,6 +1287,21 @@ describe("file requests", () => {
       expect((await app.request(`/api/inbox/${id}`, { headers: headers.inbox })).status).toBe(200);
     });
 
+    it("looks like a missing request for an ID that is no lower-case UUID", async () => {
+      const app = createApp();
+      const { id, headers } = await createRequest(app);
+      for (const other of ["not-a-uuid", id.toUpperCase()]) {
+        expect((await app.request(`/api/inbox/${other}`, { headers: headers.inbox })).status).toBe(
+          404,
+        );
+        expect(
+          (await app.request(`/api/inbox/${other}`, { method: "DELETE", headers: headers.owner }))
+            .status,
+        ).toBe(404);
+      }
+      expect(requestRow(id)).toBeDefined();
+    });
+
     it("never locks a request ID that does not exist", async () => {
       const app = createApp();
       const id = crypto.randomUUID();
@@ -1143,6 +1393,99 @@ describe("file requests", () => {
         ).status,
       ).toBe(404);
       expect(await storage.exists(uid)).toBe(true);
+    });
+
+    function downloadCount(uid: string) {
+      return dbCtx.db.select().from(requestUploads).where(eq(requestUploads.id, uid)).get()!
+        .downloadCount;
+    }
+
+    it("needs the inbox token to download an upload and counts nothing without it", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const uid = await uploadInto(app, created, new Uint8Array(10));
+      const file = `/api/inbox/${created.id}/file/${uid}`;
+      for (const token of [
+        undefined,
+        fakeBase64urlToken(),
+        created.headers.owner["X-Inbox-Owner-Token"],
+        created.headers.upload["X-Upload-Token"],
+      ]) {
+        const res = await app.request(file, { headers: token ? { "X-Inbox-Token": token } : {} });
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: "File request not found" });
+      }
+      expect(downloadCount(uid)).toBe(0);
+    });
+
+    it("answers an upload ID that is no lower-case UUID like a missing upload", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const uid = await uploadInto(app, created, new Uint8Array(10));
+      for (const other of ["not-a-uuid", uid.toUpperCase()]) {
+        const file = `/api/inbox/${created.id}/file/${other}`;
+        const download = await app.request(file, { headers: created.headers.inbox });
+        expect(download.status).toBe(404);
+        expect(await download.json()).toEqual({ error: "Upload not found" });
+        const deleted = await app.request(file, {
+          method: "DELETE",
+          headers: created.headers.owner,
+        });
+        expect(deleted.status).toBe(404);
+      }
+      expect(await storage.exists(uid)).toBe(true);
+      expect(downloadCount(uid)).toBe(0);
+    });
+
+    it("reports a blob missing from storage and counts no download", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const uid = await uploadInto(app, created, new Uint8Array(10));
+      await storage.delete(uid);
+      const res = await app.request(`/api/inbox/${created.id}/file/${uid}`, {
+        headers: created.headers.inbox,
+      });
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: "File not found on disk" });
+      expect(downloadCount(uid)).toBe(0);
+    });
+
+    it("never counts past the limit when a parallel download took the last one", async () => {
+      const app = createApp();
+      const created = await createRequest(app, { downloads: 1 });
+      const data = crypto.getRandomValues(new Uint8Array(10));
+      const uid = await uploadInto(app, created, data);
+      const file = `/api/inbox/${created.id}/file/${uid}`;
+      // The other download runs to its end while this one looks for the blob, after both
+      // found a download left.
+      const exists = storage.exists.bind(storage);
+      let parallel: Response | undefined;
+      vi.spyOn(storage, "exists").mockImplementationOnce(async (id) => {
+        parallel = await app.request(file, { headers: created.headers.inbox });
+        return exists(id);
+      });
+      const res = await app.request(file, { headers: created.headers.inbox });
+      expect(res.status).toBe(410);
+      expect(await res.json()).toEqual({ error: "Upload is no longer available" });
+      expect(parallel?.status).toBe(200);
+      expect(new Uint8Array(await parallel!.arrayBuffer())).toEqual(data);
+      expect(downloadCount(uid)).toBe(1);
+    });
+
+    it("hands out a presigned URL when the storage has one, and counts the download", async () => {
+      const app = createApp();
+      const created = await createRequest(app);
+      const uid = await uploadInto(app, created, new Uint8Array(10));
+      const url = `https://bucket.example.com/${uid}.bin?X-Amz-Signature=abc`;
+      vi.spyOn(storage, "supportsPresignedUrls").mockReturnValue(true);
+      const presign = vi.spyOn(storage, "getPresignedDownloadUrl").mockResolvedValue(url);
+      const res = await app.request(`/api/inbox/${created.id}/file/${uid}`, {
+        headers: created.headers.inbox,
+      });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ url, size: 10, fileCount: 1 });
+      expect(presign).toHaveBeenCalledWith(uid);
+      expect(downloadCount(uid)).toBe(1);
     });
 
     it("deletes the request with every upload in it", async () => {
@@ -1370,6 +1713,82 @@ describe("file requests", () => {
       expect(requestRow(created.id).reservedUploads).toBe(0);
     });
 
+    /** Sends one init frame on a new socket and returns what the server answered. */
+    async function sendInit(
+      app: Hono,
+      id: string,
+      mock: ReturnType<typeof createMockUpgrade>,
+      frame: unknown,
+    ) {
+      const events = await connect(app, id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(msgEvent(JSON.stringify(frame)), fake.ws);
+      return { reply: fake.lastJson(), closed: fake.closed };
+    }
+
+    it("refuses an init frame that does not hold a request upload, and reserves nothing", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const valid = JSON.parse(wsInit(created.headers.upload["X-Upload-Token"], 10)) as {
+        type: string;
+        request: Record<string, unknown>;
+      };
+      for (const frame of [
+        { type: "init" },
+        { ...valid, headers: {} },
+        { type: "init", request: { ...valid.request, salt: "short" } },
+        { type: "init", request: { ...valid.request, contentLength: 0 } },
+        { type: "init", request: { ...valid.request, fileCount: 1.5 } },
+        { type: "init", request: { ...valid.request, hold: "short" } },
+        { type: "init", request: { ...valid.request, publicKey: "x" } },
+      ]) {
+        const { reply, closed } = await sendInit(app, created.id, mock, frame);
+        expect(reply).toEqual({ type: "error", message: "Invalid upload headers", status: 400 });
+        expect(closed).toMatchObject({ code: 1008 });
+      }
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+      expect(released).toBe(0);
+    });
+
+    it("refuses an ID that is no lower-case UUID like a missing request", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade });
+      const created = await createRequest(app);
+      const frame = JSON.parse(wsInit(created.headers.upload["X-Upload-Token"], 10)) as unknown;
+      for (const id of ["not-a-uuid", created.id.toUpperCase()]) {
+        const { reply } = await sendInit(app, id, mock, frame);
+        expect(reply).toEqual({ type: "error", message: "File request not found", status: 404 });
+      }
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+    });
+
+    it("refuses an upload above FILE_MAX_SIZE or with too many files like the HTTP init", async () => {
+      vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_MAX_SIZE: 50 });
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const frame = (request: Record<string, unknown>) => {
+        const parsed = JSON.parse(wsInit(created.headers.upload["X-Upload-Token"], 10)) as {
+          request: Record<string, unknown>;
+        };
+        Object.assign(parsed.request, request);
+        return parsed;
+      };
+      const tooLarge = await sendInit(app, created.id, mock, frame({ contentLength: 51 }));
+      expect(tooLarge.reply).toMatchObject({ type: "error", status: 413 });
+      const tooMany = await sendInit(app, created.id, mock, frame({ fileCount: 33 }));
+      expect(tooMany.reply).toEqual({
+        type: "error",
+        message: "Maximum 32 files per upload",
+        status: 400,
+      });
+      expect(requestRow(created.id).reservedUploads).toBe(0);
+      expect(released).toBe(0);
+      await sendInit(app, created.id, mock, frame({ contentLength: 50, fileCount: 32 }));
+      expect(requestRow(created.id).reservedUploads).toBe(1);
+    });
+
     it("names a full request with the status of the HTTP init", async () => {
       const mock = createMockUpgrade();
       const app = createApp({ upgradeWebSocket: mock.upgrade });
@@ -1497,6 +1916,78 @@ describe("file requests", () => {
       );
       expect(fake.lastJson()).toMatchObject({ type: "error", status: 404 });
       expect(await storage.exists(ready.id)).toBe(false);
+    });
+
+    it("closes with 1011 and gives everything back when the row cannot be stored", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      await events.onMessage!(
+        msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)),
+        fake.ws,
+      );
+      const ready = fake.allJson().find((m) => m.type === "ready") as { id: string };
+      await events.onMessage!(msgEvent(new Uint8Array(10).buffer), fake.ws);
+      const finalize = await wsFinalize(
+        created.request.local.publicKey,
+        created.id,
+        ready.id,
+        generateSecret(),
+      );
+      vi.spyOn(dbCtx.db, "transaction").mockImplementationOnce(() => {
+        throw new Error("disk I/O error");
+      });
+      await events.onMessage!(msgEvent(finalize), fake.ws);
+
+      expect(fake.lastJson()).toEqual({ type: "error", message: "Upload could not be stored" });
+      expect(fake.closed).toMatchObject({ code: 1011 });
+      expect(await storage.exists(ready.id)).toBe(false);
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0, finishedUploads: 0 });
+      expect(dbCtx.db.select().from(requestUploads).all()).toHaveLength(0);
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
+    });
+
+    it("fails only the upload, not the server, when the database errs during the init", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      // The adapter does not await onMessage, so a rejection here would end the process.
+      vi.spyOn(dbCtx.db.query.fileRequests, "findFirst").mockRejectedValueOnce(
+        new Error("database is locked"),
+      );
+      await expect(
+        events.onMessage!(msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)), fake.ws),
+      ).resolves.toBeUndefined();
+
+      expect(fake.lastJson()).toEqual({ type: "error", message: "Upload init failed" });
+      expect(fake.closed).toMatchObject({ code: 1011 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
+      expect(released).toBe(0);
+    });
+
+    it("gives the quota back once when claiming the slot fails during the init", async () => {
+      const mock = createMockUpgrade();
+      const app = createApp({ upgradeWebSocket: mock.upgrade, quota: true });
+      const created = await createRequest(app);
+      const events = await connect(app, created.id, mock);
+      const fake = createFakeWs();
+      vi.spyOn(dbCtx.db, "update").mockImplementationOnce(() => {
+        throw new Error("database is locked");
+      });
+      await expect(
+        events.onMessage!(msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 10)), fake.ws),
+      ).resolves.toBeUndefined();
+
+      expect(fake.lastJson()).toEqual({ type: "error", message: "Upload init failed" });
+      expect(fake.closed).toMatchObject({ code: 1011 });
+      expect(requestRow(created.id)).toMatchObject({ reservedUploads: 0 });
+      expect(released).toBe(1);
+      expect(recorded).toEqual([]);
     });
 
     /** Blobs in storage, finished or not. */
@@ -1673,6 +2164,19 @@ describe("file requests", () => {
   it("puts request chunks in their own folder", () => {
     createApp();
     expect(existsSync(join(storageCtx.tempDir, "request-chunks"))).toBe(true);
+  });
+
+  it("declares the foreign key of request uploads the way the migration created it", () => {
+    // A finalize knows a deleted request by this key, so the schema has to match the database.
+    const [fk] = getTableConfig(requestUploads).foreignKeys;
+    const reference = fk!.reference();
+    expect(reference.foreignTable).toBe(fileRequests);
+    expect(reference.columns.map((column) => column.name)).toEqual(["request_id"]);
+    expect(reference.foreignColumns.map((column) => column.name)).toEqual(["id"]);
+    expect(fk!.onDelete).toBe("cascade");
+    expect(dbCtx.sqlite.prepare("PRAGMA foreign_key_list(request_uploads)").all()).toMatchObject([
+      { table: "file_requests", from: "request_id", to: "id", on_delete: "CASCADE" },
+    ]);
   });
 });
 

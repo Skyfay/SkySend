@@ -89,6 +89,17 @@ describe("routes", () => {
     vi.restoreAllMocks();
   });
 
+  /** Blobs left in storage, whatever upload they belong to. */
+  const storedBlobs = () => readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+
+  /** Makes every insert into uploads fail the way a locked or full database would. */
+  function failUploadInserts() {
+    // Raw SQL: a trigger is the only way to make SQLite itself refuse the insert, no mock involved.
+    dbCtx.sqlite.exec(
+      "CREATE TRIGGER fail_upload_insert BEFORE INSERT ON uploads BEGIN SELECT RAISE(ABORT, 'disk I/O error'); END;",
+    );
+  }
+
   // ── Health ──────────────────────────────────────────
 
   describe("GET /api/health", () => {
@@ -1184,6 +1195,57 @@ describe("routes", () => {
       const json = await res.json();
       expect(json.id).toBeTruthy();
     });
+
+    it("should return 400 when the request has no body", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders(),
+      });
+
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe("Missing request body");
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect(storedBlobs()).toEqual([]);
+    });
+
+    it("should take the size from Content-Length when X-Content-Length is missing", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const headers: Record<string, string> = makeUploadHeaders({ "Content-Length": "5" });
+      delete headers["X-Content-Length"];
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers,
+        body: new Uint8Array([1, 2, 3, 4, 5]),
+      });
+
+      expect(res.status).toBe(201);
+      const { id } = (await res.json()) as { id: string };
+      const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, id)).get();
+      expect(row?.size).toBe(5);
+    });
+
+    it("should return 400 and keep nothing when the body is shorter than declared", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: makeUploadHeaders({ "X-Content-Length": "10" }),
+        body: new Uint8Array(5),
+      });
+
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe(
+        "Body size does not match declared content length",
+      );
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect(storedBlobs()).toEqual([]);
+    });
   });
 
   // ── Chunked Upload (init / chunk / finalize) ────────
@@ -1219,6 +1281,56 @@ describe("routes", () => {
       expect(res.status).toBe(400);
       const json = await res.json();
       expect(json.error).toContain("Invalid request headers");
+    });
+
+    it("should take the declared size from Content-Length at init when X-Content-Length is missing", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const headers: Record<string, string> = makeInitHeaders({ "Content-Length": "10" });
+      delete headers["X-Content-Length"];
+
+      const initRes = await app.request("/api/upload/init", { method: "POST", headers });
+      expect(initRes.status).toBe(201);
+      const { id } = (await initRes.json()) as { id: string };
+
+      const chunkRes = await app.request(`/api/upload/${id}/chunk?index=0`, {
+        method: "POST",
+        body: new Uint8Array(10),
+      });
+      expect(chunkRes.status).toBe(200);
+      const finalizeRes = await app.request(`/api/upload/${id}/finalize`, { method: "POST" });
+      expect(finalizeRes.status).toBe(200);
+      const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, id)).get();
+      expect(row?.size).toBe(10);
+    });
+
+    it("should store the password salt and algorithm of a password-protected chunked upload", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const passwordSalt = crypto.getRandomValues(new Uint8Array(16));
+
+      const initRes = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: makeInitHeaders({
+          "X-Content-Length": "5",
+          "X-Has-Password": "true",
+          "X-Password-Salt": Buffer.from(passwordSalt).toString("base64url"),
+          "X-Password-Algo": "argon2id-v2",
+        }),
+      });
+      expect(initRes.status).toBe(201);
+      const { id } = (await initRes.json()) as { id: string };
+      await app.request(`/api/upload/${id}/chunk?index=0`, {
+        method: "POST",
+        body: new Uint8Array(5),
+      });
+
+      const finalizeRes = await app.request(`/api/upload/${id}/finalize`, { method: "POST" });
+      expect(finalizeRes.status).toBe(200);
+      const row = dbCtx.db.select().from(uploads).where(eq(uploads.id, id)).get();
+      expect(row?.hasPassword).toBe(true);
+      expect(row?.passwordAlgo).toBe("argon2id-v2");
+      expect(new Uint8Array(row!.passwordSalt!)).toEqual(passwordSalt);
     });
 
     it("should return 400 for invalid expiry on /init", async () => {
@@ -1869,6 +1981,74 @@ describe("routes", () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it("gives the reservation back and keeps no partial file when storage fails to save a single-request upload", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const app = appWithQuota(5);
+      const save = storage.save.bind(storage);
+      vi.spyOn(storage, "save").mockImplementationOnce(async (id, stream) => {
+        await save(id, stream);
+        throw new Error("ENOSPC: no space left on device");
+      });
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+
+      expect(res.status).toBe(500);
+      expect(storedBlobs()).toEqual([]);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect((await init(app, 5)).status).toBe(201);
+    });
+
+    it("gives the reservation back and removes the blob when the row of a single-request upload cannot be written", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const app = appWithQuota(5);
+      failUploadInserts();
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+
+      expect(res.status).toBe(500);
+      expect(storedBlobs()).toEqual([]);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect((await init(app, 5)).status).toBe(201);
+    });
+
+    it("gives the reservation back and aborts the storage upload when finalizing storage fails", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const app = appWithQuota(10);
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      vi.spyOn(storage, "finalizeChunkedUpload").mockRejectedValueOnce(
+        new Error("CompleteMultipartUpload failed"),
+      );
+
+      expect((await finalize(app, id)).status).toBe(500);
+
+      expect(await storage.exists(id)).toBe(false);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
+    it("gives the reservation back and removes the blob when the row cannot be written at finalize", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const app = appWithQuota(10);
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      failUploadInserts();
+
+      expect((await finalize(app, id)).status).toBe(500);
+
+      expect(await storage.exists(id)).toBe(false);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      expect((await init(app, 10)).status).toBe(201);
     });
 
     it("stops a single-request body at its declared size and keeps nothing of it", async () => {

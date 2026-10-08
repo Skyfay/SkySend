@@ -358,7 +358,17 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
           const pending: PendingInit = { stage: "awaiting-init", gone: false };
           sessions.set(ws, pending);
 
-          const opened = await target.open(envelope, { c, ip });
+          // The WebSocket adapter does not await this handler, so an error of the target, like
+          // a busy database, has to end this upload here instead of the whole process.
+          let opened: Awaited<ReturnType<typeof target.open>>;
+          try {
+            opened = await target.open(envelope, { c, ip });
+          } catch (err) {
+            console.error("[upload-ws] Upload init failed:", describeError(err));
+            sessions.delete(ws);
+            fail(ws, undefined, "Upload init failed");
+            return;
+          }
           if (isRefusal(opened)) {
             sessions.delete(ws);
             fail(ws, undefined, opened.error, opened.code, opened.status);

@@ -31,6 +31,11 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
   };
 }
 
+/** The bindings @hono/node-server gives a request, holding the address of its socket. */
+function socketEnv(remoteAddress: string) {
+  return { incoming: { socket: { remoteAddress } } };
+}
+
 describe("rate limiter", () => {
   it("should allow requests under the limit", async () => {
     const config = makeConfig({ RATE_LIMIT_MAX: 5 });
@@ -153,6 +158,26 @@ describe("getClientIp", () => {
     const res = await app.request("/");
     expect(await res.text()).toBe("unknown");
   });
+
+  it("should skip an empty rightmost X-Forwarded-For entry instead of trusting the one before it", async () => {
+    const app = createApp(true);
+    const withRealIp = await app.request("/", {
+      headers: { "X-Forwarded-For": "1.2.3.4, ", "X-Real-IP": "5.6.7.8" },
+    });
+    expect(await withRealIp.text()).toBe("5.6.7.8");
+    const alone = await app.request("/", { headers: { "X-Forwarded-For": "1.2.3.4," } });
+    expect(await alone.text()).toBe("unknown");
+  });
+
+  it("should use the socket address when proxy headers are not trusted", async () => {
+    const app = createApp(false);
+    const res = await app.request(
+      "/",
+      { headers: { "X-Forwarded-For": "1.2.3.4" } },
+      socketEnv("::ffff:10.0.0.7"),
+    );
+    expect(await res.text()).toBe("10.0.0.7");
+  });
 });
 
 describe("toLimitKey", () => {
@@ -206,6 +231,19 @@ describe("limits over IPv6", () => {
     // Another /64 has its own budget.
     expect((await from("2001:db8:1:3::1")).status).toBe(200);
   });
+
+  it("counts a client without a proxy in front by the /64 of its socket address", async () => {
+    const config = makeConfig({ RATE_LIMIT_MAX: 2, TRUST_PROXY: false });
+    const app = new Hono();
+    app.use("*", createRateLimiter(config));
+    app.get("/test", (c) => c.json({ ok: true }));
+    const from = (address: string) => app.request("/test", {}, socketEnv(address));
+
+    expect((await from("2001:db8:1:2::1")).status).toBe(200);
+    expect((await from("2001:db8:1:2::2")).status).toBe(200);
+    expect((await from("2001:db8:1:2:ffff::3")).status).toBe(429);
+    expect((await from("2001:db8:1:3::1")).status).toBe(200);
+  });
 });
 
 describe("rate limiter cleanup interval", () => {
@@ -233,5 +271,30 @@ describe("rate limiter cleanup interval", () => {
     expect(fresh.status).toBe(200);
 
     vi.useRealTimers();
+  });
+
+  it("keeps the count of a window that is still running when the cleanup fires", async () => {
+    vi.useFakeTimers();
+    try {
+      // RATE_LIMIT_WINDOW=1000 ms, cleanup fires every 2000 ms
+      const config = makeConfig({ RATE_LIMIT_MAX: 1, RATE_LIMIT_WINDOW: 1000, TRUST_PROXY: true });
+      const app = new Hono();
+      app.use("*", createRateLimiter(config));
+      app.get("/test", (c) => c.json({ ok: true }));
+      const from = (address: string) =>
+        app.request("/test", { headers: { "X-Forwarded-For": address } });
+
+      // 1.1.1.1 opens a window that ends at 1000 ms, 2.2.2.2 one that ends at 2500 ms.
+      expect((await from("1.1.1.1")).status).toBe(200);
+      vi.advanceTimersByTime(1500);
+      expect((await from("2.2.2.2")).status).toBe(200);
+
+      // The cleanup at 2000 ms drops the first window and must keep the second.
+      vi.advanceTimersByTime(600);
+      expect((await from("2.2.2.2")).status).toBe(429);
+      expect((await from("1.1.1.1")).status).toBe(200);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

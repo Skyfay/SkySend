@@ -34,6 +34,21 @@ describe("createPrivateTempFile", () => {
     },
   );
 
+  it("leaves no directory behind when the file cannot be created", () => {
+    const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), "skysend-test-"));
+    const before = process.env.TMPDIR;
+    process.env.TMPDIR = tmpdir;
+    try {
+      // The name points into a folder that does not exist, so creating the file fails.
+      expect(() => createPrivateTempFile(path.join("missing", "upload.zip"))).toThrow();
+      expect(fs.readdirSync(tmpdir)).toEqual([]);
+    } finally {
+      if (before === undefined) delete process.env.TMPDIR;
+      else process.env.TMPDIR = before;
+      fs.rmSync(tmpdir, { recursive: true, force: true });
+    }
+  });
+
   it("gives every call a fresh directory", () => {
     const a = make();
     const b = make();
