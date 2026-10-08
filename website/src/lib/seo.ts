@@ -64,6 +64,7 @@ export function pageMetadata(
       siteName: "SkySend",
       type,
       locale: INTL_LOCALE[contentLocale].replace("-", "_"),
+      alternateLocale: languages.filter((l) => l !== contentLocale).map((l) => INTL_LOCALE[l].replace("-", "_")),
       images,
     },
     twitter: { card: "summary_large_image", title: cardTitle, description: cardDescription, images },

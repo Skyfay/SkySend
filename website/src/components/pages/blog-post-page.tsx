@@ -13,7 +13,7 @@ import { JsonLd } from "@/components/site/json-ld";
 import { localePath, type Locale } from "@/i18n/config";
 import { createTranslator } from "@/i18n/translate";
 import { getAllPosts, getAllSlugs, getHeadings, getPostBySlug, getPostLocales, splitTitle } from "@/lib/blog";
-import { CRYPTO_URL, DISCORD_URL } from "@/lib/content";
+import { CRYPTO_URL, DISCORD_URL, GITHUB_URL } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
@@ -63,20 +63,36 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
   const older = posts[index + 1];
   const neighbour = older ?? posts[index - 1];
 
+  const postUrl = `${SITE_URL}${localePath(post.lang, `/blog/${slug}/`)}`;
   const blogPostingJsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.excerpt,
     datePublished: post.date,
+    dateModified: post.date,
     inLanguage: post.lang,
-    author: { "@type": "Person", name: post.author },
-    url: `${SITE_URL}${localePath(post.lang, `/blog/${slug}/`)}`,
+    image: `${SITE_URL}${localePath(locale, `/blog/${slug}/og.png`)}`,
+    author: { "@type": "Person", name: post.author, url: GITHUB_URL },
+    publisher: { "@type": "Organization", name: "SkySend", logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.png` } },
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    url: postUrl,
+    keywords: post.tags.join(", "),
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "SkySend", item: `${SITE_URL}${localePath(locale, "/")}` },
+      { "@type": "ListItem", position: 2, name: t("meta.blogTitle"), item: `${SITE_URL}${localePath(locale, "/blog/")}` },
+      { "@type": "ListItem", position: 3, name: post.title, item: postUrl },
+    ],
   };
 
   return (
     <div className="relative">
       <JsonLd data={blogPostingJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       <ReadingProgress targetId="post-body" />
       <PageBackdrop />
 

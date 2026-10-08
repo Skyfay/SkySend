@@ -51,7 +51,7 @@ export function switchLocalePath(pathname: string, target: Locale): string {
  */
 export const LANGUAGE_SCRIPT = `(function(){try{
 var L=${JSON.stringify(LOCALES)},D=${JSON.stringify(DEFAULT_LOCALE)},K=${JSON.stringify(LANG_STORAGE_KEY)};
-if(/bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|lighthouse|headless/i.test(navigator.userAgent))return;
+if(/bot|crawl|spider|slurp|google|preview|facebookexternalhit|embedly|lighthouse|headless/i.test(navigator.userAgent))return;
 var p=null;try{p=localStorage.getItem(K)}catch(e){}
 var want=L.indexOf(p)>=0?p:null;
 if(!want){var ls=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||D];
