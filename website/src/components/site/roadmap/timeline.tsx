@@ -5,22 +5,36 @@ import { ArrowUpRight, MessageSquare, Plus, Star } from "lucide-react";
 import { CategoryPill } from "@/components/site/roadmap/category";
 import { GITHUB_URL } from "@/lib/content";
 import type { RoadmapItem, ShippedItem } from "@/lib/roadmap";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/translate";
 import { cn } from "@/lib/utils";
 
-/** A shipped entry with its date and link resolved from the changelog at build time. */
-export interface ResolvedShipped extends ShippedItem {
+/**
+ * A shipped entry with its text in the language of the page, and its date and
+ * link resolved from the changelog at build time.
+ */
+export interface ResolvedShipped extends Omit<ShippedItem, "highlights"> {
+  title: string;
+  description: string;
+  highlights?: string[];
   /** "Oct 5, 2026", or "New" for a release the changelog does not have yet. */
   dateLabel: string;
   href: string;
 }
 
+/** A planned item or an idea with its text in the language of the page. */
+export interface ResolvedItem extends RoadmapItem {
+  title: string;
+  description: string;
+}
+
 type Filter = "all" | "releases" | "stars";
 type Side = "back" | "ahead";
 
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "releases", label: "Releases" },
-  { id: "stars", label: "Stars" },
+const FILTERS: { id: Filter; label: MessageKey }[] = [
+  { id: "all", label: "roadmap.filterAll" },
+  { id: "releases", label: "roadmap.filterReleases" },
+  { id: "stars", label: "roadmap.filterStars" },
 ];
 
 // The cards hang off the spine in the middle: a short line from the card to a
@@ -77,7 +91,8 @@ function ShippedEntry({ item, latest }: { item: ResolvedShipped; latest: boolean
   );
 }
 
-function AheadCard({ item }: { item: RoadmapItem }) {
+function AheadCard({ item }: { item: ResolvedItem }) {
+  const { t } = useI18n();
   const planned = item.status === "planned";
   const discuss = item.issueNumber ? `${GITHUB_URL}/issues/${item.issueNumber}` : `${GITHUB_URL}/issues`;
   return (
@@ -92,7 +107,7 @@ function AheadCard({ item }: { item: RoadmapItem }) {
               planned ? "bg-tone-green/16 text-tone-green" : "bg-tone-violet/16 text-tone-violet"
             )}
           >
-            {planned ? "Planned" : "Idea"}
+            {planned ? t("roadmap.planned") : t("roadmap.idea")}
           </span>
           <CategoryPill category={item.category} />
           <a
@@ -102,7 +117,7 @@ function AheadCard({ item }: { item: RoadmapItem }) {
             className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <MessageSquare className="size-3" />
-            Discuss
+            {t("roadmap.discuss")}
           </a>
         </span>
         <span className="text-base font-semibold">{item.title}</span>
@@ -124,10 +139,11 @@ export function RoadmapTimeline({
   changelogUrl,
 }: {
   shipped: ResolvedShipped[];
-  ahead: RoadmapItem[];
+  ahead: ResolvedItem[];
   releaseCount: number;
   changelogUrl: string;
 }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<Filter>("all");
   const [side, setSide] = useState<Side>("back");
 
@@ -136,12 +152,12 @@ export function RoadmapTimeline({
   const sorted = [...ahead].sort((a, b) => Number(a.status === "idea") - Number(b.status === "idea"));
 
   return (
-    <section aria-label="Timeline" className="relative z-[2] mx-auto mt-14 max-w-[1248px] px-4 sm:px-6">
-      <div role="group" aria-label="Side of the timeline" className="mb-6 flex h-11 rounded-xl border border-border bg-surface p-[3px] lg:hidden">
+    <section aria-labelledby="roadmap-back" className="relative z-[2] mx-auto mt-14 max-w-[1248px] px-4 sm:px-6">
+      <div role="group" aria-label={t("roadmap.side")} className="mb-6 flex h-11 rounded-xl border border-border bg-surface p-[3px] lg:hidden">
         {(
           [
-            ["back", "Looking back"],
-            ["ahead", "Ahead"],
+            ["back", "roadmap.lookingBack"],
+            ["ahead", "roadmap.ahead"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -158,7 +174,7 @@ export function RoadmapTimeline({
                 : "text-muted-foreground"
             )}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
@@ -175,8 +191,10 @@ export function RoadmapTimeline({
 
         <div className={cn("flex-col gap-3", side === "back" ? "flex" : "hidden lg:flex")}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">Looking back</h2>
-            <div role="group" aria-label="Show" className="flex gap-1">
+            <h2 id="roadmap-back" className="text-xl font-semibold tracking-[-0.02em]">
+              {t("roadmap.lookingBack")}
+            </h2>
+            <div role="group" aria-label={t("roadmap.show")} className="flex gap-1">
               {FILTERS.map((f) => (
                 <button
                   key={f.id}
@@ -190,7 +208,7 @@ export function RoadmapTimeline({
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {f.label}
+                  {t(f.label)}
                 </button>
               ))}
             </div>
@@ -204,7 +222,7 @@ export function RoadmapTimeline({
             rel="noreferrer"
             className="mt-1 flex h-11 items-center justify-center gap-1.5 rounded-xl border border-dashed border-input font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            {releaseCount > 0 ? `All ${releaseCount} releases in the changelog` : "Every release in the changelog"}
+            {releaseCount > 0 ? t("roadmap.allReleases", { count: releaseCount }) : t("roadmap.everyRelease")}
             <ArrowUpRight className="size-3.5" />
           </a>
         </div>
@@ -212,15 +230,13 @@ export function RoadmapTimeline({
         <div aria-hidden="true" className="hidden lg:block" />
 
         <div className={cn("flex-col gap-3", side === "ahead" ? "flex" : "hidden lg:flex")}>
-          <h2 className="mb-2 flex h-[30px] items-center text-xl font-semibold tracking-[-0.02em]">Ahead</h2>
+          <h2 className="mb-2 flex h-[30px] items-center text-xl font-semibold tracking-[-0.02em]">{t("roadmap.ahead")}</h2>
           {sorted.map((item) => (
             <AheadCard key={item.slug} item={item} />
           ))}
           <div className="flex flex-col gap-2.5 rounded-[14px] border border-dashed border-input p-5">
-            <span className="font-semibold">Missing something?</span>
-            <span className="leading-[1.55] text-muted-foreground">
-              Ideas start as an issue on GitHub. The ones that fit the philosophy land here.
-            </span>
+            <span className="font-semibold">{t("roadmap.missing")}</span>
+            <span className="leading-[1.55] text-muted-foreground">{t("roadmap.missingText")}</span>
             <a
               href={`${GITHUB_URL}/issues/new`}
               target="_blank"
@@ -228,7 +244,7 @@ export function RoadmapTimeline({
               className="btn-chip flex h-[38px] w-fit items-center gap-1.5 rounded-[9px] px-3.5 font-medium"
             >
               <Plus className="size-3.5" />
-              Suggest an idea
+              {t("roadmap.suggest")}
             </a>
           </div>
         </div>

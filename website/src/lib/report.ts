@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MessageKey } from "@/i18n/translate";
 
 export const REPORT_API_BASE = "https://report.skysend.app";
 export const REPORT_INSTANCES_URL = `${REPORT_API_BASE}/instances`;
@@ -6,6 +7,9 @@ export const REPORT_INSTANCES_URL = `${REPORT_API_BASE}/instances`;
 export const TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
 
+// The reasons as the report Worker knows them. They are sent in English in
+// every language, so the operator always reads the same words, and only the
+// label on the button is translated.
 export const REPORT_REASONS = [
   "Spam, phishing or malware",
   "Violence or hate speech",
@@ -16,6 +20,18 @@ export const REPORT_REASONS = [
   "Other",
 ] as const;
 
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export const REASON_LABEL: Record<ReportReason, MessageKey> = {
+  "Spam, phishing or malware": "report.reasonSpam",
+  "Violence or hate speech": "report.reasonViolence",
+  "Harassment, intimidation or threats": "report.reasonHarassment",
+  "Human rights violation": "report.reasonHumanRights",
+  "Copyright or intellectual property": "report.reasonCopyright",
+  "Illegal activities": "report.reasonIllegal",
+  Other: "report.reasonOther",
+};
+
 const ReportContactSchema = z
   .object({
     abuse: z.union([z.boolean(), z.string()]).optional(),
@@ -24,7 +40,7 @@ const ReportContactSchema = z
   })
   .passthrough();
 
-export const ReportInstanceSchema = z.object({
+const ReportInstanceSchema = z.object({
   name: z.string(),
   country: z.string(),
   url: z.url({ protocol: /^https$/ }),
@@ -35,14 +51,23 @@ export const ReportInstanceSchema = z.object({
 export type ReportInstance = z.infer<typeof ReportInstanceSchema>;
 
 export const ReportFormSchema = z.object({
-  url: z.url({ protocol: /^https$/, error: "Paste the whole link of the share." }),
-  reason: z.array(z.enum(REPORT_REASONS)).min(1, "Pick at least one reason."),
-  comment: z.string().trim().min(10, "Describe what is wrong in at least 10 characters."),
-  replyEmail: z.email("Enter a valid email or leave the field empty.").nullable(),
-  token: z.string().min(1, "Wait for the spam check to finish."),
+  url: z.url({ protocol: /^https$/ }),
+  reason: z.array(z.enum(REPORT_REASONS)).min(1),
+  comment: z.string().trim().min(10),
+  replyEmail: z.email().nullable(),
+  token: z.string().min(1),
 });
 
-export type LinkKind = "file" | "note" | "request" | "inbox" | "other";
+/** The message for a field of the form that did not pass, by the name of the field. */
+export const FIELD_ERROR: Record<keyof z.infer<typeof ReportFormSchema>, MessageKey> = {
+  url: "report.errUrl",
+  reason: "report.errReason",
+  comment: "report.errComment",
+  replyEmail: "report.errEmail",
+  token: "report.errToken",
+};
+
+type LinkKind = "file" | "note" | "request" | "inbox" | "other";
 
 /**
  * What a pasted link points to. An inbox link is refused, its key would open

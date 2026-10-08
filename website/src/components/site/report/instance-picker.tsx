@@ -1,7 +1,10 @@
 import { ArrowUpRight } from "lucide-react";
 import { CountryFlag } from "@/components/site/country-flag";
+import { countryName } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { getHostname, hasAbuseSupport, type ReportInstance } from "@/lib/report";
+import { INTL_LOCALE } from "@/i18n/config";
+import { useI18n } from "@/i18n/provider";
 
 /**
  * The instances a report can go to, as native radio buttons, so arrow keys and
@@ -18,9 +21,10 @@ export function InstancePicker({
   selectedHostname: string | null;
   onSelect: (hostname: string) => void;
 }) {
+  const { t, locale } = useI18n();
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="sr-only">The instance that hosts the link</legend>
+      <legend className="sr-only">{t("report.instanceLegend")}</legend>
       {instances.map((instance) => {
         const hostname = getHostname(instance.url) ?? instance.name;
         const reportable = hasAbuseSupport(instance);
@@ -54,7 +58,9 @@ export function InstancePicker({
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-semibold">{instance.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {reportable ? instance.country : "Takes no reports here, write to its operator"}
+                  {reportable
+                    ? countryName(instance.country, instance.flag, INTL_LOCALE[locale])
+                    : t("report.noReportsHere")}
                 </span>
               </span>
               {reportable && (
@@ -74,10 +80,10 @@ export function InstancePicker({
                 href={instance.contact.url}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`Contact the operator of ${instance.name}`}
+                aria-label={t("report.contactLabel", { name: instance.name })}
                 className="btn-chip flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-medium"
               >
-                {instance.contact.label || "Contact"}
+                {instance.contact.label || t("report.contact")}
                 <ArrowUpRight className="size-3" />
               </a>
             )}

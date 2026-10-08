@@ -6,6 +6,8 @@ import { Eyebrow } from "@/components/site/fx";
 import { useCopy, useTick } from "@/components/site/home/hooks";
 import { CLI_URL, INSTALL_COMMANDS } from "@/lib/content";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/translate";
 
 const COMMAND = "skysend upload ./q3-board-pack.pdf -e 7d -d 5";
 const URL_BASE = "https://ch.skysend.app/file/aB3kQ9xZ";
@@ -60,13 +62,11 @@ function linesAt(t: number): { parts: Part[]; cursor?: boolean }[] {
   return lines;
 }
 
-const POINTS = [
-  "Linux, macOS and Windows, one binary each",
-  "A JSON flag on the commands for scripts",
-  "Signs in through OIDC when your instance asks",
-];
+const POINTS: MessageKey[] = ["cli.point1", "cli.point2", "cli.point3"];
 
+/** The terminal output stays English in every language, the way the CLI prints it. */
 export function CliSection() {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const tick = useTick(200, ref, ROUND - 1);
   const [os, setOs] = useState<(typeof INSTALL_COMMANDS)[number]["id"]>("unix");
@@ -76,21 +76,20 @@ export function CliSection() {
   return (
     <section className="mx-auto grid max-w-[1248px] items-center gap-10 px-4 pt-28 sm:px-6 sm:pt-[140px] lg:grid-cols-[5fr_7fr] lg:gap-14">
       <div className="flex min-w-0 flex-col gap-[18px]">
-        <Eyebrow>CLI and terminal UI</Eyebrow>
-        <h2 className="text-[32px] leading-[1.06] font-semibold tracking-[-0.04em] sm:text-[46px]">
-          Same encryption, from your terminal.
-        </h2>
+        <Eyebrow>{t("cli.eyebrow")}</Eyebrow>
+        <h2 className="text-[32px] leading-[1.06] font-semibold tracking-[-0.04em] sm:text-[46px]">{t("cli.title")}</h2>
         <p className="text-base leading-relaxed text-muted-foreground">
-          Upload, download and write notes from a shell or a script. Run{" "}
-          <code className="font-mono text-[14px] text-foreground">skysend</code> without arguments for the
-          interactive terminal UI.{" "}
-          <a href={CLI_URL} target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-4">
-            Read the CLI guide
-          </a>
-          .
+          {t.rich("cli.lead", {
+            code: (c) => <code className="font-mono text-[14px] text-foreground">{c}</code>,
+            link: (c) => (
+              <a href={CLI_URL} target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-4">
+                {c}
+              </a>
+            ),
+          })}
         </p>
         <div className="flex flex-col gap-2">
-          <div role="group" aria-label="Platform" className="flex gap-1">
+          <div role="group" aria-label={t("cli.platform")} className="flex gap-1">
             {INSTALL_COMMANDS.map((c) => (
               <button
                 key={c.id}
@@ -102,7 +101,7 @@ export function CliSection() {
                   c.id === os ? "bg-accent text-foreground shadow-[var(--chip-shadow)]" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {c.label}
+                {t(`cli.${c.id}`)}
               </button>
             ))}
           </div>
@@ -111,7 +110,7 @@ export function CliSection() {
             <span className="min-w-0 grow truncate">{install.command}</span>
             <button
               type="button"
-              aria-label={copied === "install" ? "Copied" : "Copy the install command"}
+              aria-label={copied === "install" ? t("cli.copied") : t("cli.copy")}
               onClick={() => copy("install", install.command)}
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors",
@@ -126,7 +125,7 @@ export function CliSection() {
           {POINTS.map((p) => (
             <li key={p} className="flex items-center gap-2.5">
               <Check className="size-4 shrink-0 text-tone-green" strokeWidth={2.2} />
-              {p}
+              {t(p)}
             </li>
           ))}
         </ul>
@@ -142,10 +141,10 @@ export function CliSection() {
             <span className="size-[11px] rounded-full bg-input" />
             <span className="size-[11px] rounded-full bg-input" />
           </span>
-          <span className="text-xs text-muted-foreground">Terminal</span>
+          <span className="text-xs text-muted-foreground">{t("cli.terminal")}</span>
         </div>
         <div
-          aria-label="A terminal uploading a file with the SkySend CLI"
+          aria-label={t("cli.terminalLabel")}
           role="img"
           className="h-[340px] overflow-hidden px-5 py-[18px] font-mono text-[12.5px] leading-[1.75] break-all sm:text-[13px]"
         >

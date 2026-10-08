@@ -5,52 +5,62 @@ import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, ChevronRight, Flag, Plus, RotateCcw } from "lucide-react";
 import { Eyebrow, Glow } from "@/components/site/fx";
 import { fetchWithCache } from "@/lib/github";
-import { formatBytes, formatCount, formatDuration, formatWindow, plural } from "@/lib/format";
+import { formatBytes, formatCount, formatDuration, formatRelative, formatWindow } from "@/lib/format";
 import { CountryFlag } from "@/components/site/country-flag";
+import { countryName } from "@/lib/countries";
+import { INTL_LOCALE } from "@/i18n/config";
+import { useI18n } from "@/i18n/provider";
+import type { Translator } from "@/i18n/translate";
 import { INSTANCES_API_URL, isOfficialInstance, parseInstancesResponse, type Instance } from "@/lib/instances";
 import { INSTANCES_DOCS_URL } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 const CACHE_KEY = "skysend-instances";
+// The copy says every 30 minutes, the cron of the instances worker.
 const CACHE_TTL_MS = 5 * 60 * 1000;
-/** How often the instances worker checks every instance, set by its cron. */
-const CHECK_EVERY = "every 30 minutes";
 
 type State =
   | { status: "loading" }
   | { status: "ready"; instances: Instance[]; lastUpdated: string | null }
   | { status: "error" };
 
-function relativeTime(iso: string): string {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (!Number.isFinite(mins) || mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${plural(hours, "hour")} ago`;
-  return `${plural(Math.floor(hours / 24), "day")} ago`;
-}
-
 /** The limits of an instance as the table and the cards show them. */
-function limitsOf(inst: Instance) {
-  const quota = inst.fileUploadQuotaBytes === 0 ? "No limit" : formatBytes(inst.fileUploadQuotaBytes);
+function limitsOf(inst: Instance, t: Translator) {
+  const quota = inst.fileUploadQuotaBytes === 0 ? t("instances.noLimit") : formatBytes(inst.fileUploadQuotaBytes, t);
   const quotaWindow =
-    inst.fileUploadQuotaBytes && inst.fileUploadQuotaWindow ? formatWindow(inst.fileUploadQuotaWindow) : "";
-  const noteParts = [formatDuration(inst.noteMaxExpiry), inst.noteMaxViews === null ? null : `${formatCount(inst.noteMaxViews)} views`]
+    inst.fileUploadQuotaBytes && inst.fileUploadQuotaWindow ? formatWindow(inst.fileUploadQuotaWindow, t) : "";
+  const noteParts = [
+    formatDuration(inst.noteMaxExpiry, t),
+    inst.noteMaxViews === null
+      ? null
+      : inst.noteMaxViews === 0
+        ? t("instances.unlimitedViews")
+        : t("instances.views", { count: inst.noteMaxViews }),
+  ]
     .filter((p) => p && p !== "-")
     .join(", ");
   return {
-    maxSize: formatBytes(inst.fileMaxSize),
-    perUpload: inst.fileMaxFilesPerUpload ? `${formatCount(inst.fileMaxFilesPerUpload)} files per upload` : "",
-    expiry: formatDuration(inst.fileMaxExpiry),
-    downloads: formatCount(inst.fileMaxDownloads),
+    maxSize: formatBytes(inst.fileMaxSize, t),
+    perUpload: inst.fileMaxFilesPerUpload
+      ? t("instances.filesPerUpload", { count: inst.fileMaxFilesPerUpload })
+      : "",
+    expiry: formatDuration(inst.fileMaxExpiry, t),
+    downloads: formatCount(inst.fileMaxDownloads, t),
     quota: inst.fileUploadQuotaBytes === null ? "-" : quota,
     quotaWindow,
-    noteSize: formatBytes(inst.noteMaxSize),
+    noteSize: formatBytes(inst.noteMaxSize, t),
     noteMeta: noteParts,
   };
 }
 
+/** The country of an instance in the language of the page. */
+function useCountry(inst: Instance): string {
+  const { locale } = useI18n();
+  return countryName(inst.country, inst.flag, INTL_LOCALE[locale]);
+}
+
 function Kind({ official }: { official: boolean }) {
+  const { t } = useI18n();
   return (
     <span
       className={cn(
@@ -58,12 +68,13 @@ function Kind({ official }: { official: boolean }) {
         official ? "bg-tone-green/16 text-tone-green" : "bg-accent text-subtle"
       )}
     >
-      {official ? "Official" : "Community"}
+      {official ? t("instances.official") : t("instances.community")}
     </span>
   );
 }
 
 function Status({ online }: { online: boolean }) {
+  const { t } = useI18n();
   return (
     <span
       className={cn(
@@ -75,7 +86,7 @@ function Status({ online }: { online: boolean }) {
         {online && <span className="fx-ping absolute inset-0 rounded-full bg-tone-green" />}
         <span className={cn("absolute inset-0 rounded-full", online ? "bg-tone-green" : "bg-tone-red")} />
       </span>
-      {online ? "Online" : "Offline"}
+      {online ? t("instances.online") : t("instances.offline")}
     </span>
   );
 }
@@ -93,7 +104,9 @@ function Value({ online, main, sub }: { online: boolean; main: string; sub?: str
 }
 
 function TableRow({ inst }: { inst: Instance }) {
-  const l = limitsOf(inst);
+  const { t } = useI18n();
+  const country = useCountry(inst);
+  const l = limitsOf(inst, t);
   const official = isOfficialInstance(inst.url);
   return (
     <div className={cn(COLUMNS, "h-20 border-b border-border px-5")}>
@@ -102,7 +115,7 @@ function TableRow({ inst }: { inst: Instance }) {
         <span className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[15px] font-semibold">{inst.name}</span>
           <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
-            {inst.country}
+            {country}
             <Kind official={official} />
           </span>
         </span>
@@ -110,7 +123,7 @@ function TableRow({ inst }: { inst: Instance }) {
       <span className="flex flex-col gap-1">
         <Status online={inst.online} />
         <span className="truncate text-xs text-muted-foreground">
-          {inst.online ? (inst.version ? `v${inst.version}` : "") : "No answer at the last check"}
+          {inst.online ? (inst.version ? `v${inst.version}` : "") : t("instances.noAnswer")}
         </span>
       </span>
       <Value online={inst.online} main={l.maxSize} sub={l.perUpload} />
@@ -122,10 +135,10 @@ function TableRow({ inst }: { inst: Instance }) {
         href={inst.url}
         target="_blank"
         rel="noreferrer"
-        aria-label={`Open ${inst.name}`}
+        aria-label={t("instances.openLabel", { name: inst.name })}
         className={cn("btn-chip flex h-[34px] items-center gap-1.5 justify-self-end rounded-lg px-3 font-medium", !inst.online && "opacity-50")}
       >
-        Open
+        {t("instances.open")}
         <ArrowUpRight className="size-3" />
       </a>
     </div>
@@ -133,12 +146,14 @@ function TableRow({ inst }: { inst: Instance }) {
 }
 
 function InstanceCard({ inst }: { inst: Instance }) {
-  const l = limitsOf(inst);
+  const { t } = useI18n();
+  const country = useCountry(inst);
+  const l = limitsOf(inst, t);
   const stats = [
-    [l.maxSize, "Max file size"],
-    [l.expiry, "Kept up to"],
-    [l.downloads, "Downloads"],
-    [l.quota, l.quotaWindow ? `Upload quota ${l.quotaWindow}` : "Upload quota"],
+    [l.maxSize, t("instances.statMaxSize")],
+    [l.expiry, t("instances.statKept")],
+    [l.downloads, t("instances.statDownloads")],
+    [l.quota, l.quotaWindow ? t("instances.statQuotaWindow", { window: l.quotaWindow }) : t("instances.statQuota")],
   ];
   return (
     <div className="panel flex flex-col gap-3.5 rounded-[18px] p-4">
@@ -147,7 +162,7 @@ function InstanceCard({ inst }: { inst: Instance }) {
         <span className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[15px] font-semibold">{inst.name}</span>
           <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-            {inst.country}
+            {country}
             <Kind official={isOfficialInstance(inst.url)} />
           </span>
         </span>
@@ -165,8 +180,8 @@ function InstanceCard({ inst }: { inst: Instance }) {
       </dl>
       <span className="text-[13px] leading-normal text-muted-foreground">
         {inst.online
-          ? `Notes up to ${l.noteSize}${l.noteMeta ? `, ${l.noteMeta}` : ""}${inst.version ? ` · v${inst.version}` : ""}`
-          : "No answer at the last check"}
+          ? `${t("instances.noteLimits", { size: l.noteSize })}${l.noteMeta ? `, ${l.noteMeta}` : ""}${inst.version ? ` · v${inst.version}` : ""}`
+          : t("instances.noAnswer")}
       </span>
       <a
         href={inst.url}
@@ -174,7 +189,7 @@ function InstanceCard({ inst }: { inst: Instance }) {
         rel="noreferrer"
         className="btn-chip flex h-11 items-center justify-center gap-1.5 rounded-[11px] font-medium"
       >
-        Open {inst.name}
+        {t("instances.openNamed", { name: inst.name })}
         <ArrowUpRight className="size-3.5" />
       </a>
     </div>
@@ -200,6 +215,7 @@ function Skeleton() {
 }
 
 export function Instances() {
+  const { t, path } = useI18n();
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
@@ -237,14 +253,11 @@ export function Instances() {
   return (
     <section id="instances" className="mx-auto flex max-w-[1248px] flex-col gap-10 px-4 pt-28 sm:px-6 sm:pt-[140px]">
       <div className="flex flex-col items-center gap-3.5 text-center">
-        <Eyebrow>Public instances</Eyebrow>
+        <Eyebrow>{t("instances.eyebrow")}</Eyebrow>
         <h2 className="text-[34px] leading-[1.06] font-semibold tracking-[-0.04em] sm:text-[48px]">
-          No server? Share on a public one.
+          {t("instances.title")}
         </h2>
-        <p className="max-w-[640px] text-base leading-relaxed text-muted-foreground">
-          Run by the community on the same open code, with their status and limits checked {CHECK_EVERY}. The key
-          never reaches them either.
-        </p>
+        <p className="max-w-[640px] text-base leading-relaxed text-muted-foreground">{t("instances.lead")}</p>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -253,14 +266,14 @@ export function Instances() {
         {state.status === "error" && (
           <div className="panel flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center text-muted-foreground">
             <AlertTriangle className="size-5 text-tone-red" />
-            The list of instances could not be loaded right now.
+            {t("instances.loadError")}
             <a
               href={INSTANCES_DOCS_URL}
               target="_blank"
               rel="noreferrer"
               className="text-foreground underline underline-offset-4"
             >
-              See the instances in the docs
+              {t("instances.seeDocs")}
             </a>
           </div>
         )}
@@ -275,9 +288,11 @@ export function Instances() {
                 )}
               />
               <span className="font-medium text-foreground">
-                {online === sorted.length ? `All ${sorted.length} online` : `${online} of ${sorted.length} online`}
+                {online === sorted.length
+                  ? t("instances.allOnline", { count: sorted.length })
+                  : t("instances.someOnline", { online, count: sorted.length })}
               </span>
-              {state.lastUpdated && <span>· checked {relativeTime(state.lastUpdated)}</span>}
+              {state.lastUpdated && <span>· {t("instances.checked", { time: formatRelative(state.lastUpdated, t) })}</span>}
             </div>
 
             <div className="panel hidden overflow-hidden rounded-[18px] lg:block">
@@ -290,24 +305,24 @@ export function Instances() {
                 />
                 <span className="font-semibold">
                   {online === sorted.length
-                    ? `All ${sorted.length} instances online`
-                    : `${online} of ${sorted.length} instances online`}
+                    ? t("instances.allOnlineLong", { count: sorted.length })
+                    : t("instances.someOnlineLong", { online, count: sorted.length })}
                 </span>
                 {state.lastUpdated && (
                   <span className="ml-auto flex items-center gap-1.5 text-[13px] text-muted-foreground">
                     <RotateCcw className="size-[13px]" />
-                    Checked {relativeTime(state.lastUpdated)}, {CHECK_EVERY}
+                    {t("instances.checkedLong", { time: formatRelative(state.lastUpdated, t) })}
                   </span>
                 )}
               </div>
               <div className={cn(COLUMNS, "h-10 border-b border-border px-5 text-xs text-muted-foreground")}>
-                <span>Instance</span>
-                <span>Status</span>
-                <span>Max file size</span>
-                <span>Kept up to</span>
-                <span>Downloads</span>
-                <span>Upload quota</span>
-                <span>Notes</span>
+                <span>{t("instances.colInstance")}</span>
+                <span>{t("instances.colStatus")}</span>
+                <span>{t("instances.colMaxSize")}</span>
+                <span>{t("instances.colKept")}</span>
+                <span>{t("instances.colDownloads")}</span>
+                <span>{t("instances.colQuota")}</span>
+                <span>{t("instances.colNotes")}</span>
                 <span />
               </div>
               {sorted.map((inst) => (
@@ -322,7 +337,7 @@ export function Instances() {
                 <span className="flex size-[38px] items-center justify-center rounded-[10px] border border-dashed border-input">
                   <Plus className="size-3.5" />
                 </span>
-                Run your own instance and add it to the list
+                {t("instances.addOwn")}
                 <ChevronRight className="ml-auto size-3.5" />
               </a>
             </div>
@@ -338,7 +353,7 @@ export function Instances() {
                 className="flex min-h-[52px] items-center gap-2.5 rounded-[14px] border border-dashed border-input px-3.5 text-muted-foreground sm:col-span-2"
               >
                 <Plus className="size-[15px]" />
-                Add your own instance to the list
+                {t("instances.addOwnShort")}
               </a>
             </div>
           </>
@@ -350,13 +365,11 @@ export function Instances() {
             <Flag className="size-[19px]" />
           </span>
           <span className="relative flex min-w-[220px] grow basis-0 flex-col gap-[3px]">
-            <span className="text-base font-semibold">Found something that should not be there?</span>
-            <span className="text-muted-foreground">
-              Report a link to the instance that hosts it. The report goes to its abuse contact, who can delete the share.
-            </span>
+            <span className="text-base font-semibold">{t("instances.reportTitle")}</span>
+            <span className="text-muted-foreground">{t("instances.reportText")}</span>
           </span>
-          <Link href="/report" className="btn-chip relative flex h-10 shrink-0 items-center rounded-[10px] px-4 font-medium">
-            Report a link
+          <Link href={path("/report")} className="btn-chip relative flex h-10 shrink-0 items-center rounded-[10px] px-4 font-medium">
+            {t("instances.reportButton")}
           </Link>
         </div>
       </div>

@@ -1,48 +1,36 @@
 import { Flag, Inbox, Link2, Mail, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
 import { ReportForm } from "@/components/site/report/report-form";
 import { DotGrid, Eyebrow, Glow } from "@/components/site/fx";
+import type { Locale } from "@/i18n/config";
+import { createTranslator, type MessageKey } from "@/i18n/translate";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Report a link",
-  description:
-    "Report a SkySend file, note or request link to the instance that hosts it. Its operator gets the report and can delete the share.",
-  alternates: {
-    canonical: "/report",
-  },
-};
+export function reportMetadata(locale: Locale) {
+  const t = createTranslator(locale);
+  return pageMetadata(locale, "/report/", {
+    title: t("meta.reportTitle"),
+    description: t("meta.reportDescription"),
+  });
+}
 
-const FLOW: { icon: LucideIcon; tone: string; title: string; text: string }[] = [
-  { icon: UserRound, tone: "subtle", title: "You", text: "Paste the link and say what is wrong." },
-  { icon: ShieldCheck, tone: "green", title: "A spam check", text: "Cloudflare Turnstile keeps bots out." },
-  { icon: Flag, tone: "red", title: "The operator", text: "Its abuse contact gets an email." },
+const FLOW: { icon: LucideIcon; tone: string; title: MessageKey; text: MessageKey }[] = [
+  { icon: UserRound, tone: "subtle", title: "report.flowYou", text: "report.flowYouText" },
+  { icon: ShieldCheck, tone: "green", title: "report.flowCheck", text: "report.flowCheckText" },
+  { icon: Flag, tone: "red", title: "report.flowOperator", text: "report.flowOperatorText" },
 ];
 
-const NOTES: { icon: LucideIcon; tone: string; title: string; text: string }[] = [
-  {
-    icon: Link2,
-    tone: "green",
-    title: "Paste the whole link",
-    text: "The part after the # lets the operator open the share and judge it. Without it they only see ciphertext.",
-  },
-  {
-    icon: Inbox,
-    tone: "amber",
-    title: "Inbox links are refused",
-    text: "Their key would open everything ever sent to a request. Report the upload link instead.",
-  },
-  {
-    icon: Mail,
-    tone: "subtle",
-    title: "Your email stays optional",
-    text: "Leave one only if the operator may write back to you.",
-  },
+const NOTES: { icon: LucideIcon; tone: string; title: MessageKey; text: MessageKey }[] = [
+  { icon: Link2, tone: "green", title: "report.noteWhole", text: "report.noteWholeText" },
+  { icon: Inbox, tone: "amber", title: "report.noteInbox", text: "report.noteInboxText" },
+  { icon: Mail, tone: "subtle", title: "report.noteEmail", text: "report.noteEmailText" },
 ];
 
 function toneColor(tone: string) {
   return tone === "subtle" ? "var(--subtle)" : `var(--tone-${tone})`;
 }
 
-export default function ReportPage() {
+export function ReportPage({ locale }: { locale: Locale }) {
+  const t = createTranslator(locale);
   return (
     <div className="relative">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[700px] overflow-hidden">
@@ -53,17 +41,14 @@ export default function ReportPage() {
 
       <div className="relative mx-auto grid max-w-[1248px] items-start gap-10 px-4 pt-[124px] sm:px-6 sm:pt-[172px] lg:grid-cols-[5fr_7fr] lg:gap-16">
         <div className="flex flex-col gap-[22px]">
-          <Eyebrow>Report a link</Eyebrow>
+          <Eyebrow>{t("report.eyebrow")}</Eyebrow>
           <h1 className="text-[36px] leading-[1.06] font-semibold tracking-[-0.045em] sm:text-[56px] sm:leading-[1.05]">
-            Found a link that <span className="fx-shine">should not be there?</span>
+            {t.rich("report.title", { shine: (c) => <span className="fx-shine">{c}</span> })}
           </h1>
-          <p className="text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-            Report a file, note or request link to the instance that hosts it. Its operator gets the report and can
-            delete the share.
-          </p>
+          <p className="text-base leading-relaxed text-muted-foreground sm:text-[17px]">{t("report.lead")}</p>
 
           <div className="panel flex flex-col gap-4 rounded-[18px] p-5">
-            <span className="font-semibold">Where a report goes</span>
+            <span className="font-semibold">{t("report.whereTitle")}</span>
             <ol className="grid gap-2 sm:grid-cols-3">
               {FLOW.map((step) => (
                 <li key={step.title} className="flex flex-col gap-1.5 rounded-xl border border-border bg-surface p-3">
@@ -76,8 +61,8 @@ export default function ReportPage() {
                   >
                     <step.icon className="size-[15px]" />
                   </span>
-                  <span className="text-[13px] font-semibold">{step.title}</span>
-                  <span className="text-xs leading-[1.45] text-muted-foreground">{step.text}</span>
+                  <span className="text-[13px] font-semibold">{t(step.title)}</span>
+                  <span className="text-xs leading-[1.45] text-muted-foreground">{t(step.text)}</span>
                 </li>
               ))}
             </ol>
@@ -88,8 +73,8 @@ export default function ReportPage() {
               <li key={note.title} className="flex gap-3 border-b border-border px-[18px] py-4 last:border-b-0">
                 <note.icon className="mt-0.5 size-[18px] shrink-0" style={{ color: toneColor(note.tone) }} />
                 <span className="flex flex-col gap-[3px]">
-                  <span className="font-semibold">{note.title}</span>
-                  <span className="leading-[1.55] text-muted-foreground">{note.text}</span>
+                  <span className="font-semibold">{t(note.title)}</span>
+                  <span className="leading-[1.55] text-muted-foreground">{t(note.text)}</span>
                 </span>
               </li>
             ))}

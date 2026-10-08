@@ -12,13 +12,17 @@ import {
   hasAbuseSupport,
   REPORT_API_BASE,
   REPORT_INSTANCES_URL,
+  FIELD_ERROR,
+  REASON_LABEL,
   REPORT_REASONS,
   parseReportInstances,
   ReportFormSchema,
   TURNSTILE_SITE_KEY,
   type ReportInstance,
+  type ReportReason,
 } from "@/lib/report";
 import { INSTANCES_DOCS_URL } from "@/lib/content";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 declare global {
@@ -93,10 +97,11 @@ function Hint({ tone, children }: { tone: "ok" | "warn" | "bad" | "plain"; child
 }
 
 export function ReportForm() {
+  const { t } = useI18n();
   const [instancesState, setInstancesState] = useState<InstancesState>({ status: "loading" });
   const [selectedHostname, setSelectedHostname] = useState<string | null>(null);
   const [url, setUrl] = useState("");
-  const [reasons, setReasons] = useState<string[]>([]);
+  const [reasons, setReasons] = useState<ReportReason[]>([]);
   const [comment, setComment] = useState("");
   const [replyEmail, setReplyEmail] = useState("");
   const [token, setToken] = useState("");
@@ -168,9 +173,9 @@ export function ReportForm() {
 
     const widgetId = window.turnstile.render(container, {
       sitekey: TURNSTILE_SITE_KEY,
-      callback: (t) => {
+      callback: (value) => {
         setTurnstileFailed(false);
-        setToken(t);
+        setToken(value);
       },
       "expired-callback": () => setToken(""),
       "error-callback": () => setTurnstileFailed(true),
@@ -192,7 +197,7 @@ export function ReportForm() {
     if (match && hostname && hasAbuseSupport(match)) setSelectedHostname(hostname);
   }
 
-  function toggleReason(reason: string) {
+  function toggleReason(reason: ReportReason) {
     setReasons((prev) => (prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]));
   }
 
@@ -203,16 +208,16 @@ export function ReportForm() {
 
     const trimmedUrl = url.trim();
     if (!selectedHostname || !abuseSupported) {
-      fail("Pick the instance the link belongs to.");
+      fail(t("report.errPickInstance"));
       return;
     }
     const kind = getLinkKind(trimmedUrl);
     if (kind === "inbox") {
-      fail("Inbox links cannot be reported. Report the upload link of the request instead.");
+      fail(t("report.errInbox"));
       return;
     }
     if (getHostname(trimmedUrl) !== selectedHostname || (kind !== "file" && kind !== "note" && kind !== "request")) {
-      fail("Paste a file, note or request link of the instance you picked.");
+      fail(t("report.errMismatch"));
       return;
     }
     const parsed = ReportFormSchema.safeParse({
@@ -223,7 +228,8 @@ export function ReportForm() {
       token,
     });
     if (!parsed.success) {
-      fail(parsed.error.issues[0]?.message ?? "Check the form and try again.");
+      const field = parsed.error.issues[0]?.path[0];
+      fail(t(typeof field === "string" && Object.hasOwn(FIELD_ERROR, field) ? FIELD_ERROR[field as keyof typeof FIELD_ERROR] : "report.errGeneric"));
       return;
     }
 
@@ -244,7 +250,7 @@ export function ReportForm() {
           if (widgetIdRef.current) window.turnstile?.reset(widgetIdRef.current);
           setToken("");
           setSubmitState("idle");
-          fail(`The report was refused: ${body.data.error}.`);
+          fail(t("report.refused", { reason: body.data.error }));
           return;
         }
         throw new Error("Server error");
@@ -269,23 +275,19 @@ export function ReportForm() {
     }
   }
 
-  let linkHint: ReactNode = <Hint tone="plain">Paste the link as you got it, the part after the # included.</Hint>;
-  if (url.trim() && !linkHost) linkHint = <Hint tone="bad">That does not look like a link.</Hint>;
+  let linkHint: ReactNode = <Hint tone="plain">{t("report.hintPaste")}</Hint>;
+  if (url.trim() && !linkHost) linkHint = <Hint tone="bad">{t("report.hintNotLink")}</Hint>;
   else if (linkKind === "inbox") {
-    linkHint = (
-      <Hint tone="bad">
-        Inbox links cannot be reported. Their key would open everything sent to the request, report its upload link
-        instead.
-      </Hint>
-    );
+    linkHint = <Hint tone="bad">{t("report.hintInbox")}</Hint>;
   } else if (linkHost && instancesState.status === "ready" && !linkInstance) {
-    linkHint = <Hint tone="warn">{linkHost} is not a listed instance. Write to its operator directly.</Hint>;
+    linkHint = <Hint tone="warn">{t("report.hintUnknown", { host: linkHost })}</Hint>;
   } else if (linkInstance && !hasAbuseSupport(linkInstance)) {
-    linkHint = <Hint tone="warn">{linkHost} takes no reports here. Write to its operator, linked below.</Hint>;
+    linkHint = <Hint tone="warn">{t("report.hintNoReports", { host: linkHost ?? "" })}</Hint>;
   } else if (linkInstance && linkKind === "other") {
-    linkHint = <Hint tone="warn">This is not a file, note or request link.</Hint>;
+    linkHint = <Hint tone="warn">{t("report.hintNotShare")}</Hint>;
   } else if (linkOk) {
-    linkHint = <Hint tone="ok">{`${linkKind === "request" ? "Request" : linkKind === "note" ? "Note" : "File"} link on ${linkHost}`}</Hint>;
+    const kindKey = linkKind === "request" ? "report.hintRequest" : linkKind === "note" ? "report.hintNote" : "report.hintFile";
+    linkHint = <Hint tone="ok">{t(kindKey, { host: linkHost ?? "" })}</Hint>;
   }
 
   return (
@@ -302,26 +304,24 @@ export function ReportForm() {
             <span className="flex size-16 items-center justify-center rounded-full bg-tone-green/16 text-tone-green shadow-[0_0_40px_rgb(70_200_157/0.35)]">
               <Check className="size-7" strokeWidth={2.4} />
             </span>
-            <h2 className="text-[26px] font-semibold tracking-[-0.03em]">Report sent to {sentTo}</h2>
-            <p className="max-w-[440px] leading-relaxed text-muted-foreground">
-              Its abuse contact has the link and your reasons. Thank you for keeping the instances clean.
-            </p>
+            <h2 className="text-[26px] font-semibold tracking-[-0.03em]">{t("report.sentTitle", { host: sentTo })}</h2>
+            <p className="max-w-[440px] leading-relaxed text-muted-foreground">{t("report.sentText")}</p>
             <button
               type="button"
               onClick={() => setSentTo(null)}
               className="btn-chip mt-2 h-[42px] rounded-[10px] px-[18px] font-medium"
             >
-              Report another link
+              {t("report.another")}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-[26px] p-5 sm:p-7">
             <div className="flex flex-col gap-2.5">
               <Step n={1} done={linkOk}>
-                The link
+                {t("report.stepLink")}
               </Step>
               <label htmlFor="report-url" className="text-muted-foreground">
-                The file, note or request link you want to report
+                {t("report.linkLabel")}
               </label>
               <input
                 id="report-url"
@@ -341,22 +341,24 @@ export function ReportForm() {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <Step n={2} done={!!selectedInstance && abuseSupported} aside={linkOk && selectedHostname === linkHost ? "Picked from the link" : undefined}>
-                The instance
+              <Step n={2} done={!!selectedInstance && abuseSupported} aside={linkOk && selectedHostname === linkHost ? t("report.pickedFromLink") : undefined}>
+                {t("report.stepInstance")}
               </Step>
               {instancesState.status === "loading" && (
                 <div className="flex h-[60px] items-center gap-2 rounded-xl border border-border bg-surface px-4 text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
-                  Loading the instances
+                  {t("report.loadingInstances")}
                 </div>
               )}
               {instancesState.status === "error" && (
                 <Hint tone="bad">
-                  The instances could not be loaded. Try again later, or find the operator in the{" "}
-                  <a href={INSTANCES_DOCS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">
-                    list of instances
-                  </a>
-                  .
+                  {t.rich("report.instancesError", {
+                    link: (c) => (
+                      <a href={INSTANCES_DOCS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                        {c}
+                      </a>
+                    ),
+                  })}
                 </Hint>
               )}
               {instancesState.status === "ready" && (
@@ -365,10 +367,10 @@ export function ReportForm() {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <Step n={3} done={reasons.length > 0} aside="Pick one or more">
-                What is wrong
+              <Step n={3} done={reasons.length > 0} aside={t("report.pickOneOrMore")}>
+                {t("report.stepReasons")}
               </Step>
-              <div role="group" aria-label="Reasons" className="flex flex-wrap gap-2">
+              <div role="group" aria-label={t("report.reasons")} className="flex flex-wrap gap-2">
                 {REPORT_REASONS.map((reason) => {
                   const on = reasons.includes(reason);
                   return (
@@ -383,7 +385,7 @@ export function ReportForm() {
                       )}
                     >
                       {on && <Check className="size-3.5" strokeWidth={2.6} />}
-                      {reason}
+                      {t(REASON_LABEL[reason])}
                     </button>
                   );
                 })}
@@ -391,22 +393,22 @@ export function ReportForm() {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <Step n={4} done={comment.trim().length >= 10} aside="At least 10 characters">
-                <label htmlFor="report-details">Details</label>
+              <Step n={4} done={comment.trim().length >= 10} aside={t("report.atLeast10")}>
+                <label htmlFor="report-details">{t("report.stepDetails")}</label>
               </Step>
               <textarea
                 id="report-details"
                 rows={4}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="What does the share contain, and where did you find the link?"
+                placeholder={t("report.detailsPlaceholder")}
                 className={cn(FIELD, "resize-none py-3 leading-relaxed")}
               />
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <Step n={5} done={false} aside="Optional">
-                <label htmlFor="report-email">Your email</label>
+              <Step n={5} done={false} aside={t("report.optional")}>
+                <label htmlFor="report-email">{t("report.stepEmail")}</label>
               </Step>
               <input
                 id="report-email"
@@ -417,7 +419,7 @@ export function ReportForm() {
                 placeholder="you@example.com"
                 className={cn(FIELD, "h-[46px]")}
               />
-              <Hint tone="plain">Only if the operator may write back to you.</Hint>
+              <Hint tone="plain">{t("report.emailHint")}</Hint>
             </div>
 
             {abuseSupported && <div ref={turnstileContainerRef} className="min-h-[65px]" />}
@@ -426,7 +428,7 @@ export function ReportForm() {
               {turnstileFailed && (
                 <p role="alert" className="flex items-start gap-2 text-[13px] text-tone-red">
                   <AlertCircle className="mt-px size-4 shrink-0" />
-                  The spam check could not load. Allow challenges.cloudflare.com in your blocker or try again later.
+                  {t("report.turnstileFailed")}
                 </p>
               )}
               {formError && (
@@ -438,7 +440,7 @@ export function ReportForm() {
               {submitState === "error" && (
                 <p role="alert" className="flex items-start gap-2 text-[13px] text-tone-red">
                   <AlertCircle className="mt-px size-4 shrink-0" />
-                  The report could not be sent. Try again in a moment.
+                  {t("report.sendFailed")}
                 </p>
               )}
               <button
@@ -448,12 +450,12 @@ export function ReportForm() {
               >
                 {submitState === "submitting" && <Loader2 className="size-4 animate-spin" />}
                 {submitState === "submitting"
-                  ? "Sending"
+                  ? t("report.sending")
                   : selectedHostname && abuseSupported
-                    ? `Send the report to ${selectedHostname}`
-                    : "Send the report"}
+                    ? t("report.sendTo", { host: selectedHostname })
+                    : t("report.send")}
               </button>
-              <span className="text-center text-xs text-faint">The report goes to the abuse contact of that instance.</span>
+              <span className="text-center text-xs text-faint">{t("report.goesTo")}</span>
             </div>
           </form>
         )}

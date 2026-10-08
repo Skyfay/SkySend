@@ -3,8 +3,10 @@ import { ArrowUpRight, Code, Inbox, LayoutGrid, Palette, Star, Type, type Lucide
 import { SpinBorder } from "@/components/site/fx";
 import { CategoryPill } from "@/components/site/roadmap/category";
 import { StarMilestone, type ReachedStep } from "@/components/site/roadmap/star-milestone";
-import type { Milestone, RoadmapItem } from "@/lib/roadmap";
-import type { ResolvedShipped } from "@/components/site/roadmap/timeline";
+import type { Milestone } from "@/lib/roadmap";
+import type { ResolvedItem, ResolvedShipped } from "@/components/site/roadmap/timeline";
+import type { Locale } from "@/i18n/config";
+import { createTranslator } from "@/i18n/translate";
 
 const CONIC_NOW =
   "conic-gradient(from 0deg, transparent 0deg 250deg, #46c89d 290deg, #22d3ee 320deg, #60a5fa 345deg, transparent 360deg)";
@@ -24,18 +26,21 @@ function Label({ children, className }: { children: React.ReactNode; className?:
 
 /** The top of the spine: the latest release, what is being built and the next goal. */
 export function NowSection({
+  locale,
   latest,
   inProgress,
   milestone,
   reached,
 }: {
+  locale: Locale;
   latest: ResolvedShipped | undefined;
-  inProgress: RoadmapItem[];
+  inProgress: ResolvedItem[];
   milestone: Milestone | undefined;
   reached: ReachedStep[];
 }) {
+  const t = createTranslator(locale);
   return (
-    <section aria-label="Now" className="relative z-[2] mx-auto mt-16 flex max-w-[1248px] flex-col items-center px-4 sm:px-6">
+    <section aria-label={t("roadmap.now")} className="relative z-[2] mx-auto mt-16 flex max-w-[1248px] flex-col items-center px-4 sm:px-6">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-[90px] left-1/2 -ml-[430px] h-[440px] w-[860px] rounded-full"
@@ -48,7 +53,7 @@ export function NowSection({
       <span className="relative flex size-14 items-center justify-center rounded-full border border-[#7ee6c1]/55 bg-[radial-gradient(circle_at_50%_30%,#c6f3e2,#ffffff_70%)] shadow-[0_0_0_6px_rgb(70_200_157/0.12),0_0_40px_rgb(70_200_157/0.5)] dark:bg-[radial-gradient(circle_at_50%_30%,#0f5a46,#0c0d0e_70%)]">
         <Image src="/logo.svg" alt="" width={30} height={30} />
       </span>
-      <span className="relative mt-2.5 rounded-full bg-tone-green/16 px-2.5 py-0.5 text-xs font-semibold text-tone-green">Now</span>
+      <span className="relative mt-2.5 rounded-full bg-tone-green/16 px-2.5 py-0.5 text-xs font-semibold text-tone-green">{t("roadmap.now")}</span>
       <span
         aria-hidden="true"
         className="relative h-7 w-0.5"
@@ -67,7 +72,7 @@ export function NowSection({
           <div className="flex flex-col gap-3 border-b border-border p-6 md:border-r md:border-b-0">
             <Label className="text-muted-foreground">
               <span className="size-2 rounded-full bg-tone-blue" />
-              Latest release
+              {t("roadmap.latestRelease")}
             </Label>
             <span className="flex flex-wrap items-baseline gap-x-2.5">
               <span className="text-[28px] font-semibold tracking-[-0.03em] tabular-nums">{latest.version}</span>
@@ -102,7 +107,7 @@ export function NowSection({
               rel="noreferrer"
               className="mt-auto flex w-fit items-center gap-1.5 font-medium text-tone-blue-soft"
             >
-              Read the changelog
+              {t("roadmap.readChangelog")}
               <ArrowUpRight className="size-3.5" />
             </a>
           </div>
@@ -114,7 +119,7 @@ export function NowSection({
               {inProgress.length > 0 && <span className="fx-ping absolute inset-0 rounded-full bg-tone-green" />}
               <span className="absolute inset-0 rounded-full bg-tone-green" />
             </span>
-            Being built
+            {t("roadmap.beingBuilt")}
           </Label>
           {inProgress.map((item) => (
             <div key={item.slug} className="flex flex-col gap-2 rounded-xl border border-tone-green/30 bg-tone-green/6 px-3.5 py-3">
@@ -127,8 +132,8 @@ export function NowSection({
           ))}
           {inProgress.length === 0 && (
             <>
-              <span className="text-[22px] leading-tight font-semibold tracking-[-0.02em]">Nothing marked in progress</span>
-              <span className="leading-[1.55] text-muted-foreground">Planned work moves here once it starts.</span>
+              <span className="text-[22px] leading-tight font-semibold tracking-[-0.02em]">{t("roadmap.nothingInProgress")}</span>
+              <span className="leading-[1.55] text-muted-foreground">{t("roadmap.nothingInProgressText")}</span>
             </>
           )}
         </div>
@@ -136,7 +141,7 @@ export function NowSection({
         <div className="flex flex-col gap-3 p-6">
           <Label className="text-tone-amber">
             <Star className="size-[13px] fill-current" />
-            Next goal
+            {t("roadmap.nextGoal")}
           </Label>
           {milestone && <StarMilestone milestone={milestone} reached={reached} />}
         </div>

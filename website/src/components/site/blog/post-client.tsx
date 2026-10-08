@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Link2 } from "lucide-react";
 import type { Heading } from "@/lib/blog";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 /** A thin bar on top of the window that fills while the article is read. */
 export function ReadingProgress({ targetId }: { targetId: string }) {
@@ -42,6 +43,7 @@ export function ReadingProgress({ targetId }: { targetId: string }) {
 }
 
 export function CopyLinkButton() {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,20 +69,21 @@ export function CopyLinkButton() {
     <button
       type="button"
       onClick={copy}
-      aria-label={copied ? "Link copied" : "Copy link"}
+      aria-label={copied ? t("blog.linkCopied") : t("blog.copyLink")}
       className={cn(
         "flex size-10 items-center justify-center gap-1.5 rounded-full border font-medium transition-all duration-200 sm:h-[34px] sm:w-auto sm:rounded-lg sm:px-3",
         copied ? "border-tone-green/35 bg-tone-green/10 text-tone-green" : "btn-chip"
       )}
     >
       {copied ? <Check className="size-4 sm:size-3.5" strokeWidth={2.4} /> : <Link2 className="size-4 sm:size-3.5" />}
-      <span className="hidden sm:inline">{copied ? "Link copied" : "Copy link"}</span>
+      <span className="hidden sm:inline">{copied ? t("blog.linkCopied") : t("blog.copyLink")}</span>
     </button>
   );
 }
 
 /** The table of contents beside the article, marking the heading being read. */
 export function TableOfContents({ headings }: { headings: Heading[] }) {
+  const { t } = useI18n();
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -113,8 +116,8 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
 
   return (
     <div className="panel rounded-2xl p-4">
-      <div className="px-2 pb-2.5 text-[13px] font-medium text-faint">On this page</div>
-      <nav aria-label="On this page" className="relative flex flex-col gap-0.5">
+      <div className="px-2 pb-2.5 text-[13px] font-medium text-faint">{t("blog.onThisPage")}</div>
+      <nav aria-label={t("blog.onThisPage")} className="relative flex flex-col gap-0.5">
         <span aria-hidden="true" className="absolute top-1 bottom-1 left-0 w-0.5 rounded-sm bg-border" />
         {headings.map((h, i) => {
           const on = i === active;

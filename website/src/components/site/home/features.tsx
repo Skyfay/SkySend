@@ -8,8 +8,11 @@ import {
   StorageCard,
   ThemesCard,
 } from "@/components/site/home/feature-cards";
+import type { Locale } from "@/i18n/config";
+import { createTranslator } from "@/i18n/translate";
 
-export function Features() {
+export function Features({ locale }: { locale: Locale }) {
+  const t = createTranslator(locale);
   return (
     <section id="features" className="relative px-4 pt-28 sm:px-6 sm:pt-[150px]">
       <div
@@ -21,14 +24,11 @@ export function Features() {
 
       <div className="relative mx-auto flex max-w-[1200px] flex-col gap-10">
         <div className="flex flex-col items-center gap-3.5 text-center">
-          <Eyebrow>Features</Eyebrow>
+          <Eyebrow>{t("features.eyebrow")}</Eyebrow>
           <h2 className="max-w-[820px] text-[34px] leading-[1.06] font-semibold tracking-[-0.04em] sm:text-[48px]">
-            Everything a private share needs,{" "}
-            <span className="fx-shine">and nothing that could read it.</span>
+            {t.rich("features.title", { shine: (c) => <span className="fx-shine">{c}</span> })}
           </h2>
-          <p className="hidden text-faint [@media(pointer:fine)]:block">
-            Move the mouse over the cards, most of them can be clicked.
-          </p>
+          <p className="hidden text-faint [@media(pointer:fine)]:block">{t("features.hint")}</p>
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[repeat(4,minmax(300px,auto))]">

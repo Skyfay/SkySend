@@ -4,27 +4,30 @@ import { ContributorsPill } from "@/components/site/home/contributors-pill";
 import { Lens } from "@/components/site/home/lens";
 import { Counters, CryptoMarquee } from "@/components/site/home/hero-strips";
 import { CONIC, DotGrid, Floor, Glow, Stars } from "@/components/site/fx";
-import { HERO_NEWS } from "@/lib/content";
+import { CHANGELOG_URL } from "@/lib/content";
+import { localePath, type Locale } from "@/i18n/config";
+import { createTranslator, type MessageKey, type Translator } from "@/i18n/translate";
 
 // The rolling word in the headline. The first entry comes again at the end,
 // so the loop back to the top cannot be seen.
-const TICKER: { label: string; icon: LucideIcon; tone: string }[] = [
-  { label: "files", icon: File, tone: "green" },
-  { label: "passwords", icon: KeyRound, tone: "amber" },
-  { label: "SSH keys", icon: SquareTerminal, tone: "cyan" },
-  { label: "code", icon: Code, tone: "violet" },
-  { label: "folders", icon: Folder, tone: "blue" },
+const TICKER: { label: MessageKey; icon: LucideIcon; tone: string }[] = [
+  { label: "hero.tickerFiles", icon: File, tone: "green" },
+  { label: "hero.tickerPasswords", icon: KeyRound, tone: "amber" },
+  { label: "hero.tickerSshKeys", icon: SquareTerminal, tone: "cyan" },
+  { label: "hero.tickerCode", icon: Code, tone: "violet" },
+  { label: "hero.tickerFolders", icon: Folder, tone: "blue" },
 ];
 
-function Ticker() {
+// The box takes the width of the longest word, so every language fits.
+function Ticker({ t }: { t: Translator }) {
   return (
-    <span className="box-content inline-flex h-[1.158em] w-[5.3em] overflow-hidden rounded-[0.29em] border border-foreground/15 bg-surface-2/70 text-left shadow-[inset_0_1px_0_var(--highlight),0_20px_50px_-20px_rgb(23_163_122/0.6)]">
-      <span className="fx-ticker flex w-full flex-col self-start">
+    <span className="box-content inline-flex h-[1.158em] overflow-hidden rounded-[0.29em] border border-foreground/15 bg-surface-2/70 text-left shadow-[inset_0_1px_0_var(--highlight),0_20px_50px_-20px_rgb(23_163_122/0.6)]">
+      <span className="fx-ticker flex w-max flex-col self-start">
         {[...TICKER, TICKER[0]].map((item, i) => (
           <span
             key={i}
             aria-hidden={i > 0 ? "true" : undefined}
-            className="flex h-[1.5714em] shrink-0 items-center gap-[0.29em] pr-[0.36em] pl-[0.25em] text-[0.737em]"
+            className="flex h-[1.5714em] shrink-0 items-center gap-[0.29em] pr-[0.36em] pl-[0.25em] text-[0.737em] whitespace-nowrap"
           >
             <span
               className="flex size-[1em] shrink-0 items-center justify-center rounded-[0.25em]"
@@ -36,7 +39,7 @@ function Ticker() {
             >
               <item.icon className="size-[0.5em]" strokeWidth={2.2} />
             </span>
-            {item.label}
+            {t(item.label)}
           </span>
         ))}
       </span>
@@ -44,9 +47,10 @@ function Ticker() {
   );
 }
 
-export function Hero() {
+export function Hero({ locale }: { locale: Locale }) {
+  const t = createTranslator(locale);
   return (
-    <section aria-label="Intro" className="relative overflow-hidden pb-24">
+    <section aria-label={t("hero.intro")} className="relative overflow-hidden pb-24">
       <Glow color="#17a37a" opacity={0.24} drift={1} className="top-[120px] left-[4%] size-[560px]" />
       <Glow color="#0e7490" opacity={0.26} drift={2} className="top-[40px] right-[3%] size-[540px]" />
       <Glow
@@ -72,7 +76,7 @@ export function Hero() {
 
       <div className="relative z-[2] mx-auto flex max-w-[1280px] flex-col items-center gap-[26px] px-6 pt-[124px] text-center sm:pt-[172px]">
         <a
-          href={HERO_NEWS.href}
+          href={CHANGELOG_URL}
           target="_blank"
           rel="noreferrer"
           className="relative inline-flex max-w-full overflow-hidden rounded-full bg-foreground/10 p-px"
@@ -88,32 +92,31 @@ export function Hero() {
                 <span className="fx-ping absolute inset-0 rounded-full bg-tone-green" />
                 <span className="absolute inset-0 rounded-full bg-tone-green" />
               </span>
-              New
+              {t("hero.new")}
             </span>
-            <span className="truncate sm:hidden">{HERO_NEWS.shortLabel}</span>
-            <span className="hidden truncate sm:inline">{HERO_NEWS.label}</span>
+            <span className="truncate sm:hidden">{t("hero.newsShort")}</span>
+            <span className="hidden truncate sm:inline">{t("hero.news")}</span>
             <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
           </span>
         </a>
 
         <h1 className="text-[40px] leading-[1.1] font-semibold tracking-[-0.045em] sm:text-[56px] sm:leading-[1.08] lg:text-[76px]">
           <span className="flex flex-wrap items-center justify-center gap-x-[0.26em] gap-y-2">
-            Share <Ticker />
+            {t("hero.share")} <Ticker t={t} />
           </span>
-          <span className="fx-shine mt-1 block">only the recipient can read.</span>
+          <span className="fx-shine mt-1 block">{t("hero.line2")}</span>
         </h1>
 
         <p className="max-w-[660px] text-base leading-relaxed text-muted-foreground sm:text-lg">
-          End-to-end encrypted file and note sharing you can host yourself. Everything is encrypted in
-          your browser, and the key travels in the link. No accounts, no tracking.
+          {t("hero.lead")}
         </p>
 
         <div className="flex w-full flex-col items-stretch gap-2.5 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
           <Link
-            href="#start"
+            href={localePath(locale, "/#start")}
             className="btn-primary flex h-[50px] items-center justify-center gap-2 rounded-xl px-[22px] text-base font-semibold sm:h-[46px] sm:rounded-[10px] sm:text-[15px] sm:font-medium"
           >
-            Get started
+            {t("hero.getStarted")}
             <ArrowRight className="size-4" />
           </Link>
           <ContributorsPill />
@@ -121,8 +124,8 @@ export function Hero() {
       </div>
 
       <Lens />
-      <Counters />
-      <CryptoMarquee />
+      <Counters t={t} />
+      <CryptoMarquee t={t} />
     </section>
   );
 }

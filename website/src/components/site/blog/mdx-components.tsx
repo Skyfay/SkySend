@@ -1,6 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { Info } from "lucide-react";
 import { CodeBlock } from "@/components/site/code-block";
+import type { Translator } from "@/i18n/translate";
 import { slugify } from "@/lib/blog";
 
 // Components the blog posts can use in their MDX. Props are plain strings,
@@ -18,12 +19,12 @@ function H2({ children }: { children?: ReactNode }) {
 }
 
 /** A side by side table, the right column being SkySend. */
-function Compare({ left, right, children }: { left: string; right: string; children?: ReactNode }) {
+function Compare({ label, left, right, children }: { label: string; left: string; right: string; children?: ReactNode }) {
   return (
     <div className="not-prose my-8 overflow-x-auto rounded-[18px] border border-border bg-card">
       <div className="min-w-[520px]">
         <div className="grid grid-cols-[minmax(140px,200px)_1fr_1fr] border-b border-border text-[13px] font-semibold">
-          <span className="px-4 py-3.5 font-medium text-faint">Compared</span>
+          <span className="px-4 py-3.5 font-medium text-faint">{label}</span>
           <span className="flex items-center gap-2 px-4 py-3.5">
             <span className="size-2 rounded-full bg-muted-foreground" />
             {left}
@@ -64,10 +65,15 @@ function Callout({ title, children }: { title?: string; children?: ReactNode }) 
   );
 }
 
-export const MDX_COMPONENTS = {
-  h2: H2,
-  pre: CodeBlock,
-  Compare,
-  Row,
-  Callout,
-};
+/** The components for a post, with their own labels in the language of the page. */
+export function mdxComponents(t: Translator) {
+  return {
+    h2: H2,
+    pre: CodeBlock,
+    Compare: (props: { left: string; right: string; children?: ReactNode }) => (
+      <Compare label={t("blog.compared")} {...props} />
+    ),
+    Row,
+    Callout,
+  };
+}

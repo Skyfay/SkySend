@@ -6,6 +6,8 @@ import { z } from "zod";
 import { fetchWithCache } from "@/lib/github";
 import { GITHUB_REPO, GITHUB_URL } from "@/lib/content";
 import type { Milestone } from "@/lib/roadmap";
+import { useI18n } from "@/i18n/provider";
+import { INTL_LOCALE } from "@/i18n/config";
 
 // Shared with the stars button in the header, so both read one request.
 const CACHE_KEY = "skysend-gh-stars";
@@ -13,11 +15,12 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 
 const RepoSchema = z.object({ stargazers_count: z.number().int().nonnegative() });
 
-/** A goal reached before, with the day it was reached, like "May 10". */
+/** A goal reached before, with the day it was reached, like "May 10" or "10. Mai". */
 export type ReachedStep = { value: number; day: string };
 
 /** The next community goal with the live star count and the goals reached before it. */
 export function StarMilestone({ milestone, reached }: { milestone: Milestone; reached: ReachedStep[] }) {
+  const { t, locale } = useI18n();
   const [stars, setStars] = useState<number | "failed" | null>(null);
 
   useEffect(() => {
@@ -42,14 +45,14 @@ export function StarMilestone({ milestone, reached }: { milestone: Milestone; re
     <>
       <span className="flex flex-wrap items-baseline gap-x-2.5">
         <span className="text-[28px] font-semibold tracking-[-0.03em] tabular-nums">
-          {milestone.target} {milestone.unit}
+          {t("roadmap.stars", { count: milestone.target })}
         </span>
         <span className="text-muted-foreground tabular-nums">
           {count !== null
-            ? `${new Intl.NumberFormat("en").format(count)} so far`
+            ? t("roadmap.soFar", { count })
             : stars === "failed"
-              ? "The count is on GitHub"
-              : "Counting"}
+              ? t("roadmap.countOnGithub")
+              : t("roadmap.counting")}
         </span>
       </span>
       <div aria-hidden="true" className="relative mt-2 h-2 rounded-full bg-accent">
@@ -70,12 +73,11 @@ export function StarMilestone({ milestone, reached }: { milestone: Milestone; re
       </div>
       {reached.length > 0 && (
         <p className="text-xs leading-normal text-muted-foreground">
-          Reached{" "}
-          {reached
-            .map((step) => `${step.value} on ${step.day}`)
-            .join(", ")
-            .replace(/, ([^,]*)$/, " and $1")}
-          .
+          {t("roadmap.reached", {
+            list: new Intl.ListFormat(INTL_LOCALE[locale], { type: "conjunction" }).format(
+              reached.map((step) => t("roadmap.reachedItem", { count: step.value, day: step.day }))
+            ),
+          })}
         </p>
       )}
       <a
@@ -85,7 +87,7 @@ export function StarMilestone({ milestone, reached }: { milestone: Milestone; re
         className="mt-auto flex w-fit items-center gap-1.5 font-medium text-tone-amber"
       >
         <Star className="size-3.5" />
-        Star SkySend on GitHub
+        {t("roadmap.starOnGithub")}
         <ArrowUpRight className="size-3.5" />
       </a>
     </>

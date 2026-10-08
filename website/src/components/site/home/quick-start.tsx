@@ -6,6 +6,8 @@ import { Eyebrow } from "@/components/site/fx";
 import { useCopy } from "@/components/site/home/hooks";
 import { COMPOSE_SNIPPET, DOCKER_RUN_SNIPPET, ENV_VARS_URL, REVERSE_PROXY_URL, S3_URL } from "@/lib/content";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/translate";
 
 type Token = { text: string; kind: "key" | "value" | "string" | "punct" };
 
@@ -65,24 +67,22 @@ const FILES = {
 
 type FileId = keyof typeof FILES;
 
-const STEPS = [
-  { title: "Save the file", text: "One service and two volumes. Set BASE_URL to the address people will open." },
-  { title: "Start it", text: "Docker pulls the image for your platform and starts the container." },
-  {
-    title: "Open it",
-    text: "Share the first file on localhost. Before you go public, put HTTPS in front, the browser needs it for the encryption.",
-  },
+const STEPS: { title: MessageKey; text: MessageKey }[] = [
+  { title: "start.step1", text: "start.step1Text" },
+  { title: "start.step2", text: "start.step2Text" },
+  { title: "start.step3", text: "start.step3Text" },
 ];
 
-const LINKS = [
-  { href: ENV_VARS_URL, label: "Every environment variable" },
-  { href: REVERSE_PROXY_URL, label: "Reverse proxy" },
-  { href: S3_URL, label: "S3 storage" },
+const LINKS: { href: string; label: MessageKey }[] = [
+  { href: ENV_VARS_URL, label: "start.envVars" },
+  { href: REVERSE_PROXY_URL, label: "start.reverseProxy" },
+  { href: S3_URL, label: "start.s3" },
 ];
 
 const RING = "border-tone-green/55 shadow-[0_0_0_3px_color-mix(in_srgb,var(--tone-green)_10%,transparent)]";
 
 export function QuickStart() {
+  const { t } = useI18n();
   const [file, setFile] = useState<FileId>("compose");
   const [step, setStep] = useState(1);
   const { copied, copy } = useCopy();
@@ -91,13 +91,11 @@ export function QuickStart() {
   return (
     <section id="start" className="mx-auto flex max-w-[1248px] flex-col gap-10 px-4 pt-28 sm:px-6 sm:pt-[140px]">
       <div className="flex flex-col items-center gap-3.5 text-center">
-        <Eyebrow>Quick start</Eyebrow>
+        <Eyebrow>{t("start.eyebrow")}</Eyebrow>
         <h2 className="text-[34px] leading-[1.06] font-semibold tracking-[-0.04em] sm:text-[48px]">
-          Your own instance <span className="fx-shine">in two minutes.</span>
+          {t.rich("start.title", { shine: (c) => <span className="fx-shine">{c}</span> })}
         </h2>
-        <p className="max-w-[600px] text-base leading-relaxed text-muted-foreground">
-          One container with SQLite inside. Images for AMD64 and ARM64.
-        </p>
+        <p className="max-w-[600px] text-base leading-relaxed text-muted-foreground">{t("start.lead")}</p>
       </div>
 
       <div className="grid items-stretch gap-6 lg:grid-cols-[4fr_7fr]">
@@ -124,8 +122,8 @@ export function QuickStart() {
                   {i + 1}
                 </span>
                 <span className="flex flex-col gap-1">
-                  <span className="text-base font-semibold">{s.title}</span>
-                  <span className="leading-[1.55] text-muted-foreground">{s.text}</span>
+                  <span className="text-base font-semibold">{t(s.title)}</span>
+                  <span className="leading-[1.55] text-muted-foreground">{t(s.text)}</span>
                 </span>
               </button>
             );
@@ -139,7 +137,7 @@ export function QuickStart() {
                 rel="noreferrer"
                 className="flex items-center gap-1 transition-colors hover:text-foreground"
               >
-                {l.label}
+                {t(l.label)}
                 <ArrowUpRight className="size-3" />
               </a>
             ))}
@@ -171,7 +169,7 @@ export function QuickStart() {
               )}
             >
               {copied === file ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied === file ? "Copied" : "Copy"}
+              {copied === file ? t("start.copied") : t("start.copy")}
             </button>
           </div>
 
@@ -187,9 +185,9 @@ export function QuickStart() {
                   {i + 1}
                 </span>
                 <span className="whitespace-pre">
-                  {current.tokenize(line).map((t, j) => (
-                    <span key={j} className={KIND[t.kind]}>
-                      {t.text}
+                  {current.tokenize(line).map((tok, j) => (
+                    <span key={j} className={KIND[tok.kind]}>
+                      {tok.text}
                     </span>
                   ))}
                 </span>
@@ -220,9 +218,9 @@ export function QuickStart() {
             )}
           >
             <Globe className="size-3.5" />
-            Open
+            {t("start.open")}
             <span className="font-mono text-foreground">http://localhost:3000</span>
-            <span className="text-muted-foreground sm:ml-auto">HTTPS in front before you go public</span>
+            <span className="text-muted-foreground sm:ml-auto">{t("start.httpsFirst")}</span>
           </div>
         </div>
       </div>

@@ -25,6 +25,9 @@ import {
 import { CONIC, SpinBorder } from "@/components/site/fx";
 import { useTick } from "@/components/site/home/hooks";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
+import { INTL_LOCALE } from "@/i18n/config";
+import type { MessageKey } from "@/i18n/translate";
 
 const HEX = "0123456789abcdef";
 
@@ -44,15 +47,15 @@ const LINK_BASE = "https://ch.skysend.app/file/aB3kQ9xZ";
 const LINK_SECRET = "#Zk3vT0qL8mWc2HxR9bN4yJ6sPa1eFgUd7tKiVo5nC3w";
 
 const FILES = [
-  { name: "q3-board-pack.pdf", size: "12.4 MB", icon: File, tone: "blue" },
-  { name: "contract-signed.pdf", size: "2.1 MB", icon: File, tone: "blue" },
-  { name: "site-photos", size: "169.8 MB", note: "214 files", icon: Folder, tone: "amber" },
+  { name: "q3-board-pack.pdf", size: 12.4, icon: File, tone: "blue" },
+  { name: "contract-signed.pdf", size: 2.1, icon: File, tone: "blue" },
+  { name: "site-photos", size: 169.8, note: "lens.folderFiles", icon: Folder, tone: "amber" },
 ] as const;
 
-const LINK_FACTS = [
-  { icon: Clock, text: "Expires on Thursday, 15 October" },
-  { icon: Download, text: "0 of 5 downloads used" },
-  { icon: Lock, text: "Send the password another way than the link" },
+const LINK_FACTS: { icon: typeof Clock; text: MessageKey }[] = [
+  { icon: Clock, text: "lens.expiresOn" },
+  { icon: Download, text: "lens.downloadsUsed" },
+  { icon: Lock, text: "lens.passwordElsewhere" },
 ];
 
 // Where the two cards sit in the window from lg on, in percent of its width,
@@ -89,6 +92,8 @@ function Pill({ children, className }: { children: ReactNode; className?: string
 
 /** The share page of the app, the way the person sharing sees it. */
 function YouLayer() {
+  const { t, locale } = useI18n();
+  const mb = (n: number) => `${new Intl.NumberFormat(INTL_LOCALE[locale]).format(n)} MB`;
   return (
     <div className="relative flex flex-col gap-3 bg-background bg-dot-grid p-3 sm:p-5 lg:block lg:h-full lg:p-0">
       <div className="absolute top-5 left-1/2 -ml-[280px] hidden h-[52px] w-[560px] items-center gap-3.5 rounded-[14px] border border-[var(--header-border)] bg-[var(--header-bg)] pr-2 pl-3.5 shadow-[inset_0_1px_0_var(--highlight)] lg:flex">
@@ -98,11 +103,11 @@ function YouLayer() {
         </span>
         <span className="ml-2.5 flex gap-0.5 text-[13px] font-medium text-muted-foreground">
           <span className="flex h-8 items-center rounded-lg bg-accent px-3 text-foreground shadow-[var(--chip-shadow)]">
-            Share
+            {t("lens.tabShare")}
           </span>
-          <span className="flex h-8 items-center px-3">Request</span>
+          <span className="flex h-8 items-center px-3">{t("lens.tabRequest")}</span>
           <span className="flex h-8 items-center gap-1.5 px-3">
-            My links
+            {t("lens.tabMyLinks")}
             <span className="size-1.5 rounded-full bg-tone-green" />
           </span>
         </span>
@@ -114,14 +119,14 @@ function YouLayer() {
           <span className="flex h-9 rounded-[10px] border border-border bg-surface p-[3px] text-[13px] font-medium">
             <span className="flex items-center gap-1.5 rounded-[7px] bg-accent px-3.5 shadow-[var(--chip-shadow)]">
               <File className="size-3.5" />
-              File
+              {t("lens.file")}
             </span>
             <span className="flex items-center gap-1.5 px-3.5 text-muted-foreground">
               <Type className="size-3.5" />
-              Note
+              {t("lens.note")}
             </span>
           </span>
-          <span className="text-[13px] text-muted-foreground">3 items · 184.3 MB</span>
+          <span className="text-[13px] text-muted-foreground">{t("lens.items")}</span>
         </div>
         <div className="rounded-xl border border-border bg-surface">
           {FILES.map((f, i) => (
@@ -133,27 +138,29 @@ function YouLayer() {
                 <f.icon className="size-4" />
               </Tile>
               <span className="min-w-0 truncate font-medium">{f.name}</span>
-              {"note" in f && <span className="hidden text-muted-foreground sm:inline">{f.note}</span>}
-              <span className="ml-auto text-muted-foreground tabular-nums">{f.size}</span>
+              {"note" in f && <span className="hidden text-muted-foreground sm:inline">{t(f.note)}</span>}
+              <span className="ml-auto text-muted-foreground tabular-nums">{mb(f.size)}</span>
               <X className="size-3.5 shrink-0 text-faint" />
             </div>
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
           <Pill className="btn-chip">
-            <Clock className="size-3.5 text-muted-foreground" />7 days
+            <Clock className="size-3.5 text-muted-foreground" />
+            {t("lens.days7")}
           </Pill>
           <Pill className="btn-chip">
-            <Download className="size-3.5 text-muted-foreground" />5 downloads
+            <Download className="size-3.5 text-muted-foreground" />
+            {t("lens.downloads5")}
           </Pill>
           <Pill className="border-tone-green/50 bg-tone-green/16 text-tone-green">
             <Lock className="size-3.5" />
-            Password
+            {t("lens.password")}
           </Pill>
         </div>
-        <p className="text-[13px] text-muted-foreground">Deleted in 7 days or after 5 downloads, whichever comes first.</p>
+        <p className="text-[13px] text-muted-foreground">{t("lens.deletedSentence")}</p>
         <span className="btn-primary mt-auto flex h-11 items-center justify-center gap-2 rounded-[10px] font-semibold">
-          Share 3 items
+          {t("lens.shareItems")}
           <ArrowRight className="size-4" />
         </span>
       </div>
@@ -164,8 +171,8 @@ function YouLayer() {
             <Check className="size-[18px]" strokeWidth={2.4} />
           </span>
           <span className="flex flex-col gap-0.5">
-            <span className="text-base font-semibold">Link ready</span>
-            <span className="text-[13px] text-muted-foreground">Encrypted in this browser before upload</span>
+            <span className="text-base font-semibold">{t("lens.linkReady")}</span>
+            <span className="text-[13px] text-muted-foreground">{t("lens.encryptedHere")}</span>
           </span>
         </div>
         <div className="rounded-xl border border-border bg-surface px-3.5 py-3 font-mono text-[13px] leading-[1.65] break-all">
@@ -175,7 +182,7 @@ function YouLayer() {
         <div className="flex gap-2">
           <span className="btn-primary flex h-10 grow items-center justify-center gap-2 rounded-[10px] font-semibold">
             <Copy className="size-[15px]" />
-            Copy link
+            {t("lens.copyLink")}
           </span>
           <span className="btn-chip flex size-10 items-center justify-center rounded-[10px] text-subtle">
             <QrCode className="size-4" />
@@ -185,7 +192,7 @@ function YouLayer() {
           {LINK_FACTS.map((fact) => (
             <div key={fact.text} className="flex h-9 items-center gap-2.5 border-t border-border">
               <fact.icon className="size-[15px] text-muted-foreground" />
-              {fact.text}
+              {t(fact.text)}
             </div>
           ))}
         </div>
@@ -200,6 +207,7 @@ function YouLayer() {
  * stands still.
  */
 function ServerLayer() {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const tick = useTick(220, ref, 0);
   const dashed = "border border-dashed border-tone-green/35 bg-[#0e1010]/92";
@@ -210,41 +218,41 @@ function ServerLayer() {
           <Server className="size-4" />
         </span>
         <span className="font-mono text-[13px]">uploads/aB3kQ9xZ.bin</span>
-        <span className="ml-auto text-[13px] text-[#9c9ca4]">184.3 MB of ciphertext</span>
+        <span className="ml-auto text-[13px] text-[#9c9ca4]">{t("lens.ciphertext")}</span>
       </div>
 
       <div className={cn("flex flex-col gap-3.5 rounded-2xl p-4 sm:p-5", dashed, LEFT_CARD)}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex h-9 items-center gap-2 rounded-[10px] bg-tone-green/10 px-3.5 text-[13px] font-medium text-tone-green">
             <Lock className="size-3.5" />
-            One encrypted blob
+            {t("lens.oneBlob")}
           </span>
-          <span className="text-[13px] text-[#9c9ca4]">Item count and total size, nothing per file</span>
+          <span className="text-[13px] text-[#9c9ca4]">{t("lens.noPerFile")}</span>
         </div>
         <div className="rounded-xl border border-tone-green/18 bg-[#0b0c0c]">
           <div className="flex h-[52px] items-center gap-3 border-b border-tone-green/14 px-3.5">
-            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">Blob</span>
+            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">{t("lens.blob")}</span>
             <span className="truncate font-mono text-[13px]">aB3kQ9xZ.bin</span>
             <span className="ml-auto text-[#9c9ca4] tabular-nums">184.3 MB</span>
           </div>
           <div className="flex h-[52px] items-center gap-3 border-b border-tone-green/14 px-3.5">
-            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">Metadata</span>
+            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">{t("lens.metadata")}</span>
             <span className="overflow-hidden font-mono text-[13px] whitespace-nowrap text-tone-green">{hexAt(tick * 7 + 3, 44)}</span>
           </div>
           <div className="flex h-[52px] items-center gap-3 px-3.5">
-            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">Nonce</span>
+            <span className="w-[70px] shrink-0 text-[13px] text-[#9c9ca4]">{t("lens.nonce")}</span>
             <span className="overflow-hidden font-mono text-[13px] whitespace-nowrap text-tone-green">{hexAt(tick * 13 + 5, 24)}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-[#c8c8cd]">
-          <Pill className="border-dashed border-[#36363b]">Delete after 15 Oct, 11:42</Pill>
-          <Pill className="border-dashed border-[#36363b]">5 downloads at most</Pill>
-          <Pill className="border-dashed border-[#36363b]">Password check</Pill>
+          <Pill className="border-dashed border-[#36363b]">{t("lens.deleteAfter")}</Pill>
+          <Pill className="border-dashed border-[#36363b]">{t("lens.downloadsAtMost")}</Pill>
+          <Pill className="border-dashed border-[#36363b]">{t("lens.passwordCheck")}</Pill>
         </div>
-        <p className="text-[13px] text-[#9c9ca4]">The server knows the limits, so it can enforce them.</p>
+        <p className="text-[13px] text-[#9c9ca4]">{t("lens.limitsKnown")}</p>
         <span className="mt-auto flex h-11 items-center justify-center gap-2 rounded-[10px] border border-dashed border-tone-green/35 bg-[repeating-linear-gradient(135deg,rgb(70_200_157/0.05)_0_8px,transparent_8px_16px)] font-medium text-[#9c9ca4]">
           <EyeOff className="size-4" />
-          Names, types and contents are not here
+          {t("lens.notHere")}
         </span>
       </div>
 
@@ -254,8 +262,8 @@ function ServerLayer() {
             <Link2 className="size-[18px]" />
           </span>
           <span className="flex flex-col gap-0.5">
-            <span className="text-base font-semibold">What the link gives away</span>
-            <span className="text-[13px] text-[#9c9ca4]">Only the part in front of the #</span>
+            <span className="text-base font-semibold">{t("lens.givesAway")}</span>
+            <span className="text-[13px] text-[#9c9ca4]">{t("lens.beforeHash")}</span>
           </span>
         </div>
         <div className="rounded-xl border border-tone-green/18 bg-[#0b0c0c] px-3.5 py-3 font-mono text-[13px] leading-[1.65]">
@@ -263,25 +271,27 @@ function ServerLayer() {
           <div className="flex items-center gap-2">
             <span className="text-[#9c9ca4]">#</span>
             <span className="h-3 grow rounded-[3px] bg-[repeating-linear-gradient(135deg,#2a2a2e_0_6px,#1b1b1e_6px_12px)]" />
-            <span className="font-sans text-xs text-tone-green">never sent</span>
+            <span className="font-sans text-xs text-tone-green">{t("lens.neverSent")}</span>
           </div>
         </div>
         <div className="flex flex-col text-[13px]">
-          {[
-            ["authToken", "hT9xLq2…Qa2w", "Derived, proves the link"],
-            ["ownerToken", "Qe4mZr8…v8Kd", "Derived, allows deleting"],
-          ].map(([name, value, note]) => (
+          {(
+            [
+              ["authToken", "hT9xLq2…Qa2w", "lens.authTokenNote"],
+              ["ownerToken", "Qe4mZr8…v8Kd", "lens.ownerTokenNote"],
+            ] as const
+          ).map(([name, value, note]) => (
             <div key={name} className="flex h-11 items-center gap-2.5 border-t border-tone-green/14">
               <span className="w-24 shrink-0 font-mono text-[#c8c8cd]">{name}</span>
               <span className="hidden font-mono text-[#9c9ca4] sm:inline">{value}</span>
-              <span className="ml-auto text-right text-[#9c9ca4]">{note}</span>
+              <span className="ml-auto text-right text-[#9c9ca4]">{t(note)}</span>
             </div>
           ))}
           <div className="flex h-11 items-center gap-2.5 border-t border-tone-green/14">
-            <span className="text-[#c8c8cd]">Secret, keys</span>
+            <span className="text-[#c8c8cd]">{t("lens.secretKeys")}</span>
             <span className="ml-auto flex items-center gap-1.5 font-medium text-tone-green">
               <ShieldCheck className="size-3.5" />
-              Never reach the server
+              {t("lens.neverServer")}
             </span>
           </div>
         </div>
@@ -291,8 +301,8 @@ function ServerLayer() {
 }
 
 const VIEWS = [
-  { id: "you", label: "What you see", icon: Eye },
-  { id: "server", label: "What the server stores", icon: Server },
+  { id: "you", label: "lens.you", icon: Eye },
+  { id: "server", label: "lens.server", icon: Server },
 ] as const;
 
 /**
@@ -303,6 +313,7 @@ const VIEWS = [
 export function Lens() {
   // The split lives in a CSS variable written straight to the window, so the
   // mouse never re-renders the layers. State only knows whether the mouse is in.
+  const { t } = useI18n();
   const [manual, setManual] = useState(false);
   const [view, setView] = useState<"you" | "server">("you");
 
@@ -340,11 +351,11 @@ export function Lens() {
           </span>
           <span className="hidden items-center justify-self-end gap-1.5 text-xs text-faint lg:flex [@media(hover:none)]:hidden">
             <ChevronsLeftRight className="size-3.5" />
-            Move the mouse across the window
+            {t("lens.hint")}
           </span>
         </div>
 
-        <div role="group" aria-label="Point of view" className="flex gap-1 border-b border-border bg-card p-2 lg:hidden">
+        <div role="group" aria-label={t("lens.pointOfView")} className="flex gap-1 border-b border-border bg-card p-2 lg:hidden">
           {VIEWS.map((v) => {
             const on = view === v.id;
             return (
@@ -363,7 +374,7 @@ export function Lens() {
                 )}
               >
                 <v.icon className="size-3.5" />
-                {v.label}
+                {t(v.label)}
               </button>
             );
           })}
@@ -393,11 +404,11 @@ export function Lens() {
 
           <span className="absolute top-7 left-4 z-[4] hidden h-7 items-center gap-1.5 rounded-full border border-border bg-background/85 px-2.5 text-xs font-medium text-subtle lg:flex">
             <Eye className="size-[13px]" />
-            What you see
+            {t("lens.you")}
           </span>
           <span className="absolute top-7 right-4 z-[4] hidden h-7 items-center gap-1.5 rounded-full border border-[#46c89d]/45 bg-[#0b0c0c]/90 px-2.5 text-xs font-medium text-[#46c89d] lg:flex">
             <Server className="size-[13px]" />
-            What the server stores
+            {t("lens.server")}
           </span>
         </div>
       </SpinBorder>

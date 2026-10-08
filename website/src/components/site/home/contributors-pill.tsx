@@ -7,6 +7,7 @@ import { z } from "zod";
 import { fetchWithCache } from "@/lib/github";
 import { GITHUB_REPO, GITHUB_URL } from "@/lib/content";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 const ContributorsSchema = z.array(
   z.object({
@@ -30,6 +31,7 @@ const MOBILE_AVATARS = 5;
  * without the GitHub API the pill still links to the repository.
  */
 export function ContributorsPill() {
+  const { t } = useI18n();
   const [people, setPeople] = useState<Contributor[] | null>(null);
 
   useEffect(() => {
@@ -97,9 +99,9 @@ export function ContributorsPill() {
       </span>
       <span className="flex flex-col items-start text-left leading-tight whitespace-nowrap">
         <span className="font-medium text-foreground">
-          {people && people.length > 0 ? `${people.length} contributors` : "Open source"}
+          {people && people.length > 0 ? t("hero.contributors", { count: people.length }) : t("hero.openSource")}
         </span>
-        <span className="hidden text-xs text-muted-foreground sm:block">Built in the open on GitHub</span>
+        <span className="hidden text-xs text-muted-foreground sm:block">{t("hero.builtInTheOpen")}</span>
       </span>
       <ChevronRight className="size-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-[3px]" />
     </a>
