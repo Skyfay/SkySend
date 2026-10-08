@@ -126,14 +126,18 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 Create an encrypted note.
 
 ```bash
-skysend note <text> [options]
+skysend note [text] [options]
 ```
 
 ### Arguments
 
 | Argument | Description |
 | --- | --- |
-| `<text>` | The note content |
+| `[text]` | The note content. Leave it out, or pass `-`, to type it at a prompt or pipe it in |
+
+::: warning Keep secrets out of the command line
+A note given as an argument stays in your shell history, and on Linux other users of the machine can read it from the process list while the command runs. For a password or any other secret, leave the argument out: the CLI asks for a note of one line without showing it, and reads a note that spans lines from a pipe or a file.
+:::
 
 ### Options
 
@@ -149,6 +153,13 @@ skysend note <text> [options]
 ### Examples
 
 ```bash
+# Type a secret note at a prompt that does not show it
+skysend note --type password
+
+# Read a note from a file or a pipe
+skysend note --type sshkey < ~/.ssh/deploy_key
+pbpaste | skysend note --type code
+
 # Create a simple text note
 skysend note "This is a secret message"
 
@@ -161,11 +172,8 @@ skysend note "console.log('hello')" --type code --expires 1h
 # Create a Markdown note
 skysend note "# Hello\n\nThis is **bold**." --type markdown
 
-# Create a password note
-skysend note "admin:s3cret" --type password
-
-# Create a password-protected note
-skysend note "secret data" --password --expires 24h --views 5
+# Create a password-protected note, both typed at prompts
+skysend note --password --expires 24h --views 5
 ```
 
 ### Note Types

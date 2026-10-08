@@ -44,9 +44,10 @@ const { ciphertext, iv } = await encryptMetadata(metadata, metaKey)
 ```
 
 1. The metadata object is JSON-serialized
-2. A random 12-byte IV is generated
-3. The JSON is encrypted with AES-256-GCM using `metaKey` and the IV
-4. Both `ciphertext` and `iv` are stored in the database (via `POST /api/meta/:id`)
+2. The JSON is padded with spaces to a multiple of 1024 bytes, so the length of the ciphertext tells little about the file names and types
+3. A random 12-byte IV is generated
+4. The padded JSON is encrypted with AES-256-GCM using `metaKey` and the IV
+5. Both `ciphertext` and `iv` are stored in the database (via `POST /api/meta/:id`)
 
 ## Decryption
 
@@ -55,7 +56,7 @@ const metadata = await decryptMetadata(ciphertext, iv, metaKey)
 ```
 
 1. The ciphertext is decrypted with AES-256-GCM
-2. The result is parsed as JSON
+2. The result is parsed as JSON, which ignores the trailing spaces, so padded and older unpadded metadata read alike
 3. The schema is validated (must be `SingleFileMetadata` or `ArchiveMetadata`)
 4. Returns the typed metadata object
 
@@ -66,6 +67,7 @@ If decryption fails (wrong key, tampered data), an error is thrown.
 | Constant | Value |
 | --- | --- |
 | `META_IV_LENGTH` | 12 bytes |
+| `METADATA_PAD_BLOCK` | 1024 bytes |
 
 ## Security Properties
 
@@ -73,3 +75,4 @@ If decryption fails (wrong key, tampered data), an error is thrown.
 - **Random IV** - New IV per metadata encryption (no reuse)
 - **Authenticated encryption** - GCM provides integrity verification
 - **Schema validation** - Decrypted data is validated against expected schema
+- **Padded length** - The ciphertext reveals the metadata length in whole kilobytes only

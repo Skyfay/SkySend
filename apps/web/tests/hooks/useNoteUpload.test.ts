@@ -187,10 +187,12 @@ describe("useNoteUpload", () => {
     });
     await waitFor(() => expect(result.current.phase).toBe("done"));
 
-    expect(vi.mocked(crypto.encryptNoteContent)).toHaveBeenCalledWith(
-      JSON.stringify({ v: 1, blocks }),
-      expect.anything(),
-    );
+    // The document, padded with spaces to whole blocks so its length hides how long the
+    // password is.
+    const document = JSON.stringify({ v: 1, blocks });
+    const [plaintext] = vi.mocked(crypto.encryptNoteContent).mock.calls[0]!;
+    expect(plaintext.length % 1024).toBe(0);
+    expect(plaintext.trimEnd()).toBe(document);
     const request = createNote.mock.calls[0]![0];
     expect(request.contentType).toBe("blocks");
     // Nothing about the blocks goes into the request in plaintext.

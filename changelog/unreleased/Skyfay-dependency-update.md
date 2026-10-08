@@ -1,5 +1,10 @@
 ### 🔒 Security
 
+- **web**: Notes are padded to whole kilobytes before they are encrypted, so the server no longer learns how long a password in a note is.
+- **client**: The CLI and the TUI pad notes to whole kilobytes like the web app.
+- **crypto**: File metadata is padded to whole kilobytes before it is encrypted, so its length no longer reveals how long a file name is.
+- **client**: Password prompts of the CLI no longer show what is typed, and a pasted password no longer keeps its line break.
+- **client**: `skysend note` without text asks for the note at a prompt that does not show it, or reads it from a pipe, so a secret no longer has to go into the shell history.
 - **server**: Updated `@hono/node-server` to 2.1.3 to patch a middleware bypass in static file serving (GHSA-rmxm-3fg6-px4f).
 - **website**: Updated next and eslint-config-next to 16.4.0 to patch a remote code execution in `next/og` image responses (GHSA-vcvr-r3jv-pc5j).
 - **web**: Updated dompurify to 3.4.16 to fix two XSS issues in in-place sanitizing (GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2).
@@ -17,6 +22,8 @@
 
 ### 📝 Documentation
 
+- **docs**: The threat model covers an instance that serves modified code, and the instance list says what that means for trusting an operator.
+- **website**: The zero-knowledge section and the blog post promise that the server holds nothing readable instead of that an operator can never read along.
 - **docs**: The development setup covers the macOS setup script, the Node version and the platforms the server runs on outside Docker.
 
 ### 🧪 Tests

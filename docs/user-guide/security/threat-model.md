@@ -26,7 +26,7 @@ An attacker who gains access to the server's filesystem or database.
 
 **Mitigation**: All files are encrypted client-side with AES-256-GCM before upload. The encryption key is never sent to the server - it exists only in the URL fragment. The server stores only ciphertext.
 
-**Result**: Even with full database and filesystem access, an attacker cannot decrypt files without the share link.
+**Result**: Even with full database and filesystem access, an attacker cannot decrypt files without the share link. Changing the code the instance serves is a different attack, see [A Malicious Instance Serving Modified Code](#a-malicious-instance-serving-modified-code).
 
 ### Passive Network Observation
 **Threat**: An attacker intercepts traffic between the client and server.
@@ -67,6 +67,14 @@ An attacker who gains access to the server's filesystem or database.
 
 ### Compromised Client
 If the uploader's or recipient's device is compromised (malware, keylogger), the attacker can access plaintext files. SkySend cannot protect against endpoint compromise.
+
+### A Malicious Instance Serving Modified Code
+The web app, its scripts and its Service Worker come from the instance you open. An operator who changes that code, or anyone who takes over the server or its reverse proxy, can make the browser hand over what it decrypts: the key in a link, a password you type, the files and notes you open and an inbox you open. Everything stored before stays encrypted, and nothing is at risk while the instance serves the published code. Every end-to-end encrypted web app shares this limit, because a browser runs whatever code the site sends.
+
+What to do about it:
+
+- Use an instance whose operator you trust, or [run your own](/user-guide/self-hosting/docker). The official instances are operated by the SkySend project.
+- For files and notes, the [CLI client](/user-guide/client-cli/) is shipped on its own and runs no code from the instance. It does not cover file requests yet.
 
 ### Share Link Interception
 If the share link is sent over an insecure channel (e.g., unencrypted email, public chat) and intercepted, the attacker can download and decrypt the file. Users should share links through secure channels.
@@ -109,7 +117,7 @@ SkySend does not inspect or scan file contents. It encrypts and stores whatever 
 Anyone with the upload link of a [file request](/user-guide/file-requests) can upload into it, and nothing identifies them. The inbox marks every upload as unverified and cleans file names before showing them, but it cannot tell a wanted file from an unwanted one. Equally, a sender cannot verify who wrote the title of a request, which is why the upload page marks it as not checked. Hand out upload links only to the people you ask, and open only what you expected.
 
 ### Metadata Leakage (File Size)
-The server knows the encrypted file size, which reveals the approximate original file size. This is inherent to any file transfer system. File names and types are encrypted.
+The server knows the encrypted file size, which reveals the approximate original file size. This is inherent to any file transfer system. File names and types are encrypted, and their metadata is padded to whole kilobytes, so its length does not reveal how long a file name is. Notes are padded the same way, so a note's size does not reveal how long a password in it is.
 
 ### Server Availability
 SkySend does not provide redundancy or high availability. If the server goes down, files are unavailable until it recovers.

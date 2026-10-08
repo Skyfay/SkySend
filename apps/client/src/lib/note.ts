@@ -2,6 +2,7 @@ import {
   NOTE_KIND,
   findPrivateKey,
   readNote,
+  padNote,
   serializeNote,
   type LegacyNoteKind,
   type NoteBlock,
@@ -83,13 +84,16 @@ export function toLegacyNote(block: NoteBlock): { contentType: LegacyNoteKind; p
 
 /**
  * The content type and the plaintext to encrypt for a note of one block. A server that
- * reports noteBlocks gets a note made of blocks, an older one the legacy format.
+ * reports noteBlocks gets a note made of blocks, padded to whole blocks so its length does
+ * not give away how long a password in it is. An older one gets the legacy format.
  */
 export function prepareNote(
   block: NoteBlock,
   serverTakesBlocks: boolean,
 ): { contentType: typeof NOTE_KIND | LegacyNoteKind; plaintext: string } {
-  if (serverTakesBlocks) return { contentType: NOTE_KIND, plaintext: serializeNote([block]) };
+  if (serverTakesBlocks) {
+    return { contentType: NOTE_KIND, plaintext: padNote(serializeNote([block])) };
+  }
   // LEGACY(notes-v1): a server before v3 only knows one content type per note.
   return toLegacyNote(block);
 }

@@ -102,6 +102,14 @@ describe("prepareNote", () => {
     expect(parseNote(note.plaintext)).toEqual([BLOCKS[2]]);
   });
 
+  it("pads the note to whole blocks, so its length hides how long a password is", () => {
+    const password = (value: string): NoteBlock => ({ type: "password", entries: [{ label: "", value }] });
+    const short = prepareNote(password("pw12"), true).plaintext;
+    const long = prepareNote(password("a-much-longer-password-28ch"), true).plaintext;
+    expect(new TextEncoder().encode(short).length % 1024).toBe(0);
+    expect(short.length).toBe(long.length);
+  });
+
   // LEGACY(notes-v1): drop with toLegacyNote.
   it("falls back to the legacy format for an older server", () => {
     expect(prepareNote(BLOCKS[3]!, false)).toEqual(toLegacyNote(BLOCKS[3]!));

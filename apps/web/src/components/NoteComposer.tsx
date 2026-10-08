@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Send } from "lucide-react";
-import { serializeNote, type NoteBlockType } from "@skysend/note-format";
+import { padNote, serializeNote, type NoteBlockType } from "@skysend/note-format";
 import { BLOCK_TYPES, BlockListEditor, addDraft } from "@/components/BlockListEditor";
 import { ShareFooter } from "@/components/ShareFooter";
 import { ShareLink } from "@/components/ShareLink";
@@ -75,9 +75,13 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
 
   const busy = noteHook.phase === "encrypting" || noteHook.phase === "uploading";
   const toSend = blocksToSend(drafts);
-  // The size the server checks is the encrypted document, which is this plus a 16-byte tag.
-  const bytes = toSend.length > 0 ? new TextEncoder().encode(serializeNote(toSend)).length : 0;
-  const tooLarge = bytes > config.noteMaxSize;
+  const serialized = toSend.length > 0 ? serializeNote(toSend) : "";
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(serialized).length;
+  // The server checks the encrypted document, which is padded to whole blocks and gets a
+  // 16-byte tag. The padded size has to fit, so the note fits any version of the server.
+  const tooLarge =
+    serialized !== "" && encoder.encode(padNote(serialized)).length > config.noteMaxSize;
   // A password that is switched on has to be typed, or the link would go out without one.
   const canSubmit = toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || password.length > 0);
 

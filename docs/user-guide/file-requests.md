@@ -105,7 +105,7 @@ Each upload can be downloaded as often as the request set, one of the [`FILE_REQ
 | The limits and when the request closes | File names and types, and what a note says |
 | For each upload: its size, the ciphertext, the encrypted metadata and the file key wrapped to your public key | Who you are or who sent a file |
 
-A note is padded to whole kilobytes, so its size tells little about how long a password in it is. The server can still tell a note from a file by its size and its short metadata.
+A note is padded to whole kilobytes, so its size tells little about how long a password in it is. The server can still tell a note from a file by its size, since a note is always a whole number of kilobytes before it is encrypted.
 
 The full design is on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
 

@@ -105,7 +105,7 @@ const fields = parseTemplate(template)     // the blocks a sender fills in
 - `parseTemplate()` treats the template as untrusted, since the requester wrote it and every sender reads it. It drops blocks it cannot read and throws away any value a crafted template carries, so a template can never put words into an answer. A language name that is not plain letters, digits and `_+#.-` becomes `auto`.
 - `cleanLabel()` keeps a label to one line of at most 100 characters, without control, format or reordering characters, blank fillers or towers of combining marks. The zero-width joiner and non-joiner stay.
 
-The template travels inside the encrypted brief of the request, see [File Requests](/developer-guide/crypto/file-requests#the-brief). A note sent into a request is padded with `padNote()` to a multiple of 1024 bytes before it is encrypted, so its length tells little about how long a password in it is. JSON allows the trailing spaces, so `parseNote()` reads it like any other note.
+The template travels inside the encrypted brief of the request, see [File Requests](/developer-guide/crypto/file-requests#the-brief). Every note made of blocks, a shared note as well as one sent into a request, is padded with `padNote()` to a multiple of 1024 bytes before it is encrypted, so its length tells little about how long a password in it is. JSON allows the trailing spaces, so `parseNote()` reads it like any other note, and older readers do too. A note in the legacy format is never padded. A client checks the padded size against the note limit of the instance, so a padded note fits every version of the server.
 
 ## Security Properties
 
