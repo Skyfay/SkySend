@@ -1,18 +1,14 @@
-import { Hero } from "@/components/site/hero";
-import { StatsBand } from "@/components/site/stats-band";
-import { InstancesSection } from "@/components/site/instances/instances-section";
-// import { ProductTour } from "@/components/site/product-tour";
-import { FeatureGrid } from "@/components/site/feature-grid";
-import { ZeroKnowledgeSection } from "@/components/site/zero-knowledge-section";
-import { AutomationSection } from "@/components/site/automation-section";
-import { AccessMethods } from "@/components/site/access-methods";
-import { QuickStart } from "@/components/site/quick-start";
-import { Faq } from "@/components/site/faq";
-import { BlogTeaser } from "@/components/site/blog-teaser";
-import { CtaBand } from "@/components/site/cta-band";
+import { Hero } from "@/components/site/home/hero";
+import { Features } from "@/components/site/home/features";
+import { KeyBand } from "@/components/site/home/key-band";
+import { CliSection } from "@/components/site/home/cli-section";
+import { QuickStart } from "@/components/site/home/quick-start";
+import { Instances } from "@/components/site/home/instances";
+import { Faq } from "@/components/site/home/faq";
+import { CtaBand } from "@/components/site/home/cta-band";
 import { JsonLd } from "@/components/site/json-ld";
 import { SITE_URL } from "@/lib/site";
-import { TAGLINE } from "@/lib/content";
+import { FAQS, TAGLINE } from "@/lib/content";
 
 const SOFTWARE_APPLICATION_JSON_LD = {
   "@context": "https://schema.org",
@@ -29,6 +25,19 @@ const SOFTWARE_APPLICATION_JSON_LD = {
   },
 };
 
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
 export const metadata = {
   alternates: {
     canonical: "/",
@@ -39,18 +48,14 @@ export default function Home() {
   return (
     <>
       <JsonLd data={SOFTWARE_APPLICATION_JSON_LD} />
+      <JsonLd data={FAQ_JSON_LD} />
       <Hero />
-      <StatsBand />
-      <ZeroKnowledgeSection />
-      {/* ProductTour disabled - the live Server Instances section below lets
-          visitors open a real public instance instead of static screenshots. */}
-      <InstancesSection />
-      <AutomationSection />
-      <FeatureGrid />
-      <AccessMethods />
+      <Features />
+      <KeyBand />
+      <CliSection />
       <QuickStart />
+      <Instances />
       <Faq />
-      <BlogTeaser />
       <CtaBand />
     </>
   );

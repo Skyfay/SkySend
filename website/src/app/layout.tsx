@@ -8,7 +8,6 @@ import { JsonLd } from "@/components/site/json-ld";
 import { SITE_URL } from "@/lib/site";
 import { GITHUB_REPO, DISCORD_URL, TAGLINE } from "@/lib/content";
 import "./globals.css";
-import "flag-icons/css/flag-icons.min.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,10 +19,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_TITLE = "SkySend - End-to-End Encrypted File and Note Sharing";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "SkySend - End-to-End Encrypted File & Note Sharing",
+    default: SITE_TITLE,
     template: "%s | SkySend",
   },
   description: TAGLINE,
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "SkySend - End-to-End Encrypted File & Note Sharing",
+    title: SITE_TITLE,
     description: TAGLINE,
     url: SITE_URL,
     siteName: "SkySend",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SkySend - End-to-End Encrypted File & Note Sharing",
+    title: SITE_TITLE,
     description: TAGLINE,
   },
 };
@@ -70,13 +71,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-screen flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col overflow-x-clip font-sans antialiased`}
       >
         <JsonLd data={ORGANIZATION_JSON_LD} />
         <JsonLd data={WEBSITE_JSON_LD} />
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >

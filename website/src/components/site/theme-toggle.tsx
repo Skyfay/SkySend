@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const BOX = "btn-chip flex size-9 items-center justify-center rounded-lg";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -20,26 +21,29 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return (
-      <Button variant="outline" size="icon" disabled aria-hidden className="opacity-0" />
-    );
+    return <span aria-hidden="true" className={BOX} />;
   }
 
   const isDark = resolvedTheme === "dark";
+  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        <button
+          type="button"
+          aria-label={label}
           onClick={() => setTheme(isDark ? "light" : "dark")}
+          className={BOX}
         >
-          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
+          {isDark ? (
+            <Sun className="size-4 text-tone-amber" />
+          ) : (
+            <Moon className="size-4 text-tone-violet" />
+          )}
+        </button>
       </TooltipTrigger>
-      <TooltipContent>{isDark ? "Switch to light mode" : "Switch to dark mode"}</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }

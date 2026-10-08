@@ -13,7 +13,7 @@ export const metadata = {
 
 export default function ReportPage() {
   return (
-    <div className="mx-auto grid max-w-5xl gap-12 px-6 py-20 sm:py-24 lg:grid-cols-2 lg:items-start">
+    <div className="mx-auto grid max-w-5xl gap-12 px-6 pt-[124px] pb-20 sm:pt-[172px] sm:pb-24 lg:grid-cols-2 lg:items-start">
       <div>
         <SectionHeading
           as="h1"

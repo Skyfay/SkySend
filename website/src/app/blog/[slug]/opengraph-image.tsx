@@ -28,8 +28,8 @@ export default async function Image({
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          background: "#0b0e14",
-          color: "#f5f6f8",
+          background: "#101012",
+          color: "#f2f2f3",
         }}
       >
         <div
@@ -61,7 +61,7 @@ export default async function Image({
             display: "flex",
             marginTop: 32,
             fontSize: 26,
-            color: "#9aa1ad",
+            color: "#9c9ca4",
           }}
         >
           {new Date(post.date).toLocaleDateString("en-US", {

@@ -1,88 +1,48 @@
 export const TAGLINE =
-  "End-to-end encrypted, self-hostable file and note sharing service built for speed and security.";
+  "End-to-end encrypted, self-hostable file and note sharing. The server only ever sees ciphertext.";
 
 export const GITHUB_REPO = "Skyfay/SkySend";
-export const DOCS_URL = "https://docs.skysend.app";
+export const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
+export const SPONSOR_URL = "https://github.com/sponsors/Skyfay";
+export const SECURITY_URL = `${GITHUB_URL}/security/policy`;
 export const DISCORD_URL = "https://dc.skyfay.ch";
+
+export const DOCS_URL = "https://docs.skysend.app";
 export const GETTING_STARTED_URL = `${DOCS_URL}/user-guide/getting-started`;
 export const INSTANCES_DOCS_URL = `${DOCS_URL}/instances`;
+export const CHANGELOG_URL = `${DOCS_URL}/changelog`;
+export const CRYPTO_URL = `${DOCS_URL}/developer-guide/crypto/`;
+export const ENV_VARS_URL = `${DOCS_URL}/user-guide/configuration/environment-variables`;
+export const REVERSE_PROXY_URL = `${DOCS_URL}/user-guide/self-hosting/reverse-proxy`;
+export const S3_URL = `${DOCS_URL}/user-guide/configuration/s3`;
+export const CLI_URL = `${DOCS_URL}/user-guide/client-cli/`;
 
-export const STATS = [
-  { value: "13", label: "Languages" },
-  { value: "2", label: "Storage Backends" },
-  { value: "0", label: "Accounts Required" },
-  { value: "AGPL-3.0", label: "Open Source" },
-];
+/** The page of the official instance that encrypts a sample text step by step. */
+export const HOW_IT_WORKS_URL = "https://ch.skysend.app/how";
 
-export const FEATURES = [
-  {
-    title: "Zero-Knowledge Encryption",
-    description:
-      "Every file and note is encrypted client-side with AES-256-GCM before it ever leaves the browser - the server only ever stores ciphertext and never sees the key.",
-  },
-  {
-    title: "Files & Notes",
-    description:
-      "Share files, plain text, passwords, code snippets, and SSH keys, all with the same end-to-end encryption and expiry model.",
-  },
-  {
-    title: "Self-Destructing Links",
-    description:
-      "Configurable expiry times and download/view limits, so a share disappears automatically after it's no longer needed.",
-  },
-  {
-    title: "Password Protection",
-    description:
-      "Add an optional password on top of the encryption key for an extra layer of access control on sensitive shares.",
-  },
-  {
-    title: "No Accounts, No Tracking",
-    description:
-      "Open the site and share - no registration, no login, and no analytics tracking who uploaded or downloaded what.",
-  },
-  {
-    title: "Storage Flexibility",
-    description:
-      "Local filesystem or any S3-compatible object storage (AWS S3, Cloudflare R2, MinIO, and more) as the storage backend.",
-  },
-  {
-    title: "CLI & TUI Client",
-    description:
-      "A cross-platform CLI and terminal UI for uploading and downloading with the same end-to-end encryption as the web app.",
-  },
-  {
-    title: "Progressive Web App",
-    description:
-      "Install SkySend as a PWA for a native-feeling, installable experience directly from the browser.",
-  },
-  {
-    title: "Designed for Simplicity",
-    description:
-      "A minimalist interface with sensible defaults - deep configurability for self-hosters, nothing to learn for the person just opening a link.",
-  },
-];
+/** The pill above the headline of the hero. */
+export const HERO_NEWS = {
+  label: "Version 3.0, with file requests and notes made of blocks",
+  shortLabel: "File requests in 3.0",
+  href: CHANGELOG_URL,
+};
 
-export const ACCESS_METHODS = [
+export const INSTALL_COMMANDS = [
   {
-    title: "Web UI",
-    description: "Drag, drop, and share directly from the browser - no installation required.",
+    id: "unix",
+    label: "macOS and Linux",
+    prompt: "$",
+    command: "curl -fsSL https://skysend.app/install.sh | sh",
   },
   {
-    title: "CLI & TUI",
-    description: "Script uploads and downloads, or use the interactive terminal UI, with the same E2E encryption.",
+    id: "windows",
+    label: "Windows",
+    prompt: "PS>",
+    command: "irm https://skysend.app/install.ps1 | iex",
   },
-  {
-    title: "REST API",
-    description: "A documented HTTP API behind every instance, for building your own integrations.",
-  },
-  {
-    title: "Docker",
-    description: "A single multi-arch image (amd64/arm64) to self-host your own instance in minutes.",
-  },
-];
+] as const;
 
-export const QUICK_START_SNIPPET = `# docker-compose.yml
-services:
+export const COMPOSE_SNIPPET = `services:
   skysend:
     image: skyfay/skysend:latest
     container_name: skysend
@@ -95,29 +55,41 @@ services:
     environment:
       - BASE_URL=http://localhost:3000`;
 
+export const DOCKER_RUN_SNIPPET = `docker run -d --name skysend \\
+  -p 3000:3000 \\
+  -v ./data:/data \\
+  -v ./uploads:/uploads \\
+  -e BASE_URL=http://localhost:3000 \\
+  skyfay/skysend:latest`;
+
 export const FAQS = [
   {
-    question: "Can the SkySend server read my files or notes?",
+    question: "Can the server read my files or notes?",
     answer:
-      "No. Every file and note is encrypted in your browser with AES-256-GCM before upload, and the decryption key lives only in the share link's URL fragment, which is never sent to the server. The server only ever stores and serves ciphertext.",
+      "No. Every file and note is encrypted in your browser with AES-256-GCM before it is uploaded. The key lives in the part of the link after the #, which browsers never send to a server. The server only ever stores ciphertext.",
   },
   {
-    question: "Do I need to create an account?",
+    question: "Do I need an account?",
     answer:
-      "No. SkySend has no user accounts for sharing - open an instance and start uploading. Self-hosters can optionally require OIDC/SSO login before uploads or notes are allowed, for example to restrict a private instance to their organization.",
+      "No. Open an instance and share. My Links keeps your shares in this browser. If you run an instance, you can require an OIDC sign-in before anyone may share or create requests.",
   },
   {
-    question: "Is there a hosted or cloud version?",
+    question: "What happens when a share expires?",
     answer:
-      "SkySend is self-hosted, distributed as a single Docker image you run on your own infrastructure. See the Server Instances section for community-run public instances.",
+      "The server deletes the encrypted blob once its time runs out or its download limit is used up. A note set to burn after reading is gone after the first view.",
   },
   {
-    question: "What license is SkySend released under?",
-    answer: "AGPL-3.0. The source code is fully open and available on GitHub.",
+    question: "Is there a hosted version?",
+    answer:
+      "SkySend is made to run on your own server as one Docker image. Without a server, use one of the public instances, which run the same open code.",
   },
   {
     question: "What can I share besides files?",
     answer:
-      "Files, plain text, passwords, code snippets, and SSH keys - all with the same zero-knowledge encryption, configurable expiry, and download/view limits.",
+      "Notes made of blocks: text and Markdown, passwords, code and SSH keys, in any combination. With a request, someone else sends you files or a filled-in note that only you can open.",
+  },
+  {
+    question: "Which license does SkySend use?",
+    answer: "AGPL-3.0. The whole source, the crypto design included, is on GitHub.",
   },
 ];

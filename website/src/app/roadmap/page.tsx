@@ -15,7 +15,7 @@ export const metadata = {
 export default function RoadmapPage() {
   return (
     <div>
-      <div className="mx-auto max-w-6xl px-6 pt-20 pb-16 sm:pt-24">
+      <div className="mx-auto max-w-6xl px-6 pt-[124px] pb-16 sm:pt-[172px]">
         <SectionHeading
           as="h1"
           eyebrow="Roadmap"

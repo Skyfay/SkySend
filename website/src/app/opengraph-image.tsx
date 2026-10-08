@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { TAGLINE } from "@/lib/content";
 
 export const dynamic = "force-static";
-export const alt = "SkySend - End-to-End Encrypted File & Note Sharing";
+export const alt = "SkySend - End-to-End Encrypted File and Note Sharing";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -17,8 +17,8 @@ export default async function Image() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          background: "#0b0e14",
-          color: "#f5f6f8",
+          background: "#101012",
+          color: "#f2f2f3",
         }}
       >
         <div
@@ -51,14 +51,14 @@ export default async function Image() {
             maxWidth: 950,
           }}
         >
-          Share files and notes, without anyone reading them.
+          Share files only the recipient can read.
         </div>
         <div
           style={{
             display: "flex",
             marginTop: 28,
             fontSize: 28,
-            color: "#9aa1ad",
+            color: "#9c9ca4",
             maxWidth: 900,
           }}
         >
