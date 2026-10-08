@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Pålogging kreves for å laste opp",
+    "loginRequiredRequest": "Pålogging kreves for å lage forespørsler",
     "loginButton": "Logg inn med SSO",
     "logout": "Logg ut"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Begynn å dele"
   },
   "request": {
+    "signInText": "Denne serveren lar bare innloggede personer lage forespørsler. Logg inn for å fortsette.",
     "titleLabel": "Hva trenger du? (valgfritt)",
     "titlePlaceholder": "f.eks. Dokumenter til skattemeldingen",
     "titleHint": "Avsenderen ser denne teksten. Den er kryptert, serveren leser den aldri.",

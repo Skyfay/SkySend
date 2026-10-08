@@ -173,6 +173,7 @@ describe("routes", () => {
         OIDC_ENABLED: true,
         OIDC_PROTECT_FILES: true,
         OIDC_PROTECT_NOTES: false,
+        OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
       app.route("/api/config", configRoute);
@@ -191,6 +192,7 @@ describe("routes", () => {
         OIDC_ENABLED: true,
         OIDC_PROTECT_FILES: false,
         OIDC_PROTECT_NOTES: true,
+        OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
       app.route("/api/config", configRoute);
@@ -199,6 +201,36 @@ describe("routes", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.oidcProtectNotes).toBe(true);
+    });
+
+    it("should report oidcProtectRequests apart from files and notes", async () => {
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...DEFAULT_CONFIG,
+        OIDC_ENABLED: true,
+        OIDC_PROTECT_FILES: true,
+        OIDC_PROTECT_NOTES: true,
+        OIDC_PROTECT_REQUESTS: false,
+      });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+
+      const body = await (await app.request("/api/config")).json();
+      expect(body.oidcProtectFiles).toBe(true);
+      expect(body.oidcProtectNotes).toBe(true);
+      expect(body.oidcProtectRequests).toBe(false);
+    });
+
+    it("should report oidcProtectRequests=false while OIDC is off", async () => {
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...DEFAULT_CONFIG,
+        OIDC_ENABLED: false,
+        OIDC_PROTECT_REQUESTS: true,
+      });
+      const app = new Hono();
+      app.route("/api/config", configRoute);
+
+      const body = await (await app.request("/api/config")).json();
+      expect(body.oidcProtectRequests).toBe(false);
     });
   });
 

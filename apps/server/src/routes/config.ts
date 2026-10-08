@@ -65,6 +65,7 @@ configRoute.get("/", (c) => {
     oidcEnabled: config.OIDC_ENABLED,
     oidcProtectFiles: config.OIDC_ENABLED && config.OIDC_PROTECT_FILES,
     oidcProtectNotes: config.OIDC_ENABLED && config.OIDC_PROTECT_NOTES,
+    oidcProtectRequests: config.OIDC_ENABLED && config.OIDC_PROTECT_REQUESTS,
   });
 });
 

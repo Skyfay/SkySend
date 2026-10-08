@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Kirjautuminen vaaditaan lataamiseen",
+    "loginRequiredRequest": "Kirjautuminen vaaditaan pyytämiseen",
     "loginButton": "Kirjaudu SSO:lla",
     "logout": "Kirjaudu ulos"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Aloita jakaminen"
   },
   "request": {
+    "signInText": "Tällä palvelimella vain kirjautuneet käyttäjät voivat luoda pyyntöjä. Kirjaudu sisään jatkaaksesi.",
     "titleLabel": "Mitä tarvitset? (valinnainen)",
     "titlePlaceholder": "esim. Asiakirjat veroilmoitusta varten",
     "titleHint": "Lähettäjä näkee tämän tekstin. Se on salattu, palvelin ei koskaan lue sitä.",

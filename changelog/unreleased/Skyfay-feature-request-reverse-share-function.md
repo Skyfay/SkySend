@@ -13,6 +13,7 @@
 - **client**: Fields of a password block that are no secret show in clear in the terminal view of a note, under the title of their block.
 - **server**: `FILE_REQUEST_UPLOAD_OPTIONS` and `FILE_REQUEST_DOWNLOAD_OPTIONS` list how many uploads a request takes and how often each can be downloaded, with `FILE_REQUEST_DEFAULT_UPLOADS` and `FILE_REQUEST_DEFAULT_DOWNLOADS` as the defaults. The requester picks both per request.
 - **server**: `FORCE_REQUEST_PASSWORD` requires a password on the inbox of every file request, apart from `FORCE_FILE_PASSWORD`.
+- **server**: `OIDC_PROTECT_REQUESTS` puts creating a file request behind the OIDC login, apart from files and notes. Unset, it protects requests while `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` is on.
 - **server**: `GET /api/request/limit` tells the caller how many new requests are left today, without counting one.
 - **web**: The request form shows how many new requests are left today and offers none once the daily limit is used up.
 - **cli**: `list`, `delete`, `stats`, `cleanup` and `config` cover file requests and the files uploaded into them.

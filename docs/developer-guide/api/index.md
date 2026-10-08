@@ -44,7 +44,8 @@ Active when `request` is in `ENABLED_SERVICES`. See [File Requests](/developer-g
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
-| `POST` | `/api/request` | Create a file request | OIDC when `OIDC_PROTECT_FILES` |
+| `POST` | `/api/request` | Create a file request | OIDC when `OIDC_PROTECT_REQUESTS` |
+| `GET` | `/api/request/limit` | New requests the caller has left today | OIDC when `OIDC_PROTECT_REQUESTS` |
 | `GET` | `/api/request/:id` | What a sender sees | Upload Token |
 | `GET` | `/api/request/:id/upload/ws` | WebSocket upload into the request | Upload Token in the init frame |
 | `POST` | `/api/request/:id/upload/init` | Open an upload into the request | Upload Token |
@@ -160,7 +161,8 @@ Returns server limits and options for the client UI. Each field comes from the [
   "forceRequestPassword": false,
   "oidcEnabled": false,
   "oidcProtectFiles": false,
-  "oidcProtectNotes": false
+  "oidcProtectNotes": false,
+  "oidcProtectRequests": false
 }
 ```
 

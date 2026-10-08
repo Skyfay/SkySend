@@ -489,6 +489,71 @@ describe("config", () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no upload routes are protected"));
       warnSpy.mockRestore();
     });
+
+    it("should not warn when only file requests stay protected", async () => {
+      process.env.OIDC_ISSUER = "https://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      process.env.OIDC_PROTECT_REQUESTS = "true";
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const config = await loadFreshConfig();
+
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("no upload routes are protected"),
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe("OIDC_PROTECT_REQUESTS", () => {
+    beforeEach(() => {
+      delete process.env.OIDC_PROTECT_FILES;
+      delete process.env.OIDC_PROTECT_NOTES;
+      delete process.env.OIDC_PROTECT_REQUESTS;
+    });
+
+    it("should protect requests by default, like files and notes", async () => {
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+    });
+
+    it("should stay protected while files or notes are", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      expect((await loadFreshConfig()).OIDC_PROTECT_REQUESTS).toBe(true);
+
+      vi.resetModules();
+      process.env.OIDC_PROTECT_FILES = "true";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      expect((await loadFreshConfig()).OIDC_PROTECT_REQUESTS).toBe(true);
+    });
+
+    it("should follow files and notes when both are open", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(false);
+    });
+
+    it("should let an explicit false open requests while files and notes stay protected", async () => {
+      process.env.OIDC_PROTECT_REQUESTS = "false";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(false);
+      expect(config.OIDC_PROTECT_FILES).toBe(true);
+      expect(config.OIDC_PROTECT_NOTES).toBe(true);
+    });
+
+    it("should let an explicit true protect requests while files and notes are open", async () => {
+      process.env.OIDC_PROTECT_FILES = "false";
+      process.env.OIDC_PROTECT_NOTES = "false";
+      process.env.OIDC_PROTECT_REQUESTS = "TRUE";
+      const config = await loadFreshConfig();
+      expect(config.OIDC_PROTECT_REQUESTS).toBe(true);
+    });
   });
 
   describe("file requests", () => {

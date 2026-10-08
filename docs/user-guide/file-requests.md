@@ -113,7 +113,7 @@ The full design is on the [File Requests cryptography page](/developer-guide/cry
 
 File requests are on by default. Leave `request` out of [`ENABLED_SERVICES`](/user-guide/configuration/environment-variables#services) to turn them off. An instance that already sets `ENABLED_SERVICES` has to add `request` to offer them.
 
-- With [`OIDC_PROTECT_FILES`](/user-guide/configuration/environment-variables#sso-oidc-authentication), creating a request needs a login. Uploading into one never does, the upload link is enough.
+- With [`OIDC_PROTECT_REQUESTS`](/user-guide/configuration/environment-variables#sso-oidc-authentication), creating a request needs a login. Unset, it follows `OIDC_PROTECT_FILES` and `OIDC_PROTECT_NOTES`. Uploading into a request never needs a login, the upload link is enough.
 - A request for a note is part of the `request` service and works when `note` is left out of `ENABLED_SERVICES` too. Its size still follows [`NOTE_MAX_SIZE`](/user-guide/configuration/environment-variables#notes), and the size per upload of the request.
 - With [`FORCE_REQUEST_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization), the app asks for a password for every inbox. [`FORCE_FILE_PASSWORD`](/user-guide/configuration/environment-variables#branding-customization) covers shared files only.
 - [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. It is off by default, like the upload quota. A public instance should set both, for example the limit to `100`. The count lives in memory and resets on a restart. The request form shows how many are left today.

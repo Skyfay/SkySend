@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Se requiere iniciar sesión para subir",
+    "loginRequiredRequest": "Se requiere iniciar sesión para solicitar",
     "loginButton": "Iniciar sesión con SSO",
     "logout": "Cerrar sesión"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Empezar a compartir"
   },
   "request": {
+    "signInText": "Este servidor solo permite crear solicitudes a quienes han iniciado sesión. Inicie sesión para continuar.",
     "titleLabel": "¿Qué necesitas? (opcional)",
     "titlePlaceholder": "p. ej. Documentos para la declaración de la renta",
     "titleHint": "El remitente ve este texto. Está cifrado, el servidor nunca lo lee.",

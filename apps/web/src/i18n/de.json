@@ -268,6 +268,7 @@
   },
   "auth": {
     "loginRequired": "Anmeldung erforderlich zum Hochladen",
+    "loginRequiredRequest": "Anmeldung erforderlich zum Anfordern",
     "loginButton": "Mit SSO anmelden",
     "logout": "Abmelden"
   },
@@ -468,6 +469,7 @@
     "ctaButton": "Jetzt teilen"
   },
   "request": {
+    "signInText": "Auf diesem Server können nur angemeldete Personen Anfragen erstellen. Melden Sie sich an, um fortzufahren.",
     "titleLabel": "Was brauchen Sie? (optional)",
     "titlePlaceholder": "z. B. Unterlagen für die Steuererklärung",
     "titleHint": "Der Absender sieht diesen Text. Er ist verschlüsselt, der Server liest ihn nie.",

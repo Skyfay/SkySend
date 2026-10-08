@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Connexion requise pour téléverser",
+    "loginRequiredRequest": "Connexion requise pour demander",
     "loginButton": "Se connecter avec SSO",
     "logout": "Se déconnecter"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Commencer à partager"
   },
   "request": {
+    "signInText": "Ce serveur n'autorise la création de demandes qu'aux personnes connectées. Connectez-vous pour continuer.",
     "titleLabel": "De quoi avez-vous besoin ? (facultatif)",
     "titlePlaceholder": "p. ex. Documents pour la déclaration d'impôts",
     "titleHint": "L'expéditeur voit ce texte. Il est chiffré, le serveur ne le lit jamais.",

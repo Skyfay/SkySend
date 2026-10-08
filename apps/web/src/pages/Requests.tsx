@@ -79,13 +79,13 @@ export function RequestsPage() {
   }
   if (!config.fileRequestsEnabled) return <NotFoundPage />;
 
-  const signInRequired = config.oidcProtectFiles && !isLoggedIn && !authLoading;
+  const signInRequired = config.oidcProtectRequests && !isLoggedIn && !authLoading;
 
   let body;
   if (signInRequired) {
     body = (
       <div className="p-2">
-        <SignInRequired />
+        <SignInRequired request />
       </div>
     );
   } else if (creator.created) {

@@ -44,7 +44,7 @@ Upload quotas use HMAC-SHA256 to hash IP addresses before storing them. The HMAC
 
 ## Daily File Request Limit
 
-`FILE_REQUEST_DAILY_LIMIT` caps how many file requests one person creates per day. It counts the OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and the client IP otherwise. The day starts with the first request of that user or IP. Set it to `0` to disable the limit (default).
+`FILE_REQUEST_DAILY_LIMIT` caps how many file requests one person creates per day. It counts the OIDC user when `OIDC_PROTECT_REQUESTS` puts creating behind the login, and the client IP otherwise. The day starts with the first request of that user or IP. Set it to `0` to disable the limit (default).
 
 A request costs little by itself, but every one is an inbox that anyone with its link can fill. On a public instance, set the limit together with [Upload Quotas](#upload-quotas), for example `FILE_REQUEST_DAILY_LIMIT=100`. Behind a reverse proxy, the limit needs `TRUST_PROXY=true`, or everyone shares the count of the proxy's IP.
 

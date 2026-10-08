@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Inloggning krävs för att ladda upp",
+    "loginRequiredRequest": "Inloggning krävs för att skapa förfrågningar",
     "loginButton": "Logga in med SSO",
     "logout": "Logga ut"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Börja dela"
   },
   "request": {
+    "signInText": "Den här servern tillåter bara inloggade personer att skapa förfrågningar. Logga in för att fortsätta.",
     "titleLabel": "Vad behöver du? (valfritt)",
     "titlePlaceholder": "t.ex. Underlag till deklarationen",
     "titleHint": "Avsändaren ser den här texten. Den är krypterad, servern läser den aldrig.",

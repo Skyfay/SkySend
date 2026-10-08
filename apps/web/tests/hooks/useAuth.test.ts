@@ -36,6 +36,7 @@ function oidcConfig(enabled: boolean): ServerConfig {
     oidcEnabled: enabled,
     oidcProtectFiles: false,
     oidcProtectNotes: false,
+    oidcProtectRequests: false,
   } as unknown as ServerConfig;
 }
 

@@ -56,8 +56,8 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 | `DELETE /api/upload/:id` | owner token | Delete blob and row |
 | `GET /api/quota` | none | Remaining upload quota for the caller |
 | `POST /api/note`, `POST /api/note/:id` | auth token | Create and view encrypted notes |
-| `POST /api/request` | OIDC when `OIDC_PROTECT_FILES` | Create a file request, daily limit per user or IP |
-| `GET /api/request/limit` | OIDC when `OIDC_PROTECT_FILES` | How many new requests the caller has left today, without counting one |
+| `POST /api/request` | OIDC when `OIDC_PROTECT_REQUESTS` | Create a file request, daily limit per user or IP |
+| `GET /api/request/limit` | OIDC when `OIDC_PROTECT_REQUESTS` | How many new requests the caller has left today, without counting one |
 | `GET /api/request/:id` | `X-Upload-Token` | What a sender sees: encrypted title, uploads left, size of one upload |
 | `GET /api/request/:id/upload/ws` | upload token in the init frame | WebSocket upload into a request, primary path when `FILE_UPLOAD_WS=true` |
 | `POST /api/request/:id/upload/init`, `/:uid/chunk`, `/:uid/finalize` | `X-Upload-Token` at init | Chunked HTTP upload into a request, the fallback |
@@ -81,7 +81,7 @@ Two token types, both compared in constant time via `constantTimeEqual` from `@s
 
 Both middlewares load the row, verify the token, and put the record in `c.var.upload`. Never compare tokens with `===`, never look a row up by token, and never return either token in a response body.
 
-OIDC is optional and orthogonal: it gates *who may create* uploads and notes (`OIDC_PROTECT_FILES`, `OIDC_PROTECT_NOTES`), not who may read a link. `createOidcGuard` accepts the `skysend-auth` cookie or an `Authorization: Bearer` token so the CLI works too. Sessions are HS256 JWTs signed with `OIDC_SESSION_SECRET` (`src/auth/session.ts`), and login uses PKCE. Provider presets live in `src/auth/adapters/`: `generic`, `pocketid`, `authentik`, `keycloak`.
+OIDC is optional and orthogonal: it gates *who may create* uploads, notes and file requests (`OIDC_PROTECT_FILES`, `OIDC_PROTECT_NOTES`, `OIDC_PROTECT_REQUESTS`), not who may read a link. Unset, `OIDC_PROTECT_REQUESTS` follows the other two and is on while either one is. `createOidcGuard` accepts the `skysend-auth` cookie or an `Authorization: Bearer` token so the CLI works too. Sessions are HS256 JWTs signed with `OIDC_SESSION_SECRET` (`src/auth/session.ts`), and login uses PKCE. Provider presets live in `src/auth/adapters/`: `generic`, `pocketid`, `authentik`, `keycloak`.
 
 Discovery is lazy with caching. A provider that is unreachable at startup must not stop the server from booting - keep that property when touching `src/routes/auth.ts`.
 

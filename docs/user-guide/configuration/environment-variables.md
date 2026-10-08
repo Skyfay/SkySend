@@ -66,7 +66,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. |
 | `FILE_REQUEST_DOWNLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20` | How often the requester can download each upload, as options chosen per request, each from `1` to `100`. |
 | `FILE_REQUEST_DEFAULT_DOWNLOADS` | ❌ | `5` | Default for new requests. Must be one of `FILE_REQUEST_DOWNLOAD_OPTIONS`. |
-| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `0` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_FILES` puts creating behind the login, and by IP otherwise. The day starts with the first request. `0`, the default, turns the limit off. The count lives in memory and resets on restart. The request form shows how many are left. Behind a reverse proxy, set `TRUST_PROXY`, or everyone shares the count of the proxy's IP. A public instance should set it, for example to `100`, together with `FILE_UPLOAD_QUOTA_BYTES`. |
+| `FILE_REQUEST_DAILY_LIMIT` | ❌ | `0` | New requests per day and person, counted by OIDC user when `OIDC_PROTECT_REQUESTS` puts creating behind the login, and by IP otherwise. The day starts with the first request. `0`, the default, turns the limit off. The count lives in memory and resets on restart. The request form shows how many are left. Behind a reverse proxy, set `TRUST_PROXY`, or everyone shares the count of the proxy's IP. A public instance should set it, for example to `100`, together with `FILE_UPLOAD_QUOTA_BYTES`. |
 
 ## Services
 
@@ -242,8 +242,9 @@ When `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are all set, OIDC
 | `OIDC_CLIENT_ID` | ⚠️ | - | Client ID of the application registered at your provider. |
 | `OIDC_CLIENT_SECRET` | ⚠️ | - | Client secret of the application registered at your provider. |
 | `OIDC_SESSION_SECRET` | ❌ | auto | Secret used to sign session JWT cookies. If not set, a random 48-byte secret is generated at startup - sessions will be invalidated on every server restart. Set this to a fixed value (minimum 32 characters, generate with `openssl rand -base64 48`) to persist sessions across restarts. |
-| `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files and to create file requests. Uploading into a request never needs a login. Set to `false` to allow anonymous file uploads while OIDC is active. |
+| `OIDC_PROTECT_FILES` | ❌ | `true` | Require login to upload files. Set to `false` to allow anonymous file uploads while OIDC is active. |
 | `OIDC_PROTECT_NOTES` | ❌ | `true` | Require login to create notes. Set to `false` to allow anonymous note creation while OIDC is active. |
+| `OIDC_PROTECT_REQUESTS` | ❌ | inherited | Require login to create file requests. Unset, it is `true` while `OIDC_PROTECT_FILES` or `OIDC_PROTECT_NOTES` is, so an instance that keeps either behind the login keeps requests there too. Set it to protect requests apart from files and notes. Uploading into a request and opening its inbox never need a login, the links are enough. |
 | `OIDC_REDIRECT_URI` | ❌ | `{BASE_URL}/auth/callback` | Override the OAuth2 redirect/callback URI. Only needed if SkySend is served under a sub-path or behind a proxy that changes the origin. |
 | `OIDC_SCOPES` | ❌ | `openid profile email` | Space-separated list of OIDC scopes to request. |
 | `OIDC_SESSION_DURATION` | ❌ | `86400` | Session cookie lifetime in seconds (default: 24 hours). |

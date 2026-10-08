@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Accesso richiesto per caricare",
+    "loginRequiredRequest": "Accesso richiesto per creare richieste",
     "loginButton": "Accedi con SSO",
     "logout": "Disconnetti"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Inizia a condividere"
   },
   "request": {
+    "signInText": "Questo server permette di creare richieste solo a chi ha effettuato l'accesso. Accedi per continuare.",
     "titleLabel": "Di cosa hai bisogno? (facoltativo)",
     "titlePlaceholder": "es. Documenti per la dichiarazione dei redditi",
     "titleHint": "Il mittente vede questo testo. È cifrato, il server non lo legge mai.",

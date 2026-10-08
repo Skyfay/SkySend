@@ -536,7 +536,9 @@
       "share.pick.burnHint",
       "share.pick.unlimitedHint",
       "share.pick.viewsHint",
-      "share.passwordForced"
+      "share.passwordForced",
+      "auth.loginRequiredRequest",
+      "request.signInText"
     ],
     "_contributorNote": "このファイルはAIによる初期翻訳です。日本語として自然になるよう確認しています。修正は歓迎します。"
   },
@@ -809,6 +811,7 @@
   },
   "auth": {
     "loginRequired": "アップロードにはログインが必要です",
+    "loginRequiredRequest": "リクエストにはログインが必要です",
     "loginButton": "SSOでログイン",
     "logout": "ログアウト"
   },
@@ -1009,6 +1012,7 @@
     "ctaButton": "共有を始める"
   },
   "request": {
+    "signInText": "このサーバーではログインした人だけがリクエストを作成できます。続けるにはログインしてください。",
     "titleLabel": "何が必要ですか？（任意）",
     "titlePlaceholder": "例: 確定申告の書類",
     "titleHint": "送信者にこのテキストが表示されます。暗号化されており、サーバーが読むことはありません。",

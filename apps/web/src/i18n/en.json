@@ -268,6 +268,7 @@
   },
   "auth": {
     "loginRequired": "Login required to upload",
+    "loginRequiredRequest": "Login required to request",
     "loginButton": "Login with SSO",
     "logout": "Logout"
   },
@@ -468,6 +469,7 @@
     "ctaButton": "Start sharing"
   },
   "request": {
+    "signInText": "This server only lets signed-in people create requests. Sign in to continue.",
     "titleLabel": "What do you need? (optional)",
     "titlePlaceholder": "e.g. Documents for the tax return",
     "titleHint": "The sender sees this. It is encrypted, so the server never reads it.",

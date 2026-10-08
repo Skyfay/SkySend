@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Inloggen vereist om te uploaden",
+    "loginRequiredRequest": "Inloggen vereist om aan te vragen",
     "loginButton": "Inloggen met SSO",
     "logout": "Uitloggen"
   },
@@ -473,6 +474,7 @@
     "ctaButton": "Begin met delen"
   },
   "request": {
+    "signInText": "Op deze server kunnen alleen ingelogde gebruikers verzoeken maken. Log in om door te gaan.",
     "titleLabel": "Wat heb je nodig? (optioneel)",
     "titlePlaceholder": "bijv. Documenten voor de belastingaangifte",
     "titleHint": "De afzender ziet deze tekst. Hij is versleuteld, de server leest hem nooit.",

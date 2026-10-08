@@ -273,6 +273,7 @@
   },
   "auth": {
     "loginRequired": "Wymagane logowanie do przesyłania",
+    "loginRequiredRequest": "Wymagane logowanie do tworzenia próśb",
     "loginButton": "Zaloguj przez SSO",
     "logout": "Wyloguj"
   },
@@ -477,6 +478,7 @@
     "ctaButton": "Zacznij udostępniać"
   },
   "request": {
+    "signInText": "Ten serwer pozwala tworzyć prośby tylko zalogowanym osobom. Zaloguj się, aby kontynuować.",
     "titleLabel": "Czego potrzebujesz? (opcjonalnie)",
     "titlePlaceholder": "np. Dokumenty do zeznania podatkowego",
     "titleHint": "Nadawca widzi ten tekst. Jest zaszyfrowany, serwer nigdy go nie czyta.",

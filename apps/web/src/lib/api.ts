@@ -53,6 +53,7 @@ const configResponseSchema = z.object({
   oidcEnabled: z.boolean().optional().default(false),
   oidcProtectFiles: z.boolean().optional().default(false),
   oidcProtectNotes: z.boolean().optional().default(false),
+  oidcProtectRequests: z.boolean().optional().default(false),
 });
 
 export type ServerConfig = z.infer<typeof configResponseSchema>;

@@ -387,7 +387,9 @@
       "share.pick.burnHint",
       "share.pick.unlimitedHint",
       "share.pick.viewsHint",
-      "share.passwordForced"
+      "share.passwordForced",
+      "auth.loginRequiredRequest",
+      "request.signInText"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -660,6 +662,7 @@
   },
   "auth": {
     "loginRequired": "Login necessário para enviar",
+    "loginRequiredRequest": "Login necessário para solicitar",
     "loginButton": "Entrar com SSO",
     "logout": "Sair"
   },
@@ -860,6 +863,7 @@
     "ctaButton": "Começar a compartilhar"
   },
   "request": {
+    "signInText": "Este servidor só permite criar solicitações a pessoas conectadas. Entre para continuar.",
     "titleLabel": "Do que você precisa? (opcional)",
     "titlePlaceholder": "ex. Documentos para a declaração do imposto de renda",
     "titleHint": "O remetente vê este texto. Ele é criptografado, o servidor nunca o lê.",

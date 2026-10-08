@@ -312,7 +312,7 @@ api.route(
     limiter: createRequestLimiter(config.FILE_REQUEST_DAILY_LIMIT),
     chunkDir: join(config.DATA_DIR, "tmp", "request-chunks"),
     createGuard:
-      config.OIDC_ENABLED && config.OIDC_PROTECT_FILES && oidcAdapter
+      config.OIDC_ENABLED && config.OIDC_PROTECT_REQUESTS && oidcAdapter
         ? createOidcGuard(config)
         : undefined,
     quota,

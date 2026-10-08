@@ -444,6 +444,15 @@ const configSchema = z.object({
     .transform((v) => v.toLowerCase() !== "false"),
 
   /**
+   * Protect creating file requests behind OIDC when active. Unset, it follows
+   * OIDC_PROTECT_FILES and OIDC_PROTECT_NOTES: protected when either one is.
+   */
+  OIDC_PROTECT_REQUESTS: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v.toLowerCase() !== "false")),
+
+  /**
    * Secret used to sign session JWT cookies. Must be at least 32 characters.
    * Required when OIDC is active.
    */
@@ -458,12 +467,17 @@ const configSchema = z.object({
 });
 
 type RawConfig = z.infer<typeof configSchema>;
-export type Config = Omit<RawConfig, "UPLOADS_DIR" | "BRANDING_DIR" | "FILE_REQUEST_MAX_SIZE"> & {
+export type Config = Omit<
+  RawConfig,
+  "UPLOADS_DIR" | "BRANDING_DIR" | "FILE_REQUEST_MAX_SIZE" | "OIDC_PROTECT_REQUESTS"
+> & {
   UPLOADS_DIR: string;
   /** Most bytes one upload into a request may have, FILE_MAX_SIZE unless set. */
   FILE_REQUEST_MAX_SIZE: number;
   /** Directory whose contents are served under /branding/ (custom logo etc.). */
   BRANDING_DIR: string;
+  /** Whether creating a file request needs the login, inherited from the other two unless set. */
+  OIDC_PROTECT_REQUESTS: boolean;
   /** True when OIDC is fully configured (OIDC_ISSUER + OIDC_CLIENT_ID + OIDC_CLIENT_SECRET + OIDC_SESSION_SECRET are all set). */
   OIDC_ENABLED: boolean;
 };
@@ -487,6 +501,10 @@ export function loadConfig(): Config {
     UPLOADS_DIR: parsed.UPLOADS_DIR ?? join(parsed.DATA_DIR, "uploads"),
     BRANDING_DIR: parsed.BRANDING_DIR ?? join(parsed.DATA_DIR, "branding"),
     FILE_REQUEST_MAX_SIZE: parsed.FILE_REQUEST_MAX_SIZE ?? parsed.FILE_MAX_SIZE,
+    // A request lets anyone with its link upload files and a note, so it follows the other
+    // two: an instance that keeps either behind the login keeps requests there too.
+    OIDC_PROTECT_REQUESTS:
+      parsed.OIDC_PROTECT_REQUESTS ?? (parsed.OIDC_PROTECT_FILES || parsed.OIDC_PROTECT_NOTES),
     OIDC_ENABLED: false,
   } as Config;
 
@@ -586,9 +604,13 @@ export function loadConfig(): Config {
     if (!_config.OIDC_ISSUER!.startsWith("https://")) {
       console.warn("[oidc] WARNING: OIDC_ISSUER is using HTTP instead of HTTPS. This exposes OAuth tokens to network interception and is insecure in production.");
     }
-    if (!_config.OIDC_PROTECT_FILES && !_config.OIDC_PROTECT_NOTES) {
+    if (
+      !_config.OIDC_PROTECT_FILES
+      && !_config.OIDC_PROTECT_NOTES
+      && !_config.OIDC_PROTECT_REQUESTS
+    ) {
       console.warn(
-        "[oidc] WARNING: OIDC_PROTECT_FILES=false and OIDC_PROTECT_NOTES=false - OIDC is enabled but no upload routes are protected.",
+        "[oidc] WARNING: OIDC_PROTECT_FILES, OIDC_PROTECT_NOTES and OIDC_PROTECT_REQUESTS are false - OIDC is enabled but no upload routes are protected.",
       );
     }
     _config.OIDC_ENABLED = true;

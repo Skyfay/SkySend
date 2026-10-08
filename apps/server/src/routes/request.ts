@@ -280,7 +280,7 @@ export interface RequestRouteOptions {
   chunkDir: string;
   /** Overrides the chunk size limit in tests. */
   maxChunkSize?: number;
-  /** The OIDC guard, when OIDC_PROTECT_FILES puts creating a request behind the login. */
+  /** The OIDC guard, when OIDC_PROTECT_REQUESTS puts creating a request behind the login. */
   createGuard?: MiddlewareHandler;
   /** The upload quota of the sender, the same one normal uploads count against. */
   quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware" | "reserve">;

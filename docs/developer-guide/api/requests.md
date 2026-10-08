@@ -18,7 +18,7 @@ A missing or wrong token answers `404`, the same as a request that does not exis
 
 ## POST /api/request
 
-Create a request. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
+Create a request. Needs the OIDC session when `OIDC_PROTECT_REQUESTS` is on.
 
 ```json
 {
@@ -57,7 +57,7 @@ Unknown fields are refused, and the body may be at most 16 KB.
 
 ## GET /api/request/limit
 
-How many new requests the caller has left today, counted the way creating one counts them: by OIDC user where creating needs a login, by IP otherwise. Asking counts nothing. Needs the OIDC session when `OIDC_PROTECT_FILES` is on.
+How many new requests the caller has left today, counted the way creating one counts them: by OIDC user where creating needs a login, by IP otherwise. Asking counts nothing. Needs the OIDC session when `OIDC_PROTECT_REQUESTS` is on.
 
 With `FILE_REQUEST_DAILY_LIMIT=100`:
 
