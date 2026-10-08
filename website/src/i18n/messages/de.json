@@ -386,7 +386,7 @@
     "writtenBy": "Geschrieben von {name}",
     "maintainer": "Maintainer von SkySend.",
     "discuss": "Auf Discord diskutieren",
-    "previous": "Vorheriger",
+    "previous": "Älterer",
     "newer": "Neuerer",
     "allPostsLink": "Alle Beiträge",
     "backToBlog": "Zurück zum Blog",
@@ -394,7 +394,7 @@
     "ctaLead": "Kostenlos und Open Source unter AGPL-3.0.",
     "cryptoDesign": "Das Krypto-Design lesen",
     "onlyEnglish": "Diesen Beitrag gibt es bisher nur auf Englisch.",
-    "compared": "Verglichen",
+    "compared": "Im Vergleich",
     "copy": "Kopieren",
     "copied": "Kopiert",
     "inEnglish": "Auf Englisch"
