@@ -7,6 +7,7 @@ import { ArrowRight, ArrowUpRight, ChevronRight, Heart, Menu, Monitor, Moon, Sun
 import { Dialog } from "radix-ui";
 import { useTheme } from "next-themes";
 import { DiscordIcon } from "@/components/site/discord-icon";
+import { Glow } from "@/components/site/fx";
 import { GithubStarsWidget } from "@/components/site/github-stars-widget";
 import { NAV_LINKS, useActiveHref, useNavHref } from "@/components/site/nav-links";
 import { LocaleFlag, useLanguageChoice } from "@/components/site/language-switcher";
@@ -55,11 +56,7 @@ export function MobileMenu({ version }: { version: string | null }) {
         >
           <div className="relative overflow-hidden rounded-[22px] bg-[linear-gradient(150deg,color-mix(in_srgb,var(--tone-green)_75%,transparent),var(--border)_38%,var(--border)_70%,color-mix(in_srgb,var(--tone-cyan)_60%,transparent))] p-px shadow-[0_40px_80px_-20px_rgb(0_0_0/0.6),0_30px_80px_-30px_rgb(23_163_122/0.5)]">
             <div className="relative overflow-hidden rounded-[21px] bg-card">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-20 -right-16 h-[220px] w-[260px] rounded-full bg-[#17a37a]"
-                style={{ filter: "blur(60px)", opacity: "calc(0.24 * var(--glow-strength))" }}
-              />
+              <Glow color="#17a37a" opacity={0.24} blur={60} className="-top-20 -right-16 h-[220px] w-[260px]" />
 
               <div className="relative flex h-14 items-center gap-2.5 border-b border-border pr-2 pl-3.5">
                 <Image src="/logo.svg" alt="" width={26} height={26} />

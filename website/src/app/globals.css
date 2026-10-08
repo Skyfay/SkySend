@@ -170,8 +170,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* No double tap to zoom, so iOS does not hold every tap back while it waits
+     for a second one. Pinch to zoom stays. */
   html {
     scroll-padding-top: 96px;
+    touch-action: manipulation;
   }
   body {
     @apply bg-background text-foreground;
@@ -326,6 +329,12 @@
   }
   .fx-marquee-rev {
     animation: fx-marquee-rev 70s linear infinite;
+  }
+  /* A soft light behind the content. --glow is its color, --glow-blur the
+     reach of the blur. Touch screens draw it without the blur, see below. */
+  .fx-glow {
+    background: var(--glow);
+    filter: blur(var(--glow-blur));
   }
   .fx-drift {
     animation: fx-drift 16s ease-in-out infinite;
@@ -568,14 +577,15 @@
 /* Touch screens keep the heavy decoration still. iOS Safari tiles every layer
    wider than 1280px, and a tiled layer under a running animation makes it redo
    its rendering on the main thread every frame, which can freeze the page on
-   an iPhone. The large spinning layers (fx-border), the marquees, the floor
-   grid, the shine, the stars, the drifting glows and the lens sweep stop here.
-   Small loops like fx-ping, fx-ticker and fx-blink keep running on purpose,
-   they move a few pixels of transform or opacity. */
+   an iPhone. The floor grid, the shine, the stars, the drifting glows and the
+   lens sweep stop here. A spinning border would stand still at a random angle,
+   so it goes and the plain frame below it stays. The marquees keep moving,
+   they only shift a finished layer and cost the main thread nothing, and so do
+   small loops like fx-ping, fx-ticker and fx-blink. */
 @media (hover: none) {
-  .fx-border,
-  .fx-marquee,
-  .fx-marquee-rev,
+  .fx-border {
+    display: none;
+  }
   .fx-floor,
   .fx-shine,
   .fx-twinkle,
@@ -585,6 +595,36 @@
   .lens-auto .lens-clip-inner,
   .lens-auto .lens-handle {
     animation: none;
+  }
+}
+
+/* Touch screens draw no CSS blur. iOS Safari renders a blur on the main thread
+   and again whenever anything near it repaints, which froze the page for
+   seconds on an iPhone. A glow becomes a radial gradient that fades out as far
+   as the blur reached, a hazy gradient loses only its blur, and the blurred
+   cone behind the hero, which has no such stand-in, is left out. */
+@media (hover: none) {
+  .fx-glow {
+    background: none;
+    filter: none;
+  }
+  .fx-glow::before {
+    content: "";
+    position: absolute;
+    inset: calc(var(--glow-blur) * -2);
+    background: radial-gradient(
+      closest-side,
+      var(--glow),
+      color-mix(in srgb, var(--glow) 50%, transparent) 55%,
+      color-mix(in srgb, var(--glow) 15%, transparent) 78%,
+      transparent
+    );
+  }
+  .fx-haze {
+    filter: none !important;
+  }
+  .fx-halo {
+    display: none;
   }
 }
 

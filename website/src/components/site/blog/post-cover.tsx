@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import type { PostCover, PostTone } from "@/lib/blog";
 import { cn } from "@/lib/utils";
@@ -40,8 +41,10 @@ export function PostCoverArt({
     >
       <span className="bg-dot-grid absolute inset-0 [background-size:16px_16px]" />
       <span
-        className="absolute -top-[60px] left-1/2 -ml-[130px] h-[180px] w-[260px] rounded-full"
-        style={{ background: color, filter: "blur(50px)", opacity: "calc(0.35 * var(--glow-strength))" }}
+        className="fx-glow absolute -top-[60px] left-1/2 -ml-[130px] h-[180px] w-[260px] rounded-full"
+        style={
+          { "--glow": color, "--glow-blur": "50px", opacity: "calc(0.35 * var(--glow-strength))" } as CSSProperties
+        }
       />
       {cover.snippet && (
         <span className="absolute inset-x-[18px] bottom-[18px] overflow-hidden rounded-[10px] border border-border-strong bg-surface-2/85 px-3 py-2.5 font-mono text-xs leading-[1.7] whitespace-pre text-subtle">

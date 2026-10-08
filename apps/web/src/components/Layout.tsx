@@ -130,8 +130,10 @@ export function Layout() {
     )
   );
 
+  // overflow-clip keeps the glow of a page from widening or lengthening it. Unlike hidden it
+  // makes no scroll container, so the sticky header keeps working.
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-clip">
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4">
         <div
           data-slot="glass"
