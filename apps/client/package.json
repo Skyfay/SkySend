@@ -27,16 +27,16 @@
     "commander": "^15.0.0",
     "fflate": "^0.8.3",
     "hash-wasm": "^4.12.0",
-    "ink": "^7.1.0",
+    "ink": "^8.0.0",
     "qrcode": "^1.5.4",
-    "react": "^19.2.7",
-    "zod": "^4.4.3"
+    "react": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.6.4",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "^19.2.17",
+    "@types/react": "^19.3.0",
     "react-devtools-core": "file:stubs/react-devtools-core",
-    "tsx": "^4.22.4"
+    "tsx": "^4.23.15"
   }
 }

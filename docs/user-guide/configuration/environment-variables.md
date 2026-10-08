@@ -91,7 +91,7 @@ A file request is a link you send to someone so they can upload files to you, en
 
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
-| `PASSWORD_MAX_ATTEMPTS` | ❌ | `10` | Failed password attempts before a specific IP is locked out from a specific upload, note or file request inbox. Failed attempts that led to no lockout are forgotten after `PASSWORD_LOCKOUT_MS`. |
+| `PASSWORD_MAX_ATTEMPTS` | ❌ | `10` | Failed password attempts before a specific IP is locked out from a specific upload, note or file request inbox. For an upload, a wrong token at the download counts as well. Failed attempts that led to no lockout are forgotten after `PASSWORD_LOCKOUT_MS`. |
 | `PASSWORD_LOCKOUT_MS` | ❌ | `900000` | Lockout duration in milliseconds (default: 15 minutes). |
 
 ## Storage Backend

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StoredUpload, StoredNote } from "../../src/lib/history.js";
@@ -49,6 +49,34 @@ afterEach(() => {
   delete process.env["XDG_CONFIG_HOME"];
   rmSync(tempDir, { recursive: true, force: true });
   vi.resetModules();
+});
+
+// ── File permissions (GHSA-5vjq-2637-p33f) ──────────────────────────────────
+
+describe.skipIf(process.platform === "win32")("history file permissions", () => {
+  const modeOf = (target: string) => statSync(target).mode & 0o777;
+
+  it("keeps the share links and owner tokens readable for the user only", async () => {
+    const { addUpload, addNote } = await freshHistory();
+    addUpload(makeUpload());
+    addNote(makeNote());
+    expect(modeOf(join(tempDir, "skysend", "history.json"))).toBe(0o600);
+    expect(modeOf(join(tempDir, "skysend"))).toBe(0o700);
+  });
+
+  it("narrows a history file an older version wrote readable for everyone", async () => {
+    const dir = join(tempDir, "skysend");
+    mkdirSync(dir, { mode: 0o755 });
+    chmodSync(dir, 0o755);
+    writeFileSync(join(dir, "history.json"), JSON.stringify({ uploads: [], notes: [] }), { mode: 0o644 });
+    chmodSync(join(dir, "history.json"), 0o644);
+
+    const { addUpload, getUploads } = await freshHistory();
+    addUpload(makeUpload());
+    expect(getUploads()).toHaveLength(1);
+    expect(modeOf(join(dir, "history.json"))).toBe(0o600);
+    expect(modeOf(dir)).toBe(0o700);
+  });
 });
 
 // ── Upload CRUD ───────────────────────────────────────────────────────────────

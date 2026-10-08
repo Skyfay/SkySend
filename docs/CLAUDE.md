@@ -89,7 +89,7 @@ A change spanning several scopes becomes several entries, one per scope. Never `
 
 **One entry per user-visible change.** A pull request touching 20 files to deliver one behavior change is one line. Two unrelated changes in one pull request are two lines.
 
-Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link.
+Security entries name the advisory: `Updated hono to 4.12.32 to patch ... (GHSA-hvrm-45r6-mjfj)`. A vulnerability reported to SkySend itself thanks the reporter at the end of every entry that fixes it: `Thanks @user ([GHSA-xxxx-xxxx-xxxx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-xxxx-xxxx-xxxx))`. Contributions credit the same way with the pull request link, which the release adds by itself: `scripts/changelog.mjs` looks up the pull request that added a fragment with git and `gh` and appends `Thanks @author ([#N](url))` to every entry of a fragment from outside the project. Contributors write no thanks, and a reviewer does not ask for one.
 
 ## Section order
 

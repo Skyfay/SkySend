@@ -43,10 +43,13 @@ infoRoute.get("/:id", async (c) => {
       ? toBase64url(new Uint8Array(upload.passwordSalt))
       : undefined,
     salt: toBase64url(new Uint8Array(upload.salt)),
-    encryptedMeta: upload.encryptedMeta
+    // A password-protected upload hands out its metadata only after the password check, which
+    // counts wrong guesses. With the metadata, anyone holding the link could test passwords
+    // offline against its GCM tag (GHSA-rxxj-c5wr-phqp).
+    encryptedMeta: upload.encryptedMeta && !upload.hasPassword
       ? Buffer.from(upload.encryptedMeta).toString("base64")
       : null,
-    nonce: upload.nonce
+    nonce: upload.nonce && !upload.hasPassword
       ? Buffer.from(upload.nonce).toString("base64")
       : null,
     // S-5 (Security Audit): downloadCount is intentionally exposed here.

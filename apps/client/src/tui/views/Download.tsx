@@ -8,9 +8,11 @@ import {
   expectedPlaintextSize,
   type FileMetadata,
 } from "@skysend/crypto";
-import { fetchInfo, downloadFile, verifyPassword } from "../../lib/api.js";
+import { fetchInfo, downloadFile, verifyPassword, withUnlockedMeta } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
 import { parseShareUrl } from "../../lib/url.js";
+import { availablePath, sanitizeFilename } from "../../lib/filename.js";
+import { forTerminal } from "../../lib/terminal.js";
 import { formatBytes, formatSpeed } from "../../lib/progress.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import { ProgressBar } from "../components/ProgressBar.js";
@@ -66,8 +68,8 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
       }
       setMetadata(meta);
-      const name = meta?.type === "single" ? meta.name : meta?.type === "archive" ? "archive.zip" : `download-${parsed.id}`;
-      setSavePath(path.join(process.cwd(), name));
+      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsed.id}`;
+      setSavePath(availablePath(process.cwd(), name));
       setPhase("save-path");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -82,21 +84,24 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       const creds = await prepareDownload(
         parsedUrl.secret, fileInfo.salt, pw, fileInfo.passwordSalt, fileInfo.passwordAlgo,
       );
-      const valid = await verifyPassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
-      if (!valid) {
+      const unlocked = await verifyPassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
+      if (!unlocked) {
         setErrorMsg("Invalid password");
         setPhase("error");
         return;
       }
+      // Only a right password makes the server release the metadata.
+      const opened = withUnlockedMeta(fileInfo, unlocked);
+      setFileInfo(opened);
       let meta: FileMetadata | undefined;
-      if (fileInfo.encryptedMeta && fileInfo.nonce) {
-        const ct = new Uint8Array(Buffer.from(fileInfo.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
-        const iv = new Uint8Array(Buffer.from(fileInfo.nonce, "base64")) as Uint8Array<ArrayBuffer>;
+      if (opened.encryptedMeta && opened.nonce) {
+        const ct = new Uint8Array(Buffer.from(opened.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
+        const iv = new Uint8Array(Buffer.from(opened.nonce, "base64")) as Uint8Array<ArrayBuffer>;
         meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
       }
       setMetadata(meta);
-      const name = meta?.type === "single" ? meta.name : meta?.type === "archive" ? "archive.zip" : `download-${parsedUrl.id}`;
-      setSavePath(path.join(process.cwd(), name));
+      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsedUrl.id}`;
+      setSavePath(availablePath(process.cwd(), name));
       setPhase("save-path");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -127,8 +132,9 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
         createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
       );
 
-      const writer = fs.createWriteStream(outputPath);
-      partial = { path: outputPath, writer };
+      const partPath = path.join(dir, `.skysend-${crypto.randomUUID()}.part`);
+      const writer = fs.createWriteStream(partPath, { flags: "wx" });
+      partial = { path: partPath, writer };
       const reader = decryptedStream.getReader();
       const startTime = Date.now();
       let totalWritten = 0;
@@ -149,9 +155,11 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       }
 
       await new Promise<void>((resolve, reject) => {
-        writer.end(() => resolve());
+        writer.on("close", () => resolve());
         writer.on("error", reject);
+        writer.end();
       });
+      fs.renameSync(partPath, outputPath);
       partial = undefined;
 
       setResultPath(outputPath);
@@ -236,7 +244,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       <Box flexDirection="column" paddingX={1}>
         <Text bold color="green">Download complete!</Text>
         <Box flexDirection="column" marginLeft={2} marginTop={1}>
-          <Text><Text dimColor>Saved: </Text>{resultPath}</Text>
+          <Text><Text dimColor>Saved: </Text>{forTerminal(resultPath)}</Text>
           <Text><Text dimColor>Size:  </Text>{formatBytes(resultSize)}</Text>
           {avgSpeed && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
           {metadata?.type === "archive" && (
@@ -254,7 +262,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
     return (
       <Box flexDirection="column" paddingX={1}>
         <Text color="red" bold>Download failed</Text>
-        <Text color="red">{errorMsg}</Text>
+        <Text color="red">{forTerminal(errorMsg)}</Text>
         <Box marginTop={1}>
           <Text dimColor>Press Enter or Esc to go back</Text>
         </Box>

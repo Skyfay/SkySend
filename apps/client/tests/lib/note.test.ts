@@ -9,7 +9,6 @@ import {
 import { NOTE_KIND, legacyToBlocks, parseNote, type NoteBlock } from "@skysend/note-format";
 import {
   CLI_NOTE_TYPES,
-  forTerminal,
   isCliNoteType,
   noteFileName,
   prepareNote,
@@ -103,6 +102,14 @@ describe("prepareNote", () => {
     expect(parseNote(note.plaintext)).toEqual([BLOCKS[2]]);
   });
 
+  it("pads the note to whole blocks, so its length hides how long a password is", () => {
+    const password = (value: string): NoteBlock => ({ type: "password", entries: [{ label: "", value }] });
+    const short = prepareNote(password("pw12"), true).plaintext;
+    const long = prepareNote(password("a-much-longer-password-28ch"), true).plaintext;
+    expect(new TextEncoder().encode(short).length % 1024).toBe(0);
+    expect(short.length).toBe(long.length);
+  });
+
   // LEGACY(notes-v1): drop with toLegacyNote.
   it("falls back to the legacy format for an older server", () => {
     expect(prepareNote(BLOCKS[3]!, false)).toEqual(toLegacyNote(BLOCKS[3]!));
@@ -143,19 +150,5 @@ describe("noteFileName", () => {
     expect(noteFileName([BLOCKS[0]!])).toBe("note.txt");
     expect(noteFileName([BLOCKS[0]!, BLOCKS[5]!])).toBe("note.txt");
     expect(noteFileName([])).toBe("note.txt");
-  });
-});
-
-describe("forTerminal", () => {
-  it("keeps text, tabs and line breaks", () => {
-    expect(forTerminal("line one\n\tline two")).toBe("line one\n\tline two");
-    expect(forTerminal("windows\r\nline")).toBe("windows\nline");
-  });
-
-  it("makes escape sequences and bidirectional overrides visible instead of running them", () => {
-    expect(forTerminal("safe\x1b[8mhidden\x1b[0m")).toBe("safe\uFFFD[8mhidden\uFFFD[0m");
-    expect(forTerminal("\x1b]8;;https://evil.example\x07link")).toBe("\uFFFD]8;;https://evil.example\uFFFDlink");
-    expect(forTerminal("a\rb\bc\x7fd\x9be")).toBe("a\uFFFDb\uFFFDc\uFFFDd\uFFFDe");
-    expect(forTerminal("rm -rf /\u202Etxt.exe")).toBe("rm -rf /\uFFFDtxt.exe");
   });
 });

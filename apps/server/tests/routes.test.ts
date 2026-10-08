@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Hono } from "hono";
-import type { Context, Next } from "hono";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { eq } from "drizzle-orm";
 import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
 import { uploads } from "../src/db/schema.js";
@@ -35,6 +35,8 @@ import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
 import { authMiddleware, ownerMiddleware } from "../src/middleware/auth.js";
+import { createUploadQuota } from "../src/middleware/quota.js";
+import type { Config } from "../src/lib/config.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
 
@@ -881,7 +883,7 @@ describe("routes", () => {
       }));
 
       const app = new Hono();
-      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
 
       const res = await app.request(`/api/download/${TEST_UUID}`, {
         headers: { "X-Auth-Token": authToken },
@@ -905,7 +907,7 @@ describe("routes", () => {
       insertTestUpload(dbCtx.db);
 
       const app = new Hono();
-      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
 
       const res = await app.request(`/api/download/${TEST_UUID}`);
       expect(res.status).toBe(401);
@@ -919,7 +921,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
 
       const res = await app.request(`/api/download/${TEST_UUID}`, {
         headers: { "X-Auth-Token": authToken },
@@ -937,7 +939,7 @@ describe("routes", () => {
       });
 
       const app = new Hono();
-      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
 
       const res = await app.request(`/api/download/${TEST_UUID}`, {
         headers: { "X-Auth-Token": authToken },
@@ -1578,7 +1580,7 @@ describe("routes", () => {
 
       app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
       app.route("/api/info", infoRoute);
-      app.route("/api/download", createDownloadRoute(storage));
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
       app.route("/api/note", createNoteRoute(mockLockout));
       return app;
     }
@@ -1698,6 +1700,277 @@ describe("routes", () => {
       expect(result).toBeNull();
     });
   });
+
+  // ── Quota reservations and the single-request body limit ──
+
+  describe("upload quota on the HTTP transports", () => {
+    const salt = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+    const headersFor = (size: number) => ({
+      "X-Auth-Token": fakeBase64urlToken(),
+      "X-Owner-Token": fakeBase64urlToken(),
+      "X-Salt": salt,
+      "X-Max-Downloads": "1",
+      "X-Expire-Sec": "86400",
+      "X-File-Count": "1",
+      "X-Content-Length": String(size),
+    });
+
+    /** The upload routes with a real quota, mounted the way src/index.ts mounts them. */
+    function appWithQuota(limit: number) {
+      const config = { ...DEFAULT_CONFIG, FILE_UPLOAD_QUOTA_BYTES: limit } as unknown as Config;
+      vi.mocked(getConfig).mockReturnValue(config);
+      const app = new Hono();
+      app.route(
+        "/api/upload",
+        createUploadRoute(storage, { chunkDir, quota: createUploadQuota(config) }),
+      );
+      return app;
+    }
+
+    const init = async (app: Hono, size: number) => {
+      const res = await app.request("/api/upload/init", { method: "POST", headers: headersFor(size) });
+      return { status: res.status, id: res.status === 201 ? ((await res.json()) as { id: string }).id : "" };
+    };
+    const chunk = (app: Hono, id: string, size: number) =>
+      app.request(`/api/upload/${id}/chunk?index=0`, { method: "POST", body: new Uint8Array(size) });
+    const finalize = (app: Hono, id: string) =>
+      app.request(`/api/upload/${id}/finalize`, { method: "POST" });
+
+    it("reserves the declared size at init, so parallel uploads cannot pass the same check", async () => {
+      const app = appWithQuota(1000);
+      const opened = await Promise.all([init(app, 600), init(app, 600), init(app, 600)]);
+      expect(opened.map((o) => o.status).sort()).toEqual([201, 413, 413]);
+    });
+
+    it("runs chunks and finalize on the reservation of their init, even one that fills the quota", async () => {
+      const app = appWithQuota(10);
+      const { status, id } = await init(app, 10);
+      expect(status).toBe(201);
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(200);
+      // Stored, so the quota is used up now.
+      expect((await init(app, 1)).status).toBe(429);
+    });
+
+    it("gives the reservation back when finalize refuses the upload", async () => {
+      const app = appWithQuota(10);
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 5)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
+    it("gives the reservation back when the init itself fails", async () => {
+      const app = appWithQuota(10);
+      const res = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: { ...headersFor(10), "X-Expire-Sec": "999" },
+      });
+      expect(res.status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
+    it("counts a single-request upload and gives a failed one back", async () => {
+      const app = appWithQuota(5);
+      const tooLong = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(6),
+      });
+      expect(tooLong.status).toBe(413);
+      const stored = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+      expect(stored.status).toBe(201);
+      const again = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(1),
+        body: new Uint8Array(1),
+      });
+      expect(again.status).toBe(429);
+    });
+
+    it("guards both ways to start an upload, and only those", async () => {
+      const guard: MiddlewareHandler = async (c) => c.json({ error: "Login required" }, 401);
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir, startGuard: guard }));
+      const single = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(5),
+      });
+      expect(single.status).toBe(401);
+      expect((await init(app, 5)).status).toBe(401);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      // A chunk or finalize request reaches its session check, which only an init could pass.
+      expect((await chunk(app, "unknown-session", 5)).status).toBe(404);
+      expect((await finalize(app, "unknown-session")).status).toBe(404);
+    });
+
+    it("drops a chunked upload that stops making progress and gives its reservation back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10);
+        const stalled = await init(app, 10);
+        expect(stalled.status).toBe(201);
+        expect((await init(app, 10)).status).toBe(429);
+
+        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        expect((await finalize(app, stalled.id)).status).toBe(404);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps a chunked upload that makes progress", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10);
+        const { id } = await init(app, 10);
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+        expect((await chunk(app, id, 10)).status).toBe(200);
+        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        expect((await finalize(app, id)).status).toBe(200);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stops a single-request body at its declared size and keeps nothing of it", async () => {
+      const app = new Hono();
+      app.route("/api/upload", createUploadRoute(storage, { chunkDir }));
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(5),
+        body: new Uint8Array(64 * 1024),
+      });
+      expect(res.status).toBe(413);
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+      const left = readdirSync(storageCtx.tempDir).filter((name) => name.endsWith(".bin"));
+      expect(left).toEqual([]);
+    });
+  });
+
+  // ── Password-protected uploads (GHSA-rxxj-c5wr-phqp) ──
+
+  describe("password-protected uploads", () => {
+    const authToken = fakeBase64urlToken();
+    const encryptedMeta = Buffer.from(crypto.getRandomValues(new Uint8Array(1040)));
+    const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(12)));
+
+    function insertProtected() {
+      insertTestUpload(dbCtx.db, {
+        authToken,
+        hasPassword: true,
+        passwordSalt: Buffer.from(crypto.getRandomValues(new Uint8Array(16))),
+        passwordAlgo: "argon2id-v2",
+        encryptedMeta,
+        nonce,
+      });
+    }
+
+    /** The info, password and download routes sharing one lockout, as src/index.ts mounts them. */
+    function appWithLockout(maxAttempts = 3) {
+      const lockout = createPasswordLockout(maxAttempts, 60_000);
+      const app = new Hono();
+      app.route("/api/info", infoRoute);
+      app.route("/api/password", createPasswordRoute(lockout));
+      app.route("/api/download", createDownloadRoute(storage, lockout));
+      return app;
+    }
+
+    const guessPassword = (app: Hono, token: string) =>
+      app.request(`/api/password/${TEST_UUID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken: token }),
+      });
+    const guessDownload = (app: Hono, token: string) =>
+      app.request(`/api/download/${TEST_UUID}`, { headers: { "X-Auth-Token": token } });
+
+    it("keeps the encrypted metadata out of the public info, so no guess can be tested offline", async () => {
+      insertProtected();
+      const body = await (await appWithLockout().request(`/api/info/${TEST_UUID}`)).json();
+      expect(body.hasPassword).toBe(true);
+      expect(body.encryptedMeta).toBeNull();
+      expect(body.nonce).toBeNull();
+      // What a client needs to derive the keys is still there.
+      expect(body.passwordSalt).toBeTruthy();
+      expect(body.salt).toBeTruthy();
+    });
+
+    it("still shows the metadata of an upload without a password", async () => {
+      insertTestUpload(dbCtx.db, { encryptedMeta, nonce });
+      const body = await (await appWithLockout().request(`/api/info/${TEST_UUID}`)).json();
+      expect(body.encryptedMeta).toBe(encryptedMeta.toString("base64"));
+      expect(body.nonce).toBe(nonce.toString("base64"));
+    });
+
+    it("hands out the metadata after the password check, and only then", async () => {
+      insertProtected();
+      const app = appWithLockout();
+
+      const wrong = await guessPassword(app, fakeBase64urlToken());
+      expect(wrong.status).toBe(401);
+      expect(await wrong.json()).not.toHaveProperty("encryptedMeta");
+
+      const right = await guessPassword(app, authToken);
+      expect(right.status).toBe(200);
+      expect(await right.json()).toEqual({
+        ok: true,
+        encryptedMeta: encryptedMeta.toString("base64"),
+        nonce: nonce.toString("base64"),
+      });
+    });
+
+    it("counts wrong tokens at the download and locks it like the password check", async () => {
+      insertProtected();
+      const app = appWithLockout(3);
+      for (let i = 0; i < 3; i++) {
+        expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      }
+      // Locked, the right token included, so the download is no way around the lockout.
+      expect((await guessDownload(app, authToken)).status).toBe(429);
+      expect((await guessPassword(app, authToken)).status).toBe(429);
+    });
+
+    it("does not count a request without a token, which another site can send", async () => {
+      insertProtected();
+      const app = appWithLockout(3);
+      for (let i = 0; i < 5; i++) {
+        expect((await app.request(`/api/download/${TEST_UUID}`)).status).toBe(401);
+      }
+      const right = await guessPassword(app, authToken);
+      expect(right.status).toBe(200);
+    });
+
+    it("forgets the wrong guesses after a download with the right token", async () => {
+      insertProtected();
+      await storage.save(TEST_UUID, new ReadableStream({
+        start(c) { c.enqueue(new Uint8Array([1, 2, 3])); c.close(); },
+      }));
+      const app = appWithLockout(3);
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessDownload(app, authToken)).status).toBe(200);
+      // Two more wrong tokens would have locked it without the reset.
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessPassword(app, authToken)).status).toBe(200);
+    });
+
+    it("shares one count between the password check and the download", async () => {
+      insertProtected();
+      const app = appWithLockout(3);
+      expect((await guessPassword(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessPassword(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
+      expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(429);
+    });
+  });
 });
 
 // ── authMiddleware edge cases ─────────────────────────────────────────────────
@@ -1736,7 +2009,7 @@ describe("authMiddleware edge cases", () => {
   it("returns 404 when the upload does not exist in the database", async () => {
     // DB is empty - no upload inserted
     const app = new Hono();
-    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+    app.route("/api/download", createDownloadRoute(storageCtx.storage, createPasswordLockout(10, 60_000)));
 
     const res = await app.request(`/api/download/${TEST_UUID}`, {
       headers: { "X-Auth-Token": fakeBase64urlToken() },
@@ -1750,7 +2023,7 @@ describe("authMiddleware edge cases", () => {
   it("returns 401 for an auth token containing non-base64url characters", async () => {
     insertTestUpload(dbCtx.db);
     const app = new Hono();
-    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+    app.route("/api/download", createDownloadRoute(storageCtx.storage, createPasswordLockout(10, 60_000)));
 
     const res = await app.request(`/api/download/${TEST_UUID}`, {
       headers: { "X-Auth-Token": "!!!invalid-base64url!!!" },
@@ -1851,7 +2124,7 @@ describe("download route edge cases", () => {
     // File deliberately not saved to storage
 
     const app = new Hono();
-    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+    app.route("/api/download", createDownloadRoute(storageCtx.storage, createPasswordLockout(10, 60_000)));
 
     const res = await app.request(`/api/download/${TEST_UUID}`, {
       headers: { "X-Auth-Token": authToken },
@@ -1880,7 +2153,7 @@ describe("download route edge cases", () => {
     } as ReturnType<typeof dbCtx.db.update>);
 
     const app = new Hono();
-    app.route("/api/download", createDownloadRoute(storageCtx.storage));
+    app.route("/api/download", createDownloadRoute(storageCtx.storage, createPasswordLockout(10, 60_000)));
 
     const res = await app.request(`/api/download/${TEST_UUID}`, {
       headers: { "X-Auth-Token": authToken },
@@ -1917,7 +2190,7 @@ describe("download route edge cases", () => {
     } as ReturnType<typeof dbCtx.db.update>);
 
     const app = new Hono();
-    app.route("/api/download", createDownloadRoute(mockStorage));
+    app.route("/api/download", createDownloadRoute(mockStorage, createPasswordLockout(10, 60_000)));
 
     const res = await app.request(`/api/download/${TEST_UUID}`, {
       headers: { "X-Auth-Token": authToken },

@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
@@ -6,9 +6,32 @@ import { getConfig } from "../lib/config.js";
 import { fromBase64url } from "@skysend/crypto";
 import type { StorageBackend } from "../storage/types.js";
 import type { QuotaVariables } from "../types.js";
+import type { createUploadQuota, QuotaReservation } from "../middleware/quota.js";
 import { uploadHeadersSchema, validateUploadHeaders, type UploadHeaders } from "../lib/upload-validation.js";
 import { createChunkedUploads } from "../lib/chunked-upload.js";
 
+/** What a chunked upload keeps until finalize: its headers and the bytes its init reserved. */
+type UploadSession = UploadHeaders & { quotaReservation?: QuotaReservation };
+
+/** Raised when a single-request body grows past the size its headers declared. */
+class BodyTooLargeError extends Error {}
+
+/**
+ * Passes a body through until it grows past `max` bytes, then fails the stream, so a client
+ * cannot fill the disk with a body that never ends while it declared a small one.
+ */
+function capped(body: ReadableStream<Uint8Array>, max: number): ReadableStream<Uint8Array> {
+  let seen = 0;
+  return body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        seen += chunk.byteLength;
+        if (seen > max) controller.error(new BodyTooLargeError());
+        else controller.enqueue(chunk);
+      },
+    }),
+  );
+}
 
 export interface UploadRouteOptions {
   /**
@@ -18,16 +41,32 @@ export interface UploadRouteOptions {
   chunkDir: string;
   /** Overrides MAX_CHUNK_SIZE in tests. */
   maxChunkSize?: number;
+  /** Who may start an upload, the OIDC guard when `OIDC_PROTECT_FILES` is on. */
+  startGuard?: MiddlewareHandler;
+  /** The upload quota, which reserves the bytes of an upload when it starts. */
+  quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware">;
 }
 
 export function createUploadRoute(
   storage: StorageBackend,
-  { chunkDir, maxChunkSize }: UploadRouteOptions,
+  { chunkDir, maxChunkSize, startGuard, quota }: UploadRouteOptions,
 ) {
   const route = new Hono<{ Variables: QuotaVariables }>();
 
+  // An upload starts at the chunked init or the single-request upload, which stores a file in
+  // one go. Both pass the guard and then the quota. Chunk and finalize requests need neither,
+  // they belong to a session only a started upload has and run on its reservation.
+  for (const start of ["/init", "/"]) {
+    if (startGuard) route.use(start, startGuard);
+    if (quota) route.use(start, quota.middleware);
+  }
+
   // Sessions of chunked uploads, see lib/chunked-upload.ts for the limits they enforce.
-  const chunked = createChunkedUploads<UploadHeaders>(storage, { chunkDir, maxChunkSize });
+  const chunked = createChunkedUploads<UploadSession>(storage, {
+    chunkDir,
+    maxChunkSize,
+    onAbandon: (_id, meta) => meta.quotaReservation?.release(),
+  });
 
   /**
    * POST /api/upload/init
@@ -65,7 +104,10 @@ export function createUploadRoute(
       return c.json({ error: validationError.message }, validationError.status);
     }
 
-    const id = await chunked.open(headers.contentLength, headers);
+    const id = await chunked.open(headers.contentLength, {
+      ...headers,
+      quotaReservation: c.get("quotaReservation"),
+    });
     return c.json({ id }, 201);
   });
 
@@ -87,68 +129,65 @@ export function createUploadRoute(
     }
 
     const headers = session.meta;
-
-    // Verify total bytes
-    if (session.bytesWritten !== headers.contentLength) {
-      await storage.abortChunkedUpload(id).catch(() => {});
-      return c.json(
-        { error: "Body size does not match declared content length" },
-        400,
-      );
-    }
-
-    // Finalize the storage backend (completes S3 multipart upload, no-op for filesystem)
+    // Every way out below either stores the upload and commits its reservation, or gives the
+    // reservation back in the finally block.
     try {
-      await storage.finalizeChunkedUpload(id);
-    } catch (err) {
-      await storage.abortChunkedUpload(id).catch(() => {});
-      throw err;
-    }
-
-    // Decode password salt if present
-    let passwordSaltBuffer: Buffer | null = null;
-    if (headers.hasPassword && headers.passwordSalt) {
-      passwordSaltBuffer = Buffer.from(fromBase64url(headers.passwordSalt));
-    }
-
-    // Create database record
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
-    const storagePath = `${id}.bin`;
-
-    const db = getDb();
-    try {
-      db.insert(uploads).values({
-        id,
-        ownerToken: headers.ownerToken,
-        authToken: headers.authToken,
-        salt: Buffer.from(fromBase64url(headers.salt)),
-        size: session.bytesWritten,
-        fileCount: headers.fileCount,
-        hasPassword: headers.hasPassword,
-        passwordSalt: passwordSaltBuffer,
-        passwordAlgo: headers.hasPassword ? (headers.passwordAlgo ?? null) : null,
-        maxDownloads: headers.maxDownloads,
-        downloadCount: 0,
-        expiresAt,
-        createdAt: now,
-        storagePath,
-      }).run();
-    } catch (err) {
-      await storage.delete(id).catch(() => {});
-      throw err;
-    }
-
-    // Record quota usage if applicable
-    const quotaHashedIp = c.get("quotaHashedIp");
-    if (quotaHashedIp) {
-      const quotaRecorder = c.get("quotaRecorder");
-      if (quotaRecorder) {
-        quotaRecorder(quotaHashedIp, session.bytesWritten);
+      // Verify total bytes
+      if (session.bytesWritten !== headers.contentLength) {
+        await storage.abortChunkedUpload(id).catch(() => {});
+        return c.json(
+          { error: "Body size does not match declared content length" },
+          400,
+        );
       }
-    }
 
-    return c.json({ id }, 200);
+      // Finalize the storage backend (completes S3 multipart upload, no-op for filesystem)
+      try {
+        await storage.finalizeChunkedUpload(id);
+      } catch (err) {
+        await storage.abortChunkedUpload(id).catch(() => {});
+        throw err;
+      }
+
+      // Decode password salt if present
+      let passwordSaltBuffer: Buffer | null = null;
+      if (headers.hasPassword && headers.passwordSalt) {
+        passwordSaltBuffer = Buffer.from(fromBase64url(headers.passwordSalt));
+      }
+
+      // Create database record
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + headers.expireSec * 1000);
+      const storagePath = `${id}.bin`;
+
+      const db = getDb();
+      try {
+        db.insert(uploads).values({
+          id,
+          ownerToken: headers.ownerToken,
+          authToken: headers.authToken,
+          salt: Buffer.from(fromBase64url(headers.salt)),
+          size: session.bytesWritten,
+          fileCount: headers.fileCount,
+          hasPassword: headers.hasPassword,
+          passwordSalt: passwordSaltBuffer,
+          passwordAlgo: headers.hasPassword ? (headers.passwordAlgo ?? null) : null,
+          maxDownloads: headers.maxDownloads,
+          downloadCount: 0,
+          expiresAt,
+          createdAt: now,
+          storagePath,
+        }).run();
+      } catch (err) {
+        await storage.delete(id).catch(() => {});
+        throw err;
+      }
+
+      headers.quotaReservation?.commit(session.bytesWritten);
+      return c.json({ id }, 200);
+    } finally {
+      headers.quotaReservation?.release();
+    }
   });
 
   /**
@@ -196,13 +235,16 @@ export function createUploadRoute(
     const id = randomUUID();
     const storagePath = `${id}.bin`;
 
-    // Stream the encrypted body to disk
+    // Stream the encrypted body to disk, never more than it declared
     let bytesWritten: number;
     try {
-      bytesWritten = await storage.save(id, body);
+      bytesWritten = await storage.save(id, capped(body, headers.contentLength));
     } catch (err) {
       // Clean up partial file on error
       await storage.delete(id).catch(() => {});
+      if (err instanceof BodyTooLargeError) {
+        return c.json({ error: "Body size does not match declared content length" }, 413);
+      }
       throw err;
     }
 
@@ -248,14 +290,8 @@ export function createUploadRoute(
       throw err;
     }
 
-    // Record quota usage if applicable
-    const quotaHashedIp = c.get("quotaHashedIp");
-    if (quotaHashedIp) {
-      const quotaRecorder = c.get("quotaRecorder");
-      if (quotaRecorder) {
-        quotaRecorder(quotaHashedIp, bytesWritten);
-      }
-    }
+    // The quota middleware gives the reservation back if this upload fails.
+    c.get("quotaReservation")?.commit(bytesWritten);
 
     return c.json({
       id,

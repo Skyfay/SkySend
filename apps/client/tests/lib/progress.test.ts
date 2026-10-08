@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import * as readline from "node:readline";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
@@ -318,6 +319,7 @@ describe("promptPassword", () => {
       const mockRl = {
         question: vi.fn((p: string, cb: (ans: string) => void) => { cb("mysecret"); }),
         close: vi.fn(),
+        on: vi.fn(),
       };
       vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
 
@@ -330,123 +332,120 @@ describe("promptPassword", () => {
       const mockRl = {
         question: vi.fn((p: string, cb: (ans: string) => void) => { cb(""); }),
         close: vi.fn(),
+        on: vi.fn(),
       };
       vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
 
       await promptPassword();
       expect(mockRl.question).toHaveBeenCalledWith("Password: ", expect.any(Function));
     });
+
+    it("gives an empty answer instead of waiting when the input ends first", async () => {
+      let onClose: (() => void) | undefined;
+      const mockRl = {
+        question: vi.fn(),
+        close: vi.fn(),
+        on: vi.fn((event: string, handler: () => void) => {
+          if (event === "close") onClose = handler;
+        }),
+      };
+      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+
+      const promise = promptPassword("Enter: ");
+      onClose!();
+      expect(await promise).toBe("");
+    });
   });
 
   describe("TTY mode", () => {
-    let origIsTTY: boolean | undefined;
-    let origSetRawMode: unknown;
-    let capturedDataHandler: ((data: Buffer) => void) | null;
-    let mockSetRawMode: ReturnType<typeof vi.fn>;
-    let mockRl: { question: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+    /** A terminal that records what the prompt shows and the raw mode it is in. */
+    function fakeTerminal() {
+      const input = new EventEmitter() as EventEmitter & {
+        isTTY: boolean;
+        setRawMode: ReturnType<typeof vi.fn>;
+        resume: ReturnType<typeof vi.fn>;
+        pause: ReturnType<typeof vi.fn>;
+      };
+      input.isTTY = true;
+      input.setRawMode = vi.fn();
+      input.resume = vi.fn();
+      input.pause = vi.fn();
+      const shown: string[] = [];
+      const output = { write: vi.fn((text: string) => shown.push(text)) };
+      const io = {
+        input: input as unknown as NodeJS.ReadStream,
+        output: output as unknown as NodeJS.WritableStream,
+      };
+      const type = (text: string) => input.emit("data", Buffer.from(text));
+      return { io, input, shown, type };
+    }
 
-    beforeEach(() => {
-      origIsTTY = process.stdin.isTTY;
-      origSetRawMode = (process.stdin as NodeJS.ReadStream & { setRawMode?: unknown }).setRawMode;
-      capturedDataHandler = null;
-      mockSetRawMode = vi.fn();
-      mockRl = { question: vi.fn(), close: vi.fn() };
+    it("shows nothing of what is typed, only the prompt and a line break", async () => {
+      const term = fakeTerminal();
+      const promise = promptPassword("Note: ", term.io);
+      for (const key of ["s", "e", "c", "r", "e", "t", "\r"]) term.type(key);
 
-      Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true, writable: true });
-      (process.stdin as NodeJS.ReadStream & { setRawMode: unknown }).setRawMode = mockSetRawMode;
-
-      vi.spyOn(process.stdin, "on").mockImplementation((event: string | symbol, handler: (...args: unknown[]) => void) => {
-        if (event === "data") capturedDataHandler = handler as (data: Buffer) => void;
-        return process.stdin;
-      });
-      vi.spyOn(process.stdin, "removeListener").mockReturnValue(process.stdin);
-      vi.spyOn(process.stderr, "write").mockReturnValue(true);
-      vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+      expect(await promise).toBe("secret");
+      expect(term.shown).toEqual(["Note: ", "\n"]);
+      // No readline interface is opened at a terminal, since it echoes every key.
+      expect(readline.createInterface).not.toHaveBeenCalled();
     });
 
-    afterEach(() => {
-      vi.restoreAllMocks();
-      Object.defineProperty(process.stdin, "isTTY", { value: origIsTTY, configurable: true, writable: true });
-      (process.stdin as NodeJS.ReadStream & { setRawMode: unknown }).setRawMode = origSetRawMode;
+    it("takes a paste that arrives in one chunk and ends at its first line break", async () => {
+      const term = fakeTerminal();
+      const promise = promptPassword("Pass: ", term.io);
+      term.type("pasted-secret\r");
+      expect(await promise).toBe("pasted-secret");
+
+      const second = fakeTerminal();
+      const lines = promptPassword("Pass: ", second.io);
+      second.type("first line\nsecond line\n");
+      expect(await lines).toBe("first line");
     });
 
-    it("resolves with typed characters on Enter (\\r)", async () => {
-      const promise = promptPassword("Pass: ");
-      expect(capturedDataHandler).not.toBeNull();
-      capturedDataHandler!(Buffer.from("a"));
-      capturedDataHandler!(Buffer.from("b"));
-      capturedDataHandler!(Buffer.from("c"));
-      capturedDataHandler!(Buffer.from("\r"));
+    it("resolves on newline and on Ctrl+D", async () => {
+      const newline = fakeTerminal();
+      const a = promptPassword("Pass: ", newline.io);
+      newline.type("x\n");
+      expect(await a).toBe("x");
 
-      const result = await promise;
-      expect(result).toBe("abc");
-      expect(mockSetRawMode).toHaveBeenCalledWith(false);
-      expect(mockRl.close).toHaveBeenCalled();
+      const eof = fakeTerminal();
+      const b = promptPassword("Pass: ", eof.io);
+      eof.type("\u0004");
+      expect(await b).toBe("");
     });
 
-    it("resolves on newline (\\n)", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("x"));
-      capturedDataHandler!(Buffer.from("\n"));
-
-      const result = await promise;
-      expect(result).toBe("x");
+    it("removes one character per backspace, an emoji included", async () => {
+      const term = fakeTerminal();
+      const promise = promptPassword("Pass: ", term.io);
+      term.type("ab\u{1F600}");
+      term.type("\u007F");
+      term.type("c\b\b");
+      term.type("d\r");
+      expect(await promise).toBe("ad");
     });
 
-    it("resolves on Ctrl+D (\\u0004)", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("\u0004"));
-
-      const result = await promise;
-      expect(result).toBe("");
-    });
-
-    it("rejects on Ctrl+C (\\u0003)", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("\u0003"));
-
+    it("rejects on Ctrl+C", async () => {
+      const term = fakeTerminal();
+      const promise = promptPassword("Pass: ", term.io);
+      term.type("abc\u0003");
       await expect(promise).rejects.toThrow("Aborted");
-      expect(mockSetRawMode).toHaveBeenCalledWith(false);
-      expect(mockRl.close).toHaveBeenCalled();
     });
 
-    it("handles backspace DEL (\\u007F)", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("a"));
-      capturedDataHandler!(Buffer.from("b"));
-      capturedDataHandler!(Buffer.from("\u007F"));
-      capturedDataHandler!(Buffer.from("c"));
-      capturedDataHandler!(Buffer.from("\r"));
-
-      const result = await promise;
-      expect(result).toBe("ac");
-    });
-
-    it("handles backspace (\\b)", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("a"));
-      capturedDataHandler!(Buffer.from("\b"));
-      capturedDataHandler!(Buffer.from("\r"));
-
-      const result = await promise;
-      expect(result).toBe("");
-    });
-
-    it("ignores backspace on empty password", async () => {
-      const promise = promptPassword("Pass: ");
-      capturedDataHandler!(Buffer.from("\u007F"));
-      capturedDataHandler!(Buffer.from("a"));
-      capturedDataHandler!(Buffer.from("\r"));
-
-      const result = await promise;
-      expect(result).toBe("a");
-    });
-
-    it("writes the custom prompt to stderr", async () => {
-      const promise = promptPassword("Secret: ");
-      capturedDataHandler!(Buffer.from("\r"));
+    it("leaves the terminal as it found it", async () => {
+      const term = fakeTerminal();
+      const promise = promptPassword("Pass: ", term.io);
+      expect(term.input.setRawMode).toHaveBeenCalledWith(true);
+      expect(term.input.resume).toHaveBeenCalled();
+      term.type("pw\r");
       await promise;
-      expect(process.stderr.write).toHaveBeenCalledWith("Secret: ");
+
+      expect(term.input.setRawMode).toHaveBeenLastCalledWith(false);
+      expect(term.input.pause).toHaveBeenCalled();
+      expect(term.input.listenerCount("data")).toBe(0);
+      // Keys typed after the prompt ended go nowhere.
+      term.type("late\r");
+      expect(term.shown).toEqual(["Pass: ", "\n"]);
     });
   });
 });

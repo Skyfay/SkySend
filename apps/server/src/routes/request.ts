@@ -30,7 +30,7 @@ import { validateUploadSize } from "../lib/upload-validation.js";
 import type { RequestLimiter } from "../lib/request-limit.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 import type { OidcGuardVariables } from "../middleware/oidc-guard.js";
-import type { createUploadQuota } from "../middleware/quota.js";
+import type { createUploadQuota, QuotaReservation } from "../middleware/quota.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
 import { createWsUploadHandler, type WsUploadRefusal } from "../lib/ws-upload.js";
 import { createSlotHolds, SLOT_HOLD_PATTERN, type SlotHold } from "../lib/slot-holds.js";
@@ -49,6 +49,11 @@ interface RequestUploadSession {
   held?: SlotHold;
   /** How often the requester can download the upload, as the request set it. */
   downloads: number;
+  /**
+   * The bytes the sender's quota reserved for a chunked upload. They go back like a slot when
+   * the upload does not finish. A WebSocket session keeps its reservation in the session layer.
+   */
+  quotaReservation?: QuotaReservation | null;
 }
 
 const createSchema = z
@@ -278,7 +283,7 @@ export interface RequestRouteOptions {
   /** The OIDC guard, when OIDC_PROTECT_FILES puts creating a request behind the login. */
   createGuard?: MiddlewareHandler;
   /** The upload quota of the sender, the same one normal uploads count against. */
-  quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware" | "recordUsage" | "check">;
+  quota?: Pick<ReturnType<typeof createUploadQuota>, "middleware" | "reserve">;
   /** Turns on the WebSocket transport, the same as for normal uploads (FILE_UPLOAD_WS). */
   upgradeWebSocket?: UpgradeWebSocket;
 }
@@ -302,16 +307,10 @@ export function createRequestRoute({
 }: RequestRouteOptions) {
   const route = new Hono<{ Variables: QuotaVariables & Partial<OidcGuardVariables> }>();
   route.use("*", requestServiceGuard);
-  // Not on a cancel, which only gives a slot back and must work with the quota used up,
-  // and not on the WebSocket, which checks the quota in its init like for normal uploads.
-  if (quota) {
-    const quotaMiddleware = quota.middleware;
-    route.use("/:id/upload/*", (c, next) =>
-      c.req.method === "DELETE" || c.req.path.endsWith("/upload/ws")
-        ? next()
-        : quotaMiddleware(c, next),
-    );
-  }
+  // Only on the init, which reserves the bytes of the upload. Chunks and finalize run on that
+  // reservation, a cancel only gives it back and must work with the quota used up, and the
+  // WebSocket reserves in its own init like for normal uploads.
+  if (quota) route.use("/:id/upload/init", quota.middleware);
 
   // No session survives a restart, so whatever was reserved beyond the finished uploads
   // belonged to a session that is gone.
@@ -326,6 +325,7 @@ export function createRequestRoute({
   const giveBack = (meta: RequestUploadSession) => {
     if (meta.held) holds.giveBack(meta.requestId, meta.held);
     else release(meta.requestId, meta.slots);
+    meta.quotaReservation?.release();
   };
 
   /**
@@ -517,6 +517,7 @@ export function createRequestRoute({
       fileCount,
       contentLength,
       downloads: request.downloads,
+      quotaReservation: c.get("quotaReservation"),
       ...claimed,
     };
     try {
@@ -618,13 +619,13 @@ export function createRequestRoute({
       }
       if (!stored) {
         await storage.delete(uid).catch(() => {});
+        meta.quotaReservation?.release();
         return notFound(c);
       }
 
       // The hold comes first, so nothing after the store can leave its slot reserved for good.
       const next = holdNext(meta);
-      const quotaHashedIp = c.get("quotaHashedIp");
-      if (quota && quotaHashedIp) quota.recordUsage(quotaHashedIp, session.bytesWritten);
+      meta.quotaReservation?.commit(session.bytesWritten);
 
       return c.json({ id: uid, ...next }, 200);
     },
@@ -649,9 +650,6 @@ export function createRequestRoute({
         {
           storage,
           upgradeWebSocket,
-          quota: quota
-            ? { check: quota.check, record: quota.recordUsage }
-            : { check: () => ({ ok: true, hashedIp: null }), record: () => {} },
         },
         {
           async open(init, { c, ip }) {
@@ -669,11 +667,21 @@ export function createRequestRoute({
             const sizeError = validateUploadSize(contentLength, fileCount, getConfig());
             if (sizeError) return refuse(sizeError.status, sizeError.message);
             const quotaResult = quota
-              ? quota.check(ip, contentLength)
-              : ({ ok: true, hashedIp: null } as const);
-            if (!quotaResult.ok) return refuse(429, quotaResult.reason);
-            const claimed = await claimSlots(id, contentLength, { reserveNext, hold });
-            if ("refused" in claimed) return refuse(claimed.refused.status, claimed.refused.error);
+              ? quota.reserve(ip, contentLength)
+              : ({ ok: true, reservation: null } as const);
+            if (!quotaResult.ok) return refuse(quotaResult.status, quotaResult.reason);
+            // From here the session layer owns the reservation, unless this init refuses.
+            let claimed: Awaited<ReturnType<typeof claimSlots>>;
+            try {
+              claimed = await claimSlots(id, contentLength, { reserveNext, hold });
+            } catch (err) {
+              quotaResult.reservation?.release();
+              throw err;
+            }
+            if ("refused" in claimed) {
+              quotaResult.reservation?.release();
+              return refuse(claimed.refused.status, claimed.refused.error);
+            }
             return {
               contentLength,
               meta: {
@@ -684,7 +692,7 @@ export function createRequestRoute({
                 downloads: request.downloads,
                 ...claimed,
               },
-              quotaHashedIp: quotaResult.hashedIp,
+              quotaReservation: quotaResult.reservation,
             };
           },
 

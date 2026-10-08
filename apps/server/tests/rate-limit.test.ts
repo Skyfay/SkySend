@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { createRateLimiter, getClientIp } from "../src/middleware/rate-limit.js";
+import { createRateLimiter, getClientIp, toLimitKey } from "../src/middleware/rate-limit.js";
 import type { Config } from "../src/lib/config.js";
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
@@ -152,6 +152,59 @@ describe("getClientIp", () => {
     const app = createApp(true);
     const res = await app.request("/");
     expect(await res.text()).toBe("unknown");
+  });
+});
+
+describe("toLimitKey", () => {
+  it("keeps an IPv4 address and turns an IPv4-mapped IPv6 address into it", () => {
+    expect(toLimitKey("1.2.3.4")).toBe("1.2.3.4");
+    expect(toLimitKey("::ffff:1.2.3.4")).toBe("1.2.3.4");
+    expect(toLimitKey("::FFFF:10.0.0.1")).toBe("10.0.0.1");
+  });
+
+  it("counts every address of an IPv6 /64 as one, however it is written", () => {
+    const key = "2001:db8:abcd:12::/64";
+    expect(toLimitKey("2001:db8:abcd:12:1:2:3:4")).toBe(key);
+    expect(toLimitKey("2001:db8:abcd:12:ffff:ffff:ffff:ffff")).toBe(key);
+    expect(toLimitKey("2001:0DB8:ABCD:0012::1")).toBe(key);
+    expect(toLimitKey("[2001:db8:abcd:12::99]")).toBe(key);
+    expect(toLimitKey("2001:db8:abcd:13::1")).not.toBe(key);
+  });
+
+  it("handles the short forms, a zone index and an IPv4 tail", () => {
+    expect(toLimitKey("::1")).toBe("0:0:0:0::/64");
+    expect(toLimitKey("fe80::1%eth0")).toBe("fe80:0:0:0::/64");
+    expect(toLimitKey("64:ff9b::1.2.3.4")).toBe("64:ff9b:0:0::/64");
+  });
+
+  it("leaves anything that is no address as it is", () => {
+    expect(toLimitKey("unknown")).toBe("unknown");
+    expect(toLimitKey("not-an-ip")).toBe("not-an-ip");
+  });
+});
+
+describe("limits over IPv6", () => {
+  it("gives a client the IP of its /64 network", async () => {
+    const app = new Hono();
+    app.get("/", (c) => c.text(getClientIp(c, true)));
+    const res = await app.request("/", {
+      headers: { "X-Forwarded-For": "2001:db8:abcd:12:aaaa:bbbb:cccc:dddd" },
+    });
+    expect(await res.text()).toBe("2001:db8:abcd:12::/64");
+  });
+
+  it("does not reset the rate limit for a new address in the same /64", async () => {
+    const config = makeConfig({ RATE_LIMIT_MAX: 3, TRUST_PROXY: true });
+    const app = new Hono();
+    app.use("*", createRateLimiter(config));
+    app.get("/test", (c) => c.json({ ok: true }));
+    const from = (address: string) =>
+      app.request("/test", { headers: { "X-Forwarded-For": address } });
+
+    for (let i = 1; i <= 3; i++) expect((await from(`2001:db8:1:2::${i}`)).status).toBe(200);
+    expect((await from("2001:db8:1:2::99")).status).toBe(429);
+    // Another /64 has its own budget.
+    expect((await from("2001:db8:1:3::1")).status).toBe(200);
   });
 });
 

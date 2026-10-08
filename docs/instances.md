@@ -24,5 +24,5 @@ Instance data (version, limits, enabled services) is fetched automatically every
 :::
 
 ::: warning Disclaimer
-**Community** instances are operated by independent parties. SkySend is end-to-end encrypted, so instance operators cannot access your file contents. However, availability, uptime and data retention are not guaranteed by the SkySend project. **Official** instances (marked in blue) are operated directly by the SkySend project.
+**Community** instances are operated by independent parties. SkySend is end-to-end encrypted, so what an instance stores is unreadable to its operator. The operator also serves the web app your browser runs, though, so use an instance you trust with that, or the [CLI client](/user-guide/client-cli/) for files and notes, see the [threat model](/user-guide/security/threat-model#a-malicious-instance-serving-modified-code). However, availability, uptime and data retention are not guaranteed by the SkySend project. **Official** instances (marked in blue) are operated directly by the SkySend project.
 :::

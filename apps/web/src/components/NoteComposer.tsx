@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Send } from "lucide-react";
-import { serializeNote, type NoteBlockType } from "@skysend/note-format";
+import { padNote, serializeNote, type NoteBlockType } from "@skysend/note-format";
 import { BLOCK_TYPES, BlockListEditor, addDraft } from "@/components/BlockListEditor";
 import { ShareFooter } from "@/components/ShareFooter";
 import { ShareLink } from "@/components/ShareLink";
@@ -12,6 +12,7 @@ import { noteStart } from "@/lib/defaults";
 import { blocksToSend, emptyBlock, type DraftBlock } from "@/lib/note-editor";
 import { showKnownErrorToast } from "@/lib/toast";
 import { cn, formatBytes } from "@/lib/utils";
+import { meetsPasswordMinimum } from "@skysend/crypto";
 
 /** The start of an empty note: one card per block type. A click starts the note with it. */
 export function BlockCards({
@@ -75,11 +76,17 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
 
   const busy = noteHook.phase === "encrypting" || noteHook.phase === "uploading";
   const toSend = blocksToSend(drafts);
-  // The size the server checks is the encrypted document, which is this plus a 16-byte tag.
-  const bytes = toSend.length > 0 ? new TextEncoder().encode(serializeNote(toSend)).length : 0;
-  const tooLarge = bytes > config.noteMaxSize;
-  // A password that is switched on has to be typed, or the link would go out without one.
-  const canSubmit = toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || password.length > 0);
+  const serialized = toSend.length > 0 ? serializeNote(toSend) : "";
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(serialized).length;
+  // The server checks the encrypted document, which is padded to whole blocks and gets a
+  // 16-byte tag. The padded size has to fit, so the note fits any version of the server.
+  const tooLarge =
+    serialized !== "" && encoder.encode(padNote(serialized)).length > config.noteMaxSize;
+  // A password that is switched on has to be typed, or the link would go out without one, and
+  // long enough to hold against guessing with the link and the server's database.
+  const canSubmit =
+    toSend.length > 0 && !tooLarge && !busy && (!passwordEnabled || meetsPasswordMinimum(password));
 
   const add = (type: NoteBlockType) => setDrafts((current) => addDraft(current, type));
 

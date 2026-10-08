@@ -90,6 +90,18 @@ async function prepareKeys(
   return deriveFromSecret(secret, saltB64);
 }
 
+/**
+ * The info with the metadata a password check released. GET /api/info holds it back for a
+ * password-protected upload, so it arrives with a correct password only.
+ */
+function withUnlockedMeta(info: api.UploadInfo, unlocked: api.UnlockedMeta): api.UploadInfo {
+  return {
+    ...info,
+    encryptedMeta: unlocked.encryptedMeta ?? info.encryptedMeta,
+    nonce: unlocked.nonce ?? info.nonce,
+  };
+}
+
 /** Decrypts the upload metadata. Returns null for uploads that carry none. */
 async function decryptMeta(
   info: api.UploadInfo,
@@ -170,7 +182,7 @@ export function useDownload() {
       argon2id: Argon2idHashFn,
     ) => {
       try {
-        const info = state.info ?? (await api.fetchInfo(id));
+        let info = state.info ?? (await api.fetchInfo(id));
         // Clearing the error lets PasswordPrompt toast again on a repeated failure.
         setState((s) => ({ ...s, phase: "verifying-password", info, error: null }));
 
@@ -182,8 +194,8 @@ export function useDownload() {
           argon2id,
         );
 
-        const valid = await api.verifyPassword(id, authTokenB64);
-        if (!valid) {
+        const unlocked = await api.verifyPassword(id, authTokenB64);
+        if (!unlocked) {
           setState((s) => ({
             ...s,
             phase: "needs-password",
@@ -193,6 +205,7 @@ export function useDownload() {
         }
 
         unlockedSecretRef.current = secret;
+        info = withUnlockedMeta(info, unlocked);
 
         let metadata: FileMetadata | null = null;
         try {
@@ -232,7 +245,7 @@ export function useDownload() {
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
       try {
-        const info = state.info ?? (await api.fetchInfo(id));
+        let info = state.info ?? (await api.fetchInfo(id));
         if (!info) throw new Error("Upload not found");
 
         // Firefox DevTools warning - open DevTools during a download cause lag/freezes.
@@ -281,8 +294,8 @@ export function useDownload() {
 
           // Verify password if protected
           if (info.hasPassword) {
-            const valid = await api.verifyPassword(id, prepared.authTokenB64);
-            if (!valid) {
+            const unlocked = await api.verifyPassword(id, prepared.authTokenB64);
+            if (!unlocked) {
               setState((s) => ({
                 ...s,
                 phase: "needs-password",
@@ -290,6 +303,7 @@ export function useDownload() {
               }));
               return;
             }
+            info = withUnlockedMeta(info, unlocked);
           }
         }
 

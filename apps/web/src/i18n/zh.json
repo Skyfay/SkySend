@@ -3,6 +3,7 @@
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGenerated": false,
     "aiGeneratedKeys": [
+      "share.passwordTooShort",
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
@@ -729,6 +730,7 @@
     "summary": "将在 <b>{{expiry}}</b> 后删除。",
     "summaryLimit": "将在 <b>{{expiry}}</b> 后或 <b>{{limit}}</b> 后删除，以先到者为准。",
     "passwordForced": "服务器要求设置密码。",
+    "passwordTooShort": "请至少使用 {{count}} 个字符。",
     "encryptUpload": "加密并上传",
     "encryptShare": "加密并分享",
     "signInText": "此服务器仅允许已登录的用户分享。请登录后继续。",

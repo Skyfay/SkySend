@@ -18,6 +18,9 @@ export function createPasswordRoute(lockout: PasswordLockout) {
    *
    * The client derives keys from: secret XOR passwordDerivedKey,
    * then computes an authToken. This endpoint verifies that token.
+   *
+   * On success it returns the encrypted metadata, which GET /api/info holds back for a
+   * password-protected upload, so a guess can only be tested here, against the lockout.
    */
   passwordRoute.post("/:id", bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ error: "Request body too large" }, 413) }), async (c) => {
     const id = c.req.param("id");
@@ -76,7 +79,13 @@ export function createPasswordRoute(lockout: PasswordLockout) {
     }
 
     lockout.recordSuccess(resourceKey, ip);
-    return c.json({ ok: true });
+    return c.json({
+      ok: true,
+      encryptedMeta: upload.encryptedMeta
+        ? Buffer.from(upload.encryptedMeta).toString("base64")
+        : null,
+      nonce: upload.nonce ? Buffer.from(upload.nonce).toString("base64") : null,
+    });
   });
 
   return passwordRoute;

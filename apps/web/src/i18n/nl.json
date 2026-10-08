@@ -343,6 +343,7 @@
     "summary": "Verwijderd na <b>{{expiry}}</b>.",
     "summaryLimit": "Verwijderd na <b>{{expiry}}</b> of <b>{{limit}}</b>, afhankelijk van wat het eerst gebeurt.",
     "passwordForced": "De server vereist een wachtwoord.",
+    "passwordTooShort": "Gebruik minstens {{count}} tekens.",
     "encryptUpload": "Versleutelen en uploaden",
     "encryptShare": "Versleutelen en delen",
     "signInText": "Op deze server kunnen alleen ingelogde gebruikers delen. Log in om door te gaan.",

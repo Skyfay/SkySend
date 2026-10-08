@@ -3,6 +3,7 @@ import { getDb } from "../db/index.js";
 import { fileRequests, notes, requestUploads, uploads } from "../db/schema.js";
 import { SESSION_MAX_LIFETIME_MS } from "./chunked-upload.js";
 import type { StorageBackend } from "../storage/types.js";
+import { describeError } from "./log-error.js";
 
 /**
  * An upload into a request can still finish as long as its session lives, because the
@@ -155,7 +156,7 @@ export function startCleanupJob(
         console.log(`[cleanup] Removed ${deleted} expired record(s)`);
       }
     } catch (err) {
-      console.error("[cleanup] Error during cleanup:", err);
+      console.error("[cleanup] Error during cleanup:", describeError(err));
     }
   }, intervalMs);
 

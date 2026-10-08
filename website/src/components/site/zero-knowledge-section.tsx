@@ -30,7 +30,7 @@ export function ZeroKnowledgeSection() {
         <SectionHeading
           eyebrow="Zero-knowledge"
           title="The server never sees your data"
-          description="Every file and note is encrypted before it leaves your device. Even the person running the SkySend instance can't read what's shared through it."
+          description="Every file and note is encrypted before it leaves your device. The instance only ever stores ciphertext it has no key for, so a breach or a curious operator finds nothing readable on the server."
         />
 
         <Reveal>

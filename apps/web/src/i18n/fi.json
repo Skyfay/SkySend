@@ -343,6 +343,7 @@
     "summary": "Poistetaan <b>{{expiry}}</b> kuluttua.",
     "summaryLimit": "Poistetaan <b>{{expiry}}</b> kuluttua tai kun <b>{{limit}}</b> on saavutettu, sen mukaan kumpi tulee ensin.",
     "passwordForced": "Palvelin vaatii salasanan.",
+    "passwordTooShort": "Käytä vähintään {{count}} merkkiä.",
     "encryptUpload": "Salaa ja lähetä",
     "encryptShare": "Salaa ja jaa",
     "signInText": "Tällä palvelimella vain kirjautuneet käyttäjät voivat jakaa. Kirjaudu sisään jatkaaksesi.",

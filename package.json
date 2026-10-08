@@ -34,9 +34,19 @@
   "packageManager": "pnpm@10.29.3",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3",
       "esbuild"
     ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-import>eslint": "10",
+        "eslint-plugin-jsx-a11y>eslint": "10",
+        "eslint-plugin-react>eslint": "10",
+        "@hono/node-ws>@hono/node-server": "2"
+      }
+    },
     "overrides": {
       "fast-xml-parser": ">=5.7.2",
       "postcss": ">=8.5.25",
@@ -46,27 +56,30 @@
       "tsx>esbuild": ">=0.28.1",
       "wrangler>esbuild": ">=0.28.1",
       "@babel/core": ">=7.29.6",
-      "sharp": ">=0.35.4",
-      "brace-expansion": ">=5.0.9",
-      "minimatch@3>brace-expansion": "^1.1.18"
+      "sharp": ">=0.35.5",
+      "brace-expansion": "^5.0.12",
+      "minimatch@3>brace-expansion": "^1.1.21",
+      "@tailwindcss/typography>postcss-selector-parser": "^7.1.6",
+      "js-yaml@3>argparse": "^2.0.1"
     },
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg"
+        "GHSA-mh99-v99m-4gvg",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^10.5.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.6.0",
-    "prettier": "^3.8.4",
-    "tsx": "^4.22.4",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
-    "vitest": "^4.1.11"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
   }
 }

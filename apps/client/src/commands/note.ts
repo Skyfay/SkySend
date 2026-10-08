@@ -14,6 +14,14 @@ import {
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
 import { CLI_NOTE_TYPES, isCliNoteType, prepareNote, textToBlock } from "../lib/note.js";
+import { forTerminal } from "../lib/terminal.js";
+import {
+  asksForPassword,
+  checkNewPassword,
+  noteSource,
+  readAll,
+  withoutFinalNewline,
+} from "../lib/input.js";
 
 interface NoteOptions {
   server?: string;
@@ -28,14 +36,17 @@ export function registerNoteCommand(program: Command): void {
   program
     .command("note")
     .description("Create an encrypted note")
-    .argument("<text>", "Note content")
+    .argument(
+      "[text]",
+      "Note content. Leave it out, or pass -, to type it at a prompt or pipe it in, which keeps it out of the shell history",
+    )
     .option("-s, --server <url>", "Server URL")
     .option("-t, --type <type>", "Content type (text, password, code, markdown, sshkey)", "text")
     .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
     .option("-v, --views <count>", "Max view count (0 = unlimited)")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
     .option("--json", "Output as JSON")
-    .action(async (text: string, options: NoteOptions) => {
+    .action(async (text: string | undefined, options: NoteOptions) => {
       try {
         const server = resolveServer(options.server);
         const config = await fetchConfig(server);
@@ -53,8 +64,34 @@ export function registerNoteCommand(program: Command): void {
           throw new Error(`Invalid content type: ${contentType}. Options: ${CLI_NOTE_TYPES.join(", ")}`);
         }
 
+        // `-p -` reads as the password "-", not as "the note comes from stdin".
+        if (options.password === "-") {
+          throw new Error("Pass -p without a value to be asked for the password.");
+        }
+
+        // Read the content before anything else asks for input.
+        let content: string;
+        if (text !== undefined && text !== "-") {
+          content = text;
+        } else {
+          const source = noteSource(contentType, Boolean(process.stdin.isTTY));
+          if (source === "pipe" && asksForPassword(options.password, config.forceNotePassword)) {
+            throw new Error(
+              "The note comes from a pipe, so no terminal is left to ask for the password. Type the note at the prompt instead, or use the TUI.",
+            );
+          }
+          if (source === "pipe" && !options.json) {
+            writeLine("Reading the note from standard input, end it with Ctrl+D.");
+          }
+          content =
+            source === "pipe"
+              ? withoutFinalNewline(await readAll(process.stdin))
+              : await promptPassword("Note: ");
+        }
+        if (content === "") throw new Error("Note cannot be empty");
+
         // The note is one block. A server from before v3 gets it in the legacy format.
-        const note = prepareNote(textToBlock(contentType, text), config.noteBlocks);
+        const note = prepareNote(textToBlock(contentType, content), config.noteBlocks);
 
         // Validate size
         const contentBytes = new TextEncoder().encode(note.plaintext);
@@ -66,13 +103,17 @@ export function registerNoteCommand(program: Command): void {
         let password: string | undefined;
         if (options.password === true) {
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
         } else if (typeof options.password === "string") {
           password = options.password;
         } else if (config.forceNotePassword) {
           if (!options.json) writeLine("Password is required by server policy.");
           password = await promptPassword("Password: ");
-          if (!password) throw new Error("Password cannot be empty");
+        }
+
+        // A new password has to hold against guessing with the link and the server's database.
+        if (password !== undefined) {
+          const problem = checkNewPassword(password);
+          if (problem !== true) throw new Error(problem);
         }
 
         // Resolve expiry
@@ -160,7 +201,7 @@ export function registerNoteCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

@@ -2,6 +2,7 @@
   "__meta": {
     "_info": "JSON has no native comment syntax. This block documents translation metadata and is ignored by i18next at runtime.",
     "aiGeneratedKeys": [
+      "share.passwordTooShort",
       "auth.loginRequired",
       "auth.loginButton",
       "auth.logout",
@@ -878,6 +879,7 @@
     "summary": "<b>{{expiry}}</b>後に削除されます。",
     "summaryLimit": "<b>{{expiry}}</b>後、または<b>{{limit}}</b>後のどちらか早い方で削除されます。",
     "passwordForced": "サーバーがパスワードを必須にしています。",
+    "passwordTooShort": "{{count}} 文字以上にしてください。",
     "encryptUpload": "暗号化してアップロード",
     "encryptShare": "暗号化して共有",
     "signInText": "このサーバーではログインした人だけが共有できます。続けるにはログインしてください。",
