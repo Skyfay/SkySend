@@ -154,6 +154,8 @@
   --color-tone-amber: var(--tone-amber);
   --color-tone-red: var(--tone-red);
   --color-tone-ink: var(--tone-ink);
+  --color-post: var(--post-tone);
+  --color-post-2: var(--post-tone-2);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -631,11 +633,54 @@
   font-size: 0.82em;
   color: var(--foreground);
 }
+/*
+ * The color of a post page, from the tone of its cover, with green everywhere
+ * else. A band with its own .dark class declares it again, so it takes the
+ * dark value of the tone in light mode too.
+ */
+:root,
+.dark,
+[data-post-tone="green"],
+[data-post-tone="green"] .dark {
+  --post-tone: var(--tone-green);
+  --post-tone-2: var(--tone-cyan);
+  --post-glow: #17a37a;
+  --post-glow-2: #0e7490;
+}
+[data-post-tone="cyan"],
+[data-post-tone="cyan"] .dark {
+  --post-tone: var(--tone-cyan);
+  --post-tone-2: var(--tone-blue);
+  --post-glow: #0e7490;
+  --post-glow-2: #0369a1;
+}
+[data-post-tone="violet"],
+[data-post-tone="violet"] .dark {
+  --post-tone: var(--tone-violet);
+  --post-tone-2: var(--tone-blue);
+  --post-glow: #7c3aed;
+  --post-glow-2: #4f46e5;
+}
+[data-post-tone="blue"],
+[data-post-tone="blue"] .dark {
+  --post-tone: var(--tone-blue);
+  --post-tone-2: var(--tone-cyan);
+  --post-glow: #2563eb;
+  --post-glow-2: #0e7490;
+}
+[data-post-tone="amber"],
+[data-post-tone="amber"] .dark {
+  --post-tone: var(--tone-amber);
+  --post-tone-2: var(--tone-red);
+  --post-glow: #b45309;
+  --post-glow-2: #c2410c;
+}
+
 .post-prose a {
-  color: var(--tone-green);
+  color: var(--post-tone);
   text-decoration: underline;
   text-underline-offset: 4px;
-  text-decoration-color: color-mix(in srgb, var(--tone-green) 40%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--post-tone) 40%, transparent);
 }
 .post-prose > ul {
   margin: 0 0 22px;
@@ -655,8 +700,8 @@
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--tone-green);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--tone-green) 80%, transparent);
+  background: var(--post-tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--post-tone) 80%, transparent);
 }
 .post-prose > ol {
   margin: 0 0 22px;

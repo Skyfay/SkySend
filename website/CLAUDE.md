@@ -67,7 +67,11 @@ iOS Safari freezes on large layers under an endless animation. Every decorative 
 
 A post is an `.mdx` file in `src/content/blog/`, with frontmatter `title`, `date`, `excerpt`, `tags`, `author` and an optional `cover` (`badge` of up to three letters, `tone` of green, blue, violet, cyan or amber, and a two-line `snippet`) for the card art. `src/lib/blog.ts` checks the frontmatter with Zod, so a broken post fails the build, reads the directory at build time and sorts newest first, so no index needs updating. Rendering goes through `next-mdx-remote`, and code blocks through `rehype-pretty-code` with Shiki. A post can use `Callout`, `Compare` and `Row` from `components/site/blog/mdx-components.tsx`, and its `##` headings make the table of contents. The feed at `/blog/rss.xml` builds from the same list.
 
-Dates are `YYYY-MM-DD`. The slug is the filename.
+Dates are `YYYY-MM-DD`. The slug is the filename. The author is a GitHub username, its avatar shows beside the post, with the initial while it loads or when GitHub cannot be reached.
+
+A post has a color, the `tone` of its cover. The post page sets `data-post-tone`, and the CSS in `globals.css` turns it into `--post-tone`, `--post-tone-2`, `--post-glow` and `--post-glow-2`, so the glows, the reading bar, the table of contents, the accents of the text and the band at the end take it. Tailwind knows it as the color `post` (`bg-post/10`). The buttons stay green, they are the brand.
+
+An illustration sits beside the posts as `public/blog/<slug>.webp`, 2400 by 1260, and its social card as `public/blog/<slug>.jpg`, 1200 by 630. With them, the card on the blog and the head of the post show the illustration, and the JPEG becomes the social card, without them the card draws its badge and the post draws a card at `og.png`. The illustrations are drawn in the color of the post on the Blog page of the SkySend Illustrations canvas, with almost no text, so one picture serves every language.
 
 A translation sits beside its post as `<slug>.de.mdx`, with only `title`, `excerpt` and optionally `tags` in its frontmatter. The date, the author and the cover stay those of the English post. Without a translation the German page shows the English text with a notice, marks it `lang="en"` and points its canonical at the English page, so search engines index the original. Every language has its own feed, `/de/blog/rss.xml` for German.
 

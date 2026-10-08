@@ -8,7 +8,7 @@ import { PageBackdrop } from "@/components/site/page-backdrop";
 import { AuthorAvatar } from "@/components/site/blog/author-avatar";
 import { mdxComponents } from "@/components/site/blog/mdx-components";
 import { CopyLinkButton, ReadingProgress, TableOfContents } from "@/components/site/blog/post-client";
-import { CONIC, Glow, SpinBorder } from "@/components/site/fx";
+import { Glow, POST_CONIC, SpinBorder } from "@/components/site/fx";
 import { JsonLd } from "@/components/site/json-ld";
 import { localePath, type Locale } from "@/i18n/config";
 import { createTranslator } from "@/i18n/translate";
@@ -40,7 +40,7 @@ export function blogPostMetadata(locale: Locale, slug: string) {
     canonicalLocale: post.lang,
     languages: getPostLocales(slug),
     type: "article",
-    image: localePath(locale, `/blog/${slug}/og.png`),
+    image: post.socialImage ?? localePath(locale, `/blog/${slug}/og.png`),
   });
 }
 
@@ -55,7 +55,9 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
   const headings = getHeadings(post.content);
   const [titleHead, titleTail] = splitTitle(post.title);
   const meta = t("blog.readingTime", { date: formatDate(post.date, locale), minutes: post.readingMinutes });
-  const tone = `var(--tone-${post.cover?.tone ?? "green"})`;
+  // The page takes the color of the post: the glows, the reading bar, the
+  // table of contents, the accents of the text and the band at the end.
+  const tone = "var(--post-tone)";
   const tint = (pct: number) => `color-mix(in srgb, ${tone} ${pct}%, transparent)`;
 
   const posts = getAllPosts(locale);
@@ -72,7 +74,7 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
     datePublished: post.date,
     dateModified: post.date,
     inLanguage: post.lang,
-    image: `${SITE_URL}${localePath(locale, `/blog/${slug}/og.png`)}`,
+    image: `${SITE_URL}${post.socialImage ?? localePath(locale, `/blog/${slug}/og.png`)}`,
     author: { "@type": "Person", name: post.author, url: GITHUB_URL },
     publisher: { "@type": "Organization", name: "SkySend", logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.png` } },
     mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
@@ -90,7 +92,7 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
   };
 
   return (
-    <div className="relative">
+    <div data-post-tone={post.cover?.tone ?? "green"} className="relative">
       <JsonLd data={blogPostingJsonLd} />
       <JsonLd data={breadcrumbJsonLd} />
       <ReadingProgress targetId="post-body" />
@@ -156,6 +158,21 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
         </div>
       </header>
 
+      {post.image && (
+        <div className="relative mx-auto mt-10 max-w-[1088px] px-4 sm:px-6">
+          <Image
+            src={post.image}
+            alt=""
+            width={2400}
+            height={1260}
+            loading="eager"
+            fetchPriority="high"
+            sizes="(min-width: 1088px) 1040px, 100vw"
+            className="h-auto w-full rounded-[22px] border border-border shadow-[0_40px_100px_-40px_color-mix(in_srgb,var(--post-glow)_60%,transparent)]"
+          />
+        </div>
+      )}
+
       <div className="relative mx-auto mt-12 grid max-w-[1088px] items-start gap-16 px-4 sm:px-6 lg:grid-cols-[minmax(0,720px)_1fr]">
         <article id="post-body" lang={post.lang} className="post-prose min-w-0">
           <MDXRemote
@@ -172,7 +189,7 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
         <aside className="sticky top-24 hidden flex-col gap-5 lg:flex">
           <TableOfContents headings={headings} />
           <div className="panel relative flex flex-col gap-3 overflow-hidden rounded-2xl p-[18px]">
-            <Glow color="#17a37a" opacity={0.25} blur={50} className="-top-[60px] -right-[60px] size-[180px]" />
+            <Glow color="var(--post-glow)" opacity={0.25} blur={50} className="-top-[60px] -right-[60px] size-[180px]" />
             <Image src="/logo.svg" alt="" width={36} height={36} className="relative" />
             <div className="relative font-semibold">{t("blog.trySkySend")}</div>
             <p className="relative text-[13px] leading-[1.55] text-muted-foreground">{t("blog.trySkySendText")}</p>
@@ -236,8 +253,8 @@ export function BlogPostPage({ locale, slug }: { locale: Locale; slug: string })
       </section>
 
       <section className="mx-auto mt-[72px] max-w-[1248px] px-4 sm:px-6">
-        <SpinBorder conic={CONIC.green} size={1600} speed="normal" radius={28} innerClassName="dark overflow-hidden bg-[#0c0d0e] text-foreground">
-          <Glow color="#17a37a" opacity={0.25} blur={90} drift={1} className="-top-[60px] left-[30%] h-[260px] w-[500px]" />
+        <SpinBorder conic={POST_CONIC} size={1600} speed="normal" radius={28} innerClassName="dark overflow-hidden bg-[#0c0d0e] text-foreground">
+          <Glow color="var(--post-glow)" opacity={0.25} blur={90} drift={1} className="-top-[60px] left-[30%] h-[260px] w-[500px]" />
           <div className="relative flex flex-wrap items-center gap-8 p-7 sm:p-14">
             <div className="min-w-[240px] grow basis-0">
               <div className="text-[28px] font-semibold tracking-[-0.035em] sm:text-4xl">{t("blog.ctaTitle")}</div>

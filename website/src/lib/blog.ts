@@ -5,6 +5,8 @@ import { z } from "zod";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/i18n/config";
 
 const BLOG_DIR = path.join(process.cwd(), "src/content/blog");
+/** The illustration of a post, public/blog/<slug>.webp, and its social card, public/blog/<slug>.jpg. */
+const IMAGE_DIR = path.join(process.cwd(), "public/blog");
 const WORDS_PER_MINUTE = 220;
 
 const PostToneSchema = z.enum(["green", "blue", "violet", "cyan", "amber"]);
@@ -45,6 +47,10 @@ export interface PostSummary extends PostFrontmatter {
   /** The language the post is written in, English when it has no translation yet. */
   lang: Locale;
   readingMinutes: number;
+  /** The path of its illustration, shown on its card and above it, or null without one. */
+  image: string | null;
+  /** The path of its social card, 1200 by 630, or null to draw one. */
+  socialImage: string | null;
 }
 
 export interface Post extends PostSummary {
@@ -93,11 +99,14 @@ export function getPostBySlug(slug: string, locale: Locale = DEFAULT_LOCALE): Po
   const translated = lang === DEFAULT_LOCALE ? null : read(fileOf(slug, lang), TranslationSchema);
   const content = translated?.content ?? english.content;
   const words = content.replace(/```[\s\S]*?```/g, "").split(/\s+/).filter(Boolean).length;
+  const has = (file: string) => fs.existsSync(path.join(IMAGE_DIR, file));
   return {
     slug,
     lang,
     content,
     readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
+    image: has(`${slug}.webp`) ? `/blog/${slug}.webp` : null,
+    socialImage: has(`${slug}.jpg`) ? `/blog/${slug}.jpg` : null,
     ...english.data,
     ...(translated && {
       title: translated.data.title,

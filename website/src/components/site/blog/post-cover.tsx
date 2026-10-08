@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { PostCover, PostTone } from "@/lib/blog";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +12,27 @@ export const TONE_RGB: Record<PostTone, string> = {
 
 const FALLBACK: PostCover = { badge: "SS", tone: "green", snippet: "" };
 
-/** The artwork on top of a post card: a glow, the badge tile and a terminal line. */
-export function PostCoverArt({ cover = FALLBACK, className }: { cover?: PostCover; className?: string }) {
+/**
+ * The artwork on top of a post card: its illustration when it has one, else a
+ * glow, the badge tile and a terminal line.
+ */
+export function PostCoverArt({
+  cover = FALLBACK,
+  image,
+  className,
+}: {
+  cover?: PostCover;
+  image?: string | null;
+  className?: string;
+}) {
   const color = `var(--tone-${cover.tone})`;
+  if (image) {
+    return (
+      <span aria-hidden="true" className={cn("relative block h-[180px] overflow-hidden border-b border-border bg-[#0a0a0b]", className)}>
+        <Image src={image} alt="" fill sizes="(min-width: 1024px) 440px, (min-width: 768px) 50vw, 100vw" className="object-cover" />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden="true"
