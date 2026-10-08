@@ -89,46 +89,55 @@ export function parseDuration(input: string): number {
 
 // ── Interactive Password Prompt ────────────────────────
 
-export function promptPassword(prompt: string = "Password: "): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stderr,
-      terminal: true,
-    });
+/** What promptPassword reads from and writes to. Tests pass their own. */
+export interface PromptIo {
+  input: NodeJS.ReadStream;
+  output: NodeJS.WritableStream;
+}
 
-    // Disable echo
-    if (process.stdin.isTTY) {
-      process.stderr.write(prompt);
-      process.stdin.setRawMode(true);
-      let password = "";
-      const onData = (data: Buffer) => {
-        const char = data.toString("utf-8");
-        if (char === "\n" || char === "\r" || char === "\u0004") {
-          process.stdin.setRawMode(false);
-          process.stdin.removeListener("data", onData);
-          process.stderr.write("\n");
-          rl.close();
-          resolve(password);
-        } else if (char === "\u0003") {
-          process.stdin.setRawMode(false);
-          process.stdin.removeListener("data", onData);
-          rl.close();
-          reject(new Error("Aborted"));
-        } else if (char === "\u007F" || char === "\b") {
-          if (password.length > 0) {
-            password = password.slice(0, -1);
-          }
-        } else {
-          password += char;
-        }
-      };
-      process.stdin.on("data", onData);
-    } else {
+/**
+ * Asks for a secret without showing it. At a terminal the input is read in raw mode and
+ * nothing is echoed. No readline interface may be open meanwhile, since readline writes every
+ * key it sees to its output. A paste arrives in one chunk, so the chunk is read character by
+ * character and the secret ends at the first line break. Without a terminal one line is read,
+ * and an input that ends first gives an empty string instead of waiting forever.
+ */
+export function promptPassword(
+  prompt: string = "Password: ",
+  { input, output }: PromptIo = { input: process.stdin, output: process.stderr },
+): Promise<string> {
+  if (!input.isTTY) {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({ input, output, terminal: false });
       rl.question(prompt, (answer) => {
         rl.close();
         resolve(answer);
       });
-    }
+      rl.on("close", () => resolve(""));
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    let secret = "";
+    const finish = (error?: Error) => {
+      input.removeListener("data", onData);
+      input.setRawMode(false);
+      input.pause();
+      output.write("\n");
+      if (error) reject(error);
+      else resolve(secret);
+    };
+    const onData = (data: Buffer | string) => {
+      for (const char of data.toString()) {
+        if (char === "\r" || char === "\n" || char === "\u0004") return finish();
+        if (char === "\u0003") return finish(new Error("Aborted"));
+        if (char === "\u007F" || char === "\b") secret = Array.from(secret).slice(0, -1).join("");
+        else secret += char;
+      }
+    };
+    output.write(prompt);
+    input.setRawMode(true);
+    input.on("data", onData);
+    input.resume();
   });
 }

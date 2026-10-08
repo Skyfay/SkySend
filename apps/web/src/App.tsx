@@ -34,10 +34,9 @@ export function App() {
         <TooltipProvider delayDuration={0}>
         <ServerConfigProvider>
           {/*
-            Toaster stays ahead of the router. Sonner only delivers a toast to
-            subscribers that already exist, and it subscribes in a mount effect.
-            Sibling effects run in tree order, so a page that toasts while
-            mounting would publish into the void if the Toaster came after it.
+            Toaster stays ahead of the router, so a page that toasts while
+            mounting is heard right away. Since Sonner 2.0.8 a Toaster that
+            subscribes later also gets the toasts that are still active.
           */}
           <Toaster />
           <BrowserRouter>

@@ -343,6 +343,7 @@
     "summary": "Raderas efter <b>{{expiry}}</b>.",
     "summaryLimit": "Raderas efter <b>{{expiry}}</b> eller <b>{{limit}}</b>, beroende på vilket som inträffar först.",
     "passwordForced": "Servern kräver ett lösenord.",
+    "passwordTooShort": "Använd minst {{count}} tecken.",
     "encryptUpload": "Kryptera och ladda upp",
     "encryptShare": "Kryptera och dela",
     "signInText": "Den här servern tillåter bara inloggade personer att dela. Logga in för att fortsätta.",

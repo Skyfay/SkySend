@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchQuota, type QuotaStatus } from "@/lib/api";
 import { fileStart } from "@/lib/defaults";
 import { formatBytes } from "@/lib/utils";
+import { meetsPasswordMinimum } from "@skysend/crypto";
 
 type Tab = "file" | "note";
 
@@ -170,14 +171,15 @@ export function UploadPage() {
   const sizeExceeded = totalSize > config.fileMaxSize;
   const tooManyFiles = files.length > config.fileMaxFilesPerUpload;
   const quotaExceeded = quota?.enabled && totalSize > quota.remaining;
-  // A password that is switched on has to be typed, or the link would go out without one.
+  // A password that is switched on has to be typed, or the link would go out without one, and
+  // long enough to hold against guessing with the link and the server's database.
   const canUpload =
     files.length > 0 &&
     !sizeExceeded &&
     !tooManyFiles &&
     !quotaExceeded &&
     !isUploading &&
-    (!passwordEnabled || password.length > 0);
+    (!passwordEnabled || meetsPasswordMinimum(password));
 
   const handleUpload = () => {
     uploadHook.upload({

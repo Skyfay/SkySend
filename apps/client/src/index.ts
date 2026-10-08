@@ -11,6 +11,7 @@ import { registerUpdateCommand } from "./commands/update.js";
 import { registerInteractiveCommand } from "./commands/interactive.js";
 import { registerLsCommand } from "./commands/ls.js";
 import { registerAuthCommand } from "./commands/auth.js";
+import { forTerminal } from "./lib/terminal.js";
 import { APP_VERSION } from "./version.js";
 
 const program = new Command()
@@ -31,7 +32,7 @@ registerAuthCommand(program);
 registerInteractiveCommand(program);
 
 await program.parseAsync().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : String(err));
+  console.error(forTerminal(err instanceof Error ? err.message : String(err)));
   process.exit(1);
 });
 

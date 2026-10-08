@@ -9,7 +9,7 @@ This guide walks you through uploading and sharing your first file with SkySend.
 3. Optionally change the settings below the files. Each pill shows its value, and a click opens its choices, on a phone in a sheet from the bottom:
    - **Expires after** - One of the offered times
    - **Downloads** - How often the file can be downloaded before it is deleted
-   - **Password** - A switch for optional password protection
+   - **Password** - A switch for optional password protection, with a password of at least 8 characters
 4. Click **Encrypt and upload**. The line next to the button sums up when the upload will be deleted.
 5. Wait for the encryption and upload to complete
 6. Copy the share link, or open its QR code
@@ -67,7 +67,7 @@ SkySend also shares encrypted notes, no file needed. A note is made of blocks, s
 5. Optionally change the settings below the note, the same pills as for a file:
    - **Expires after** - How long the note should be available
    - **Views** - Maximum number of views, from unlimited (∞) down to 1, which is burn after reading
-   - **Password** - A switch for optional password protection
+   - **Password** - A switch for optional password protection, with a password of at least 8 characters
 6. Click **Encrypt and share**
 7. Copy the share link
 

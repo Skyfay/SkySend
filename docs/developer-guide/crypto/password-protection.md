@@ -60,13 +60,16 @@ The salt and the algorithm identifier are stored on the server so that the downl
 4. Client recovers `secret = protectedSecret XOR passwordKey`
 5. Client derives keys and computes `authToken`
 6. Client verifies the password via `POST /api/password/:id` with the derived auth token
-7. If the token matches, the password is correct and the download proceeds
+7. If the token matches, the server returns the encrypted metadata, which `GET /api/info/:id` holds back for a password-protected upload, and the download proceeds
+
+Without the metadata nobody can test a guess offline, so every guess has to pass the password check or the download, which share one lockout. Someone who holds both the link and the server's database can still guess offline at the cost of one Argon2id run per guess, which is why the clients ask for at least `MIN_PASSWORD_LENGTH` (8) characters for a new password. Only the clients can check that, since the server never sees the password.
 
 ## Constants
 
 | Constant | Value |
 | --- | --- |
 | `PASSWORD_SALT_LENGTH` | 16 bytes |
+| `MIN_PASSWORD_LENGTH` | 8 characters, for a new password |
 | `DERIVED_KEY_LENGTH` | 32 bytes |
 | `ARGON2_PARAMS.memory` | 65,536 KiB |
 | `ARGON2_PARAMS.iterations` | 3 |

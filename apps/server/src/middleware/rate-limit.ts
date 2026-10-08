@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { createMiddleware } from "hono/factory";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import type { Context } from "hono";
@@ -62,8 +63,43 @@ export function createRateLimiter(config: Config) {
   });
 }
 
+/** The eight 16-bit groups of a valid IPv6 address, an IPv4 tail like ::ffff:1.2.3.4 included. */
+function ipv6Groups(address: string): number[] {
+  let text = address.toLowerCase();
+  const tail = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(text);
+  if (tail) {
+    const [a, b, c, d] = tail.slice(1).map(Number) as [number, number, number, number];
+    text = `${text.slice(0, tail.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head = "", rest] = text.split("::");
+  const left = head === "" ? [] : head.split(":");
+  const right = rest === undefined || rest === "" ? [] : rest.split(":");
+  const fill = rest === undefined ? [] : Array<string>(8 - left.length - right.length).fill("0");
+  return [...left, ...fill, ...right].map((group) => parseInt(group, 16));
+}
+
 /**
- * Extract the client IP from the request.
+ * The form of a client address that the limits count by: the rate limiter, the upload quota,
+ * the password lockout and the daily request limit. A client on IPv6 usually holds a whole
+ * /64, one household, phone or server, and could take a new address from it for every request,
+ * so an IPv6 address counts as its /64 network. An IPv4 address mapped into IPv6 counts as that
+ * IPv4 address. Anything that is no address, like "unknown", stays as it is.
+ */
+export function toLimitKey(ip: string): string {
+  const address = ip.replace(/^\[|\]$/g, "").split("%")[0] ?? "";
+  if (isIP(address) === 4) return address;
+  if (isIP(address) !== 6) return ip;
+  const groups = ipv6Groups(address);
+  const mapped = groups.slice(0, 6).every((group, i) => (i === 5 ? group === 0xffff : group === 0));
+  if (mapped) {
+    const [high = 0, low = 0] = groups.slice(6);
+    return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
+  }
+  return `${groups.slice(0, 4).map((group) => group.toString(16)).join(":")}::/64`;
+}
+
+/**
+ * Extract the client IP from the request, in the form the limits count by (see toLimitKey).
  * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled.
  * Falls back to Node.js socket info via getConnInfo.
  *
@@ -74,6 +110,10 @@ export function createRateLimiter(config: Config) {
  * Example: X-Forwarded-For: <spoofed>, <real-client-ip>  → we use <real-client-ip>.
  */
 function getClientIp(c: Context, trustProxy = false): string {
+  return toLimitKey(rawClientIp(c, trustProxy));
+}
+
+function rawClientIp(c: Context, trustProxy: boolean): string {
   if (trustProxy) {
     const forwarded = c.req.header("X-Forwarded-For");
     if (forwarded) {

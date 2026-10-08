@@ -26,7 +26,7 @@ Retrieve public information about an upload. No authentication required.
 }
 ```
 
-For password-protected uploads, `passwordAlgo` and `passwordSalt` are included so the client can derive the password key.
+For password-protected uploads, `passwordAlgo` and `passwordSalt` are included so the client can derive the password key. `encryptedMeta` and `nonce` are `null` for them: the metadata comes from [`POST /api/password/:id`](./password.md) after a correct password, because anyone holding the link could otherwise test guesses against it offline.
 
 **404 Not Found:**
 
@@ -47,7 +47,7 @@ For password-protected uploads, `passwordAlgo` and `passwordSalt` are included s
 ### Notes
 
 - Sensitive fields (tokens, storage path) are excluded from the response
-- The `encryptedMeta` and `nonce` fields are the encrypted file metadata (names, types, sizes)
+- The `encryptedMeta` and `nonce` fields are the encrypted file metadata (names, types, sizes), `null` for a password-protected upload
 - The `salt` is needed by the downloader to derive encryption keys from the secret
 
 ## GET /api/exists/:id

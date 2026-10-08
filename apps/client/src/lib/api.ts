@@ -260,19 +260,43 @@ export async function downloadFile(
 
 // ── Password ───────────────────────────────────────────
 
+// A server before GHSA-rxxj-c5wr-phqp answers { ok: true } and still sends the metadata in the info.
+const passwordCheckSchema = z.object({
+  ok: z.literal(true),
+  encryptedMeta: z.string().nullable().optional(),
+  nonce: z.string().nullable().optional(),
+});
+
+/** The metadata of a password-protected upload, which the server releases after the check. */
+export type UnlockedMeta = Pick<UploadInfo, "encryptedMeta" | "nonce">;
+
+/**
+ * Checks the auth token derived from a password. Null for a wrong password, otherwise the
+ * encrypted metadata, which the info of a password-protected upload holds back.
+ */
 export async function verifyPassword(
   server: string,
   id: string,
   authToken: string,
-): Promise<boolean> {
+): Promise<UnlockedMeta | null> {
   const res = await fetch(apiUrl(server, `/api/password/${encodeURIComponent(id)}`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ authToken }),
   });
-  if (res.status === 401) return false;
+  if (res.status === 401) return null;
   if (!res.ok) throw new ApiError(res.status, "Password verification failed");
-  return true;
+  const { encryptedMeta = null, nonce = null } = await handleResponse(res, passwordCheckSchema);
+  return { encryptedMeta, nonce };
+}
+
+/** The info with the metadata a password check released, or the info's own from an older server. */
+export function withUnlockedMeta(info: UploadInfo, unlocked: UnlockedMeta): UploadInfo {
+  return {
+    ...info,
+    encryptedMeta: unlocked.encryptedMeta ?? info.encryptedMeta,
+    nonce: unlocked.nonce ?? info.nonce,
+  };
 }
 
 // ── Delete ─────────────────────────────────────────────

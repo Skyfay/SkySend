@@ -5,6 +5,7 @@ import {
   decryptRequestMetadata,
   expectedPlaintextSize,
   META_IV_LENGTH,
+  METADATA_PAD_BLOCK,
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
@@ -189,6 +190,95 @@ describe("metadata encryption/decryption", () => {
       mimeType: "text/plain",
     });
     expect(Object.keys(decrypted).sort()).toEqual(["mimeType", "name", "size", "type"]);
+  });
+});
+
+describe("metadata padding", () => {
+  const single = (name: string): SingleFileMetadata => ({
+    type: "single",
+    name,
+    size: 1234,
+    mimeType: "application/pdf",
+  });
+
+  /** The plaintext the server never sees, read with the key the way a reader does. */
+  async function plaintextOf(
+    encrypted: { ciphertext: Uint8Array; iv: Uint8Array },
+    metaKey: CryptoKey,
+  ): Promise<Uint8Array> {
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: asBytes(encrypted.iv), tagLength: 128 },
+      metaKey,
+      asBytes(encrypted.ciphertext),
+    );
+    return new Uint8Array(plain);
+  }
+
+  it("should pad the JSON with spaces to whole blocks", async () => {
+    const metaKey = await getMetaKey();
+    const encrypted = await encryptMetadata(single("report.pdf"), metaKey);
+    const plaintext = await plaintextOf(encrypted, metaKey);
+    expect(plaintext.length).toBe(METADATA_PAD_BLOCK);
+    expect(encrypted.ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    const json = JSON.stringify(single("report.pdf"));
+    expect(new TextDecoder().decode(plaintext)).toBe(json + " ".repeat(METADATA_PAD_BLOCK - json.length));
+  });
+
+  it("should give file names of different lengths the same ciphertext length", async () => {
+    const metaKey = await getMetaKey();
+    const short = await encryptMetadata(single("a.txt"), metaKey);
+    const long = await encryptMetadata(single(`${"x".repeat(200)}.docx`), metaKey);
+    expect(short.ciphertext.length).toBe(long.ciphertext.length);
+  });
+
+  it("should take as many blocks as the JSON needs and still round-trip", async () => {
+    const metaKey = await getMetaKey();
+    const files = Array.from({ length: 20 }, (_, i) => ({ name: `${"n".repeat(80)}-${i}.bin`, size: i }));
+    const archive: ArchiveMetadata = { type: "archive", files, totalSize: 190, archiveSize: 4096 };
+    const json = JSON.stringify(archive);
+    expect(json.length).toBeGreaterThan(METADATA_PAD_BLOCK);
+
+    const encrypted = await encryptMetadata(archive, metaKey);
+    const blocks = Math.ceil(json.length / METADATA_PAD_BLOCK);
+    expect(encrypted.ciphertext.length).toBe(blocks * METADATA_PAD_BLOCK + 16);
+    expect(await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(archive);
+  });
+
+  it("should pad JSON of exactly one block to that block, and one byte more to two", async () => {
+    const metaKey = await getMetaKey();
+    const base = JSON.stringify(single("")).length;
+    const exact = single("e".repeat(METADATA_PAD_BLOCK - base));
+    const over = single("o".repeat(METADATA_PAD_BLOCK - base + 1));
+    expect((await encryptMetadata(exact, metaKey)).ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    expect((await encryptMetadata(over, metaKey)).ciphertext.length).toBe(2 * METADATA_PAD_BLOCK + 16);
+  });
+
+  it("should count bytes, not characters, when a file name is not ASCII", async () => {
+    const metaKey = await getMetaKey();
+    const base = new TextEncoder().encode(JSON.stringify(single(""))).length;
+    // "ü" is two bytes in UTF-8, so half as many characters fill the block exactly.
+    const exact = single("ü".repeat((METADATA_PAD_BLOCK - base) / 2));
+    const over = single(`${"ü".repeat((METADATA_PAD_BLOCK - base) / 2)}x`);
+    expect(new TextEncoder().encode(JSON.stringify(exact)).length).toBe(METADATA_PAD_BLOCK);
+    const encrypted = await encryptMetadata(exact, metaKey);
+    expect(encrypted.ciphertext.length).toBe(METADATA_PAD_BLOCK + 16);
+    expect(await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(exact);
+    expect((await encryptMetadata(over, metaKey)).ciphertext.length).toBe(2 * METADATA_PAD_BLOCK + 16);
+  });
+
+  it("should still read the unpadded metadata of older clients", async () => {
+    const metaKey = await getMetaKey();
+    const legacy = await encryptRawJson(single("old.pdf"), metaKey);
+    expect(legacy.ciphertext.length).toBeLessThan(METADATA_PAD_BLOCK);
+    expect(await decryptMetadata(legacy.ciphertext, legacy.iv, metaKey)).toEqual(single("old.pdf"));
+  });
+
+  it("should refuse padded metadata with a flipped byte", async () => {
+    const metaKey = await getMetaKey();
+    const encrypted = await encryptMetadata(single("report.pdf"), metaKey);
+    await expect(
+      decryptMetadata(flipped(encrypted.ciphertext, METADATA_PAD_BLOCK - 1), encrypted.iv, metaKey),
+    ).rejects.toThrow();
   });
 });
 

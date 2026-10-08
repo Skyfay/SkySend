@@ -23,7 +23,7 @@ skysend upload <files...> [options]
 | `-s, --server <url>` | Server URL (overrides config) |
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
-| `-p, --password [password]` | Password protect the upload. Prompts interactively if no value is given. |
+| `-p, --password [password]` | Password protect the upload, at least 8 characters. Prompts interactively if no value is given. |
 | `--no-ws` | Use HTTP chunked upload instead of WebSocket. Currently the default anyway, see below |
 | `--json` | Output result as JSON |
 
@@ -91,7 +91,7 @@ skysend download <url> [options]
 
 | Option | Description |
 | --- | --- |
-| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. |
+| `-o, --output <path>` | Output path (file or directory). Defaults to the original filename in the current directory. The filename is cleaned of path separators, control characters and leading dots, and a file that already exists keeps its place while the download gets a number, such as `report (1).pdf`. Only an explicit file path replaces an existing file. |
 | `-p, --password [password]` | Password for protected uploads. Prompts interactively if no value is given. |
 | `--json` | Output result as JSON |
 
@@ -126,14 +126,18 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 Create an encrypted note.
 
 ```bash
-skysend note <text> [options]
+skysend note [text] [options]
 ```
 
 ### Arguments
 
 | Argument | Description |
 | --- | --- |
-| `<text>` | The note content |
+| `[text]` | The note content. Leave it out, or pass `-`, to type it at a prompt or pipe it in |
+
+::: warning Keep secrets out of the command line
+A note given as an argument stays in your shell history, and on Linux other users of the machine can read it from the process list while the command runs. For a password or any other secret, leave the argument out: the CLI asks for a note of one line without showing it, and reads a note that spans lines from a pipe or a file.
+:::
 
 ### Options
 
@@ -143,12 +147,19 @@ skysend note <text> [options]
 | `-t, --type <type>` | `text` | Note type: `text`, `password`, `code`, `markdown`, `sshkey` |
 | `-e, --expires <duration>` | | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-v, --views <count>` | | Maximum view count (`0` = unlimited) |
-| `-p, --password [password]` | | Password protect. Prompts interactively if no value is given. |
+| `-p, --password [password]` | | Password protect, at least 8 characters. Prompts interactively if no value is given. |
 | `--json` | | Output result as JSON |
 
 ### Examples
 
 ```bash
+# Type a secret note at a prompt that does not show it
+skysend note --type password
+
+# Read a note from a file or a pipe
+skysend note --type sshkey < ~/.ssh/deploy_key
+pbpaste | skysend note --type code
+
 # Create a simple text note
 skysend note "This is a secret message"
 
@@ -161,11 +172,8 @@ skysend note "console.log('hello')" --type code --expires 1h
 # Create a Markdown note
 skysend note "# Hello\n\nThis is **bold**." --type markdown
 
-# Create a password note
-skysend note "admin:s3cret" --type password
-
-# Create a password-protected note
-skysend note "secret data" --password --expires 24h --views 5
+# Create a password-protected note, both typed at prompts
+skysend note --password --expires 24h --views 5
 ```
 
 ### Note Types
@@ -493,7 +501,7 @@ skysend i [options]           # short alias
 
 ### Upload History
 
-All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode.
+All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode. The history holds the full share links with their keys and the owner tokens, so the CLI keeps it, the config and the OIDC session readable for your user only (file mode `0600` in a `0700` folder), and narrows files an older version created with wider permissions.
 
 ### Example
 

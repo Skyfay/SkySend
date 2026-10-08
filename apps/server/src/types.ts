@@ -1,7 +1,9 @@
+import type { QuotaReservation } from "./middleware/quota.js";
+
 /**
  * Shared Hono context variable types for the SkySend server.
  */
 export interface QuotaVariables {
-  quotaHashedIp?: string;
-  quotaRecorder?: (ip: string, bytes: number) => void;
+  /** What the quota middleware granted the upload this request starts. */
+  quotaReservation?: QuotaReservation;
 }

@@ -19,6 +19,13 @@ import { randomBytes, asBytes } from "./util.js";
 export const META_IV_LENGTH = 12;
 
 /**
+ * The block the metadata JSON is padded to with spaces, so the length of the encrypted blob
+ * tells little about the names and types of the files in it. JSON allows the trailing spaces,
+ * so every reader parses a padded blob like any other, older versions included.
+ */
+export const METADATA_PAD_BLOCK = 1024;
+
+/**
  * Marks the uploads a sender of a file request sent together, files and a note. 32 hex
  * characters, random per send. Every upload into a request carries one, so the metadata of a
  * note sent alone is as long as the one of a note sent with files.
@@ -82,7 +89,7 @@ export interface EncryptedMetadata {
 }
 
 /**
- * Encrypt file metadata with AES-256-GCM.
+ * Encrypt file metadata with AES-256-GCM, padded to whole METADATA_PAD_BLOCK blocks.
  *
  * @param metadata - The file metadata to encrypt
  * @param metaKey - The AES-256-GCM key derived for metadata
@@ -92,8 +99,10 @@ export async function encryptMetadata(
   metadata: RequestUploadMetadata,
   metaKey: CryptoKey,
 ): Promise<EncryptedMetadata> {
-  const encoder = new TextEncoder();
-  const plaintext = encoder.encode(JSON.stringify(metadata));
+  const json = new TextEncoder().encode(JSON.stringify(metadata));
+  const padded = Math.max(1, Math.ceil(json.length / METADATA_PAD_BLOCK)) * METADATA_PAD_BLOCK;
+  const plaintext = new Uint8Array(padded).fill(0x20);
+  plaintext.set(json);
   const iv = randomBytes(META_IV_LENGTH);
 
   const ciphertext = await crypto.subtle.encrypt(

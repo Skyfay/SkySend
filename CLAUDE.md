@@ -73,6 +73,7 @@ The server is single-instance by design. Rate limiting, upload sessions, and pas
 ## Commands
 
 ```bash
+bash scripts/setup-dev-macos.sh  # First setup on a Mac: fnm, Node from .node-version, pnpm, dependencies
 pnpm dev                  # All workspaces in parallel, except the two Cloudflare Workers
 pnpm build                # Recursive build
 pnpm validate             # Lint + typecheck + tests, same as CI (scripts/validate.sh)

@@ -73,7 +73,7 @@ The suite byte `REQUEST_SUITE` (`0x01`) opens the upload fragment and the vault,
 | :--- | :--- |
 | `keychain.ts` | Secret and salt generation, HKDF derivation, auth and owner tokens |
 | `ece.ts` | Streaming AES-256-GCM in 64 KB records, plus exact size math |
-| `metadata.ts` | AES-256-GCM over the JSON metadata blob, and the note metadata of request uploads |
+| `metadata.ts` | AES-256-GCM over the JSON metadata blob, padded with spaces to whole 1 KiB blocks, and the note metadata of request uploads |
 | `note.ts` | AES-256-GCM over note content, with its own nonce |
 | `password.ts` | Argon2id KDF plus the XOR protection layer |
 | `password-box.ts` | Bytes sealed with a password (Argon2id key, AES-256-GCM, purpose as AAD), for exports such as request templates |

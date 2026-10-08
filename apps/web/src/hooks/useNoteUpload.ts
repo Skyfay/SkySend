@@ -12,7 +12,7 @@ import {
   randomBytes,
   PASSWORD_SALT_LENGTH,
 } from "@skysend/crypto";
-import { NOTE_KIND, serializeNote, type NoteBlock } from "@skysend/note-format";
+import { NOTE_KIND, padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { createNote } from "@/lib/api";
 import { noteKinds } from "@/lib/note-editor";
@@ -71,8 +71,9 @@ export function useNoteUpload() {
       const keys = await deriveKeys(secret, salt);
 
       // The whole document is the plaintext. Which blocks it holds is encrypted with it, the
-      // server only ever sees NOTE_KIND.
-      const encrypted = await encryptNoteContent(serializeNote(blocks), keys.metaKey);
+      // server only ever sees NOTE_KIND. Padded to whole blocks, so the length of the note
+      // does not give away how long a password in it is.
+      const encrypted = await encryptNoteContent(padNote(serializeNote(blocks)), keys.metaKey);
 
       // Password protection
       let effectiveSecret: Uint8Array = secret;

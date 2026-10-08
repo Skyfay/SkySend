@@ -343,6 +343,7 @@
     "summary": "Eliminato dopo <b>{{expiry}}</b>.",
     "summaryLimit": "Eliminato dopo <b>{{expiry}}</b> o <b>{{limit}}</b>, a seconda di quale si verifica per primo.",
     "passwordForced": "Il server richiede una password.",
+    "passwordTooShort": "Usa almeno {{count}} caratteri.",
     "encryptUpload": "Crittografa e carica",
     "encryptShare": "Crittografa e condividi",
     "signInText": "Questo server permette di condividere solo a chi ha effettuato l'accesso. Accedi per continuare.",

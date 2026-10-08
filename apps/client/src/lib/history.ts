@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { writePrivateFile } from "./private-file.js";
 
 export interface StoredUpload {
   id: string;
@@ -56,9 +57,7 @@ function loadHistory(): HistoryData {
 }
 
 function saveHistory(data: HistoryData): void {
-  const dir = getHistoryDir();
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(getHistoryPath(), JSON.stringify(data, null, 2) + "\n", "utf-8");
+  writePrivateFile(getHistoryPath(), JSON.stringify(data, null, 2) + "\n");
 }
 
 // ── Uploads ────────────────────────────────────────────

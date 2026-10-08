@@ -3,6 +3,7 @@ import { deleteUpload, deleteNote } from "../lib/api.js";
 import { parseShareUrl } from "../lib/url.js";
 import { writeLine } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { forTerminal } from "../lib/terminal.js";
 
 interface DeleteOptions {
   json?: boolean;
@@ -42,7 +43,7 @@ export function registerDeleteCommand(program: Command): void {
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${message}`);
+            console.error(`Error: ${forTerminal(message)}`);
           }
         }
         process.exit(1);

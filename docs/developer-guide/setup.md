@@ -4,9 +4,10 @@ Set up a local development environment for SkySend.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 24 LTS or later
+- [Node.js](https://nodejs.org/) 24 LTS, the version in `.node-version` that CI and the Docker image use. A version manager like [fnm](https://github.com/Schniz/fnm) switches to it on its own.
 - [pnpm](https://pnpm.io/) 10
 - [Git](https://git-scm.com/)
+- Linux, macOS or Windows on x64 or arm64, the platforms the SQLite driver of the server ships prebuilt binaries for
 
 ## Clone and Install
 
@@ -14,8 +15,15 @@ Set up a local development environment for SkySend.
 git clone https://github.com/Skyfay/SkySend.git
 cd SkySend
 git checkout dev
-pnpm install
 ```
+
+On macOS, the setup script installs fnm with the Node of `.node-version`, pnpm in the version `package.json` pins and the dependencies. It also offers to add the line to `~/.zshrc` that lets new terminals switch to that Node inside the project.
+
+```bash
+bash scripts/setup-dev-macos.sh
+```
+
+Elsewhere, install Node 24 and pnpm 10, then run `pnpm install`.
 
 New work happens on a branch off `dev`, and its pull request goes back into `dev`, never into `main`. See [Branches and Pull Requests](/developer-guide/#branches-and-pull-requests).
 

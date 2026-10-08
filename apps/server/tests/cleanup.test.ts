@@ -330,9 +330,10 @@ describe("startCleanupJob", () => {
     await vi.advanceTimersByTimeAsync(60_000); // Second tick - recovers
     stop();
 
+    // The error is logged as a description, never as the object with its fields.
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("[cleanup] Error"),
-      expect.any(Error),
+      expect.stringContaining("Error: DB unavailable"),
     );
   });
 });

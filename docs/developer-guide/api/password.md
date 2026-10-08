@@ -22,7 +22,19 @@ The `authToken` is derived client-side from the secret (which itself was recover
 
 ```json
 {
-  "ok": true
+  "ok": true,
+  "encryptedMeta": "<base64 encoded ciphertext>",
+  "nonce": "<base64 encoded IV>"
+}
+```
+
+The encrypted metadata of a password-protected upload comes only from here, since `GET /api/info/:id` holds it back. Every wrong token counts against the lockout (`PASSWORD_MAX_ATTEMPTS` per IP and upload, then `PASSWORD_LOCKOUT_MS`), shared with `GET /api/download/:id`.
+
+**429 Too Many Requests** (too many wrong tokens, with a `Retry-After` header):
+
+```json
+{
+  "error": "Too many failed attempts. Try again later."
 }
 ```
 
@@ -66,6 +78,7 @@ The `authToken` is derived client-side from the secret (which itself was recover
 4. The client recovers the secret: `secret = protectedSecret XOR passwordKey`
 5. The client derives keys and computes the `authToken`
 6. The client sends the `authToken` to `POST /api/password/:id`
-7. The server compares the provided token with the stored token using constant-time comparison
+7. The server compares the provided token with the stored token using constant-time comparison, and on a match returns the encrypted metadata
+8. The client decrypts the metadata with its `metaKey` and starts the download
 
 This approach means the server never receives the password. It only verifies that the client was able to derive the correct authentication token, which proves knowledge of the secret.

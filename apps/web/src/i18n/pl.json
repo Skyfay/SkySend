@@ -343,6 +343,7 @@
     "summary": "Zostanie usunięte za <b>{{expiry}}</b>.",
     "summaryLimit": "Zostanie usunięte za <b>{{expiry}}</b> lub po osiągnięciu limitu: <b>{{limit}}</b>, zależnie od tego, co nastąpi pierwsze.",
     "passwordForced": "Serwer wymaga hasła.",
+    "passwordTooShort": "Użyj co najmniej {{count}} znaków.",
     "encryptUpload": "Zaszyfruj i prześlij",
     "encryptShare": "Zaszyfruj i udostępnij",
     "signInText": "Ten serwer pozwala udostępniać tylko zalogowanym osobom. Zaloguj się, aby kontynuować.",

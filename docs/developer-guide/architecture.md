@@ -41,7 +41,7 @@ Client                                          Server
 4. If multi-file: zip with fflate
 5. WS connect /api/upload/ws -------->  Validate Origin header
 6. Send JSON { type: "init",            Validate headers (shared schema)
-     headers: auth, salt, limits }       Check quota
+     headers: auth, salt, limits }       Reserve quota
                                          Create empty storage entry
                                   <----  { type: "ready", id }
 7. Encrypt payload (streaming AES-256-GCM)
@@ -53,7 +53,7 @@ Client                                          Server
 8. Send JSON { type: "finalize" } --->  Verify total bytes == contentLength
                                          Flush remaining buffer
                                          Create DB record
-                                         Record quota
+                                         Commit quota reservation
                                   <----  { type: "done", id }
                                          Close 1000
 9. Encrypt metadata (names, types)
