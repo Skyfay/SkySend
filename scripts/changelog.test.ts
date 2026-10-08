@@ -258,6 +258,30 @@ describe("the version block of a release", () => {
   });
 });
 
+describe("the entries of a section", () => {
+  it("are grouped by scope in the order of the scopes, each keeping the order of its fragments", () => {
+    const first = parseFragment(
+      "### ✨ Features\n\n- **web**: Web one.\n- **infra**: Infra one.\n- **server**: Server one.",
+      "a.md",
+    );
+    const second = parseFragment(
+      "### ✨ Features\n\n- **client**: Client one.\n- **web**: Web two.\n- **server**: Server two.",
+      "b.md",
+    );
+
+    const block = renderBlock("3.0.0", "`latest`, `v3`", [first, second]);
+    const features = block.split("\n").filter((line) => line.startsWith("- **"));
+    expect(features.slice(0, 6)).toEqual([
+      "- **server**: Server one.",
+      "- **server**: Server two.",
+      "- **web**: Web one.",
+      "- **web**: Web two.",
+      "- **client**: Client one.",
+      "- **infra**: Infra one.",
+    ]);
+  });
+});
+
 describe("a release", () => {
   it("writes the block into the changelog and deletes the fragments, but keeps the README", () => {
     const files = memoryFiles({

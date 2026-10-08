@@ -1,4 +1,4 @@
-> ⚠️ **Breaking:** CLI clients before v3 cannot open notes created with v3. Update the CLI client together with the server.
+> ⚠️ **Breaking:** A CLI from before v3 can neither open notes created with v3 nor download password-protected files from a v3 server. Run `skysend update` together with the server update.
 
 ### ✨ Features
 
@@ -33,10 +33,6 @@
 - **web**: The share form has two tabs, File and Note, instead of one tab per note type.
 - **server**: Notes created since v3 are stored with the content type `blocks`, so the server no longer learns whether a note holds text, a password, code or an SSH key.
 
-### 🗑️ Removed
-
-- **web**: Removed an unused toast component and its dependency.
-
 ### 📝 Documentation
 
 - **docs**: The toast system page describes the new look and position of notifications.
@@ -50,7 +46,7 @@
 - **server**: Tests for notes made of blocks, the note tab in `DEFAULT_TAB` and the `noteBlocks` flag.
 - **web**: Tests for opening notes made of blocks and notes from before v3, for code highlighting against injected markup, and for copying to the clipboard.
 - **client**: Tests for turning CLI input into a note, for the format sent to older servers and for a round trip through the real encryption.
-- **web**: Tests for building a note from its blocks, for the upload that only tells the server it is made of blocks, and for the kinds kept for My Uploads.
+- **web**: Tests for building a note from its blocks, for the upload that only tells the server it is made of blocks, and for the kinds kept for My Links.
 
 ### 🔧 CI/CD
 

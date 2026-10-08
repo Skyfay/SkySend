@@ -25,7 +25,7 @@
 - **web**: A redesigned interface with a floating navigation bar, a new share form and new pages for receiving files and notes.
 - **web**: The settings of a share are a row of pills that open their choices on a click. A sentence next to the share button says when the share will be deleted.
 - **web**: Expired, used up and unknown links show one page with an explanation and a way back to sharing.
-- **web**: My Uploads keeps the copy button at hand and moves opening, renaming, the QR code and deleting into a menu.
+- **web**: My Links keeps the copy button at hand and moves opening, renaming, the QR code and deleting into a menu.
 - **web**: Icon buttons show tooltips and have labels for screen readers, and the code blocks of a note open and close with the keyboard.
 
 ### 📝 Documentation
@@ -39,4 +39,3 @@
 - **server**: Tests for the new theme and color scheme variables and for the hint a pre-v3 value gets.
 - **web**: Tests that text on and next to the accent reaches a contrast of at least 4.5:1 for any color.
 - **web**: Tests for the color scheme choice, the accent injected for `CUSTOM_COLOR` and the file type badges.
-- **web**: The coverage report also counts hooks that are written as `.tsx` files.

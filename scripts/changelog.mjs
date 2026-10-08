@@ -287,8 +287,21 @@ export function creditAll(fragments, find = findContribution) {
 }
 
 /**
+ * The entries of a section grouped by scope, in the order of `SCOPES`, so a reader finds the
+ * lines of one part of SkySend together. Within a scope they keep the order of the fragments.
+ *
+ * @param {string[]} entries
+ * @returns {string[]}
+ */
+function byScope(entries) {
+  const rank = (/** @type {string} */ entry) => SCOPES.indexOf(ENTRY.exec(entry)?.[1] ?? "");
+  return [...entries].sort((a, b) => rank(a) - rank(b));
+}
+
+/**
  * The version block the fragments add up to: the notes, then every section in the
- * order of `SECTIONS` with the entries of all fragments, then the Docker section.
+ * order of `SECTIONS` with the entries of all fragments grouped by scope, then the Docker
+ * section.
  *
  * @param {string} version Without the leading `v`, like `2.13.0`.
  * @param {string} tags The other Docker tags of the image, like `` `latest`, `v2` ``.
@@ -300,7 +313,7 @@ export function renderBlock(version, tags, fragments) {
   for (const note of fragments.flatMap((fragment) => fragment.notes)) lines.push(note, "");
   for (const heading of SECTIONS) {
     const entries = fragments.flatMap((fragment) => fragment.sections.get(heading) ?? []);
-    if (entries.length > 0) lines.push(heading, "", ...entries, "");
+    if (entries.length > 0) lines.push(heading, "", ...byScope(entries), "");
   }
   lines.push(
     DOCKER_SECTION,

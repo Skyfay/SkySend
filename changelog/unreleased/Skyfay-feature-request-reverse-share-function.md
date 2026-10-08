@@ -8,7 +8,6 @@
 - **web**: A dot beside My Links and a count on each request show uploads that arrived since its inbox was last open in this browser.
 - **web**: A settings page behind the gear in the header keeps defaults for sharing files and notes and for requests in this browser, like how long they stay open and whether a password starts on. Values the instance no longer offers fall back to its own, and an enforced password always wins.
 - **web**: Templates keep the setup of a request for the next one, with built-in ones for credentials, an SSH key, Wi-Fi and an API key. They live in the settings of this browser and move to another one as a file or a link, sealed with a password if wanted.
-- **crypto**: `sealWithPassword` and `openWithPassword` encrypt an export with a key Argon2id derives from a password.
 - **web**: A field of a password block can be marked as no secret, like a username or an address, and is then shown in clear without a generator. A block with such a field is called Fields instead of Password.
 - **web**: Text, password and SSH key blocks take a title of their own, like Server access, in a shared note and in a request template. It heads the block for whoever fills it in or reads it.
 - **client**: Fields of a password block that are no secret show in clear in the terminal view of a note, under the title of their block.
@@ -31,7 +30,7 @@
 
 - **server**: Chunked uploads refuse empty chunks and keep at most 64 chunks waiting for an earlier one.
 - **server**: A WebSocket upload whose first frame is `null` no longer crashes the server.
-- **server**: WebSocket uploads closed during setup or finalize leave no orphaned file behind, and uploads that deliver less than 1 MB in 10 minutes are closed.
+- **server**: WebSocket uploads closed during setup or finalize leave no orphaned file behind, and uploads that deliver less than 1 MiB in 10 minutes are closed.
 - **server**: A WebSocket upload that stops short of 4 MB no longer keeps its data in memory.
 - **server**: WebSocket uploads no longer send storage error details to the client.
 - **web**: Downloads through the service worker tell the browser not to guess the file type.
