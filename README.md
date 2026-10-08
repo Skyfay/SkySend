@@ -35,7 +35,7 @@
 -->
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/readme-banner.png" alt="The SkySend share page on a desktop and the download page on a phone" width="800">
+  <img src="https://raw.githubusercontent.com/Skyfay/SkySend/main/docs/public/readme-banner.png" alt="The SkySend share page on a desktop and a file request on a phone" width="800">
 </div>
 
 ### What is SkySend?
@@ -51,7 +51,7 @@ Inspired by [timvisee/send](https://github.com/timvisee/send), the community for
 - **Zero knowledge** - AES-256-GCM in the browser, and the key never leaves the share link
 - **Files and folders** - single files, several at once or a whole folder, zipped in the browser, with size and file limits you set yourself
 - **Notes made of blocks** - text and Markdown, passwords with a generator, code with highlighting and SSH keys, combined in one note
-- **File requests** - send someone an upload link, and what they upload is encrypted for you alone
+- **File and note requests** - send someone an upload link, and the files or the note they send are encrypted for you alone
 - **Shares that delete themselves** - expiry times, download and view limits, and burn after reading
 - **Password protection** - an optional password on top of the link, derived with Argon2id
 - **A CLI for the terminal** - upload, download and notes with the same encryption, plus an interactive TUI
@@ -161,7 +161,7 @@ Pull requests go into the `dev` branch, never into `main`. [CONTRIBUTING.md](CON
 
 The architecture, the cryptographic design, the technology stack and the feature specifications of SkySend were designed and directed by a human system engineer. The code is written by AI coding agents that follow those specifications and the guidelines of the project. Every feature is tested by hand, backed by unit tests with coverage tracking, CodeQL and security audits.
 
-A manual security audit by an external developer has not been done yet. The crypto design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to make an independent review easy. If you review code or work in security, your findings are very welcome, see [SECURITY.md](SECURITY.md) for how to report them.
+A formal security audit by an external firm has not been done yet. Independent security researchers have reviewed parts of the code and reported vulnerabilities privately. Every report was fixed in a release and published as an advisory that credits the reporter, see [Security Advisories](https://github.com/Skyfay/SkySend/security/advisories). The crypto design is [publicly documented](https://docs.skysend.app/developer-guide/crypto/) to make a full review easy. If you review code or work in security, your findings are very welcome, see [SECURITY.md](SECURITY.md) for how to report them.
 
 ## 📝 License
 
