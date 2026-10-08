@@ -501,7 +501,7 @@ skysend i [options]           # short alias
 
 ### Upload History
 
-All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode.
+All uploads and notes created via the CLI (both interactive and direct commands) are saved to `~/.config/skysend/history.json`. This enables the "My uploads" feature in interactive mode. The history holds the full share links with their keys and the owner tokens, so the CLI keeps it, the config and the OIDC session readable for your user only (file mode `0600` in a `0700` folder), and narrows files an older version created with wider permissions.
 
 ### Example
 

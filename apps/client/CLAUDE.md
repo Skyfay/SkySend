@@ -52,7 +52,7 @@ Config and history live under `$XDG_CONFIG_HOME/skysend/` or `~/.config/skysend/
 - `config.json` - saved servers, default server, per-server WebSocket flag, stored OIDC token
 - `history.json` - uploads and notes created from this machine, including `ownerToken` so `delete` works
 
-Both files hold owner tokens. Never print their raw contents in a log line or an error, and never sync them anywhere.
+Both files hold owner tokens. Never print their raw contents in a log line or an error, and never sync them anywhere. Every file in that folder is written through `writePrivateFile()` from `lib/private-file.ts`: mode `0600` in a `0700` folder, narrowed with `chmod` when an older version left it wider (GHSA-5vjq-2637-p33f).
 
 ## OIDC
 

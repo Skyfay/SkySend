@@ -10,6 +10,7 @@
 - **web**: Notes are padded to whole kilobytes before they are encrypted, so the server no longer learns how long a password in a note is.
 - **client**: The CLI and the TUI pad notes to whole kilobytes like the web app.
 - **crypto**: File metadata is padded to whole kilobytes before it is encrypted, so its length no longer reveals how long a file name is.
+- **client**: The CLI keeps its history, config and session files readable for the current user only, and narrows the permissions of files an older version created. Thanks @lissy93 ([GHSA-5vjq-2637-p33f](https://github.com/Skyfay/SkySend/security/advisories/GHSA-5vjq-2637-p33f))
 - **client**: Password prompts of the CLI no longer show what is typed, and a pasted password no longer keeps its line break.
 - **client**: `skysend note` without text asks for the note at a prompt that does not show it, or reads it from a pipe, so a secret no longer has to go into the shell history.
 - **server**: Updated `@hono/node-server` to 2.1.3 to patch a middleware bypass in static file serving (GHSA-rmxm-3fg6-px4f).
@@ -19,7 +20,7 @@
 - **infra**: Updated wrangler to 4.148.0 and refreshed the lockfile, so undici in the local worker runtime and source-map-js in the build tooling resolve to patched versions (GHSA-rfgv-xxqx-mfg5, GHSA-w293-vg96-wgc3, GHSA-3wwx-pv8p-q78v, GHSA-pmjh-fq2x-6v4x, GHSA-3xpg-4rpp-hhhm, GHSA-2jfj-6hjv-fm6j, GHSA-rx4f-c7p8-82vq, GHSA-r53p-7pc4-xj5r, GHSA-2gqq-gqf2-x968, GHSA-8436-99hf-9mmv, GHSA-68fv-2mgg-jv7q).
 - **infra**: `pnpm audit` ignores the braces advisory GHSA-vfj7-8cjw-p6xm, which has no patched release and only reaches the lint tooling of the website.
 - **infra**: Raised the pnpm overrides for `sharp` and `brace-expansion` and added overrides for `postcss-selector-parser` under `@tailwindcss/typography` and `argparse` under `js-yaml` to clear transitive advisories (GHSA-wq5f-xc86-pv6w, GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p, GHSA-rj75-hqrm-r3gf, GHSA-hp3w-g68c-fv3c).
-- **client**: The CLI and the TUI save a download under a cleaned file name inside the chosen folder and add a number instead of replacing an existing file, so a crafted name can no longer write elsewhere on disk.
+- **client**: The CLI and the TUI save a download under a cleaned file name inside the chosen folder and add a number instead of replacing an existing file, so a crafted name can no longer write elsewhere on disk. Thanks @lissy93 ([GHSA-2gh8-5c87-87jx](https://github.com/Skyfay/SkySend/security/advisories/GHSA-2gh8-5c87-87jx))
 - **client**: File names, error messages and the server title are shown with their control characters made visible, so a sender or a server can no longer rewrite terminal output or the clipboard through escape sequences.
 - **client**: The TUI packs a multi-file upload into a temporary file only the current user can read and removes it even when the TUI is closed with Ctrl+C.
 - **server**: An upload reserves its size in the upload quota when it starts, so uploads running side by side can no longer store more than the quota allows.
