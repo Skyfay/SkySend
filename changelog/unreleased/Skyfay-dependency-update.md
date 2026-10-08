@@ -25,6 +25,7 @@
 
 ### 🔧 CI/CD
 
+- **infra**: The release thanks the author of a pull request from outside the project at the end of each of its changelog entries, with a link to the pull request.
 - **infra**: Updated the GitHub Actions of every workflow to their newest major versions, which run on Node 24, among them checkout 7, setup-node 7, pnpm/action-setup 6, the artifact actions 7 and 8, codecov 7 and the Docker actions.
 - **infra**: Bumped minor and patch dependencies across the monorepo, among them the AWS SDK, hono, radix-ui, react 19.3, react-router, i18next, lucide-react, zod 4.6, vite 8.3, tailwindcss, typescript-eslint and prettier.
 - **docker**: The image keeps only the SQLite binary for its own platform, which makes it about 29 MB smaller.

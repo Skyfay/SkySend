@@ -11,9 +11,12 @@
  *   node scripts/changelog.mjs preview                   prints the block the next release writes
  *   node scripts/changelog.mjs release <version> <tags>  writes that block and deletes the fragments
  *
- * `pnpm version:bump` runs `release` itself, with the Docker tags of the new version.
+ * `pnpm version:bump` runs `release` itself, with the Docker tags of the new version. Preview and
+ * release thank the author of an outside pull request at the end of each entry of its fragment,
+ * so a contributor never has to write the thanks and the maintainer never has to add it.
  */
 
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -25,6 +28,15 @@ export const FRAGMENT_DIR = path.join(ROOT, "changelog", "unreleased");
 
 /** The published changelog, which only the release writes to. */
 export const CHANGELOG = path.join(ROOT, "docs", "changelog.md");
+
+/** The repository on GitHub, which the links of the changelog point to. */
+const REPO = "Skyfay/SkySend";
+
+/** Whose pull requests get no thanks, since they maintain the project. */
+const MAINTAINERS = ["Skyfay"];
+
+/** A GitHub login: letters, digits and single hyphens, at most 39 characters. */
+const LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 /** The line of the changelog that new version blocks go below. */
 const MARKER = "All notable changes to SkySend are documented here.";
@@ -70,6 +82,17 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.md$/;
  * @property {string[]} notes The notes above the sections, like `> ⚠️ **Breaking:**`, each a whole line.
  * @property {Map<string, string[]>} sections The entry lines under each section heading.
  * @property {string[]} problems What breaks the format, empty for a good fragment.
+ */
+
+/**
+ * @typedef {object} Contribution
+ * @property {string} author The GitHub login of whoever opened the pull request.
+ * @property {number} number The number of the pull request.
+ */
+
+/**
+ * @typedef {(command: string, args: string[]) => string} Run
+ * Runs a command without a shell and returns its output. Throws when it fails.
  */
 
 /**
@@ -177,6 +200,92 @@ export function readFragments(dir = FRAGMENT_DIR) {
     .map((name) => parseFragment(fs.readFileSync(path.join(dir, name), "utf8"), name));
 }
 
+/** @type {Run} */
+function run(command, args) {
+  return execFileSync(command, args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+/**
+ * The pull request that added a fragment, if someone outside the project opened it. The commit
+ * that added the file comes from git, the pull request of that commit and its author from the
+ * GitHub CLI. Null for a fragment without a pull request, or with one a maintainer or a bot
+ * opened. Throws when git or gh cannot answer, so the caller can say the thanks is missing.
+ *
+ * @param {string} name The file name of the fragment.
+ * @param {{ dir?: string, run?: Run }} [options]
+ * @returns {Contribution | null}
+ */
+export function findContribution(name, { dir = FRAGMENT_DIR, run: exec = run } = {}) {
+  const file = path.join(dir, name);
+  const sha = exec("git", ["log", "-1", "--diff-filter=A", "--format=%H", "--", file]).trim();
+  // Not committed yet, so no pull request can hold it.
+  if (sha === "") return null;
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error(`git returned no commit for ${name}`);
+
+  const found = exec("gh", [
+    "api",
+    `repos/${REPO}/commits/${sha}/pulls`,
+    "--jq",
+    ".[0] | [.number, .user.login, .user.type] | @tsv",
+  ]).trim();
+  if (found === "") return null;
+  const [number = "", author = "", type = ""] = found.split("\t");
+  // The values end up in the changelog, so they have to look exactly like what GitHub hands out.
+  if (!/^[1-9][0-9]*$/.test(number)) throw new Error(`gh returned no pull request for ${name}`);
+  // Bots get no thanks, and their logins look different anyway, like `dependabot[bot]`.
+  if (type !== "User") return null;
+  if (!LOGIN.test(author)) throw new Error(`gh returned no pull request for ${name}`);
+  return MAINTAINERS.includes(author) ? null : { author, number: Number(number) };
+}
+
+/**
+ * The fragment with the thanks of its contribution at the end of every entry, like
+ * `Thanks @user ([#81](https://github.com/Skyfay/SkySend/pull/81))`. An entry that thanks
+ * someone already, the reporter of an advisory for example, keeps its own words.
+ *
+ * @param {Fragment} fragment
+ * @param {Contribution | null} contribution
+ * @returns {Fragment}
+ */
+export function creditFragment(fragment, contribution) {
+  if (!contribution) return fragment;
+  const { author, number } = contribution;
+  const thanks = `Thanks @${author} ([#${number}](https://github.com/${REPO}/pull/${number}))`;
+  const sections = new Map(
+    [...fragment.sections].map(([heading, entries]) => [
+      heading,
+      entries.map((entry) => (entry.includes("Thanks @") ? entry : `${entry} ${thanks}`)),
+    ]),
+  );
+  return { ...fragment, sections };
+}
+
+/**
+ * Credits every fragment through `findContribution`. A fragment whose lookup fails stays as it
+ * is and ends up in `missing`, so a release without network or gh still goes through.
+ *
+ * @param {Fragment[]} fragments
+ * @param {(name: string) => Contribution | null} [find]
+ * @returns {{ fragments: Fragment[], missing: string[] }}
+ */
+export function creditAll(fragments, find = findContribution) {
+  /** @type {string[]} */
+  const missing = [];
+  const credited = fragments.map((fragment) => {
+    try {
+      return creditFragment(fragment, find(fragment.name));
+    } catch {
+      missing.push(fragment.name);
+      return fragment;
+    }
+  });
+  return { fragments: credited, missing };
+}
+
 /**
  * The version block the fragments add up to: the notes, then every section in the
  * order of `SECTIONS` with the entries of all fragments, then the Docker section.
@@ -232,11 +341,24 @@ function problemsOf(fragments) {
 /**
  * Writes the block of a release into the changelog and deletes the fragments it took. Nothing
  * changes while a fragment breaks the format or the changelog lists the version already.
+ * `credit` adds the thanks of a contribution to the fragments, see `creditAll`.
  *
- * @param {{ version: string, tags: string, dir?: string, changelog?: string }} options
+ * @param {{
+ *   version: string,
+ *   tags: string,
+ *   dir?: string,
+ *   changelog?: string,
+ *   credit?: (fragments: Fragment[]) => Fragment[],
+ * }} options
  * @returns {Fragment[]} The fragments the block was made of.
  */
-export function release({ version, tags, dir = FRAGMENT_DIR, changelog = CHANGELOG }) {
+export function release({
+  version,
+  tags,
+  dir = FRAGMENT_DIR,
+  changelog = CHANGELOG,
+  credit = (fragments) => fragments,
+}) {
   const fragments = readFragments(dir);
   const problems = problemsOf(fragments);
   if (problems.length > 0) {
@@ -254,7 +376,8 @@ export function release({ version, tags, dir = FRAGMENT_DIR, changelog = CHANGEL
     throw new Error(`The changelog already lists v${version}.`);
   }
 
-  fs.writeFileSync(changelog, insertBlock(content, renderBlock(version, tags, fragments)));
+  const block = renderBlock(version, tags, credit(fragments));
+  fs.writeFileSync(changelog, insertBlock(content, block));
   for (const fragment of fragments) fs.rmSync(path.join(dir, fragment.name));
   return fragments;
 }
@@ -268,6 +391,24 @@ function out(text) {
 function fail(text) {
   process.stderr.write(`${text}\n`);
   process.exitCode = 1;
+}
+
+/**
+ * Credits the fragments for preview and release, and warns about every fragment whose
+ * contribution git or gh could not look up, so its thanks can be added by hand.
+ *
+ * @param {Fragment[]} fragments
+ * @returns {Fragment[]}
+ */
+function creditWithWarning(fragments) {
+  const { fragments: credited, missing } = creditAll(fragments);
+  if (missing.length > 0) {
+    process.stderr.write(
+      `Could not look up the pull request of ${missing.join(", ")}. Is gh installed and logged in? ` +
+        "Add the thanks of an outside contribution by hand.\n",
+    );
+  }
+  return credited;
 }
 
 function main() {
@@ -286,7 +427,7 @@ function main() {
       return;
     case "preview":
       if (problems.length > 0) fail(problems.join("\n"));
-      out(renderBlock("NEXT", "`latest`, `vNEXT`", fragments));
+      out(renderBlock("NEXT", "`latest`, `vNEXT`", creditWithWarning(fragments)));
       return;
     case "release":
       if (!version || !tags) {
@@ -294,7 +435,7 @@ function main() {
         return;
       }
       try {
-        const used = release({ version, tags });
+        const used = release({ version, tags, credit: creditWithWarning });
         out(
           `docs/changelog.md has v${version} with ${used.length} fragment${used.length === 1 ? "" : "s"}, which are deleted.`,
         );
