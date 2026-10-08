@@ -168,7 +168,7 @@ Node timeouts at the bottom of the file (`headersTimeout` 60 s, `requestTimeout`
 
 `console.log` / `warn` / `error` with a bracketed prefix (`[storage]`, `[quota]`, `[oidc]`, `[skysend]`) is the house style here - there is no logger abstraction, and adding one is not on the roadmap.
 
-What must never be logged: secrets, derived keys, auth or owner tokens, request bodies, filenames, note content, raw IP addresses. The Hono request logger records method, path, status, and duration only, and that comment in `src/index.ts` is a deliberate audit note.
+What must never be logged: secrets, derived keys, auth or owner tokens, request bodies, filenames, note content, raw IP addresses. Log an error through `describeError()` from `lib/log-error.ts`, never the error object itself: openid-client keeps the claims of an ID token in `cause`, and Drizzle's async drivers write the query parameters, tokens among them, into the message. The Hono request logger records method, path, status, and duration only, and that comment in `src/index.ts` is a deliberate audit note.
 
 Errors returned to the client stay generic. Details go to the log, not the response.
 

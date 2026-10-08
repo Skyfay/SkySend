@@ -7,6 +7,7 @@ import type { StorageBackend } from "../storage/types.js";
 import type { QuotaReservation } from "../middleware/quota.js";
 // The same progress rule as chunked HTTP sessions.
 import { MIN_PROGRESS_BYTES, PROGRESS_WINDOW_MS } from "./chunked-upload.js";
+import { describeError } from "./log-error.js";
 
 /**
  * The session layer of WebSocket uploads, shared by normal uploads and uploads into a file
@@ -373,7 +374,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
           try {
             await storage.createEmpty(id);
           } catch (err) {
-            console.error("[upload-ws] Storage init failed:", err);
+            console.error("[upload-ws] Storage init failed:", describeError(err));
             target.abandon?.(opened.meta);
             opened.quotaReservation?.release();
             sessions.delete(ws);
@@ -513,7 +514,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
                 envelope,
               );
             } catch (err) {
-              console.error("[upload-ws] Storing the upload failed:", err);
+              console.error("[upload-ws] Storing the upload failed:", describeError(err));
               outcome = { error: "DB insert failed", code: 1011 };
             }
             if (isRefusal(outcome)) {
@@ -530,7 +531,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             try {
               session.quotaReservation?.commit(session.bytesReceived);
             } catch (err) {
-              console.error("[upload-ws] Recording the quota failed:", err);
+              console.error("[upload-ws] Recording the quota failed:", describeError(err));
             }
             sendJson(ws, { ...outcome?.reply, type: "done", id: session.id });
             try {
@@ -539,7 +540,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
               // ignore
             }
           } catch (err) {
-            console.error("[upload-ws] Finalize failed:", err);
+            console.error("[upload-ws] Finalize failed:", describeError(err));
             clearInterval(keepaliveTimer);
             fail(ws, session, "Finalize failed");
           }

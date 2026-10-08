@@ -4,6 +4,7 @@
 
 - **server**: The metadata of a password-protected file is released only after a correct password, so a link holder can no longer test password guesses offline. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
 - **server**: A wrong token at the download of a password-protected file counts against the password lockout like a wrong password. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
+- **server**: A failed OIDC sign-in and other server errors are logged without the claims of an ID token or other values attached to the error, so the log no longer holds data that identifies a user.
 - **server**: An IPv6 client counts per /64 network in the rate limit, the upload quota, the password lockout and the daily request limit, so a new address from the same network no longer starts a fresh count.
 - **web**: A new file or note password needs at least 8 characters. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))
 - **client**: The CLI and the TUI ask for at least 8 characters for a new file or note password and take the metadata from the password check. Thanks @NotAFlightRisk ([GHSA-rxxj-c5wr-phqp](https://github.com/Skyfay/SkySend/security/advisories/GHSA-rxxj-c5wr-phqp))

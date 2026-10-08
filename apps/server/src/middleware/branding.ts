@@ -3,6 +3,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { mkdirSync, realpathSync } from "node:fs";
 import { extname, resolve, sep } from "node:path";
 import type { MiddlewareHandler } from "hono";
+import { describeError } from "../lib/log-error.js";
 
 /** URL prefix the branding directory is mounted under, with trailing slash. */
 export const BRANDING_PREFIX = "/branding/";
@@ -72,7 +73,7 @@ export function createBrandingStatic(brandingDir: string): MiddlewareHandler[] {
   } catch (err) {
     // Read-only or externally managed mounts (e.g. SKIP_CHOWN=true) are the
     // operator's responsibility - a missing directory only means 404s.
-    console.warn(`[skysend] Could not create branding directory ${root}:`, err);
+    console.warn(`[skysend] Could not create branding directory ${root}:`, describeError(err));
   }
 
   try {

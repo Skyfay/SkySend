@@ -38,6 +38,7 @@ import { createInboxRoute } from "./routes/inbox.js";
 // OIDC
 import { createOidcAdapter } from "./auth/index.js";
 import { createOidcGuard } from "./middleware/oidc-guard.js";
+import { describeError } from "./lib/log-error.js";
 
 // ── Initialize ─────────────────────────────────────────
 
@@ -62,7 +63,7 @@ await storage.init();
 try {
   await runCleanup(storage);
 } catch (err) {
-  console.error("[startup] Initial cleanup failed:", err);
+  console.error("[startup] Initial cleanup failed:", describeError(err));
   process.exit(1);
 }
 
@@ -189,7 +190,7 @@ const quota = createUploadQuota(config);
 // responses. Without this, a transient 500 for a static asset during deployment
 // gets cached and served to all clients until the proxy container is recreated.
 app.onError((err, c) => {
-  console.error("[error]", err);
+  console.error("[error]", describeError(err));
   return c.json({ error: "Internal server error" }, 500, {
     "Cache-Control": "no-store",
   });
