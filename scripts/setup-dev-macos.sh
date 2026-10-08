@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Set up a Mac for SkySend development: fnm with the Node of .node-version, pnpm in the
-# version package.json pins, and the dependencies.
+# version package.json pins, the dependencies and .env.dev.
 # Usage: bash scripts/setup-dev-macos.sh
 
 set -euo pipefail
@@ -48,6 +48,14 @@ info "Using pnpm $(pnpm -v)."
 
 info "Installing dependencies..."
 pnpm install
+
+# .env.dev holds the values of this machine and stays out of git, .env.dev.example is its template.
+if [ -f .env.dev ]; then
+  info ".env.dev already exists."
+else
+  cp .env.dev.example .env.dev
+  info "Created .env.dev from .env.dev.example."
+fi
 
 # Without this line in ~/.zshrc, a new terminal keeps the Node it finds first on PATH.
 FNM_LINE='eval "$(fnm env --use-on-cd)"'

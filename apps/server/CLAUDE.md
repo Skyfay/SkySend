@@ -91,7 +91,7 @@ Every environment variable is declared in `src/lib/config.ts` as a Zod field, in
 
 Relationships between variables go into the cross-field block at the end of `loadConfig()`, which already covers file and note option consistency, the S3 requirement set, and OIDC completeness. Fail loudly with a `throw` for a broken configuration, `console.warn` for a risky but workable one.
 
-Adding a variable means four edits: `config.ts`, `.env.example`, `docs/user-guide/configuration/environment-variables.md`, and - if the SPA needs it - the `/api/config` payload in `src/routes/config.ts` plus its Zod schema in `apps/web/src/lib/api.ts`.
+Adding a variable means five edits: `config.ts`, `.env.example`, `.env.dev.example` (commented out with its default unless dev needs another value), `docs/user-guide/configuration/environment-variables.md`, and - if the SPA needs it - the `/api/config` payload in `src/routes/config.ts` plus its Zod schema in `apps/web/src/lib/api.ts`.
 
 `loadConfig()` caches. Call it once in `src/index.ts`, use `getConfig()` everywhere else.
 

@@ -23,7 +23,13 @@ On macOS, the setup script installs fnm with the Node of `.node-version`, pnpm i
 bash scripts/setup-dev-macos.sh
 ```
 
-Elsewhere, install Node 24 and pnpm 10, then run `pnpm install`.
+Elsewhere, install Node 24 and pnpm 10, then run `pnpm install` and create the dev environment from its template:
+
+```bash
+cp .env.dev.example .env.dev
+```
+
+The dev server reads `.env.dev`, which git ignores, so local values and secrets like an OIDC client stay out of the repository. `.env.dev.example` holds the defaults for development and is the file to update when a variable is added. `pnpm setup:worktree` copies `.env.dev` of the primary checkout into a new git worktree, or creates it from the template.
 
 New work happens on a branch off `dev`, and its pull request goes back into `dev`, never into `main`. See [Branches and Pull Requests](/developer-guide/#branches-and-pull-requests).
 

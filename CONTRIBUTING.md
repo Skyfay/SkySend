@@ -32,10 +32,11 @@ git clone https://github.com/Skyfay/SkySend.git
 cd SkySend
 git checkout dev
 pnpm install
+cp .env.dev.example .env.dev
 pnpm dev
 ```
 
-This starts both the backend (Hono) and frontend (Vite) in development mode.
+This starts both the backend (Hono) and frontend (Vite) in development mode. The server reads `.env.dev`, which git ignores, so change values there. `.env.dev.example` is its template and the one to update when a variable is added. On macOS, `bash scripts/setup-dev-macos.sh` installs Node, pnpm and the dependencies and creates `.env.dev` as well.
 
 Start your work on a branch of its own:
 

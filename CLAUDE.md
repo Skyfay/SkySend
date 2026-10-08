@@ -96,7 +96,7 @@ pnpm changelog:check      # Check every fragment under changelog/unreleased/
 
 Single workspace: `pnpm --filter @skysend/web build`, `pnpm --filter @skysend/docs dev`, and so on. Package names are `@skysend/server`, `-web`, `-client`, `-cli`, `-crypto`, `-docs`, `@skysend/website`, `@skysend/instances-worker`, `@skysend/report-worker`.
 
-`pnpm dev` runs the server against `.env.dev` at the repo root. Vite serves the SPA on `:5173` and proxies `/api`, `/auth`, and `/branding` to the server on `:3000`. `BASE_URL` and `CORS_ORIGINS` in `.env.dev` therefore point at the Vite origin, not the server one.
+`pnpm dev` runs the server against `.env.dev` at the repo root. Git ignores it, `.env.dev.example` is its tracked template and `scripts/setup-dev-macos.sh` and `scripts/setup-worktree.sh` create it. Vite serves the SPA on `:5173` and proxies `/api`, `/auth`, and `/branding` to the server on `:3000`. `BASE_URL` and `CORS_ORIGINS` in `.env.dev` therefore point at the Vite origin, not the server one.
 
 ## Changelog workflow
 
@@ -156,13 +156,13 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 | Changelog fragments (unreleased) | [changelog/unreleased/](changelog/unreleased/README.md) |
 | Changelog (released) | [docs/changelog.md](docs/changelog.md) |
 | Published env var reference | [docs/user-guide/configuration/environment-variables.md](docs/user-guide/configuration/environment-variables.md) |
-| Dev environment | [.env.dev](.env.dev), [.env.example](.env.example) |
+| Dev environment | [.env.dev.example](.env.dev.example), [.env.example](.env.example) |
 | CI | [.github/workflows/validate.yml](.github/workflows/validate.yml), [pr-build.yml](.github/workflows/pr-build.yml) |
 
 ## Before finishing a change
 
 1. `pnpm validate` passes (lint, typecheck, tests).
 2. The fragment of the branch under `changelog/unreleased/` has an entry, unless the change is AI tooling only.
-3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, and the published env var reference.
+3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, `.env.dev.example`, and the published env var reference.
 4. New user-facing strings exist in `en.json` and `de.json`, plus the 11 AI-translated locales.
 5. Nothing new is logged that identifies a user or reveals plaintext.
