@@ -26,6 +26,8 @@ import {
   type TemplateFields,
 } from "../../src/lib/request-templates.js";
 import { formatBytes, formatDuration } from "../../src/lib/utils.js";
+import { hashWasmArgon2 } from "../../src/lib/argon2.js";
+import frozen from "../fixtures/frozen-passwords.json";
 
 /** A stand-in for Argon2id: SHA-256 of password and salt, fast and deterministic. */
 const fakeArgon2: Argon2idHashFn = async (password, salt) => {
@@ -303,6 +305,23 @@ describe("export and import", () => {
       "tooLarge",
     );
   });
+});
+
+describe("exports made by v3.0", () => {
+  const { password, plain, sealed, templates } = frozen.templateExport;
+
+  it("still reads a plain export", () => {
+    expect(readTemplateExport(plain)).toEqual({ sealed: false, templates, skipped: 0 });
+  });
+
+  it("still opens a sealed export with its password and the real Argon2id", async () => {
+    const read = readTemplateExport(sealed);
+    if (!read.sealed) throw new Error("expected a sealed export");
+    expect(await openTemplateExport(read.box, password, hashWasmArgon2)).toEqual({
+      templates,
+      skipped: 0,
+    });
+  }, 30_000);
 });
 
 describe("export limits", () => {

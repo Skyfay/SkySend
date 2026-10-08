@@ -389,7 +389,8 @@
       "share.pick.viewsHint",
       "share.passwordForced",
       "auth.loginRequiredRequest",
-      "request.signInText"
+      "request.signInText",
+      "errors.linkRewrittenTemplatesDesc"
     ],
     "_contributorNote": "Tradução para Português do Brasil (pt-BR) criada seguindo as convenções do projeto. Revisão por falante nativo recomendada."
   },
@@ -702,7 +703,8 @@
     "linkRewritten": "O link foi modificado em trânsito",
     "linkRewrittenDesc": "Um filtro de segurança de e-mail reescreveu este link, então a chave de descriptografia ficou visível para o servidor. Se o conteúdo for confidencial, peça ao remetente que o exclua assim que você o tiver.",
     "linkRewrittenInboxDesc": "Um filtro de segurança de e-mail reescreveu este link, então a chave desta caixa ficou visível para o servidor. Baixe o que precisar e depois exclua a solicitação.",
-    "linkRewrittenUploadDesc": "Um filtro de segurança de e-mail reescreveu este link, então o servidor o viu por completo. Seus arquivos continuam criptografados para quem pediu, mas quem tem o link pode ler o título e enviar para a solicitação."
+    "linkRewrittenUploadDesc": "Um filtro de segurança de e-mail reescreveu este link, então o servidor o viu por completo. Seus arquivos continuam criptografados para quem pediu, mas quem tem o link pode ler o título e enviar para a solicitação.",
+    "linkRewrittenTemplatesDesc": "Um filtro de segurança de e-mail reescreveu este link, então o servidor o viu por completo. Uma exportação sem senha mostrou no caminho os nomes e campos dos seus modelos, mas nunca valores."
   },
   "header": {
     "share": "Compartilhar",

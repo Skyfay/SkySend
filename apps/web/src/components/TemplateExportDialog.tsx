@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Check, Copy, FileJson, Link2, Loader2 } from "lucide-react";
+import { MIN_PASSWORD_LENGTH, meetsPasswordMinimum } from "@skysend/crypto";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -81,7 +82,9 @@ function ExportForm({
   const [copied, setCopied] = useState(false);
 
   const picked = templates.filter((template) => chosen.has(template.id));
-  const ready = picked.length > 0 && (!sealed || password.length > 0) && !busy;
+  // Anyone who holds the file or the link can test guesses offline, so the password needs the
+  // same length as the one of a file.
+  const ready = picked.length > 0 && (!sealed || meetsPasswordMinimum(password)) && !busy;
 
   const toggle = (templateId: string, on: boolean) =>
     setChosen((current) => {
@@ -215,7 +218,13 @@ function ExportForm({
             placeholder={t("templates.sealPlaceholder")}
           />
         )}
-        <p className="text-xs leading-relaxed text-muted-foreground">{t("templates.sealHint")}</p>
+        {sealed && password !== "" && !meetsPasswordMinimum(password) ? (
+          <p className="text-xs text-destructive-text">
+            {t("share.passwordTooShort", { count: MIN_PASSWORD_LENGTH })}
+          </p>
+        ) : (
+          <p className="text-xs leading-relaxed text-muted-foreground">{t("templates.sealHint")}</p>
+        )}
       </div>
 
       <DialogFooter>

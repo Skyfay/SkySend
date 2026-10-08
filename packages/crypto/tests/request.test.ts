@@ -1,13 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { argon2id } from "hash-wasm";
 import {
-  applyPasswordProtection,
+  applyInboxPassword,
   computeAuthToken,
   computeOwnerToken,
+  createDecryptStream,
   createFileRequest,
   decodeInboxFragment,
   decodeUploadFragment,
   decryptMetadata,
   decryptRequestBrief,
+  decryptRequestMetadata,
   deriveInboxKeys,
   deriveKeys,
   deriveLinkKeys,
@@ -17,12 +20,14 @@ import {
   concatBytes,
   encryptRequestBrief,
   encodeUtf8,
+  expectedPlaintextSize,
   generateSecret,
   openRequestKey,
   randomBytes,
   toBase64url,
   unwrapFileSecret,
   wrapFileSecret,
+  INBOX_PASSWORD_ARGON2,
   REQUEST_BRIEF_BLOCK,
   REQUEST_BRIEF_MAX_BYTES,
   REQUEST_SUITE,
@@ -30,6 +35,7 @@ import {
   REQUEST_VAULT_LENGTH,
   WRAP_CIPHERTEXT_LENGTH,
   WRAP_ENC_LENGTH,
+  type Argon2idHashFn,
   type NewFileRequest,
   type RequestBrief,
   type RequestKey,
@@ -41,6 +47,24 @@ import fixture from "./fixtures/file-request.json";
 
 const requestId = crypto.randomUUID();
 const uploadId = crypto.randomUUID();
+
+/** The real Argon2id the web app uses, for the frozen inbox link. */
+const argon2: Argon2idHashFn = async (password, salt, params) =>
+  new Uint8Array(
+    await argon2id({
+      password,
+      salt,
+      parallelism: params.parallelism,
+      iterations: params.iterations,
+      memorySize: params.memory,
+      hashLength: params.hashLength,
+      outputType: "binary",
+    }),
+  );
+
+/** A stand-in for Argon2id: SHA-256 of password and salt, so it is fast and deterministic. */
+const fakeArgon2: Argon2idHashFn = async (password, salt) =>
+  new Uint8Array(await crypto.subtle.digest("SHA-256", asBytes(concatBytes(password, salt))));
 
 /** A fresh request and its opened vault, the way the requester's browser holds it. */
 async function freshRequest(
@@ -137,6 +161,38 @@ describe("the frozen file request fixture", () => {
     const brief = { ciphertext: fromHex(output.briefCiphertext), nonce: fromHex(input.briefNonce) };
     expect(brief.ciphertext.length).toBe(REQUEST_BRIEF_BLOCK + 16);
     expect(await decryptRequestBrief(brief, briefKey)).toEqual(input.brief);
+  });
+
+  it("should take the password off the frozen inbox link with the real Argon2id", async () => {
+    const { secret, passwordSalt } = decodeInboxFragment(output.protectedInboxFragment);
+    expect(passwordSalt).toEqual(fromHex(input.passwordSalt));
+    const inboxSecret = await applyInboxPassword(secret, input.password, passwordSalt!, argon2);
+    expect(toHex(inboxSecret)).toBe(input.inboxSecret);
+    const protectedSecret = await applyInboxPassword(
+      fromHex(input.inboxSecret),
+      input.password,
+      fromHex(input.passwordSalt),
+      argon2,
+    );
+    expect(encodeInboxFragment(protectedSecret, fromHex(input.passwordSalt))).toBe(
+      output.protectedInboxFragment,
+    );
+  }, 30_000);
+
+  it("should open the frozen note upload with the file secret of the frozen wrap", async () => {
+    const keys = await deriveKeys(fromHex(input.fileSecret), fromHex(input.uploadSalt));
+    const metadata = await decryptRequestMetadata(
+      fromHex(output.uploadMetaCiphertext),
+      fromHex(output.uploadMetaNonce),
+      keys.metaKey,
+    );
+    expect(metadata).toEqual(input.uploadMetadata);
+    const plain = new Blob([asBytes(fromHex(output.uploadCiphertext))])
+      .stream()
+      .pipeThrough(createDecryptStream(keys.fileKey, expectedPlaintextSize(metadata)));
+    const bytes = new Uint8Array(await new Response(plain).arrayBuffer());
+    expect(bytes.length).toBe(input.uploadMetadata.size);
+    expect(new TextDecoder().decode(bytes).trimEnd()).toBe(input.noteDocument);
   });
 });
 
@@ -624,18 +680,46 @@ describe("inbox fragments", () => {
     });
   });
 
-  it("should let a password protect the inbox the way it protects a file", async () => {
+  it("should put a password on the inbox and take it off again", async () => {
     const { local } = await createFileRequest();
-    const passwordKey = randomBytes(32);
     const salt = randomBytes(16);
     const fragment = encodeInboxFragment(
-      applyPasswordProtection(local.inboxSecret, passwordKey),
+      await applyInboxPassword(local.inboxSecret, "correct horse", salt, fakeArgon2),
       salt,
     );
     const decoded = decodeInboxFragment(fragment);
     expect(decoded.passwordSalt).toEqual(salt);
     expect(decoded.secret).not.toEqual(local.inboxSecret);
-    expect(applyPasswordProtection(decoded.secret, passwordKey)).toEqual(local.inboxSecret);
+    expect(await applyInboxPassword(decoded.secret, "correct horse", salt, fakeArgon2)).toEqual(
+      local.inboxSecret,
+    );
+    expect(await applyInboxPassword(decoded.secret, "wrong horse", salt, fakeArgon2)).not.toEqual(
+      local.inboxSecret,
+    );
+  });
+
+  it("should derive the inbox password with its own frozen Argon2id parameters", async () => {
+    const spy = vi.fn(fakeArgon2);
+    await applyInboxPassword(randomBytes(32), "pw", randomBytes(16), spy);
+    expect(spy).toHaveBeenCalledWith(encodeUtf8("pw"), expect.any(Uint8Array), {
+      memory: 65_536,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    });
+    expect(INBOX_PASSWORD_ARGON2).toEqual({ memory: 65_536, iterations: 3, parallelism: 1 });
+  });
+
+  it("should refuse an inbox password on anything but the exact secret and salt", async () => {
+    await expect(
+      applyInboxPassword(randomBytes(31), "pw", randomBytes(16), fakeArgon2),
+    ).rejects.toThrow("Inbox secret must be exactly 32 bytes");
+    await expect(
+      applyInboxPassword(randomBytes(32), "pw", randomBytes(8), fakeArgon2),
+    ).rejects.toThrow("Password salt must be exactly 16 bytes");
+    await expect(
+      applyInboxPassword(randomBytes(32), "", randomBytes(16), fakeArgon2),
+    ).rejects.toThrow("Password must not be empty");
   });
 
   it("should reject anything but the exact format", () => {

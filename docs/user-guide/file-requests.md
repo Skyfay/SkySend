@@ -15,7 +15,7 @@ Like everything in SkySend, what they send is encrypted before it leaves their b
    - **Uploads** - How many uploads it takes in total, one of the options the instance offers. A note counts as one. For **Both**, these are **Submissions**: one sender's files and note together, which take two uploads of the request.
    - **Per upload** - How large one upload may be, at most the [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) of the instance. Only for files.
    - **Downloads per upload** - How often you can download each upload, or open each note.
-   - **Password** - A switch. Once it is on, the inbox opens only with the link and the password together. Where the instance requires a password, it stays on.
+   - **Password** - A switch. Once it is on, the inbox opens only with the link and the password together, and the password needs at least 8 characters. Where the instance requires a password, it stays on.
 6. Click **Create request**
 
 You get two links, and they do very different things.
@@ -29,7 +29,7 @@ You get two links, and they do very different things.
 The inbox link is the key to every file sent to the request and the only way in. Nobody can recover it, not even the operator of the instance. Save it before you leave the page.
 :::
 
-**My Links**, tab **Requests**, lists the requests made in this browser, with how many uploads arrived and how long each one stays open. **Go to my requests** under the two links of a new request leads there. The list lives in this browser only. The server does not know which requests are yours. A request with a password shows no status there, since that needs the password.
+**My Links**, tab **Requests**, lists the requests made in this browser, with how many uploads arrived and how long each one stays open. **Go to my requests** under the two links of a new request leads there. The list lives in this browser only. The server does not know which requests are yours. A request with a password shows no status there, since that needs the password. A request the server no longer finds stays in the list as **Unavailable** until every upload in it would have run out, since a misconfigured proxy can answer the same way and the stored inbox link is often the only copy. You can remove it by hand at any time.
 
 ## Templates
 
@@ -43,7 +43,7 @@ Templates live in this browser only, like the list of your requests. The default
 
 - **As a file** - A `.json` file to keep or carry over
 - **As a link** - Everything sits after the `#` of the link, so it never reaches a server. Open it on the other device to import.
-- **Encrypt with a password** - Field names like "Bank PIN" tell what a request is about. With a password, the export cannot be read without it.
+- **Encrypt with a password** - Field names like "Bank PIN" tell what a request is about. With a password of at least 8 characters, the export cannot be read without it.
 
 **Import** reads a file or a link and lists what it found, with what each template asks for. A template with the name of one you have goes in beside it unless you choose to replace it or skip it, since a link can come from anyone. Every imported template is checked like one from a stranger: names and labels are cleaned, values are dropped, and a template that does not fit a request is left out.
 
@@ -73,7 +73,7 @@ Open the inbox link, and enter the password if the request has one. The inbox li
 - **Close request** stops new uploads. Uploads already running still finish.
 - **Delete request** removes the request and every file in it.
 
-Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. The files and the note of one submission are listed together under **Sent together**. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
+Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, a trailing dot or sheer length, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. The files and the note of one submission are listed together under **Sent together**. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
 
 ## New Uploads
 
@@ -82,7 +82,7 @@ While a SkySend page is visible, the browser checks up to 20 of the newest reque
 - A request with a password is not checked. Its tokens need the password, and the browser keeps none beside the protected link on purpose.
 - Nothing new is sent. Each check sends the inbox token that opening the list of requests sends anyway. The server does see the checks, so it learns that the requests checked together belong to one browser, and when that browser is open.
 - The pages of share links check nothing. A download, or an upload into someone else's request, never sits right next to a check of your requests.
-- A check never forgets a request. Only the list of requests does, once the server no longer has it.
+- A check never forgets a request. Only the list of requests and the inbox page do, once the server no longer has it and every upload in it would have run out.
 - Nothing is checked while every SkySend tab is closed or hidden, and there are no push notifications. They would need the server to store a push address for each request.
 
 ## What Happens Over Time
@@ -101,11 +101,13 @@ Each upload can be downloaded as often as the request set, one of the [`FILE_REQ
 | --- | --- |
 | A random request ID | The key in either link |
 | The sealed vault with your private key, which opens only with the inbox link | The public key of the request |
-| Three tokens derived from the links, to check who may upload, read and manage | Your title, what you asked for and your note template |
+| Three tokens derived from the links, to check who may upload, read and manage | Your title and your note template |
 | The limits and when the request closes | File names and types, and what a note says |
 | For each upload: its size, the ciphertext, the encrypted metadata and the file key wrapped to your public key | Who you are or who sent a file |
 
 A note is padded to whole kilobytes, so its size tells little about how long a password in it is. The server can still tell a note from a file by its size, since a note is always a whole number of kilobytes before it is encrypted.
+
+What a request asks for is encrypted, but the server can often tell. A request for files and a note takes two uploads per submission, so its number of uploads can give it away, and the two uploads of one submission arrive together.
 
 The full design is on the [File Requests cryptography page](/developer-guide/crypto/file-requests).
 
@@ -119,7 +121,7 @@ File requests are on by default. Leave `request` out of [`ENABLED_SERVICES`](/us
 - [`FILE_REQUEST_DAILY_LIMIT`](/user-guide/configuration/environment-variables#file-requests) caps how many requests one person creates per day, counted by OIDC user when creating needs a login and by IP otherwise. It is off by default, like the upload quota. A public instance should set both, for example the limit to `100`. The count lives in memory and resets on a restart. The request form shows how many are left today.
 - An abuse report for a file request takes its upload link. The report form refuses inbox links, since their key would open every file sent to the request.
 - A wrong inbox password counts toward the same lockout as a wrong file password, [`PASSWORD_MAX_ATTEMPTS`](/user-guide/configuration/environment-variables#password-lockout) per IP. An inbox without a password never locks, since nobody can guess its 256-bit key.
-- One request can take its number of uploads times its size per upload. Any request may take up to twice the largest of the [`FILE_REQUEST_UPLOAD_OPTIONS`](/user-guide/configuration/environment-variables#file-requests), since a submission of files and a note takes two uploads and the server cannot tell what a request asks for, for example 200 × 2 GB with the defaults. Choose the options and [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) with that product in mind.
+- One request can take its number of uploads times its size per upload. Any request may take up to twice the largest of the [`FILE_REQUEST_UPLOAD_OPTIONS`](/user-guide/configuration/environment-variables#file-requests), since a submission of files and a note takes two uploads and what a request asks for is encrypted, for example 200 × 2 GB with the defaults. Choose the options and [`FILE_REQUEST_MAX_SIZE`](/user-guide/configuration/environment-variables#file-requests) with that product in mind.
 - With `FORCE_REQUEST_PASSWORD`, the server refuses a request that does not say it has a password. It cannot check the password itself, which never reaches it.
 - Uploads into a request take the same transports as normal uploads: WebSocket when [`FILE_UPLOAD_WS`](/user-guide/configuration/environment-variables#file) is on, chunked HTTP otherwise and whenever the WebSocket cannot connect.
 - The [admin CLI](/user-guide/admin-cli/commands) lists, counts and deletes requests like uploads and notes.

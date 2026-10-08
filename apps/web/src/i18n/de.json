@@ -308,7 +308,8 @@
     "linkRewritten": "Link wurde unterwegs verändert",
     "linkRewrittenDesc": "Ein Mail-Security-Filter hat diesen Link umgeschrieben, dadurch war der Schlüssel für den Server sichtbar. Lass den Inhalt bei vertraulichen Daten vom Absender löschen, sobald du ihn hast.",
     "linkRewrittenInboxDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb war der Schlüssel zu dieser Inbox für den Server sichtbar. Laden Sie herunter, was Sie brauchen, und löschen Sie danach die Anfrage.",
-    "linkRewrittenUploadDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb hat der Server ihn vollständig gesehen. Ihre Dateien bleiben für die anfragende Person verschlüsselt, aber wer den Link hat, kann den Titel lesen und in die Anfrage hochladen."
+    "linkRewrittenUploadDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb hat der Server ihn vollständig gesehen. Ihre Dateien bleiben für die anfragende Person verschlüsselt, aber wer den Link hat, kann den Titel lesen und in die Anfrage hochladen.",
+    "linkRewrittenTemplatesDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb hat der Server ihn vollständig gesehen. Ein Export ohne Passwort hat dabei die Namen und Felder seiner Vorlagen gezeigt, nie aber Werte."
   },
   "header": {
     "share": "Teilen",

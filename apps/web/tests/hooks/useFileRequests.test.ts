@@ -33,7 +33,7 @@ import * as api from "../../src/lib/api.js";
 import * as fileRequest from "../../src/lib/file-request.js";
 import * as store from "../../src/lib/upload-store.js";
 import { useCreateRequest, useRequestHistory } from "../../src/hooks/useFileRequests.js";
-import { keepUnseen, unseenFor } from "../../src/lib/unseen-uploads.js";
+import { keepUnseen, setUnseen, unseenFor } from "../../src/lib/unseen-uploads.js";
 
 const ID = "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const argon2 = vi.fn();
@@ -192,14 +192,43 @@ describe("useRequestHistory", () => {
     expect(unseenFor("a")).toBe(0);
   });
 
-  it("forgets a request the server no longer has", async () => {
+  it("forgets a request the server no longer has once every upload in it ran out", async () => {
+    vi.mocked(store.getAllRequests).mockResolvedValueOnce([
+      { ...stored("a"), closesAt: "2020-01-01T00:00:00.000Z" },
+    ]);
+    vi.mocked(api.fetchInbox).mockRejectedValueOnce(
+      new api.ApiError(404, "File request not found"),
+    );
+    const { result } = renderHook(() => useRequestHistory(604_800));
+    await waitFor(() => expect(store.removeRequest).toHaveBeenCalledWith("a"));
+    expect(result.current.requests).toHaveLength(0);
+  });
+
+  it("keeps a request the server answers 404 for while its uploads may still be there", async () => {
+    // A proxy or a restored database can answer 404, and the stored link is the only copy.
     vi.mocked(store.getAllRequests).mockResolvedValueOnce([stored("a")]);
     vi.mocked(api.fetchInbox).mockRejectedValueOnce(
       new api.ApiError(404, "File request not found"),
     );
+    setUnseen("a", 2);
+    const { result } = renderHook(() => useRequestHistory(604_800));
+    await waitFor(() => expect(result.current.requests[0]?.loading).toBe(false));
+    expect(store.removeRequest).not.toHaveBeenCalled();
+    expect(result.current.requests[0]).toMatchObject({ id: "a", inbox: null });
+    // Nothing the server no longer lists counts as new.
+    expect(unseenFor("a")).toBe(0);
+  });
+
+  it("forgets nothing on a 404 before it knows how long the instance keeps an upload", async () => {
+    vi.mocked(store.getAllRequests).mockResolvedValueOnce([
+      { ...stored("a"), closesAt: "2020-01-01T00:00:00.000Z" },
+    ]);
+    vi.mocked(api.fetchInbox).mockRejectedValueOnce(
+      new api.ApiError(404, "File request not found"),
+    );
     const { result } = renderHook(() => useRequestHistory());
-    await waitFor(() => expect(store.removeRequest).toHaveBeenCalledWith("a"));
-    expect(result.current.requests).toHaveLength(0);
+    await waitFor(() => expect(result.current.requests[0]?.loading).toBe(false));
+    expect(store.removeRequest).not.toHaveBeenCalled();
   });
 
   it("keeps a request when the server only failed to answer", async () => {

@@ -95,6 +95,8 @@ export {
   decodeUploadFragment,
   encodeInboxFragment,
   decodeInboxFragment,
+  applyInboxPassword,
+  INBOX_PASSWORD_ARGON2,
   REQUEST_SUITE,
   REQUEST_SECRET_LENGTH,
   REQUEST_NONCE_LENGTH,

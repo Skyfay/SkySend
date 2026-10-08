@@ -65,7 +65,7 @@ The public key must only ever come from the fragment, and the server must never 
 | Vault AAD | `skysend-inbox-privkey-v1` followed by SHA-256 of the brief nonce and ciphertext, checked for their lengths first |
 | Brief AAD | `skysend-request-brief-v1` |
 
-The suite byte `REQUEST_SUITE` (`0x01`) opens the upload fragment and the vault, and a version byte opens the inbox fragment, so a later suite (X25519, or a hybrid with ML-KEM) can be added without breaking existing links. With a password, the inbox fragment carries the protected secret plus the 16-byte password salt. The vault holds only the 32-byte private scalar, so its length is fixed (`REQUEST_VAULT_LENGTH`). The server checks every length against the exported `REQUEST_*` and `WRAP_*` constants. `tests/fixtures/file-request.json` freezes the whole format and `tests/fixtures/hpke-p256-sha256-aes256gcm.json` holds the CFRG test vector. **From the first release on, never regenerate or edit either file.**
+The suite byte `REQUEST_SUITE` (`0x01`) opens the upload fragment and the vault, and a version byte opens the inbox fragment, so a later suite (X25519, or a hybrid with ML-KEM) can be added without breaking existing links. With a password, the inbox fragment carries the protected secret plus the 16-byte password salt, from `applyInboxPassword`, which always uses `INBOX_PASSWORD_ARGON2`. The fragment stores no parameters, so those are frozen apart from `ARGON2_PARAMS`, and other ones need a new version byte. The vault holds the suite byte, the public key, the link secret and the 32-byte private scalar, 130 bytes before the tag, so its length is fixed (`REQUEST_VAULT_LENGTH`). The server checks every length against the exported `REQUEST_*` and `WRAP_*` constants. `tests/fixtures/file-request.json` freezes the whole format, down to an inbox link protected with the real Argon2id and a complete note sent into a request, and `tests/fixtures/hpke-p256-sha256-aes256gcm.json` holds the CFRG test vector. **From the first release on, never regenerate or edit either file.**
 
 ## Modules
 
@@ -99,7 +99,7 @@ The base nonce is random per encryption, each record is authenticated on its own
 
 Argon2id with OWASP parameters (`ARGON2_PARAMS`: 64 MiB, 3 iterations, parallelism 1), a 16-byte salt per upload, producing a 32-byte key. `applyPasswordProtection` XORs that key with the master secret, so decrypting needs both the URL fragment and the password.
 
-The hash function itself is injected as `Argon2idHashFn`. The web app passes `hash-wasm` (`apps/web/src/lib/argon2.ts`), the CLI passes its own. That is what keeps this package dependency-free - do not "simplify" it by importing hash-wasm here.
+The hash function itself is injected as `Argon2idHashFn`. The web app passes `hash-wasm` (`apps/web/src/lib/argon2.ts`), the CLI passes its own. That is what keeps this package dependency-free - do not "simplify" it by importing hash-wasm here. The tests may, which is why it is a devDependency: the frozen request fixture is checked against the real Argon2id.
 
 `passwordAlgo` on the server is currently only `argon2id-v2`. A new algorithm means a new enum value on both sides plus a decrypt path for the old one, never a silent change of parameters.
 
@@ -113,7 +113,7 @@ Build with `pnpm --filter @skysend/crypto build`. Consumers import from `dist/`,
 
 ## Tests
 
-`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 180 cases across 9 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo. `tsconfig.test.json` typechecks the tests with the same strict settings as the code, as part of `pnpm typecheck`. A direct `crypto.subtle` call in a test wraps its bytes in `asBytes` from `src/util.ts`, and a byte is flipped with `flipped` from `tests/helpers.ts`.
+`packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 210 cases across 10 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo. `tsconfig.test.json` typechecks the tests with the same strict settings as the code, as part of `pnpm typecheck`. A direct `crypto.subtle` call in a test wraps its bytes in `asBytes` from `src/util.ts`, and a byte is flipped with `flipped` from `tests/helpers.ts`.
 
 Every change needs:
 

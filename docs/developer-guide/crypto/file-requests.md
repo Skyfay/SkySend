@@ -66,7 +66,7 @@ wrap = { enc: 65 B, ciphertext: 48 B }
 
 The info and the aad bind a wrap to one request and one upload, so a server cannot move a wrap to another request or another upload. P-256 was chosen because every browser a sender might use has it. The KEM binds the ephemeral key and the recipient key into the shared secret, which stops a negated ephemeral point from opening the same wrap.
 
-The implementation is checked against the CFRG test vectors for this suite, and a frozen fixture holds the exact bytes of every format above.
+The implementation is checked against the CFRG test vectors for this suite, and a frozen fixture holds the exact bytes of every format above, down to a complete note sent into a request.
 
 ## The Brief
 
@@ -107,13 +107,15 @@ The files reserve both slots of the submission at init, with `X-Reserve-Next: 1`
 
 ## Password
 
-With a password the inbox link carries the secret after [password protection](/developer-guide/crypto/password-protection), the same Argon2id and XOR scheme a file uses, plus the 16-byte password salt. A wrong password yields wrong tokens, which the server answers like a wrong link, and the lockout counts it.
+With a password the inbox link carries the secret after [password protection](/developer-guide/crypto/password-protection), the same Argon2id and XOR scheme a file uses, plus the 16-byte password salt. A wrong password yields wrong tokens, which the server answers like a wrong link, and the lockout counts it. The password needs at least 8 characters.
+
+The fragment stores no Argon2id parameters, so `applyInboxPassword` always uses `INBOX_PASSWORD_ARGON2`: 64 MiB, 3 iterations, parallelism 1, frozen apart from the parameters of a file password. Other parameters need a new version byte of the inbox fragment. The frozen fixture holds an inbox link protected with the real Argon2id.
 
 ## Templates
 
 A request template is kept in the browser that made it, in IndexedDB, and never reaches the server. It holds the asks, the note template, and optionally the title and the limits. Its note template goes through `parseTemplate` from `@skysend/note-format` on every read, from the store, a file or a link alike, so a template can never carry a value or an unclean label. A template whose brief would not fit a request is refused.
 
-An export is JSON, `{ "kind": "skysend-request-templates", "v": 1, "templates": [...] }`, at most 512 KiB and 200 templates, sealed or not, and the export refuses to make a larger one. A link carries it base64url-encoded in the fragment of `/templates#...`, which the page takes out of the address bar at once and hands to the import in memory, never through the history. With a password the export becomes `{ "kind", "v", "sealed": { salt, nonce, ciphertext } }`: `sealWithPassword` in `@skysend/crypto` derives an AES-256-GCM key with Argon2id from the password and a random 16-byte salt, with `PASSWORD_BOX_ARGON2`, frozen parameters that match an upload password, and encrypts under a random 12-byte nonce with the AAD `skysend-request-templates-v1`. A wrong password and a changed box both fail the GCM tag and read the same.
+An export is JSON, `{ "kind": "skysend-request-templates", "v": 1, "templates": [...] }`, at most 512 KiB and 200 templates, sealed or not, and the export refuses to make a larger one. A link carries it base64url-encoded in the fragment of `/templates#...`, which the page takes out of the address bar at once and hands to the import in memory, never through the history. With a password the export becomes `{ "kind", "v", "sealed": { salt, nonce, ciphertext } }`: `sealWithPassword` in `@skysend/crypto` derives an AES-256-GCM key with Argon2id from the password and a random 16-byte salt, with `PASSWORD_BOX_ARGON2`, frozen parameters that match an upload password, and encrypts under a random 12-byte nonce with the AAD `skysend-request-templates-v1`. A wrong password and a changed box both fail the GCM tag and read the same. The password needs at least 8 characters, and the web app keeps a sealed and a plain export of v3.0 as a frozen fixture.
 
 ## Why the Public Key Stays Out of the Server
 

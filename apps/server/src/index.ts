@@ -170,6 +170,8 @@ app.use(
       "X-Password-Salt",
       "X-Password-Algo",
       "X-Upload-Token",
+      "X-Reserve-Next",
+      "X-Slot-Hold",
       "X-Inbox-Token",
       "X-Inbox-Owner-Token",
       "Authorization",

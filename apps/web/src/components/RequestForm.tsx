@@ -15,7 +15,12 @@ import {
   Pencil,
   Upload,
 } from "lucide-react";
-import { REQUEST_TITLE_MAX_BYTES, type RequestAsk } from "@skysend/crypto";
+import {
+  MIN_PASSWORD_LENGTH,
+  REQUEST_TITLE_MAX_BYTES,
+  meetsPasswordMinimum,
+  type RequestAsk,
+} from "@skysend/crypto";
 import { serializeTemplate } from "@skysend/note-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,8 +189,10 @@ export function RequestForm({
   // The server says how many new requests are left today, where it limits them.
   const limited = !!dailyLimit && dailyLimit.dailyLimit > 0 && dailyLimit.remaining !== null;
   const limitReached = limited && dailyLimit.remaining === 0;
+  // An inbox password guards the inbox link wherever it ends up, so it needs the same length
+  // as the password of a file.
   const canSubmit =
-    canSave && !editing && !limitReached && (!passwordEnabled || password.length > 0);
+    canSave && !editing && !limitReached && (!passwordEnabled || meetsPasswordMinimum(password));
   // Trans parses its values as markup, so only numbers and what is formatted from them go
   // in here, never a title or a name.
   const pill = (key: string, values: Record<string, string | number>) => (
@@ -425,7 +432,13 @@ export function RequestForm({
               )}
               disabled={creating}
             />
-            <p className="text-xs text-muted-foreground">{t("request.passwordHint")}</p>
+            {password !== "" && !meetsPasswordMinimum(password) ? (
+              <p className="text-xs text-destructive-text">
+                {t("share.passwordTooShort", { count: MIN_PASSWORD_LENGTH })}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("request.passwordHint")}</p>
+            )}
             {config.forceRequestPassword && (
               <p className="text-xs text-muted-foreground">{t("share.passwordForced")}</p>
             )}

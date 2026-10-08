@@ -44,7 +44,12 @@
  */
 
 import { importHkdfKey, SECRET_LENGTH } from "./keychain.js";
-import { PASSWORD_SALT_LENGTH } from "./password.js";
+import {
+  applyPasswordProtection,
+  deriveKeyFromPasswordArgon2,
+  PASSWORD_SALT_LENGTH,
+  type Argon2idHashFn,
+} from "./password.js";
 import {
   assertUncompressedPoint,
   HPKE_PUBLIC_KEY_LENGTH,
@@ -105,6 +110,14 @@ const VAULT_PLAINTEXT_LENGTH = REQUEST_VAULT_LENGTH - 16;
 const UPLOAD_FRAGMENT_LENGTH = 1 + HPKE_PUBLIC_KEY_LENGTH + REQUEST_SECRET_LENGTH;
 const INBOX_FRAGMENT_VERSION = 0x01;
 const NO_SALT = new Uint8Array(0);
+
+/**
+ * The Argon2id parameters of an inbox password. The inbox fragment stores none of them, its
+ * version byte stands for these, so they are frozen here apart from the ones of an upload
+ * password: changing them would leave every password protected inbox unopenable. Other
+ * parameters need a new fragment version.
+ */
+export const INBOX_PASSWORD_ARGON2 = { memory: 65_536, iterations: 3, parallelism: 1 } as const;
 
 // HKDF info strings and AAD labels. Part of the wire format, distinct from keychain.ts.
 const INFO_INBOX_KEY = "skysend-inbox-key";
@@ -544,8 +557,33 @@ export async function decodeUploadFragment(
 }
 
 /**
+ * Puts a password on an inbox secret, or takes it off again: the secret XOR an Argon2id key
+ * from the password and the salt, always with INBOX_PASSWORD_ARGON2. The same call protects a
+ * fresh secret and recovers it from the link.
+ */
+export async function applyInboxPassword(
+  secret: Uint8Array,
+  password: string,
+  passwordSalt: Uint8Array,
+  argon2id: Argon2idHashFn,
+): Promise<Uint8Array> {
+  checkLength(secret, REQUEST_SECRET_LENGTH, "Inbox secret");
+  const key = await deriveKeyFromPasswordArgon2(
+    password,
+    passwordSalt,
+    argon2id,
+    INBOX_PASSWORD_ARGON2,
+  );
+  try {
+    return applyPasswordProtection(secret, key);
+  } finally {
+    key.fill(0);
+  }
+}
+
+/**
  * The fragment of the inbox link. `secret` is the inbox secret, or with a password the secret
- * after applyPasswordProtection(), and then `passwordSalt` goes along so the inbox needs no
+ * after applyInboxPassword(), and then `passwordSalt` goes along so the inbox needs no
  * endpoint that answers before the token is checked.
  */
 export function encodeInboxFragment(secret: Uint8Array, passwordSalt?: Uint8Array): string {

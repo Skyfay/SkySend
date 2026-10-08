@@ -224,15 +224,31 @@ describe("useInbox", () => {
   });
 
   it("forgets a request without a password that the server no longer has", async () => {
+    const kept = { inboxFragment: "fragment", closesAt: "2020-01-01T00:00:00.000Z" };
     vi.mocked(getRequest)
-      .mockResolvedValueOnce({ inboxFragment: "fragment" } as never)
-      .mockResolvedValueOnce({ inboxFragment: "fragment" } as never);
+      .mockResolvedValueOnce(kept as never)
+      .mockResolvedValueOnce(kept as never);
     vi.mocked(api.fetchInbox).mockRejectedValueOnce(
       new api.ApiError(404, "File request not found"),
     );
-    const { result } = renderHook(() => useInbox(ID, "fragment", argon2));
+    const { result } = renderHook(() => useInbox(ID, "fragment", argon2, 604_800));
     await waitFor(() => expect(result.current.phase).toBe("gone"));
     expect(removeRequest).toHaveBeenCalledWith(ID);
+  });
+
+  it("keeps the stored request on a 404 while its uploads may still be there", async () => {
+    const kept = { inboxFragment: "fragment", closesAt: "2099-01-01T00:00:00.000Z" };
+    vi.mocked(getRequest)
+      .mockResolvedValueOnce(kept as never)
+      .mockResolvedValueOnce(kept as never);
+    vi.mocked(api.fetchInbox).mockRejectedValueOnce(
+      new api.ApiError(404, "File request not found"),
+    );
+    setUnseen(ID, 1);
+    const { result } = renderHook(() => useInbox(ID, "fragment", argon2, 604_800));
+    await waitFor(() => expect(result.current.phase).toBe("gone"));
+    expect(removeRequest).not.toHaveBeenCalled();
+    expect(unseenFor(ID)).toBe(0);
   });
 
   it("keeps the stored request when a made-up link for its ID leads nowhere", async () => {

@@ -313,7 +313,8 @@
     "linkRewritten": "De link is onderweg gewijzigd",
     "linkRewrittenDesc": "Een e-mailbeveiligingsfilter heeft deze link herschreven, waardoor de ontsleutelsleutel zichtbaar was voor de server. Vraag de afzender om het te verwijderen zodra je het hebt, als de inhoud vertrouwelijk is.",
     "linkRewrittenInboxDesc": "Een beveiligingsfilter voor e-mail heeft deze link herschreven, dus de sleutel van deze inbox was zichtbaar voor de server. Download wat je nodig hebt en verwijder daarna het verzoek.",
-    "linkRewrittenUploadDesc": "Een beveiligingsfilter voor e-mail heeft deze link herschreven, dus de server zag hem volledig. Je bestanden blijven versleuteld voor de aanvrager, maar wie de link heeft, kan de titel lezen en in het verzoek uploaden."
+    "linkRewrittenUploadDesc": "Een beveiligingsfilter voor e-mail heeft deze link herschreven, dus de server zag hem volledig. Je bestanden blijven versleuteld voor de aanvrager, maar wie de link heeft, kan de titel lezen en in het verzoek uploaden.",
+    "linkRewrittenTemplatesDesc": "Een beveiligingsfilter voor e-mail heeft deze link herschreven, dus de server zag hem volledig. Een export zonder wachtwoord liet onderweg de namen en velden van zijn sjablonen zien, maar nooit waarden."
   },
   "header": {
     "share": "Delen",

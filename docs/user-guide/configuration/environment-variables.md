@@ -60,7 +60,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | :--- | :---: | :--- | :--- |
 | `FILE_REQUEST_EXPIRE_OPTIONS_SEC` | ❌ | `86400,259200,604800` | Comma-separated list of how long a request accepts uploads, in seconds. |
 | `FILE_REQUEST_DEFAULT_EXPIRE_SEC` | ❌ | `259200` | Default for new requests (must be one of `FILE_REQUEST_EXPIRE_OPTIONS_SEC`). |
-| `FILE_REQUEST_UPLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | How many uploads a request takes, as options for the requester, each from `1` to `1000`. A request for files and a note counts submissions with them, which take two uploads each. The server cannot tell what a request asks for, so any request may take up to twice the largest option. |
+| `FILE_REQUEST_UPLOAD_OPTIONS` | ❌ | `1,2,3,5,10,20,50,100` | How many uploads a request takes, as options for the requester, each from `1` to `1000`. A request for files and a note counts submissions with them, which take two uploads each. What a request asks for is encrypted and the server does not check it, so any request may take up to twice the largest option. |
 | `FILE_REQUEST_DEFAULT_UPLOADS` | ❌ | `10` | Default for new requests. Must be one of `FILE_REQUEST_UPLOAD_OPTIONS`. |
 | `FILE_REQUEST_MAX_SIZE` | ❌ | `FILE_MAX_SIZE` | Most bytes one upload into a request may have. The requester picks a size up to this. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `FILE_REQUEST_RETENTION_SEC` | ❌ | `604800` | How long an uploaded file stays in the inbox, in seconds. |

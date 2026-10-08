@@ -84,8 +84,8 @@ export function InboxPage() {
   const { t } = useTranslation();
   const { id = "" } = useParams<{ id: string }>();
   const [fragment] = useState(() => window.location.hash.slice(1));
-  const inbox = useInbox(id, fragment, hashWasmArgon2);
   const { config } = useServerConfig();
+  const inbox = useInbox(id, fragment, hashWasmArgon2, config?.fileRequestRetention);
   const [pending, setPending] = useState<PendingDownload | null>(null);
   // The last asked question stays while the dialog closes, so its text does not flip.
   const [confirm, setConfirm] = useState<Confirm | null>(null);

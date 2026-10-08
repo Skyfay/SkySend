@@ -9,6 +9,7 @@ import {
   openInbox,
   openInboxLink,
   readInboxNote,
+  requestOutlived,
   sanitizeFilename,
   NoteTooLargeError,
   type InboxAccess,
@@ -59,8 +60,15 @@ export function downloadName(entry: OpenedUpload): { filename: string; mimeType:
 /**
  * The inbox of a file request, opened with the key in the link. Nothing here reaches the
  * server but the two inbox tokens. Listing never counts as a download, only a click does.
+ * `retentionSec` is how long the instance keeps an upload, which decides when a request the
+ * server no longer has may be forgotten in this browser.
  */
-export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn) {
+export function useInbox(
+  id: string,
+  fragment: string,
+  argon2id: Argon2idHashFn,
+  retentionSec?: number,
+) {
   // Whether the link is complete and needs a password shows without the server.
   const [linkState] = useState<"invalid" | "needs-password" | "open">(() => {
     try {
@@ -81,6 +89,11 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
   const accessRef = useRef<InboxAccess | null>(null);
   const hasPasswordRef = useRef(linkState === "needs-password");
   const abortRef = useRef<Map<string, AbortController>>(new Map());
+  // Read when the server answers 404, so the server config arriving does not reload the inbox.
+  const retentionRef = useRef(retentionSec);
+  useEffect(() => {
+    retentionRef.current = retentionSec;
+  }, [retentionSec]);
 
   const load = useCallback(
     async (access: InboxAccess) => {
@@ -127,11 +140,15 @@ export function useInbox(id: string, fragment: string, argon2id: Argon2idHashFn)
             return;
           }
           // Anyone who knows the ID can make up an inbox link that leads here. Only the
-          // link this browser stored for the request may remove it from the list.
+          // link this browser stored for the request may remove it from the list, and only
+          // once every upload in it ran out, since a 404 can also come from a proxy.
           const stored = await getRequest(id).catch(() => undefined);
           if (stored?.inboxFragment === fragment) {
-            await removeRequest(id).catch(() => {});
+            // Nothing the server no longer lists is new.
             setUnseen(id, 0);
+            if (requestOutlived(stored.closesAt, retentionRef.current)) {
+              await removeRequest(id).catch(() => {});
+            }
           }
           setState((s) => ({ ...s, phase: "gone" }));
           return;

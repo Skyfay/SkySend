@@ -313,7 +313,8 @@
     "linkRewritten": "Lenken ble endret underveis",
     "linkRewrittenDesc": "Et e-postsikkerhetsfilter skrev om denne lenken, så dekrypteringsnøkkelen var synlig for serveren. Hvis innholdet er fortrolig, be avsenderen slette det så snart du har det.",
     "linkRewrittenInboxDesc": "Et sikkerhetsfilter for e-post skrev om lenken, så nøkkelen til denne innboksen var synlig for serveren. Last ned det du trenger, og slett deretter forespørselen.",
-    "linkRewrittenUploadDesc": "Et sikkerhetsfilter for e-post skrev om lenken, så serveren så den i sin helhet. Filene dine forblir kryptert for den som spurte, men den som har lenken, kan lese tittelen og laste opp til forespørselen."
+    "linkRewrittenUploadDesc": "Et sikkerhetsfilter for e-post skrev om lenken, så serveren så den i sin helhet. Filene dine forblir kryptert for den som spurte, men den som har lenken, kan lese tittelen og laste opp til forespørselen.",
+    "linkRewrittenTemplatesDesc": "Et sikkerhetsfilter for e-post skrev om lenken, så serveren så den i sin helhet. En eksport uten passord viste navnene og feltene i malene sine underveis, men aldri verdier."
   },
   "header": {
     "share": "Del",

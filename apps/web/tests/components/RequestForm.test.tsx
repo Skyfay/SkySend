@@ -161,6 +161,18 @@ describe("RequestForm settings", () => {
     );
   });
 
+  it("takes an inbox password only from 8 characters on, like a file password", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("switch", { name: "share.password" }));
+    const field = screen.getByPlaceholderText("upload.passwordPlaceholder");
+    fireEvent.change(field, { target: { value: "1234567" } });
+    expect(create().disabled).toBe(true);
+    expect(screen.getByText("share.passwordTooShort")).toBeTruthy();
+    fireEvent.change(field, { target: { value: "12345678" } });
+    expect(create().disabled).toBe(false);
+    expect(screen.queryByText("share.passwordTooShort")).toBeNull();
+  });
+
   it("keeps a forced password on, with its field", () => {
     renderForm({ config: { ...config, forceRequestPassword: true } });
     const password = screen.getByRole("switch", { name: "share.password" }) as HTMLButtonElement;

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequestCard } from "@/components/RequestCard";
 import { useRequestHistory, type RequestWithStatus } from "@/hooks/useFileRequests";
+import { useServerConfig } from "@/hooks/useServerConfig";
 
 /**
  * The requests made in this browser, for the Requests tab of My Links. `hint` leaves out the
@@ -14,7 +15,8 @@ import { useRequestHistory, type RequestWithStatus } from "@/hooks/useFileReques
  */
 export function RequestList({ hint = true }: { hint?: boolean }) {
   const { t } = useTranslation();
-  const history = useRequestHistory();
+  const { config } = useServerConfig();
+  const history = useRequestHistory(config?.fileRequestRetention);
 
   const handleDelete = async (request: RequestWithStatus) => {
     try {

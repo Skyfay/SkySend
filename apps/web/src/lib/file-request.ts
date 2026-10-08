@@ -1,5 +1,5 @@
 import {
-  applyPasswordProtection,
+  applyInboxPassword,
   calculateEncryptedSize,
   createDecryptStream,
   createFileRequest,
@@ -7,7 +7,6 @@ import {
   decryptRequestBrief,
   decryptRequestMetadata,
   deriveInboxKeys,
-  deriveKeyFromPassword,
   deriveKeys,
   deriveLinkKeys,
   encodeInboxFragment,
@@ -89,12 +88,13 @@ export async function prepareRequest(options: {
   if (options.password) {
     if (!options.argon2id) throw new Error("Argon2id is required for a password protected inbox");
     const passwordSalt = randomBytes(PASSWORD_SALT_LENGTH);
-    const { key } = await deriveKeyFromPassword(options.password, passwordSalt, options.argon2id);
-    inboxFragment = encodeInboxFragment(
-      applyPasswordProtection(local.inboxSecret, key),
+    const protectedSecret = await applyInboxPassword(
+      local.inboxSecret,
+      options.password,
       passwordSalt,
+      options.argon2id,
     );
-    key.fill(0);
+    inboxFragment = encodeInboxFragment(protectedSecret, passwordSalt);
   } else {
     inboxFragment = encodeInboxFragment(local.inboxSecret);
   }
@@ -138,6 +138,26 @@ export function requestLinks(request: {
   };
 }
 
+/** A margin past the last upload of a request, for one that finished late and for the cleanup. */
+const FORGET_MARGIN_MS = 24 * 60 * 60_000;
+
+/**
+ * Whether a request the server answers 404 for may be forgotten in this browser: only once
+ * every upload in it has run out, which is at most the retention of the instance after it
+ * closed. Before that a 404 can come from a proxy or a restored database, and the stored
+ * inbox link is often the only copy, so forgetting it would lose what arrived for good.
+ * Without the retention, before the config arrived or from a server that sends none,
+ * nothing is forgotten.
+ */
+export function requestOutlived(
+  closesAt: string,
+  retentionSec: number | undefined,
+  now = Date.now(),
+): boolean {
+  if (!retentionSec) return false;
+  return now > new Date(closesAt).getTime() + retentionSec * 1000 + FORGET_MARGIN_MS;
+}
+
 /** Whether an inbox link needs a password. Throws for a link that is not one. */
 export function inboxNeedsPassword(fragment: string): boolean {
   return decodeInboxFragment(fragment).passwordSalt !== null;
@@ -160,9 +180,7 @@ export async function openInboxLink(
   let inboxSecret = secret;
   if (passwordSalt) {
     if (!password || !argon2id) throw new Error("This inbox needs its password");
-    const { key } = await deriveKeyFromPassword(password, passwordSalt, argon2id);
-    inboxSecret = applyPasswordProtection(secret, key);
-    key.fill(0);
+    inboxSecret = await applyInboxPassword(secret, password, passwordSalt, argon2id);
   }
   const keys = await deriveInboxKeys(inboxSecret);
   inboxSecret.fill(0);
@@ -366,26 +384,43 @@ const BLANK_FILLERS = /[\u2800\u3164\u115F\u1160\uFFA0]/g;
 /** Combining marks stacked past what any script needs, which spill over the lines around them. */
 const MARK_STACKS = /(\p{M}{3})\p{M}+/gu;
 
+/** The most characters a name from a sender keeps. */
+const MAX_NAME_LENGTH = 255;
+/** An extension longer than this is not worth keeping when a name has to be shortened. */
+const MAX_KEPT_EXTENSION_LENGTH = 32;
+
 /**
  * A name from a sender, made safe to show and to save under: no control or format
  * characters (bidirectional overrides that make an "exe" read as "pdf", zero-width ones),
  * no lone surrogates, no path separators, no runs of spaces or blank fillers that push the
- * real extension out of sight, no towers of combining marks, at most 255 characters, and
- * never empty.
+ * real extension out of sight, no towers of combining marks, no dots or spaces at either end,
+ * at most 255 characters with the extension kept, and never empty. Windows drops trailing
+ * dots on save, so "invoice.pdf.exe." would show as one thing and land as an exe. The same
+ * rules as the CLI (apps/client/src/lib/filename.ts).
  */
 export function sanitizeFilename(name: string): string {
-  const cleaned = Array.from(
-    name
-      .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, "")
-      .replace(BLANK_FILLERS, " ")
-      .replace(MARK_STACKS, "$1")
-      .replace(/[/\\]/g, "_")
-      .replace(/\s+/g, " ")
-      .trim(),
-  )
-    .slice(0, 255)
-    .join("");
-  return cleaned === "" || cleaned === "." || cleaned === ".." ? "file" : cleaned;
+  const cleaned = name
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, "")
+    .replace(BLANK_FILLERS, " ")
+    .replace(MARK_STACKS, "$1")
+    .replace(/[/\\]/g, "_")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s.]+|[\s.]+$/g, "");
+  return cleaned === "" ? "file" : shortenName(cleaned);
+}
+
+/** A name cut to MAX_NAME_LENGTH characters with its extension kept, never inside a character. */
+function shortenName(name: string): string {
+  const chars = Array.from(name);
+  if (chars.length <= MAX_NAME_LENGTH) return name;
+  const dot = name.lastIndexOf(".");
+  const extension = dot > 0 ? Array.from(name.slice(dot)) : [];
+  const kept = extension.length <= MAX_KEPT_EXTENSION_LENGTH ? extension : [];
+  const stem = chars
+    .slice(0, MAX_NAME_LENGTH - kept.length)
+    .join("")
+    .replace(/[\s.]+$/, "");
+  return `${stem || "file"}${kept.join("")}`;
 }
 
 /**

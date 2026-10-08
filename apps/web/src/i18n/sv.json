@@ -313,7 +313,8 @@
     "linkRewritten": "Länken ändrades under överföringen",
     "linkRewrittenDesc": "Ett e-postsäkerhetsfilter skrev om den här länken, så dekrypteringsnyckeln var synlig för servern. Om innehållet är känsligt, be avsändaren radera det så snart du har hämtat det.",
     "linkRewrittenInboxDesc": "Ett säkerhetsfilter för e-post skrev om länken, så nyckeln till den här inkorgen var synlig för servern. Ladda ner det du behöver och ta sedan bort förfrågan.",
-    "linkRewrittenUploadDesc": "Ett säkerhetsfilter för e-post skrev om länken, så servern såg den i sin helhet. Dina filer förblir krypterade för den som frågade, men den som har länken kan läsa titeln och ladda upp till förfrågan."
+    "linkRewrittenUploadDesc": "Ett säkerhetsfilter för e-post skrev om länken, så servern såg den i sin helhet. Dina filer förblir krypterade för den som frågade, men den som har länken kan läsa titeln och ladda upp till förfrågan.",
+    "linkRewrittenTemplatesDesc": "Ett säkerhetsfilter för e-post skrev om länken, så servern såg den i sin helhet. En export utan lösenord visade namnen och fälten i sina mallar på vägen, men aldrig några värden."
   },
   "header": {
     "share": "Dela",

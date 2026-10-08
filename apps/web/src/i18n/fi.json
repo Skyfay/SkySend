@@ -313,7 +313,8 @@
     "linkRewritten": "Linkkiä muutettiin siirron aikana",
     "linkRewrittenDesc": "Sähköpostin suojaussuodatin kirjoitti tämän linkin uudelleen, joten salauksen purkuavain näkyi palvelimelle. Jos sisältö on luottamuksellista, pyydä lähettäjää poistamaan se heti kun olet saanut sen.",
     "linkRewrittenInboxDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten näiden saapuneiden avain näkyi palvelimelle. Lataa tarvitsemasi ja poista sitten pyyntö.",
-    "linkRewrittenUploadDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten palvelin näki sen kokonaan. Tiedostosi pysyvät salattuina pyytäjälle, mutta linkin haltija voi lukea otsikon ja lähettää pyyntöön."
+    "linkRewrittenUploadDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten palvelin näki sen kokonaan. Tiedostosi pysyvät salattuina pyytäjälle, mutta linkin haltija voi lukea otsikon ja lähettää pyyntöön.",
+    "linkRewrittenTemplatesDesc": "Sähköpostin tietoturvasuodatin muutti tätä linkkiä, joten palvelin näki sen kokonaan. Ilman salasanaa tehty vienti näytti matkalla pohjiensa nimet ja kentät, mutta ei koskaan arvoja."
   },
   "header": {
     "share": "Jaa",

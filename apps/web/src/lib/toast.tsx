@@ -165,15 +165,19 @@ export function showToast(message: string, options: ShowToastOptions = {}) {
  * in the request path, which the recipient cannot see and should be told about.
  *
  * What the exposure means differs by link: a share link exposed its content, an inbox link
- * every file of a request, an upload link only the title and the right to upload.
+ * every file of a request, an upload link only the title and the right to upload, and a
+ * templates link without a password the names and fields of its templates.
  *
  * The fixed id keeps a remount from stacking a second copy.
  */
-export function showRewrittenLinkWarning(link: "share" | "inbox" | "upload" = "share") {
+export function showRewrittenLinkWarning(
+  link: "share" | "inbox" | "upload" | "templates" = "share",
+) {
   const description = {
     share: "errors.linkRewrittenDesc",
     inbox: "errors.linkRewrittenInboxDesc",
     upload: "errors.linkRewrittenUploadDesc",
+    templates: "errors.linkRewrittenTemplatesDesc",
   }[link];
   return showToast(i18n.t("errors.linkRewritten"), {
     type: "warning",

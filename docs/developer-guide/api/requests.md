@@ -40,7 +40,7 @@ Create a request. Needs the OIDC session when `OIDC_PROTECT_REQUESTS` is on.
 | --- | --- |
 | `brief` | Required. The ciphertext is 16 bytes longer than a multiple of 1024, see [the brief](/developer-guide/crypto/file-requests#the-brief) |
 | `expireSec` | One of `FILE_REQUEST_EXPIRE_OPTIONS_SEC` |
-| `maxUploads` | One of `FILE_REQUEST_UPLOAD_OPTIONS`, or twice one. A request for files and a note counts submissions with the options, and each takes two uploads. The server cannot tell what a request asks for, so any request may take up to twice the largest option. |
+| `maxUploads` | One of `FILE_REQUEST_UPLOAD_OPTIONS`, or twice one. A request for files and a note counts submissions with the options, and each takes two uploads. What a request asks for is encrypted and the server does not check it, so any request may take up to twice the largest option. |
 | `maxSize` | Most bytes one upload may have, at most `FILE_REQUEST_MAX_SIZE` |
 | `downloads` | How often the requester can download each upload, one of `FILE_REQUEST_DOWNLOAD_OPTIONS` |
 | `hasPassword` | Must be `true` when `FORCE_REQUEST_PASSWORD` is on. The server takes the client's word for it, since the password never reaches it. |

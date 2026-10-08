@@ -308,7 +308,8 @@
     "linkRewritten": "Link was modified in transit",
     "linkRewrittenDesc": "A mail security filter rewrote this link, so the decryption key was visible to the server. If the content is confidential, ask the sender to delete it once you have it.",
     "linkRewrittenInboxDesc": "A mail security filter rewrote this link, so the key to this inbox was visible to the server. Download what you need, then delete the request.",
-    "linkRewrittenUploadDesc": "A mail security filter rewrote this link, so the server saw it in full. Your files stay encrypted for the requester, but whoever holds the link can read the title and upload into the request."
+    "linkRewrittenUploadDesc": "A mail security filter rewrote this link, so the server saw it in full. Your files stay encrypted for the requester, but whoever holds the link can read the title and upload into the request.",
+    "linkRewrittenTemplatesDesc": "A mail security filter rewrote this link, so the server saw it in full. An export without a password showed the names and fields of its templates on the way, never any values."
   },
   "header": {
     "share": "Share",

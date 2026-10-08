@@ -23,12 +23,15 @@ import {
   openInboxLink,
   prepareRequest,
   readInboxNote,
+  requestOutlived,
   sanitizeFilename,
   sanitizeTitle,
   NoteTooLargeError,
   type OpenedUpload,
 } from "../../src/lib/file-request.js";
 import type { Inbox, InboxUpload } from "../../src/lib/api.js";
+import { hashWasmArgon2 } from "../../src/lib/argon2.js";
+import frozen from "../fixtures/frozen-passwords.json";
 
 /** Stands in for Argon2id: deterministic, so the same password always gives the same key. */
 const fakeArgon2: Argon2idHashFn = async (password, salt, params) => {
@@ -283,6 +286,13 @@ describe("file requests in the browser", () => {
     expect(wrong.inboxToken).not.toBe(prepared.body.inboxAuthToken);
   });
 
+  it("still opens an inbox link with a password from v3.0, with the real Argon2id", async () => {
+    const { fragment, password, inboxToken, ownerToken } = frozen.inbox;
+    const access = await openInboxLink(fragment, password, hashWasmArgon2);
+    expect(access.inboxToken).toBe(inboxToken);
+    expect(access.ownerToken).toBe(ownerToken);
+  }, 30_000);
+
   it("never puts a secret of the links into the body for the server", async () => {
     const prepared = await prepareRequest({ title: "x" });
     const body = JSON.stringify(prepared.body);
@@ -347,6 +357,26 @@ describe("file requests in the browser", () => {
   });
 });
 
+describe("requestOutlived", () => {
+  const DAY = 24 * 60 * 60_000;
+  const closesAt = "2026-10-01T00:00:00.000Z";
+  const closed = Date.parse(closesAt);
+
+  it("forgets a request only a day after its last upload ran out", () => {
+    const retention = 7 * 24 * 3600;
+    expect(requestOutlived(closesAt, retention, closed + 8 * DAY)).toBe(false);
+    expect(requestOutlived(closesAt, retention, closed + 8 * DAY + 1)).toBe(true);
+    expect(requestOutlived(closesAt, retention, closed - DAY)).toBe(false);
+  });
+
+  it("forgets nothing without the retention or with a date it cannot read", () => {
+    expect(requestOutlived(closesAt, undefined, closed + 365 * DAY)).toBe(false);
+    // A server that sends no retention reads as 0 through the config schema.
+    expect(requestOutlived(closesAt, 0, closed + 365 * DAY)).toBe(false);
+    expect(requestOutlived("not a date", 604_800, closed + 365 * DAY)).toBe(false);
+  });
+});
+
 describe("sanitizeFilename", () => {
   it("drops bidirectional overrides that disguise an extension", () => {
     expect(sanitizeFilename("invoice‮fdp.exe")).toBe("invoicefdp.exe");
@@ -354,7 +384,7 @@ describe("sanitizeFilename", () => {
 
   it("drops control characters and path separators", () => {
     expect(sanitizeFilename("a\u0000b\u001F\u007Fc")).toBe("abc");
-    expect(sanitizeFilename("../../etc/passwd")).toBe(".._.._etc_passwd");
+    expect(sanitizeFilename("../../etc/passwd")).toBe("_.._etc_passwd");
     expect(sanitizeFilename("dir\\file.txt")).toBe("dir_file.txt");
   });
 
@@ -385,6 +415,22 @@ describe("sanitizeFilename", () => {
     const name = sanitizeFilename("😀".repeat(300));
     expect(Array.from(name)).toHaveLength(255);
     expect(name.isWellFormed()).toBe(true);
+  });
+
+  it("keeps the real extension when it cuts a long name", () => {
+    const name = sanitizeFilename(`Rechnung.pdf${"_".repeat(300)}.exe`);
+    expect(name).toHaveLength(255);
+    expect(name.startsWith("Rechnung.pdf___")).toBe(true);
+    expect(name.endsWith("_.exe")).toBe(true);
+    // An extension too long to be one is not worth the room.
+    expect(sanitizeFilename(`${"a".repeat(300)}.${"b".repeat(40)}`)).toBe("a".repeat(255));
+  });
+
+  it("drops dots and spaces at either end, which Windows would drop on save", () => {
+    expect(sanitizeFilename("invoice.pdf.exe.")).toBe("invoice.pdf.exe");
+    expect(sanitizeFilename(`Rechnung.pdf${"_".repeat(300)}.exe.`).endsWith(".exe")).toBe(true);
+    expect(sanitizeFilename("report.exe . . ")).toBe("report.exe");
+    expect(sanitizeFilename(" .hidden")).toBe("hidden");
   });
 
   it("never returns an empty name", () => {

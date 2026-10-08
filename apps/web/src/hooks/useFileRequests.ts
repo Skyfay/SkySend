@@ -2,7 +2,13 @@ import { useCallback, useState, useSyncExternalStore } from "react";
 import type { Argon2idHashFn, RequestAsk } from "@skysend/crypto";
 import type { NoteBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
-import { openInboxLink, prepareRequest, requestLinks, type RequestLinks } from "@/lib/file-request";
+import {
+  openInboxLink,
+  prepareRequest,
+  requestLinks,
+  requestOutlived,
+  type RequestLinks,
+} from "@/lib/file-request";
 import { getAllRequests, removeRequest, saveRequest, type StoredRequest } from "@/lib/upload-store";
 import { countUnseen, keepUnseen, setUnseen } from "@/lib/unseen-uploads";
 
@@ -113,9 +119,10 @@ export interface RequestWithStatus extends StoredRequest {
 /**
  * The requests created in this browser. A request without a password shows how many files
  * arrived, which needs only the token from its own link. One with a password stays closed
- * here until its inbox is opened.
+ * here until its inbox is opened. `retentionSec` is how long the instance keeps an upload,
+ * which decides when a request the server no longer has may be forgotten.
  */
-export function useRequestHistory() {
+export function useRequestHistory(retentionSec?: number) {
   const [requests, setRequests] = useState<RequestWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -135,9 +142,13 @@ export function useRequestHistory() {
           prev.map((r) => (r.id === request.id ? { ...r, inbox, loading: false } : r)),
         );
       } catch (err) {
-        if (err instanceof api.ApiError && err.status === 404) {
+        const gone = err instanceof api.ApiError && err.status === 404;
+        // Nothing the server no longer lists is new.
+        if (gone) setUnseen(request.id, 0);
+        // A 404 before every upload ran out shows the request as unavailable instead, since
+        // the stored link is often the only copy of the inbox.
+        if (gone && requestOutlived(request.closesAt, retentionSec)) {
           await removeRequest(request.id);
-          setUnseen(request.id, 0);
           setRequests((prev) => prev.filter((r) => r.id !== request.id));
         } else {
           setRequests((prev) =>
@@ -146,7 +157,7 @@ export function useRequestHistory() {
         }
       }
     }
-  }, []);
+  }, [retentionSec]);
 
   // Load on mount and whenever a refresh is triggered.
   const version = useSyncExternalStore(subscribe, getSnapshot);

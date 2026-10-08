@@ -313,7 +313,8 @@
     "linkRewritten": "Le lien a été modifié en transit",
     "linkRewrittenDesc": "Un filtre de sécurité de messagerie a réécrit ce lien, la clé de déchiffrement a donc été visible par le serveur. Si le contenu est confidentiel, demandez à l'expéditeur de le supprimer une fois que vous l'avez.",
     "linkRewrittenInboxDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, la clé de cette boîte était donc visible pour le serveur. Téléchargez ce dont vous avez besoin, puis supprimez la demande.",
-    "linkRewrittenUploadDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, le serveur l'a donc vu en entier. Vos fichiers restent chiffrés pour la personne qui demande, mais qui a le lien peut lire le titre et envoyer dans la demande."
+    "linkRewrittenUploadDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, le serveur l'a donc vu en entier. Vos fichiers restent chiffrés pour la personne qui demande, mais qui a le lien peut lire le titre et envoyer dans la demande.",
+    "linkRewrittenTemplatesDesc": "Un filtre de sécurité de la messagerie a réécrit ce lien, le serveur l'a donc vu en entier. Un export sans mot de passe a laissé voir en chemin les noms et les champs de ses modèles, jamais de valeurs."
   },
   "header": {
     "share": "Partager",

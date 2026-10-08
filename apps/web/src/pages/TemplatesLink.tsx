@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { readTemplatesLink, setLinkImport } from "@/lib/request-templates";
+import { wasShareLinkRewritten } from "@/lib/rewritten-link";
+import { showRewrittenLinkWarning } from "@/lib/toast";
 import { NotFoundPage } from "@/pages/NotFound";
 
 /** Reads the fragment once and takes it out of the address bar and the history at once. */
@@ -19,6 +21,11 @@ function takeFragment(): string {
 export function TemplatesLinkPage() {
   const { config, loading } = useServerConfig();
   const [fragment] = useState(takeFragment);
+
+  // The toast outlives the redirect to the settings, where the import is offered.
+  useEffect(() => {
+    if (wasShareLinkRewritten()) showRewrittenLinkWarning("templates");
+  }, []);
 
   if (loading || !config) {
     return (

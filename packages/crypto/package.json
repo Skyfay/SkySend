@@ -15,5 +15,8 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
+  },
+  "devDependencies": {
+    "hash-wasm": "^4.12.0"
   }
 }

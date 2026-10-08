@@ -313,7 +313,8 @@
     "linkRewritten": "Il link è stato modificato durante il transito",
     "linkRewrittenDesc": "Un filtro di sicurezza email ha riscritto questo link, quindi la chiave di decifratura è stata visibile al server. Se il contenuto è riservato, chiedi al mittente di eliminarlo una volta che lo hai ricevuto.",
     "linkRewrittenInboxDesc": "Un filtro di sicurezza della posta ha riscritto questo link, quindi la chiave di questa casella era visibile al server. Scarica ciò che ti serve, poi elimina la richiesta.",
-    "linkRewrittenUploadDesc": "Un filtro di sicurezza della posta ha riscritto questo link, quindi il server l'ha visto per intero. I tuoi file restano cifrati per chi li ha chiesti, ma chi ha il link può leggere il titolo e caricare nella richiesta."
+    "linkRewrittenUploadDesc": "Un filtro di sicurezza della posta ha riscritto questo link, quindi il server l'ha visto per intero. I tuoi file restano cifrati per chi li ha chiesti, ma chi ha il link può leggere il titolo e caricare nella richiesta.",
+    "linkRewrittenTemplatesDesc": "Un filtro di sicurezza della posta ha riscritto questo link, quindi il server l'ha visto per intero. Un'esportazione senza password ha mostrato lungo il percorso i nomi e i campi dei suoi modelli, mai dei valori."
   },
   "header": {
     "share": "Condividi",
