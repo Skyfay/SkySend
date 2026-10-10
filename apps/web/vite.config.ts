@@ -18,6 +18,22 @@ function readDevEnv(): Record<string, string | undefined> {
   return { ...fileEnv, ...process.env };
 }
 
+// Vite answers only for localhost and IP addresses unless a host name is listed. The hosts of
+// BASE_URL and CORS_ORIGINS are where the app is opened anyway, so .env.dev stays the one place.
+function devHosts(env: Record<string, string | undefined>): string[] {
+  const urls = [env.BASE_URL, ...(env.CORS_ORIGINS?.split(",") ?? [])];
+  const hosts = new Set<string>();
+  for (const url of urls) {
+    if (!url?.trim()) continue;
+    try {
+      hosts.add(new URL(url.trim()).hostname);
+    } catch {
+      // Not a URL, so there is no host to allow.
+    }
+  }
+  return [...hosts];
+}
+
 export default defineConfig(({ command }) => {
   // In dev mode (Vite dev server) the server middleware is not involved,
   // so replace the placeholder directly with the env value.
@@ -36,6 +52,8 @@ export default defineConfig(({ command }) => {
   const defaultColorScheme = command === "serve"
     ? (["dark", "light", "system"].includes(envColorScheme) ? envColorScheme : "system")
     : "__DEFAULT_COLOR_SCHEME__";
+  // The API server takes its port from PORT in .env.dev, SERVER_PORT in the shell still wins.
+  const apiTarget = `http://localhost:${env.SERVER_PORT ?? env.PORT ?? 3000}`;
 
   return {
   plugins: [
@@ -92,19 +110,23 @@ export default defineConfig(({ command }) => {
   },
   server: {
     port: 5173,
+    // Every interface, so a dev server on another machine can be opened over the network. The
+    // API server behind the proxy listens on every interface already.
+    host: true,
+    allowedHosts: devHosts(env),
     proxy: {
       "/api": {
-        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
+        target: apiTarget,
         changeOrigin: true,
         ws: true,
       },
       "/auth": {
-        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
+        target: apiTarget,
         changeOrigin: true,
       },
       // Operator-supplied branding assets are served by the API server.
       "/branding": {
-        target: `http://localhost:${process.env.SERVER_PORT ?? 3000}`,
+        target: apiTarget,
         changeOrigin: true,
       },
     },
