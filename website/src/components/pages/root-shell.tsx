@@ -70,7 +70,10 @@ export function RootShell({
           <I18nProvider locale={locale}>
             <TooltipProvider>
               <Nav locale={locale} />
-              <main className="flex-1">{children}</main>
+              {/* Clips what decorative layers spread past the screen. On the body alone that is not
+                  enough: mobile browsers hand its overflow to the viewport and let the page scroll
+                  sideways all the same. */}
+              <main className="flex-1 overflow-x-clip">{children}</main>
               <Footer locale={locale} />
             </TooltipProvider>
           </I18nProvider>
