@@ -95,6 +95,16 @@ pnpm test         # Run unit tests
 - Write the changelog entry into a file of its own under `changelog/unreleased/`, named after your branch, never into `docs/changelog.md`. An entry for a change that resolves an issue ends with the link to that issue. The release collects those files, see [changelog/unreleased/README.md](changelog/unreleased/README.md)
 - Ensure all CI checks pass. Every pull request into `dev` or `main` runs lint, type check, unit tests and the builds of the docs and the website
 
+## AI-assisted contributions
+
+Using AI for code or issues is fine. What matters is that you checked the result yourself before anyone else has to.
+
+- Only report what you reproduced on a running instance, not what reading the code suggests
+- Test a pull request on a running instance before you open it, and say in its description how you tested it
+- Open issues through the web interface with one of the templates. A few at a time are fine, but not a whole batch within an hour
+
+Issues and pull requests that were not tested, or arrive in such a batch, are closed without a review.
+
 ## Security
 
 If you discover a security vulnerability, **do not** open a public issue or pull request. See [SECURITY.md](SECURITY.md) for how to report it privately.
