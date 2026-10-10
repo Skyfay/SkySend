@@ -5,7 +5,14 @@ import { z } from "zod";
 import { getDb } from "../db/index.js";
 import { notes, type Note } from "../db/schema.js";
 import { getConfig } from "../lib/config.js";
-import { constantTimeEqual, fromBase64url, toBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH } from "@skysend/crypto";
+import {
+  constantTimeEqual,
+  fromBase64url,
+  toBase64url,
+  SALT_LENGTH,
+  PASSWORD_SALT_LENGTH,
+  TOKEN_LENGTH,
+} from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
 import type { PasswordLockout } from "../lib/password-lockout.js";
 
@@ -109,6 +116,23 @@ noteRoute.post(
       }
     } catch {
       return c.json({ error: "Invalid salt encoding" }, 400);
+    }
+
+    // Every client sends tokens of 32 bytes. A shorter one stored here would let a guess of a
+    // few characters open the note.
+    for (const [name, value] of [
+      ["authToken", data.authToken],
+      ["ownerToken", data.ownerToken],
+    ] as const) {
+      let tokenBytes: Uint8Array;
+      try {
+        tokenBytes = fromBase64url(value);
+      } catch {
+        return c.json({ error: `Invalid ${name} encoding` }, 400);
+      }
+      if (tokenBytes.length !== TOKEN_LENGTH) {
+        return c.json({ error: `${name} must be exactly ${TOKEN_LENGTH} bytes` }, 400);
+      }
     }
 
     // Validate nonce

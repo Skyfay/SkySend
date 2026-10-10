@@ -85,6 +85,8 @@ const ownerToken = await computeOwnerToken(secret, salt)
 
 Both tokens are sent to the server during upload and verified using constant-time comparison.
 
+The clients derive the owner token from the secret as it stands in the link, which is the password-protected one when a password is set. Anyone holding the link can therefore delete the upload, with or without the password. This is deliberate. A product without accounts has no other owner than the link holder, and a token derived from the unprotected secret would turn the browser's local store, which keeps the protected secret next to the token, into an offline oracle for the password.
+
 ## Constants
 
 | Constant | Value |

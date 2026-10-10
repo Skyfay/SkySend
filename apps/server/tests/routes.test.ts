@@ -1798,11 +1798,12 @@ describe("routes", () => {
   describe("validateUploadHeaders (unit)", () => {
     const validSalt32 = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
     const validPwSalt16 = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+    const validToken = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 
     function makeHeaders(overrides: Partial<UploadHeaders> = {}): UploadHeaders {
       return {
-        authToken: "abc",
-        ownerToken: "abc",
+        authToken: validToken,
+        ownerToken: validToken,
         salt: validSalt32,
         maxDownloads: 1,
         expireSec: 86400,
@@ -1832,6 +1833,23 @@ describe("routes", () => {
       const result = validateUploadHeaders(headers, DEFAULT_CONFIG as ReturnType<typeof getConfig>);
       expect(result?.status).toBe(400);
       expect(result?.message).toContain("Invalid password salt encoding");
+    });
+
+    it.each([
+      ["authToken", "abc", "Auth token must be exactly 32 bytes"],
+      ["ownerToken", "abc", "Owner token must be exactly 32 bytes"],
+      [
+        "authToken",
+        Buffer.from(new Uint8Array(33)).toString("base64url"),
+        "Auth token must be exactly 32 bytes",
+      ],
+    ] as const)("should return 400 when %s is %s", (field, value, message) => {
+      const result = validateUploadHeaders(
+        makeHeaders({ [field]: value }),
+        DEFAULT_CONFIG as ReturnType<typeof getConfig>,
+      );
+      expect(result?.status).toBe(400);
+      expect(result?.message).toBe(message);
     });
 
     it("should return null for valid headers with correct passwordSalt length", () => {

@@ -6,6 +6,9 @@ import {
   expectedPlaintextSize,
   META_IV_LENGTH,
   METADATA_PAD_BLOCK,
+  METADATA_MAX_FILES,
+  METADATA_MAX_MIME_LENGTH,
+  METADATA_MAX_NAME_LENGTH,
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
@@ -279,6 +282,124 @@ describe("metadata padding", () => {
     await expect(
       decryptMetadata(flipped(encrypted.ciphertext, METADATA_PAD_BLOCK - 1), encrypted.iv, metaKey),
     ).rejects.toThrow();
+  });
+});
+
+describe("validateMetadata - sizes and caps", () => {
+  // JSON reads 1e999 as Infinity and 1.5 as a float, and JSON.stringify would normalize both
+  // away, so these blobs are built from raw text.
+  async function encryptRawText(json: string, metaKey: CryptoKey) {
+    return encryptRawBytes(new TextEncoder().encode(json), metaKey);
+  }
+
+  it.each(["1e999", "-1e999", "1.5", "9007199254740992", '"7"', "null"])(
+    "should reject a single-file size of %s",
+    async (size) => {
+      const metaKey = await getMetaKey();
+      const enc = await encryptRawText(
+        `{"type":"single","name":"a.txt","size":${size},"mimeType":"text/plain"}`,
+        metaKey,
+      );
+      await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+        "invalid file size",
+      );
+    },
+  );
+
+  it.each(["1e999", "1.5"])("should reject a total size of %s", async (size) => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawText(
+      `{"type":"archive","files":[{"name":"a","size":1}],"totalSize":${size}}`,
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "invalid total size",
+    );
+  });
+
+  it.each(["1e999", "1.5"])("should reject a file entry size of %s", async (size) => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawText(
+      `{"type":"archive","files":[{"name":"a","size":${size}}],"totalSize":1}`,
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "file entry invalid size",
+    );
+  });
+
+  it("should reject a note size of 1e999 in a request upload", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawText('{"type":"note","size":1e999}', metaKey);
+    await expect(decryptRequestMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "invalid note size",
+    );
+  });
+
+  it("should accept a file name of exactly the cap and reject one character more", async () => {
+    const metaKey = await getMetaKey();
+    const atCap = await encryptRawJson(
+      { type: "single", name: "a".repeat(METADATA_MAX_NAME_LENGTH), size: 1, mimeType: "" },
+      metaKey,
+    );
+    const decrypted = await decryptMetadata(atCap.ciphertext, atCap.iv, metaKey);
+    expect(decrypted.type === "single" && decrypted.name.length).toBe(METADATA_MAX_NAME_LENGTH);
+    const over = await encryptRawJson(
+      { type: "single", name: "a".repeat(METADATA_MAX_NAME_LENGTH + 1), size: 1, mimeType: "" },
+      metaKey,
+    );
+    await expect(decryptMetadata(over.ciphertext, over.iv, metaKey)).rejects.toThrow(
+      "file name too long",
+    );
+  });
+
+  it("should reject an archive entry name over the cap", async () => {
+    const metaKey = await getMetaKey();
+    const enc = await encryptRawJson(
+      {
+        type: "archive",
+        files: [{ name: "a".repeat(METADATA_MAX_NAME_LENGTH + 1), size: 1 }],
+        totalSize: 1,
+      },
+      metaKey,
+    );
+    await expect(decryptMetadata(enc.ciphertext, enc.iv, metaKey)).rejects.toThrow(
+      "file entry name too long",
+    );
+  });
+
+  it("should accept the maximum number of entries and reject one more", async () => {
+    const metaKey = await getMetaKey();
+    const entry = { name: "a", size: 1 };
+    const atCap = await encryptRawJson(
+      { type: "archive", files: Array(METADATA_MAX_FILES).fill(entry), totalSize: 1 },
+      metaKey,
+    );
+    const decrypted = await decryptMetadata(atCap.ciphertext, atCap.iv, metaKey);
+    expect(decrypted.type === "archive" && decrypted.files.length).toBe(METADATA_MAX_FILES);
+    const over = await encryptRawJson(
+      { type: "archive", files: Array(METADATA_MAX_FILES + 1).fill(entry), totalSize: 1 },
+      metaKey,
+    );
+    await expect(decryptMetadata(over.ciphertext, over.iv, metaKey)).rejects.toThrow(
+      "too many file entries",
+    );
+  });
+
+  it("should accept an empty MIME type and reject one over the cap", async () => {
+    const metaKey = await getMetaKey();
+    const empty = await encryptRawJson(
+      { type: "single", name: "a", size: 1, mimeType: "" },
+      metaKey,
+    );
+    expect((await decryptMetadata(empty.ciphertext, empty.iv, metaKey)).type).toBe("single");
+    const over = await encryptRawJson(
+      { type: "single", name: "a", size: 1, mimeType: "x".repeat(METADATA_MAX_MIME_LENGTH + 1) },
+      metaKey,
+    );
+    await expect(decryptMetadata(over.ciphertext, over.iv, metaKey)).rejects.toThrow(
+      "MIME type too long",
+    );
   });
 });
 

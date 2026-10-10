@@ -7,8 +7,10 @@ import {
   computeOwnerToken,
   SECRET_LENGTH,
   SALT_LENGTH,
+  TOKEN_LENGTH,
 } from "../src/keychain.js";
 import { constantTimeEqual } from "../src/util.js";
+import { fromHex, toHex } from "./helpers.js";
 
 describe("generateSecret", () => {
   it("should produce a 32-byte secret", () => {
@@ -212,5 +214,51 @@ describe("computeOwnerToken", () => {
     const token1 = await computeOwnerToken(secret, generateSalt());
     const token2 = await computeOwnerToken(secret, generateSalt());
     expect(constantTimeEqual(token1, token2)).toBe(false);
+  });
+
+  it("should accept the salts deriveKeys accepts, 32 and legacy 16 bytes", async () => {
+    const secret = generateSecret();
+    expect((await computeOwnerToken(secret, new Uint8Array(32))).length).toBe(TOKEN_LENGTH);
+    expect((await computeOwnerToken(secret, new Uint8Array(16))).length).toBe(TOKEN_LENGTH);
+  });
+
+  it.each([0, 15, 17, 31, 33])("should reject a %i-byte salt", async (length) => {
+    await expect(computeOwnerToken(generateSecret(), new Uint8Array(length))).rejects.toThrow(
+      "Salt must be 16 or 32 bytes",
+    );
+  });
+});
+
+describe("frozen token derivation", () => {
+  // Fixed inputs with their tokens, checked against an independent HKDF and HMAC implementation
+  // (node:crypto) on 2026-10-10. The server stores these tokens for the lifetime of a share, so
+  // a change here means every existing link stops opening. Never update the expected values.
+  const secret = fromHex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+  const cases = [
+    {
+      name: "32-byte salt",
+      salt: fromHex("202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"),
+      authToken: "9b0cd78bf19921f4d0aab6eb474dca89a2e98616b2be1b134e8745b8482dfb9c",
+      ownerToken: "044e61770e5bf550bdc775306218d016d6c91eb29ddfea45811371dd537f4e18",
+    },
+    {
+      name: "legacy 16-byte salt",
+      salt: fromHex("404142434445464748494a4b4c4d4e4f"),
+      authToken: "d9bb1efa83f5201bebf6f231a566b2c32c6f015ec4b96aec823dbb93f6cdab9f",
+      ownerToken: "73cd5b15611d82727b1b1975cbca4ab3109496ca4e86b708074d4302e3bc1c9e",
+    },
+  ];
+
+  it.each(cases)(
+    "should derive the frozen tokens for a $name",
+    async ({ salt, authToken, ownerToken }) => {
+      const keys = await deriveKeys(secret, salt);
+      expect(toHex(await computeAuthToken(keys.authKey))).toBe(authToken);
+      expect(toHex(await computeOwnerToken(secret, salt))).toBe(ownerToken);
+    },
+  );
+
+  it("should keep the token length the server checks at 32 bytes", () => {
+    expect(TOKEN_LENGTH).toBe(32);
   });
 });

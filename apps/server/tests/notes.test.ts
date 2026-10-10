@@ -240,6 +240,33 @@ describe("note routes", () => {
       expect(body.error).toContain("Salt");
     });
 
+    it.each([
+      ["authToken", "abc"],
+      ["ownerToken", Buffer.from(new Uint8Array(33)).toString("base64url")],
+    ])("should reject a %s that is not 32 bytes", async (field, value) => {
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ [field]: value })),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe(`${field} must be exactly 32 bytes`);
+    });
+
+    it("should reject a token with invalid base64url characters", async () => {
+      const app = createApp();
+      const res = await app.request("/api/note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validNotePayload({ ownerToken: "!!!not-valid!!!" })),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid ownerToken encoding");
+    });
+
     it("should require password fields when hasPassword is true", async () => {
       const app = createApp();
       const res = await app.request("/api/note", {

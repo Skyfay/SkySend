@@ -22,6 +22,9 @@ export const SECRET_LENGTH = 32;
  */
 export const SALT_LENGTH = 32;
 
+/** Length of authToken and ownerToken in bytes: an HMAC-SHA256 output and 256 derived bits. */
+export const TOKEN_LENGTH = 32;
+
 /** HKDF info strings for domain separation. */
 const HKDF_INFO_FILE = "skysend-file-encryption";
 const HKDF_INFO_META = "skysend-metadata";
@@ -153,6 +156,10 @@ export async function computeAuthToken(authKey: CryptoKey): Promise<Uint8Array> 
 export async function computeOwnerToken(secret: Uint8Array, salt: Uint8Array): Promise<Uint8Array> {
   if (secret.length !== SECRET_LENGTH) {
     throw new Error(`Secret must be exactly ${SECRET_LENGTH} bytes`);
+  }
+  // The same salts deriveKeys takes, legacy 16-byte ones included, see the TODO there.
+  if (salt.length !== 32 && salt.length !== 16) {
+    throw new Error(`Salt must be 16 or 32 bytes, got ${salt.length}`);
   }
   const baseKey = await importHkdfKey(secret);
   const encoder = new TextEncoder();

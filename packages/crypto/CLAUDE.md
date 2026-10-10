@@ -39,6 +39,8 @@ Info strings (`keychain.ts`) provide domain separation and are part of the wire 
 
 `computeAuthToken` is `HMAC-SHA256(authKey, "skysend-auth-token")`, so the server can verify a reader without ever holding the secret. `computeOwnerToken` derives independently via `deriveBits`.
 
+The clients pass `computeOwnerToken` the secret as it stands in the link, which with a password is the protected one. Whoever holds a link can therefore also delete the share, password or not. That is the intended model for a product without accounts, decided in the audit of 2026-10-10. Do not switch it to the real secret: the browser keeps the protected secret next to the owner token in IndexedDB, and a token derived from the real secret would make that store an offline oracle for the password.
+
 Changing any of these strings invalidates every existing link. Do not.
 
 ## File requests

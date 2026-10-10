@@ -14,6 +14,7 @@ export {
   computeOwnerToken,
   SECRET_LENGTH,
   SALT_LENGTH,
+  TOKEN_LENGTH,
 } from "./keychain.js";
 export type { DerivedKeys } from "./keychain.js";
 

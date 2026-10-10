@@ -62,6 +62,8 @@ Two tokens are derived for server-side authorization:
 
 Both tokens are sent to the server during upload. The server stores them for later verification using constant-time comparison.
 
+The owner token is derived from the secret in the link, so whoever has the link can also delete the share, with or without its password.
+
 ## Streaming Encryption (ECE)
 
 File content is encrypted using a custom Encrypted Content-Encoding scheme based on AES-256-GCM with streaming support.

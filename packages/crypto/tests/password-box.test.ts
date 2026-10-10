@@ -37,6 +37,21 @@ describe("password box", () => {
     expect(PASSWORD_BOX_ARGON2).toEqual(ARGON2_PARAMS);
   });
 
+  it("should import the box key non-extractable and for one operation only", async () => {
+    const spy = vi.spyOn(crypto.subtle, "importKey");
+    try {
+      const box = await sealWithPassword(plaintext, "pw", PURPOSE, fakeArgon2);
+      await openWithPassword(box, "pw", PURPOSE, fakeArgon2);
+      const aesImports = spy.mock.calls.filter(([, , algorithm]) => algorithm === "AES-GCM");
+      expect(aesImports.map(([, , , extractable, usages]) => [extractable, usages])).toEqual([
+        [false, ["encrypt"]],
+        [false, ["decrypt"]],
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("should use a fresh salt and nonce for every seal", async () => {
     const a = await sealWithPassword(plaintext, "pw", PURPOSE, fakeArgon2);
     const b = await sealWithPassword(plaintext, "pw", PURPOSE, fakeArgon2);

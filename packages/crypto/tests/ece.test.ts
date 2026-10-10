@@ -61,6 +61,48 @@ async function getFileKey(): Promise<CryptoKey> {
   return keys.fileKey;
 }
 
+describe("createEncryptStream nonce header", () => {
+  it("should keep deriving record nonces from its own copy when a consumer overwrites the emitted header", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE + 100);
+    const { readable, writable } = createEncryptStream(fileKey);
+    const writer = writable.getWriter();
+    const reader = readable.getReader();
+
+    // A TransformStream starts with backpressure, so the first write only runs once the
+    // reader pulls. The first chunk is too small for a record, so the stream emits the header.
+    const firstWrite = writer.write(plaintext.slice(0, 10));
+    const header = await reader.read();
+    await firstWrite;
+    expect(header.value?.length).toBe(NONCE_LENGTH);
+    const original = header.value!.slice();
+    header.value!.fill(0); // a consumer that reuses the chunk's memory
+
+    const rest = writer.write(plaintext.slice(10)).then(() => writer.close());
+    const records: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      records.push(value);
+    }
+    await rest;
+
+    const encrypted = new Uint8Array(original.length + records.reduce((n, r) => n + r.length, 0));
+    encrypted.set(original, 0);
+    let offset = original.length;
+    for (const record of records) {
+      encrypted.set(record, offset);
+      offset += record.length;
+    }
+    const decrypted = await collectStream(
+      createReadableStream(encrypted, 8192).pipeThrough(
+        createDecryptStream(fileKey, plaintext.length),
+      ),
+    );
+    expect(constantTimeEqual(decrypted, plaintext)).toBe(true);
+  });
+});
+
 describe("ECE streaming encryption/decryption", () => {
   it("should encrypt and decrypt a small payload", async () => {
     const fileKey = await getFileKey();

@@ -26,6 +26,24 @@ export const META_IV_LENGTH = 12;
 export const METADATA_PAD_BLOCK = 1024;
 
 /**
+ * Caps on what a sender may put into metadata, which an inbox shows and computes with. They sit
+ * far above anything the clients produce (a path is at most 4096 bytes, an upload holds a few
+ * dozen files), so no real upload is affected, while a crafted blob cannot carry a megabyte of
+ * name or a hundred thousand entries into the UI.
+ */
+export const METADATA_MAX_NAME_LENGTH = 4096;
+export const METADATA_MAX_FILES = 10_000;
+export const METADATA_MAX_MIME_LENGTH = 256;
+
+/**
+ * Whether a value is a byte count: a non-negative safe integer. JSON reads 1e999 as Infinity
+ * and 1.5 as a float, and a hand-built blob can carry either.
+ */
+function isByteCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+/**
  * Marks the uploads a sender of a file request sent together, files and a note. 32 hex
  * characters, random per send. Every upload into a request carries one, so the metadata of a
  * note sent alone is as long as the one of a note sent with files.
@@ -146,7 +164,7 @@ export async function decryptRequestMetadata(
   const data = await decryptJson(ciphertext, iv, metaKey);
   if (typeof data === "object" && data !== null && (data as { type?: unknown }).type === "note") {
     const { size } = data as { size?: unknown };
-    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) {
+    if (!isByteCount(size)) {
       throw new Error("Invalid metadata: invalid note size");
     }
     return { type: "note", size, ...submissionOf(data as Record<string, unknown>) };
@@ -208,11 +226,17 @@ function validateMetadata(data: unknown): FileMetadata {
     if (typeof obj.name !== "string" || obj.name.length === 0) {
       throw new Error("Invalid metadata: missing or empty file name");
     }
-    if (typeof obj.size !== "number" || obj.size < 0) {
+    if (obj.name.length > METADATA_MAX_NAME_LENGTH) {
+      throw new Error("Invalid metadata: file name too long");
+    }
+    if (!isByteCount(obj.size)) {
       throw new Error("Invalid metadata: invalid file size");
     }
     if (typeof obj.mimeType !== "string") {
       throw new Error("Invalid metadata: missing MIME type");
+    }
+    if (obj.mimeType.length > METADATA_MAX_MIME_LENGTH) {
+      throw new Error("Invalid metadata: MIME type too long");
     }
     return {
       type: "single",
@@ -227,6 +251,9 @@ function validateMetadata(data: unknown): FileMetadata {
     if (!Array.isArray(obj.files)) {
       throw new Error("Invalid metadata: files must be an array");
     }
+    if (obj.files.length > METADATA_MAX_FILES) {
+      throw new Error("Invalid metadata: too many file entries");
+    }
     const files: Array<{ name: string; size: number }> = [];
     for (const file of obj.files) {
       if (typeof file !== "object" || file === null) {
@@ -236,20 +263,18 @@ function validateMetadata(data: unknown): FileMetadata {
       if (typeof f.name !== "string" || f.name.length === 0) {
         throw new Error("Invalid metadata: file entry missing name");
       }
-      if (typeof f.size !== "number" || f.size < 0) {
+      if (f.name.length > METADATA_MAX_NAME_LENGTH) {
+        throw new Error("Invalid metadata: file entry name too long");
+      }
+      if (!isByteCount(f.size)) {
         throw new Error("Invalid metadata: file entry invalid size");
       }
       files.push({ name: f.name, size: f.size });
     }
-    if (typeof obj.totalSize !== "number" || obj.totalSize < 0) {
+    if (!isByteCount(obj.totalSize)) {
       throw new Error("Invalid metadata: invalid total size");
     }
-    if (
-      obj.archiveSize !== undefined &&
-      (typeof obj.archiveSize !== "number" ||
-        !Number.isSafeInteger(obj.archiveSize) ||
-        obj.archiveSize < 0)
-    ) {
+    if (obj.archiveSize !== undefined && !isByteCount(obj.archiveSize)) {
       throw new Error("Invalid metadata: invalid archive size");
     }
     return {

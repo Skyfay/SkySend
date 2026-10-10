@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fromBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH } from "@skysend/crypto";
+import { fromBase64url, SALT_LENGTH, PASSWORD_SALT_LENGTH, TOKEN_LENGTH } from "@skysend/crypto";
 import type { Config } from "./config.js";
 
 const base64urlPattern = /^[A-Za-z0-9_-]+$/;
@@ -70,6 +70,18 @@ export function validateUploadHeaders(
     }
   } catch {
     return { message: "Invalid salt encoding", status: 400 };
+  }
+
+  // Every client sends tokens of 32 bytes. A shorter one stored here would let a guess of a
+  // few characters open the upload, so the decoded length is checked for all three transports.
+  // The schema already limits the characters, so decoding cannot throw.
+  for (const [name, value] of [
+    ["Auth token", headers.authToken],
+    ["Owner token", headers.ownerToken],
+  ] as const) {
+    if (fromBase64url(value).length !== TOKEN_LENGTH) {
+      return { message: `${name} must be exactly ${TOKEN_LENGTH} bytes`, status: 400 };
+    }
   }
 
   const sizeError = validateUploadSize(headers.contentLength, headers.fileCount, config);

@@ -197,7 +197,7 @@ async function handleDownload(config, downloadId, streamDone) {
   // encodeURIComponent would throw on falls back to a plain one here, after the
   // download was already counted, instead of failing the whole tier.
   const headers = new Headers({
-    "Content-Type": /^[\w.+-]+\/[\w.+-]+$/.test(mimeType || "") ? mimeType : "application/octet-stream",
+    "Content-Type": /^[a-z][\w.+-]*\/[\w.+-]+$/i.test(mimeType || "") ? mimeType : "application/octet-stream",
     // The type is the uploader's word, so the browser must not guess a more dangerous one.
     "X-Content-Type-Options": "nosniff",
   });

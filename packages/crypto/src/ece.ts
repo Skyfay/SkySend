@@ -62,9 +62,10 @@ export function createEncryptStream(
 
   return new TransformStream<Uint8Array, Uint8Array>({
     async transform(chunk, controller) {
-      // Emit the nonce header before any encrypted data
+      // Emit a copy of the nonce header before any encrypted data. The record nonces keep
+      // coming from the stream's own array, whatever a consumer does with the chunk.
       if (!headerSent) {
-        controller.enqueue(baseNonce);
+        controller.enqueue(baseNonce.slice());
         headerSent = true;
       }
 
@@ -82,7 +83,7 @@ export function createEncryptStream(
     async flush(controller) {
       // Emit header even for empty input (edge case)
       if (!headerSent) {
-        controller.enqueue(baseNonce);
+        controller.enqueue(baseNonce.slice());
       }
 
       // Encrypt any remaining data as the final (potentially smaller) record

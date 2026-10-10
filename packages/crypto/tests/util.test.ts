@@ -73,6 +73,12 @@ describe("toBase64url / fromBase64url", () => {
   it("should throw on invalid characters", () => {
     expect(() => fromBase64url("abc!")).toThrow("Invalid base64url character");
   });
+
+  it("should refuse the standard base64 alphabet, whitespace and inner padding", () => {
+    for (const text of ["ab+c", "ab/c", "ab c", "ab\nc", "a=bc"]) {
+      expect(() => fromBase64url(text)).toThrow("Invalid base64url character");
+    }
+  });
 });
 
 describe("concatBytes", () => {
