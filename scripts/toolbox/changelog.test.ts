@@ -5,10 +5,12 @@ import {
   CHANGELOG,
   FRAGMENT_DIR,
   SECTIONS,
+  amend,
   creditAll,
   creditFragment,
   findContribution,
   insertBlock,
+  listedVersions,
   parseFragment,
   readFragments,
   release,
@@ -451,5 +453,70 @@ describe("the pull request behind a fragment", () => {
     expect(() => findContribution("a.md", { dir: DIR, ...answers("not-a-sha", "") })).toThrow(
       /no commit/,
     );
+  });
+});
+
+describe("adding fragments to a version block written already", () => {
+  const BUMPED = [
+    "# Changelog",
+    "",
+    "All notable changes to SkySend are documented here.",
+    "",
+    "## v3.0.1 - Fixes",
+    "",
+    "*Released: October 10, 2026*",
+    "",
+    "### 🐛 Bug Fixes",
+    "",
+    "- **server**: Uploads resume after a lost connection.",
+    "- **docker**: The image starts without internet access.",
+    "",
+    "### 🐳 Docker",
+    "",
+    "- **Image**: `skyfay/skysend:v3.0.1`",
+    "- **Also tagged as**: `latest`, `v3`",
+    "- **Platforms**: linux/amd64, linux/arm64",
+    "",
+    "## v3.0.0 - File and Note Requests",
+    "",
+    "*Released: October 4, 2026*",
+    "",
+  ].join("\n");
+
+  it("sorts the new entries in by scope and keeps the title, the date and the Docker section", () => {
+    const files = memoryFiles({
+      [MEMORY_CHANGELOG]: BUMPED,
+      [`${DIR}/late-fix.md`]: "### 🐛 Bug Fixes\n\n- **web**: The upload page loads again.\n\n### 🔧 CI/CD\n\n- **infra**: The release tags itself.",
+    });
+
+    amend({ version: "3.0.1", dir: DIR, changelog: MEMORY_CHANGELOG });
+    expect(files.get(MEMORY_CHANGELOG)).toBe(
+      BUMPED.replace(
+        "- **server**: Uploads resume after a lost connection.\n",
+        "- **server**: Uploads resume after a lost connection.\n- **web**: The upload page loads again.\n",
+      ).replace("\n### 🐳 Docker", "\n### 🔧 CI/CD\n\n- **infra**: The release tags itself.\n\n### 🐳 Docker"),
+    );
+    expect(files.has(`${DIR}/late-fix.md`)).toBe(false);
+  });
+
+  it("refuses a block with a line it cannot read, and changes nothing", () => {
+    const handWritten = BUMPED.replace("*Released: October 10, 2026*\n", "*Released: October 10, 2026*\n\nA paragraph written by hand.\n");
+    const files = memoryFiles({
+      [MEMORY_CHANGELOG]: handWritten,
+      [`${DIR}/late-fix.md`]: "### 🐛 Bug Fixes\n\n- **web**: The upload page loads again.",
+    });
+
+    expect(() => amend({ version: "3.0.1", dir: DIR, changelog: MEMORY_CHANGELOG })).toThrow(/by hand/);
+    expect(files.get(MEMORY_CHANGELOG)).toBe(handWritten);
+    expect(files.has(`${DIR}/late-fix.md`)).toBe(true);
+  });
+
+  it("refuses a version the changelog has no block for", () => {
+    memoryFiles({ [MEMORY_CHANGELOG]: BUMPED, [`${DIR}/late-fix.md`]: "### 🐛 Bug Fixes\n\n- **web**: Fixed." });
+    expect(() => amend({ version: "9.9.9", dir: DIR, changelog: MEMORY_CHANGELOG })).toThrow(/no block for v9\.9\.9/);
+  });
+
+  it("lists the versions of the changelog, newest first", () => {
+    expect(listedVersions(BUMPED)).toEqual(["3.0.1", "3.0.0"]);
   });
 });

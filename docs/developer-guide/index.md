@@ -66,6 +66,14 @@ git push -u origin feat/short-description
 
 Every pull request into `dev` or `main` runs lint, type check, unit tests and the builds of the docs and the website.
 
+### Releasing
+
+Only the maintainer releases, from an up to date `dev`. `pnpm toolbox` lists every command used here in one menu, each also runs on its own:
+
+1. `pnpm version:bump` checks the changelog fragments and asks GitHub for the CodeQL alerts open on `dev` that `main` does not have. While one is open, it asks whether to go on. Then it picks the next version, writes its block into `docs/changelog.md` and sets the version in every package. `pnpm codeql:check` runs the CodeQL part on its own.
+2. Replace `*Release: In Progress*` with `*Released: <date>*`, commit, push `dev` and open the pull request from `dev` into `main`. Merge it with a merge commit, not a squash, so both branches keep their history. A change that still belongs to the release after the bump gets its fragment as usual, and `pnpm changelog:amend` adds it to the block.
+3. `pnpm release:tag` proposes the tag of the version on `main`, with the title from the changelog as its message, and pushes it once you confirm. The tag starts the release workflow. `pnpm release:untag` deletes a tag here and on GitHub, so a release that failed can be tagged again.
+
 ### PR Guidelines
 
 1. Create a feature branch off `dev`

@@ -7,21 +7,24 @@
  * release collects the fragments into one version block of `docs/changelog.md` and deletes them.
  * The format of a fragment is described in `changelog/unreleased/README.md`.
  *
- *   node scripts/changelog.mjs check                     checks every fragment, exits 1 on a problem
- *   node scripts/changelog.mjs preview                   prints the block the next release writes
- *   node scripts/changelog.mjs release <version> <tags>  writes that block and deletes the fragments
+ *   pnpm changelog:check             checks every fragment, exits 1 on a problem
+ *   pnpm changelog:preview           prints the block the next release writes
+ *   pnpm changelog:amend [version]   adds the fragments to a block the changelog has already
  *
- * `pnpm version:bump` runs `release` itself, with the Docker tags of the new version. Preview and
- * release thank the author of an outside pull request at the end of each entry of its fragment,
- * so a contributor never has to write the thanks and the maintainer never has to add it.
+ * `pnpm version:bump` writes that block and deletes the fragments, with the Docker tags of the new
+ * version. Preview, release and amend thank the author of an outside pull request at the end of
+ * each entry of its fragment, so a contributor never has to write the thanks and the maintainer
+ * never has to add it.
  */
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { ask, confirm } from "./cli.mjs";
+import { remoteTag } from "./release-tag.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Where the fragments of the next release wait. */
 export const FRAGMENT_DIR = path.join(ROOT, "changelog", "unreleased");
@@ -299,6 +302,24 @@ function byScope(entries) {
 }
 
 /**
+ * The notes of the fragments, then every section in the order of `SECTIONS` with the entries of
+ * all fragments grouped by scope. Every part ends with a blank line.
+ *
+ * @param {Fragment[]} fragments
+ * @returns {string[]}
+ */
+function renderSections(fragments) {
+  /** @type {string[]} */
+  const lines = [];
+  for (const note of fragments.flatMap((fragment) => fragment.notes)) lines.push(note, "");
+  for (const heading of SECTIONS) {
+    const entries = fragments.flatMap((fragment) => fragment.sections.get(heading) ?? []);
+    if (entries.length > 0) lines.push(heading, "", ...byScope(entries), "");
+  }
+  return lines;
+}
+
+/**
  * The version block the fragments add up to: the notes, then every section in the
  * order of `SECTIONS` with the entries of all fragments grouped by scope, then the Docker
  * section.
@@ -309,12 +330,7 @@ function byScope(entries) {
  * @returns {string}
  */
 export function renderBlock(version, tags, fragments) {
-  const lines = [`## v${version}`, "", "*Release: In Progress*", ""];
-  for (const note of fragments.flatMap((fragment) => fragment.notes)) lines.push(note, "");
-  for (const heading of SECTIONS) {
-    const entries = fragments.flatMap((fragment) => fragment.sections.get(heading) ?? []);
-    if (entries.length > 0) lines.push(heading, "", ...byScope(entries), "");
-  }
+  const lines = [`## v${version}`, "", "*Release: In Progress*", "", ...renderSections(fragments)];
   lines.push(
     DOCKER_SECTION,
     "",
@@ -349,6 +365,85 @@ function problemsOf(fragments) {
   return fragments.flatMap((fragment) =>
     fragment.problems.map((problem) => `${fragment.name}: ${problem}`),
   );
+}
+
+/**
+ * Every version the changelog has a block for, newest first, without the leading `v`.
+ *
+ * @param {string} changelog
+ * @returns {string[]}
+ */
+export function listedVersions(changelog) {
+  return changelog
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("## v"))
+    .map((line) => line.slice("## v".length).split(" ")[0]);
+}
+
+/**
+ * A version block with the entries of the fragments among its own, sorted in the way a release
+ * sorts them. Its heading, its date line and its Docker section stay as they are.
+ *
+ * Throws when the block holds a line that is no note and no entry of a section, a paragraph
+ * written by hand for one, since that line would get lost. Such a block is changed by hand.
+ *
+ * @param {string} block From its heading to the last line before the next version.
+ * @param {Fragment[]} fragments
+ * @returns {string}
+ */
+export function amendBlock(block, fragments) {
+  const lines = block.split(/\r?\n/);
+  const first = lines.findIndex((line, index) => index > 0 && line.trim() !== "");
+  // The heading, and the date line below it when the block has one.
+  const head = first !== -1 && lines[first].startsWith("*Release") ? first + 1 : 1;
+  const docker = lines.indexOf(DOCKER_SECTION);
+  const body = lines.slice(head, docker === -1 ? lines.length : docker).join("\n");
+  const own = parseFragment(body, "block.md");
+
+  // Read in and written out again, the block has to come back with every line it had.
+  /** @param {string[]} text */
+  const content = (text) => text.map((line) => line.trimEnd()).filter((line) => line !== "").join("\n");
+  if (content(renderSections([own])) !== content(body.split("\n"))) {
+    throw new Error("The block has lines that are no note and no entry of a section. Add the fragments to it by hand.");
+  }
+
+  const tail = docker === -1 ? [] : lines.slice(docker);
+  return [...lines.slice(0, head), "", ...renderSections([own, ...fragments]), ...tail].join("\n").replace(/\n+$/, "");
+}
+
+/**
+ * Adds the fragments to the block of a version the changelog lists already and deletes them, for
+ * a change that still belongs to a release after the version bump wrote its block. Nothing
+ * changes while a fragment breaks the format or the block cannot take them.
+ *
+ * @param {{
+ *     version: string,
+ *     dir?: string,
+ *     changelog?: string,
+ *     credit?: (fragments: Fragment[]) => Fragment[],
+ * }} options
+ * @returns {Fragment[]} The fragments that were added.
+ */
+export function amend({ version, dir = FRAGMENT_DIR, changelog = CHANGELOG, credit = (fragments) => fragments }) {
+  const fragments = readFragments(dir);
+  if (fragments.length === 0) throw new Error("There are no fragments to add.");
+  const problems = fragments.flatMap((fragment) => fragment.problems.map((problem) => `${fragment.name}: ${problem}`));
+  if (problems.length > 0) throw new Error(`Fix the changelog fragments first:\n${problems.join("\n")}`);
+
+  const lines = fs.readFileSync(changelog, "utf8").split("\n");
+  const heading = `## v${version}`;
+  const start = lines.findIndex((line) => line === heading || line.startsWith(`${heading} `));
+  if (start === -1) throw new Error(`The changelog has no block for v${version}.`);
+  const next = lines.findIndex((line, index) => index > start && line.startsWith("## v"));
+  const end = next === -1 ? lines.length : next;
+
+  // The blank lines before the next version stay, so the block keeps its distance to it.
+  let blank = 0;
+  while (end - blank - 1 > start && lines[end - blank - 1].trim() === "") blank++;
+  const block = amendBlock(lines.slice(start, end - blank).join("\n"), credit(fragments));
+  fs.writeFileSync(changelog, [...lines.slice(0, start), block, ...lines.slice(end - blank)].join("\n"));
+  for (const fragment of fragments) fs.rmSync(path.join(dir, fragment.name));
+  return fragments;
 }
 
 /**
@@ -424,43 +519,95 @@ function creditWithWarning(fragments) {
   return credited;
 }
 
-function main() {
-  const [command, version, tags] = process.argv.slice(2);
+/**
+ * `pnpm changelog:check`: checks every fragment against the rules.
+ *
+ * @returns {boolean} Whether all of them are in order.
+ */
+export function checkCommand() {
   const fragments = readFragments();
   const problems = problemsOf(fragments);
+  if (problems.length > 0) {
+    fail(problems.join("\n"));
+    return false;
+  }
+  out(`${fragments.length} changelog fragment${fragments.length === 1 ? "" : "s"}, all in order.`);
+  return true;
+}
 
-  switch (command) {
-    case "check":
-      if (problems.length > 0) fail(problems.join("\n"));
-      else {
-        out(
-          `${fragments.length} changelog fragment${fragments.length === 1 ? "" : "s"}, all in order.`,
-        );
-      }
-      return;
-    case "preview":
-      if (problems.length > 0) fail(problems.join("\n"));
-      out(renderBlock("NEXT", "`latest`, `vNEXT`", creditWithWarning(fragments)));
-      return;
-    case "release":
-      if (!version || !tags) {
-        fail("Usage: node scripts/changelog.mjs release <version> <tags>");
-        return;
-      }
-      try {
-        const used = release({ version, tags, credit: creditWithWarning });
-        out(
-          `docs/changelog.md has v${version} with ${used.length} fragment${used.length === 1 ? "" : "s"}, which are deleted.`,
-        );
-      } catch (error) {
-        fail(error instanceof Error ? error.message : String(error));
-      }
-      return;
-    default:
-      fail("Usage: node scripts/changelog.mjs check | preview | release <version> <tags>");
+/** `pnpm changelog:preview`: prints the block the next release writes. */
+export function previewCommand() {
+  const fragments = readFragments();
+  const problems = problemsOf(fragments);
+  if (problems.length > 0) fail(problems.join("\n"));
+  out(renderBlock("NEXT", "`latest`, `vNEXT`", creditWithWarning(fragments)));
+}
+
+/**
+ * Writes the block of a release into the changelog and deletes its fragments, for the version
+ * bump.
+ *
+ * @param {string} version
+ * @param {string} tags
+ * @returns {boolean} Whether the changelog took the version.
+ */
+export function releaseCommand(version, tags) {
+  try {
+    const used = release({ version, tags, credit: creditWithWarning });
+    out(
+      `docs/changelog.md has v${version} with ${used.length} fragment${used.length === 1 ? "" : "s"}, which are deleted.`,
+    );
+    return true;
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+    return false;
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  main();
+/**
+ * `pnpm changelog:amend [version]`: adds the fragments to a block the changelog has already, the
+ * newest one unless another is named.
+ *
+ * @param {string[]} args
+ */
+export async function amendCommand([given]) {
+  const fragments = readFragments();
+  if (fragments.length === 0) {
+    out("There are no fragments to add.");
+    return;
+  }
+  if (!checkCommand()) return;
+
+  const versions = listedVersions(fs.readFileSync(CHANGELOG, "utf8"));
+  if (versions.length === 0) {
+    fail("The changelog has no version block yet.");
+    return;
+  }
+  out(`The newest versions: ${versions.slice(0, 3).map((version) => `v${version}`).join(", ")}`);
+  const version = (given ?? ((await ask(`Add them to which version? [v${versions[0]}]: `)) || versions[0])).replace(/^v/, "");
+  if (!versions.includes(version)) {
+    fail(`The changelog has no block for v${version}.`);
+    return;
+  }
+
+  let tagged = null;
+  try {
+    tagged = remoteTag(`v${version}`);
+  } catch {
+    out("Could not ask GitHub whether the version is tagged already.");
+  }
+  if (tagged) out(`v${version} is tagged already. Its GitHub release and its images stay as they are, only docs/changelog.md changes.`);
+
+  const entries = fragments.flatMap((fragment) => [...fragment.sections.values()].flat());
+  for (const entry of entries) out(`  ${entry}`);
+  if (!(await confirm(`Add ${entries.length === 1 ? "this entry" : `these ${entries.length} entries`} to v${version}?`, !tagged))) {
+    out("Stopped, nothing changed.");
+    return;
+  }
+  try {
+    const used = amend({ version, credit: creditWithWarning });
+    out(`docs/changelog.md: v${version} has the entries of ${used.length} more fragment${used.length === 1 ? "" : "s"}, which are deleted.`);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
