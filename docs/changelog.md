@@ -2,6 +2,43 @@
 
 All notable changes to SkySend are documented here.
 
+## v3.0.1 - iPhone and iPad Fixes, Steady Header and Release Tooling
+
+*Released: October 10, 2026*
+
+### 🐛 Bug Fixes
+
+- **web**: The header stays in place when switching between pages on a computer that always shows scrollbars.
+- **web**: Taps and tab switches on iPhones and iPads respond right away again instead of hanging for seconds.
+- **website**: The site no longer freezes for seconds on iPhones and iPads, and taps there respond right away. On these devices the feature strips move again and plain frames replace the spinning borders.
+
+### 📝 Documentation
+
+- **docs**: The contributing guide asks for the link to the issue at the end of a changelog entry for a change that resolves one.
+- **docs**: The contributing guide asks that issues and pull requests made with AI are tested on a running instance before they are opened.
+- **docs**: The developer guide describes the steps of a release.
+
+### 🧪 Tests
+
+- **server**: Tests for errors in the middle of an upload, like a storage or database failure at the start or the finalize, for the session layer of chunked uploads and for the inbox and WebSocket paths of file requests.
+- **client**: Tests for a temporary file that cannot be created, a stream that delivers text and a file name with an extension too long to keep.
+
+### 🔧 CI/CD
+
+- **infra**: The Vite dev server listens on every interface and allows the hosts of `BASE_URL` and `CORS_ORIGINS`, so it can be opened from another machine. Its proxy follows `PORT` from `.env.dev`.
+- **infra**: The build of a pull request into `main` waits for one approval instead of one per Docker image and CLI binary, so a run sends a single review request.
+- **infra**: `pnpm toolbox` shows the release and maintenance commands in one menu, and each still runs on its own.
+- **infra**: The version bump stops at CodeQL alerts open on dev until you confirm, and `pnpm codeql:check` lists them on its own.
+- **infra**: `pnpm release:tag` tags the release on main with the title from the changelog and pushes the tag, and `pnpm release:untag` deletes a tag here and on GitHub.
+- **infra**: `pnpm changelog:amend` adds the fragments to a version block the version bump wrote already.
+- **infra**: `pnpm audit:check` runs `pnpm audit` for the whole workspace.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v3.0.1`
+- **Also tagged as**: `latest`, `v3`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v3.0.0 - File and Note Requests, Notes Made of Blocks, New Themes and Security Hardening
 
 *Released: October 8, 2026*

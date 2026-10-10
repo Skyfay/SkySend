@@ -63,7 +63,7 @@ export function Hero({ locale }: { locale: Locale }) {
       <DotGrid mask="radial-gradient(ellipse 60% 45% at 50% 22%, #000, transparent 75%)" />
       <div
         aria-hidden="true"
-        className="fx-border fx-spin-slower pointer-events-none absolute -top-[500px] left-1/2 -ml-[700px] size-[1400px] rounded-full"
+        className="fx-border fx-halo fx-spin-slower pointer-events-none absolute -top-[500px] left-1/2 -ml-[700px] size-[1400px] rounded-full"
         style={{
           background:
             "conic-gradient(from 0deg, transparent, rgb(70 200 157 / 0.32), transparent 25%, rgb(34 211 238 / 0.26), transparent 50%, rgb(96 165 250 / 0.2), transparent 75%)",

@@ -82,16 +82,19 @@ pnpm typecheck            # Builds crypto + server first, then tsc across the tr
 pnpm test                 # Recursive vitest run
 pnpm test:coverage        # Coverage for server, web, crypto, client
 pnpm format               # prettier --write .
-pnpm update:check         # Outdated dependencies per workspace (scripts/check-updates.sh)
 ```
 
-Version and release helpers:
+Version, release and maintenance helpers, all in the toolbox:
 
 ```bash
-pnpm version:bump         # Interactive version picker, syncs every package.json + changelog
+pnpm toolbox              # Menu of the commands below, see scripts/toolbox/README.md
+pnpm version:bump         # Interactive version picker after a CodeQL check of dev, syncs every package.json + changelog
 pnpm version:sync         # Propagate the root version without bumping
 pnpm changelog:preview    # Show the changelog block the next release writes from the fragments
 pnpm changelog:check      # Check every fragment under changelog/unreleased/
+pnpm codeql:check         # CodeQL alerts open on dev that main does not have
+pnpm release:tag          # Tag the release on main and push it (release:untag deletes a tag)
+pnpm update:check         # Outdated dependencies per workspace
 ```
 
 Single workspace: `pnpm --filter @skysend/web build`, `pnpm --filter @skysend/docs dev`, and so on. Package names are `@skysend/server`, `-web`, `-client`, `-cli`, `-crypto`, `-docs`, `@skysend/website`, `@skysend/instances-worker`, `@skysend/report-worker`.

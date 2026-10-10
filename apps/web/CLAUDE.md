@@ -198,6 +198,8 @@ A raw palette color (`text-green-600`, `bg-red-100`) always needs a `dark:` vari
 
 - `Button` variants: `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`. Sizes: `default`, `sm`, `lg`, `icon`. Extend the `cva` config rather than passing a wall of overriding classes.
 - Compose conditional classes with `cn()` from `@/lib/utils`, never template strings.
+- No `blur-*` or `filter: blur()` on a large element. iOS Safari draws a blur on the main thread whenever anything near it repaints or the layers around it change, which held taps for over half a second on an iPhone, and `will-change` did not save it once a menu opened over it. A soft light is `Glow`, whose `glow` class in `index.css` blurs only where a mouse is used and draws a gradient on touch screens. The `overflow-clip` on the root of `Layout` keeps that gradient from widening the page.
+- `html` carries `touch-action: manipulation` and `scrollbar-gutter: stable` in `index.css`. The first keeps iOS from holding every tap back while it waits for a double tap, the second keeps the header from moving between pages that scroll and pages that do not. Neither goes away.
 - Icons come from `lucide-react`. `h-4 w-4` inline with text, `h-5 w-5` standalone.
 - Tailwind is mobile-first: unprefixed classes are the small screen, `sm:` and up widen.
 - No inline `style` except genuinely computed values. The two that exist (a computed line-number width and the progress transform) are the reason the CSP still allows `unsafe-inline` styles, so do not add a third.

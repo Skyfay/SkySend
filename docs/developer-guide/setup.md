@@ -46,6 +46,10 @@ This runs all workspaces in parallel:
 - **Web** (`apps/web`) - Vite dev server with HMR
 - **Docs** (`docs`) - VitePress dev server
 
+::: tip Dev server on another machine
+The Vite dev server listens on every interface. When it runs on a remote box, set `BASE_URL` in `.env.dev` to the address you open in the browser, like `http://devbox:5173`, and Vite allows that host. With `PORT` the API server moves off 3000, and the proxy of Vite follows it.
+:::
+
 ### CLI Client Development
 
 The CLI client is not started by `pnpm dev` since it is a command-line tool, not a server. To develop and test it:

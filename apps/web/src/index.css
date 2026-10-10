@@ -143,14 +143,58 @@
     @apply border-border;
   }
 
+  /* The gutter keeps room for a classic scrollbar on short pages too, so the centered
+     header does not move between a page that scrolls and one that does not. No double tap
+     to zoom, so iOS does not hold every tap back while it waits for a second one. Pinch to
+     zoom stays. */
   html {
     background-color: var(--color-page);
+    scrollbar-gutter: stable;
+    touch-action: manipulation;
   }
 
   body {
     @apply bg-page font-sans text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     background-attachment: fixed;
+  }
+}
+
+/* A Radix dialog locks the page scroll and adds the width of the scrollbar to the body as a
+   margin. The gutter above keeps that room already, so the margin would push the page aside. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
+/* The light behind a page's main card (Glow). iOS Safari draws a CSS blur on the main thread,
+   again whenever the layers around it change, like a menu opening over it, which held taps for
+   over half a second on an iPhone even with a layer of its own. Touch screens get a radial
+   gradient without a filter instead, fading out as far as the blur reached. Layout clips what
+   reaches past the page. */
+.glow {
+  background-color: var(--color-primary-glow);
+  filter: blur(80px);
+  will-change: transform;
+}
+
+@media (hover: none) {
+  .glow {
+    background-color: transparent;
+    filter: none;
+    will-change: auto;
+  }
+
+  .glow::before {
+    content: "";
+    position: absolute;
+    inset: -160px;
+    background: radial-gradient(
+      closest-side,
+      var(--color-primary-glow),
+      color-mix(in srgb, var(--color-primary-glow) 50%, transparent) 55%,
+      color-mix(in srgb, var(--color-primary-glow) 15%, transparent) 78%,
+      transparent
+    );
   }
 }
 

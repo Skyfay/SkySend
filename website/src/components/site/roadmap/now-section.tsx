@@ -43,7 +43,7 @@ export function NowSection({
     <section aria-label={t("roadmap.now")} className="relative z-[2] mx-auto mt-16 flex max-w-[1248px] flex-col items-center px-4 sm:px-6">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-[90px] left-1/2 -ml-[430px] h-[440px] w-[860px] rounded-full"
+        className="fx-haze pointer-events-none absolute -top-[90px] left-1/2 -ml-[430px] h-[440px] w-[860px] rounded-full"
         style={{
           background: "radial-gradient(closest-side, rgb(70 200 157 / 0.4), rgb(34 211 238 / 0.16), transparent)",
           filter: "blur(30px)",
