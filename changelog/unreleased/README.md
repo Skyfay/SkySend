@@ -8,6 +8,7 @@ Every pull request writes its changelog entries into a file of its own in this f
 - The same Markdown as a version block of the changelog, without the version header and without the Docker section, which the release writes.
 - Notes like `> ⚠️ **Breaking:**` or `> ⚠️ **Before updating:**` go above the first section. The sections use the headings of the changelog in any order, the release sorts them and groups the entries of each section by scope.
 - Every entry is one line with exactly one scope: `server`, `web`, `client`, `cli`, `crypto`, `docs`, `website`, `docker` or `infra`. A branch that changes its mind edits its own file rather than adding a second one.
+- An entry for a change that resolves an issue ends with the link to that issue, like `([#70](https://github.com/Skyfay/SkySend/issues/70))`. It links the issue, not the pull request, since the thanks of the release links that already.
 - No thanks for your own pull request. The release looks up the pull request that added each file and, when someone outside the project opened it, adds `Thanks @author ([#N](link))` to every entry of the file. An entry that thanks someone already, like the reporter of an advisory, keeps its own words.
 
 ```markdown
