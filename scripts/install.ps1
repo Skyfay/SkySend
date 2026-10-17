@@ -58,27 +58,35 @@ function Install-SkySend {
         $SizeStr = if ($DownloadSize -ge 1MB) { "{0:F1} MB" -f ($DownloadSize / 1MB) } else { "{0:F0} KB" -f ($DownloadSize / 1KB) }
         Write-Host " done ($SizeStr)"
 
-        # Download and verify checksum
+        # Verify the checksum. A binary that cannot be verified is never installed.
+        # Errors are thrown, not exited, since `exit` would close the shell that runs `irm | iex`.
+        $ChecksumPath = Join-Path $TmpDir "checksums.txt"
+        Write-Host "  Verifying checksum..." -NoNewline
         try {
-            $ChecksumPath = Join-Path $TmpDir "checksums.txt"
-            Write-Host "  Verifying checksum..." -NoNewline
             Invoke-WebRequest -Uri $ChecksumUrl -OutFile $ChecksumPath -UseBasicParsing
-
-            $checksums = Get-Content $ChecksumPath
-            $expectedLine = $checksums | Where-Object { $_ -match $AssetName }
-            if ($expectedLine) {
-                $expected = ($expectedLine -split "\s+")[0]
-                $actual = (Get-FileHash -Path $BinaryPath -Algorithm SHA256).Hash.ToLower()
-                if ($expected -eq $actual) {
-                    Write-Host " ok"
-                } else {
-                    Write-Error "Checksum mismatch! Expected: $expected, Actual: $actual"
-                    exit 1
-                }
-            }
         } catch {
-            Write-Host " skipped (not available)"
+            Write-Host " failed"
+            throw "Could not download $ChecksumUrl. Refusing to install an unverified binary."
         }
+
+        $expected = $null
+        foreach ($line in Get-Content $ChecksumPath) {
+            $fields = $line.Trim() -split "\s+"
+            if ($fields.Count -eq 2 -and $fields[1].TrimStart("*") -eq $AssetName) {
+                $expected = $fields[0].ToLower()
+            }
+        }
+        if (-not $expected) {
+            Write-Host " failed"
+            throw "checksums.txt lists no checksum for $AssetName. Refusing to install an unverified binary."
+        }
+
+        $actual = (Get-FileHash -Path $BinaryPath -Algorithm SHA256).Hash.ToLower()
+        if ($actual -ne $expected) {
+            Write-Host " failed"
+            throw "Checksum mismatch for $AssetName. Expected $expected, got $actual."
+        }
+        Write-Host " ok"
 
         # Move binary to install dir
         $DestPath = Join-Path $InstallDir "$BinaryName.exe"

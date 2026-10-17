@@ -33,7 +33,7 @@ Binaries are compiled with [Bun](https://bun.sh/) and published as GitHub Releas
 
 ### Linux / macOS
 
-The install script automatically detects your OS and architecture, downloads the correct binary, verifies the SHA-256 checksum, and installs it to `/usr/local/bin`:
+The install script automatically detects your OS and architecture, downloads the correct binary, verifies the SHA-256 checksum against `checksums.txt` of the release, and installs it to `/usr/local/bin`. A binary whose checksum does not match or cannot be checked is not installed:
 
 ```bash
 curl -fsSL https://skysend.app/install.sh | sh
@@ -60,7 +60,7 @@ Run in PowerShell:
 irm https://skysend.app/install.ps1 | iex
 ```
 
-This installs `skysend.exe` to `~/.skysend/bin` and adds it to your user PATH. Restart your terminal for PATH changes to take effect.
+This verifies the SHA-256 checksum the same way, installs `skysend.exe` to `~/.skysend/bin` and adds it to your user PATH. Restart your terminal for PATH changes to take effect.
 
 To install a specific version:
 
@@ -129,7 +129,7 @@ The update command:
 
 1. Checks the latest version from GitHub Releases
 2. Downloads the correct binary for your platform
-3. Verifies the SHA-256 checksum
+3. Verifies the SHA-256 checksum and stops if it does not match or cannot be checked
 4. Atomically replaces the running binary
 
 ::: tip

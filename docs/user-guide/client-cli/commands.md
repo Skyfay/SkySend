@@ -366,7 +366,7 @@ skysend update
 1. Queries the GitHub Releases API for the latest version
 2. Compares with the currently installed version
 3. If a newer version is available, downloads the correct binary for your platform
-4. Verifies the SHA-256 checksum against `checksums.txt` from the release
+4. Verifies the SHA-256 checksum against `checksums.txt` from the release and stops if it does not match or cannot be checked
 5. Atomically replaces the running binary
 
 ::: tip
