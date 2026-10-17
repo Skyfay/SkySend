@@ -184,6 +184,66 @@ test("two files of the same name the CLI sends together both arrive", async ({
   expect(Buffer.from(entries["report (2).bin"]!).equals(second.buffer)).toBe(true);
 });
 
+test("several files the browser sends together download with the CLI as one zip", async ({
+  page,
+  guard,
+  browserName,
+}, testInfo) => {
+  test.skip(browserName !== "chromium", "The CLI does the downloading, any browser packs alike");
+  const first = randomFile(40_000);
+  const second = randomFile(70_000);
+  guard.text(first.name, second.name);
+  guard.content(first.name, first.buffer);
+  guard.content(second.name, second.buffer);
+  const link = await shareFiles(page, [first, second]);
+  guard.secretOf(link);
+
+  const output = testInfo.outputPath("downloads");
+  await mkdir(output);
+  const { file: saved, fileCount } = await cli(
+    ["download", link, "--output", output],
+    testInfo.outputPath("home"),
+  );
+  expect(basename(String(saved))).toBe("archive.zip");
+  expect(fileCount).toBe(2);
+  const entries = unzipSync(new Uint8Array(await readFile(String(saved))));
+  expect(Object.keys(entries).sort()).toEqual([first.name, second.name].sort());
+  expect(Buffer.from(entries[first.name]!).equals(first.buffer)).toBe(true);
+  expect(Buffer.from(entries[second.name]!).equals(second.buffer)).toBe(true);
+});
+
+test("a folder the CLI sends arrives in the browser with its structure", async ({
+  page,
+  baseURL,
+  guard,
+  browserName,
+}, testInfo) => {
+  test.skip(browserName !== "chromium", "The zip reads the same in every browser");
+  const top = randomFile(30_000);
+  const nested = randomFile(45_000);
+  guard.text(top.name, nested.name);
+  guard.content(top.name, top.buffer);
+  guard.content(nested.name, nested.buffer);
+  await mkdir(testInfo.outputPath("trip", "day-1"), { recursive: true });
+  await writeFile(testInfo.outputPath("trip", top.name), top.buffer);
+  await writeFile(testInfo.outputPath("trip", "day-1", nested.name), nested.buffer);
+
+  const sent = await cli(
+    ["upload", testInfo.outputPath("trip"), "--server", baseURL!],
+    testInfo.outputPath("home"),
+  );
+  const link = String(sent.url);
+  guard.secretOf(link);
+  expect(sent.fileCount).toBe(2);
+  await page.goto(link);
+  const received = await downloadFile(page);
+  const entries = unzipSync(new Uint8Array(received.data));
+  const names = [`trip/${top.name}`, `trip/day-1/${nested.name}`];
+  expect(Object.keys(entries).sort()).toEqual(names.sort());
+  expect(Buffer.from(entries[`trip/${top.name}`]!).equals(top.buffer)).toBe(true);
+  expect(Buffer.from(entries[`trip/day-1/${nested.name}`]!).equals(nested.buffer)).toBe(true);
+});
+
 test("a note the CLI makes opens in the browser", async ({
   page,
   baseURL,

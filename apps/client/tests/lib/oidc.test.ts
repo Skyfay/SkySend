@@ -141,7 +141,7 @@ describe("decodeTokenUser", () => {
 describe("openBrowser", () => {
   it("uses 'open' on macOS", async () => {
     vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn() });
+    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn(), on: vi.fn() });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
@@ -156,7 +156,7 @@ describe("openBrowser", () => {
 
   it("uses 'cmd /c start' on Windows", async () => {
     vi.spyOn(process, "platform", "get").mockReturnValue("win32");
-    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn() });
+    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn(), on: vi.fn() });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
@@ -172,7 +172,7 @@ describe("openBrowser", () => {
 
   it("uses 'xdg-open' on Linux", async () => {
     vi.spyOn(process, "platform", "get").mockReturnValue("linux");
-    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn() });
+    const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn(), on: vi.fn() });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
@@ -183,6 +183,25 @@ describe("openBrowser", () => {
       detached: true,
       stdio: "ignore",
     });
+  });
+
+  it("does not end the process where no browser can be opened", async () => {
+    vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+    vi.doUnmock("node:child_process");
+    vi.resetModules();
+    const savedPath = process.env.PATH;
+    // No xdg-open on the path, like a server without a desktop.
+    process.env.PATH = "/nonexistent";
+    try {
+      const { openBrowser } = await import("../../src/lib/oidc.js");
+      const failed = await new Promise<boolean>((resolve) => {
+        openBrowser("https://example.com/auth", () => resolve(true));
+        setTimeout(() => resolve(false), 2000);
+      });
+      expect(failed).toBe(true);
+    } finally {
+      process.env.PATH = savedPath;
+    }
   });
 });
 
@@ -254,7 +273,7 @@ describe("performOidcLogin", () => {
     let capturedUrl = "";
     const spawnMock = vi.fn().mockImplementation((_cmd: string, args: string[]) => {
       capturedUrl = args[0] ?? "";
-      return { unref: vi.fn() };
+      return { unref: vi.fn(), on: vi.fn() };
     });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
@@ -285,7 +304,7 @@ describe("performOidcLogin", () => {
     let capturedUrl = "";
     const spawnMock = vi.fn().mockImplementation((_cmd: string, args: string[]) => {
       capturedUrl = args[0] ?? "";
-      return { unref: vi.fn() };
+      return { unref: vi.fn(), on: vi.fn() };
     });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
@@ -312,7 +331,7 @@ describe("performOidcLogin", () => {
     let capturedUrl = "";
     const spawnMock = vi.fn().mockImplementation((_cmd: string, args: string[]) => {
       capturedUrl = args[0] ?? "";
-      return { unref: vi.fn() };
+      return { unref: vi.fn(), on: vi.fn() };
     });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
@@ -365,7 +384,7 @@ describe("ensureOidcAuth", () => {
     let capturedUrl = "";
     const spawnMock = vi.fn().mockImplementation((_cmd: string, args: string[]) => {
       capturedUrl = args[0] ?? "";
-      return { unref: vi.fn() };
+      return { unref: vi.fn(), on: vi.fn() };
     });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();

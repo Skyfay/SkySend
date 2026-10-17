@@ -6,8 +6,10 @@
 
 ```
 src/api.ts      createApiClient: every route of the server, every answer parsed with Zod, ApiError
+src/upload.ts   uploadEncrypted: keys, encryption, WebSocket or HTTP chunks with CHUNK_WINDOW, metadata
+src/download.ts keysFromLink, decryptUploadMetadata, decryptedStream with the size and base nonce checks
 src/zip.ts      The zip of several files, written while the upload reads it (stored, ZIP64)
-src/archive.ts  The metadata of an upload of several files and whether the server takes it
+src/archive.ts  The metadata of an upload of several files, whether the server takes it, uniqueNames
 src/index.ts    The public API, the only file outside this package may import from
 ```
 
@@ -21,5 +23,7 @@ src/index.ts    The public API, the only file outside this package may import fr
 6. **OIDC only where the server guards.** `bearer` goes to the routes that create something: upload init, note, request, request limit. A download never carries it.
 
 ## Tests
+
+The published guide is `docs/developer-guide/transfer.md`, keep both in step.
 
 Vitest in `tests/`, run with `pnpm --filter @skysend/transfer test`. The zip tests check the output against `node:zlib` and fflate, and stream a file of 4 GiB and one byte through the writer, keeping only the records past 4 GiB, to check ZIP64.

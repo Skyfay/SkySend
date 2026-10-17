@@ -46,7 +46,12 @@ export function LinkReady({ url, title, fresh = true, children, actions = [], ac
       onPress: () =>
         toast(copyToClipboard(url) === "system" ? "Link copied to the clipboard" : "Link sent to the terminal's clipboard"),
     },
-    { kind: "button", id: "open", label: "Open it in the browser", onPress: () => openBrowser(url) },
+    {
+      kind: "button",
+      id: "open",
+      label: "Open it in the browser",
+      onPress: () => openBrowser(url, () => toast("No browser here to open it in, copy the link instead")),
+    },
     ...actions.map((a) => ({ kind: "button" as const, ...a })),
     ...(qr ? [{ kind: "button" as const, id: "qr", label: withQr ? "Hide the QR code" : "Show the QR code", onPress: () => setShowQr(!withQr) }] : []),
   ];

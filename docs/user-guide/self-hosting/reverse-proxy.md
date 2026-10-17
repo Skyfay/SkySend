@@ -49,8 +49,9 @@ server {
         # Required for streaming uploads
         proxy_request_buffering off;
 
-        # Required for streaming downloads
-        proxy_buffering off;
+        # Keep downloads fast: buffer them in memory, never on disk
+        proxy_buffering on;
+        proxy_max_temp_file_size 0;
 
         # Required for the WebSocket upload transport (FILE_UPLOAD_WS)
         proxy_set_header Upgrade    $http_upgrade;
@@ -79,7 +80,7 @@ server {
 ::: tip Important Nginx Settings
 - `client_max_body_size` must match your `FILE_MAX_SIZE` setting
 - `proxy_request_buffering off` is required for streaming uploads
-- `proxy_buffering off` is required for streaming downloads
+- `proxy_buffering on` with `proxy_max_temp_file_size 0` lets Nginx read a download from SkySend into all of its memory buffers at once, without writing temporary files to disk. Do not turn buffering off: Nginx then reads into a single buffer of a few kilobytes, and on the local connection to SkySend that can leave the TCP window shut for seconds at a time, so some downloads drop to a tenth of their speed or less
 - The `Upgrade` / `Connection` headers and the `$connection_upgrade` map are required for the WebSocket upload transport (`FILE_UPLOAD_WS`, default on)
 - `proxy_read_timeout` / `proxy_send_timeout` must be larger than the longest expected upload or Nginx will close the WebSocket mid-upload
 :::

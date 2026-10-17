@@ -139,17 +139,21 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
 /**
  * Open a URL in the user's default browser.
  * Uses platform-appropriate commands without introducing new dependencies.
+ * On a machine without a desktop, or over SSH, there is no opener: `onFail` is called instead of
+ * the error ending the process, and the caller has printed the address anyway.
  */
-export function openBrowser(url: string): void {
+export function openBrowser(url: string, onFail?: () => void): void {
   const platform = process.platform;
-  if (platform === "darwin") {
-    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-  } else if (platform === "win32") {
-    // On Windows, `start` is a shell built-in - must be run via cmd.exe.
-    spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" }).unref();
-  } else {
-    spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
-  }
+  const [command, args] =
+    platform === "darwin"
+      ? ["open", [url]]
+      : platform === "win32"
+        ? // On Windows, `start` is a shell built-in - must be run via cmd.exe.
+          ["cmd", ["/c", "start", "", url]]
+        : ["xdg-open", [url]];
+  const child = spawn(command, args, { detached: true, stdio: "ignore" });
+  child.on("error", () => onFail?.());
+  child.unref();
 }
 
 // ── OIDC Login Flow ────────────────────────────────────
@@ -165,6 +169,7 @@ export async function performOidcLogin(serverUrl: string): Promise<string> {
   const loginUrl = `${normalized}/auth/login?cli_callback=${encodeURIComponent(callbackUrl)}`;
 
   console.error(`\nOpening browser for login: ${loginUrl}`);
+  console.error("If no browser opens, open that address in a browser on this computer.");
   console.error("Waiting for authentication...\n");
   openBrowser(loginUrl);
 

@@ -14,6 +14,7 @@
 - **client**: Uploads larger than about 640 MB no longer fail with a 502 behind Nginx.
 - **client**: Two files of the same name sent together both arrive, the second one as `report (2).pdf`.
 - **client**: Expiry times read "1 day" and "1 hour" instead of "1 days" and "1 hours".
+- **client**: The CLI no longer crashes when it cannot open a browser for a login, like on a server without a desktop or over SSH.
 
 ### 🔒 Security
 
@@ -31,11 +32,14 @@
 ### 📝 Documentation
 
 - **docs**: The CLI pages describe the new interactive mode, folders, the WebSocket transport, the checks of a download and every field of `upload --json`.
+- **docs**: The developer guide has a page on the transfer core that the web app and the CLI share, and the architecture, setup and testing pages name it.
+- **docs**: The Nginx example buffers downloads in memory instead of turning buffering off, which slowed some downloads to a fraction of their speed. Change existing configs the same way.
 
 ### 🧪 Tests
 
 - **server**: Tests read the answers of the real routes with the client the web app and the CLI share, so a change the clients would no longer read fails before a release.
 - **infra**: The transfer benchmark measures the CLI as well as the browser, and uploads of several files at once.
+- **infra**: End-to-end tests cover the CLI logging in through OIDC and sending over the WebSocket, folders and zips of several files between the browser and the CLI, and run against the Bun binary with `E2E_CLI=binary`.
 
 ### 🔧 CI/CD
 
