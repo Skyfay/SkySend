@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import { spawn } from "node:child_process";
 import type { Command } from "commander";
+import { findChecksum } from "../lib/checksum.js";
 import { writeLine } from "../lib/progress.js";
 import { APP_VERSION } from "../version.js";
 
@@ -117,36 +118,32 @@ export function registerUpdateCommand(program: Command): void {
 
       const data = new Uint8Array(await res.arrayBuffer());
 
-      // Verify checksum if available
+      // Verify the checksum. A binary that cannot be verified is never installed.
       const checksumAsset = release.assets.find((a) => a.name === "checksums.txt");
-      if (checksumAsset) {
-        try {
-          const csRes = await fetch(checksumAsset.browser_download_url, {
+      const csRes = checksumAsset
+        ? await fetch(checksumAsset.browser_download_url, {
             headers: { "User-Agent": "skysend-cli" },
             redirect: "follow",
-          });
-          if (csRes.ok) {
-            const csText = await csRes.text();
-            const line = csText.split("\n").find((l) => l.includes(assetName));
-            if (line) {
-              const expected = line.split(/\s+/)[0]!;
-              const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-              const actual = Array.from(new Uint8Array(hashBuffer))
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join("");
-              if (expected !== actual) {
-                console.error("Checksum mismatch! Aborting update.");
-                console.error(`  Expected: ${expected}`);
-                console.error(`  Actual:   ${actual}`);
-                process.exit(1);
-              }
-              writeLine("Checksum verified.");
-            }
-          }
-        } catch {
-          // Non-fatal: proceed without checksum verification
-        }
+          }).catch(() => null)
+        : null;
+      const expected = csRes?.ok ? findChecksum(await csRes.text(), assetName) : null;
+      if (!expected) {
+        console.error(
+          `Could not get the checksum of ${assetName} for v${latestVersion}. Aborting update.`,
+        );
+        process.exit(1);
       }
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const actual = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      if (expected !== actual) {
+        console.error("Checksum mismatch! Aborting update.");
+        console.error(`  Expected: ${expected}`);
+        console.error(`  Actual:   ${actual}`);
+        process.exit(1);
+      }
+      writeLine("Checksum verified.");
 
       // Replace the current binary
       const execPath = process.execPath;
