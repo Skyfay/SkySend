@@ -21,6 +21,8 @@ import {
   computeOwnerToken,
   createEncryptStream,
   encryptMetadata,
+  expectedBaseNonce,
+  NONCE_LENGTH,
   calculateEncryptedSize,
   toBase64url,
   applyPasswordProtection,
@@ -220,10 +222,16 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
 
     // The recipient needs the archive size to tell a complete download from one the server
     // cut short. The page put the same number into the metadata for its size check.
-    const metadata: RequestUploadMetadata =
+    // The stream is encrypted with the base nonce the metadata names, so the recipient can
+    // check the header against it. The page puts one in, a metadata without one gets one here.
+    const withSize: RequestUploadMetadata =
       msg.metadata.type === "archive"
         ? { ...msg.metadata, archiveSize: plaintextSize }
         : msg.metadata;
+    const metadata: RequestUploadMetadata = withSize.streamNonce
+      ? withSize
+      : { ...withSize, streamNonce: toBase64url(randomBytes(NONCE_LENGTH)) };
+    const baseNonce = expectedBaseNonce(metadata);
 
     if (msg.request) {
       const delivered = await uploadIntoRequest({
@@ -234,7 +242,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
         metadata,
         metaKey: keys.metaKey,
         fileCount: msg.fileCount,
-        encryptedStream: plaintextStream.pipeThrough(createEncryptStream(keys.fileKey)),
+        encryptedStream: plaintextStream.pipeThrough(createEncryptStream(keys.fileKey, baseNonce)),
         encryptedSize,
         maxConcurrentUploads,
         wsEnabled,
@@ -274,7 +282,7 @@ self.onmessage = async (e: MessageEvent<UploadWorkerRequest>) => {
     // Chrome/Brave serialize large HTTP/2 POST bodies through reverse proxies,
     // so we use smaller chunks (10 MB) with server-configurable concurrent uploads.
     const encryptedStream = plaintextStream.pipeThrough(
-      createEncryptStream(keys.fileKey),
+      createEncryptStream(keys.fileKey, baseNonce),
     );
 
     // Pre-flight the WebSocket transport.  If the handshake succeeds, the

@@ -24,7 +24,7 @@ import { createRequestLimiter } from "./lib/request-limit.js";
 import { configRoute } from "./routes/config.js";
 import { createUploadRoute } from "./routes/upload.js";
 import { createUploadWsRoute } from "./routes/upload-ws.js";
-import { WsBufferMemory } from "./lib/ws-upload.js";
+import { WS_MAX_PAYLOAD, WsBufferMemory } from "./lib/ws-upload.js";
 import { bucketConnectSources } from "./lib/bucket-csp.js";
 import { metaRoute } from "./routes/meta.js";
 import { infoRoute } from "./routes/info.js";
@@ -76,10 +76,10 @@ const stopCleanup = startCleanupJob(storage, config.CLEANUP_INTERVAL);
 
 const app = new Hono();
 const { upgradeWebSocket, injectWebSocket, wss } = createNodeWebSocket({ app });
-// The web app and the CLI send upload frames of 256 KiB. ws holds a whole message
-// in memory before onMessage sees it, and its default of 100 MiB would let a
-// single frame take that much before the declared size is ever checked.
-wss.options.maxPayload = 1024 * 1024;
+// ws holds a whole message in memory before onMessage sees it, outside the shared budget, and
+// its default of 100 MiB would let a single frame take that much before the declared size is
+// ever checked. WS_MAX_PAYLOAD explains the size.
+wss.options.maxPayload = WS_MAX_PAYLOAD;
 // What all WebSocket uploads together may buffer, normal ones and those into a file request.
 const wsMemory = new WsBufferMemory(config.FILE_UPLOAD_WS_MEMORY_LIMIT);
 

@@ -88,6 +88,25 @@ describe("GET /auth/session", () => {
   });
 });
 
+// ── Caching ───────────────────────────────────────────────────────────────────
+
+describe("Cache-Control on /auth", () => {
+  // These routes are mounted outside /api, whose no-store does not reach them. A caching proxy
+  // that keeps responses without a directive would otherwise serve one user's session answer,
+  // which is the same URL for everyone, to the next visitor.
+  it("marks the session answer, a refusal and the redirects as no-store", async () => {
+    const app = buildApp();
+    const token = await createSessionJwt(TEST_USER, SECRET, 3600);
+    const responses = [
+      await app.request("/auth/session", { headers: { Cookie: `skysend-auth=${token}` } }),
+      await app.request("/auth/session"),
+      await app.request("/auth/logout"),
+      await app.request("/auth/login?cli_callback=http://example.com:1234"),
+    ];
+    for (const res of responses) expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+});
+
 // ── GET /auth/logout ──────────────────────────────────────────────────────────
 
 describe("GET /auth/logout", () => {

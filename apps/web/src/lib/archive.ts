@@ -25,11 +25,12 @@ export function archiveMetadata(files: readonly File[]): ArchiveMetadata {
 /**
  * Whether the server takes the metadata of these files. Their names travel in it, and the
  * metadata only goes out once the whole upload is up, so a list too long for the server has to
- * be caught before. An upload into a file request adds a submission ID, counted with a stand-in.
+ * be caught before. An upload into a file request adds a submission ID, and every upload the
+ * base nonce of its stream, both counted with a stand-in.
  */
 export function archiveMetadataFits(files: readonly File[], request = false): boolean {
   if (files.length < 2) return true;
-  const metadata = archiveMetadata(files);
+  const metadata = { ...archiveMetadata(files), streamNonce: "A".repeat(16) };
   const sent = request ? { ...metadata, submission: "0".repeat(32) } : metadata;
   return encryptedMetadataLength(sent) <= MAX_ENCRYPTED_METADATA_BYTES;
 }

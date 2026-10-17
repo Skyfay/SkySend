@@ -15,6 +15,7 @@
  */
 
 import { createHmac, randomBytes } from "node:crypto";
+import type { Context } from "hono";
 
 // Ephemeral HMAC key - lives only in RAM, never logged or persisted
 const hmacKey = randomBytes(32);
@@ -36,6 +37,27 @@ export interface PasswordLockout {
   recordFailure(resourceKey: string, ip: string): void;
   /** Reset the failure counter on a successful authentication. */
   recordSuccess(resourceKey: string, ip: string): void;
+}
+
+/**
+ * The 429 for a resource this IP is locked out of, or null.
+ *
+ * The check holds only when nothing awaits between it, the token comparison and
+ * `recordFailure`. Every request that passes the check before an earlier failure is recorded
+ * gets its guess evaluated, and a client that holds back the last byte of its body or pipelines
+ * its requests can line up as many as the rate limiter lets through. A route therefore calls
+ * this once more after its last `await`, right before it compares the token.
+ */
+export function lockedResponse(
+  c: Context,
+  lockout: PasswordLockout,
+  resourceKey: string,
+  ip: string,
+): Response | null {
+  const lockState = lockout.check(resourceKey, ip);
+  if (!lockState.locked) return null;
+  c.header("Retry-After", String(lockState.retryAfter));
+  return c.json({ error: "Too many failed attempts. Try again later." }, 429);
 }
 
 export function createPasswordLockout(maxAttempts: number, lockoutMs: number): PasswordLockout {

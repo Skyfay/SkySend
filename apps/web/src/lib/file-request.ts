@@ -2,6 +2,7 @@ import {
   applyInboxPassword,
   calculateEncryptedSize,
   createDecryptStream,
+  expectedBaseNonce,
   createFileRequest,
   decodeInboxFragment,
   decryptRequestBrief,
@@ -353,7 +354,9 @@ export async function readInboxNote(
       },
     }),
   );
-  const plain = bounded.pipeThrough(createDecryptStream(file.keys.fileKey, metadata.size));
+  const plain = bounded.pipeThrough(
+    createDecryptStream(file.keys.fileKey, metadata.size, expectedBaseNonce(metadata)),
+  );
   const text = new TextDecoder().decode(await new Response(plain).arrayBuffer());
   try {
     return { blocks: parseNote(text).map(cleanBlockLabels), unreadable: false };
@@ -404,9 +407,24 @@ export function sanitizeFilename(name: string): string {
     .replace(BLANK_FILLERS, " ")
     .replace(MARK_STACKS, "$1")
     .replace(/[/\\]/g, "_")
-    .replace(/\s+/g, " ")
-    .replace(/^[\s.]+|[\s.]+$/g, "");
-  return cleaned === "" ? "file" : shortenName(cleaned);
+    .replace(/\s+/g, " ");
+  const trimmed = trimDotsAndSpaces(cleaned);
+  return trimmed === "" ? "file" : shortenName(trimmed);
+}
+
+/**
+ * Drops dots and whitespace at both ends, in time linear in the length. The regex
+ * `[\s.]+$` this replaces tried every position of a long run of dots and failed at the end of
+ * each, quadratic in the run: a name of 73,000 dots between two letters, which the metadata
+ * limit allows, held the main thread for over a second on every render of the inbox.
+ */
+function trimDotsAndSpaces(name: string): string {
+  const trimmable = (i: number) => name[i] === "." || /\s/.test(name[i]!);
+  let start = 0;
+  let end = name.length;
+  while (start < end && trimmable(start)) start++;
+  while (end > start && trimmable(end - 1)) end--;
+  return name.slice(start, end);
 }
 
 /** A name cut to MAX_NAME_LENGTH characters with its extension kept, never inside a character. */
@@ -416,10 +434,7 @@ function shortenName(name: string): string {
   const dot = name.lastIndexOf(".");
   const extension = dot > 0 ? Array.from(name.slice(dot)) : [];
   const kept = extension.length <= MAX_KEPT_EXTENSION_LENGTH ? extension : [];
-  const stem = chars
-    .slice(0, MAX_NAME_LENGTH - kept.length)
-    .join("")
-    .replace(/[\s.]+$/, "");
+  const stem = trimDotsAndSpaces(chars.slice(0, MAX_NAME_LENGTH - kept.length).join(""));
   return `${stem || "file"}${kept.join("")}`;
 }
 

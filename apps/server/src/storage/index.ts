@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { StorageBackend } from "./types.js";
 import type { Config } from "../lib/config.js";
 import { FileStorage } from "./filesystem.js";
@@ -24,6 +25,7 @@ export async function createStorage(config: Config): Promise<StorageBackend> {
       partSize: config.S3_PART_SIZE,
       concurrency: config.S3_CONCURRENCY,
       memoryLimit: config.S3_MEMORY_LIMIT,
+      partDir: join(config.DATA_DIR, "tmp", "s3-parts"),
     });
   }
 

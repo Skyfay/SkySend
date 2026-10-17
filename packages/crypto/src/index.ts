@@ -36,6 +36,7 @@ export {
   decryptMetadata,
   decryptRequestMetadata,
   expectedPlaintextSize,
+  expectedBaseNonce,
   encryptedMetadataLength,
   MAX_ENCRYPTED_METADATA_BYTES,
   META_IV_LENGTH,
@@ -47,6 +48,7 @@ export type {
   NoteUploadMetadata,
   RequestUploadMetadata,
   Submission,
+  StreamNonce,
   EncryptedMetadata,
 } from "./metadata.js";
 

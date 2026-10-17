@@ -46,7 +46,7 @@ For CLI clients the flow is identical except the session JWT is delivered as a r
 
 ## Auth Endpoints
 
-These routes live outside the `/api` prefix to avoid CORS complications during browser redirects.
+These routes live outside the `/api` prefix to avoid CORS complications during browser redirects. Every response carries `Cache-Control: no-store`, so no proxy or browser cache keeps a session or a redirect with a token in it.
 
 | Method | Path | Description |
 | --- | --- | --- |

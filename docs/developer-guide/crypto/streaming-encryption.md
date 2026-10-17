@@ -61,13 +61,13 @@ This guarantees unique nonces for up to 2^32 - 1 records, which allows encryptin
 ## Encryption
 
 ```typescript
-const encryptStream = createEncryptStream(fileKey)
+const encryptStream = createEncryptStream(fileKey, baseNonce)
 const encryptedStream = plaintextStream.pipeThrough(encryptStream)
 ```
 
 The `createEncryptStream` function returns a `TransformStream` that:
 
-1. Outputs a 12-byte random base nonce as the first chunk
+1. Outputs the 12-byte base nonce as the first chunk. It is random per encryption. The web app makes it itself and puts it into the metadata as `streamNonce`, so the recipient can check the header against it
 2. Buffers input into 64 KB plaintext chunks
 3. Encrypts each chunk with AES-256-GCM using `nonce_i = baseNonce XOR i`
 4. Outputs ciphertext + auth tag for each record
@@ -76,13 +76,17 @@ The `createEncryptStream` function returns a `TransformStream` that:
 ## Decryption
 
 ```typescript
-const decryptStream = createDecryptStream(fileKey, expectedPlaintextSize)
+const decryptStream = createDecryptStream(
+  fileKey,
+  expectedPlaintextSize(metadata),
+  expectedBaseNonce(metadata),
+)
 const plaintextStream = encryptedStream.pipeThrough(decryptStream)
 ```
 
 The `createDecryptStream` function returns a `TransformStream` that:
 
-1. Reads the first 12 bytes as the base nonce
+1. Reads the first 12 bytes as the base nonce, and throws when an expected base nonce was given and the header differs from it
 2. Buffers input into 65,552-byte encrypted records
 3. Decrypts each record with AES-256-GCM, verifying the auth tag
 4. Outputs plaintext chunks
@@ -92,6 +96,8 @@ The `createDecryptStream` function returns a `TransformStream` that:
 Every record carries its own auth tag, so a stream that a server cuts at a record boundary still decrypts cleanly. The size check is the only thing that catches it, so every SkySend client passes `expectedPlaintextSize`. The value comes from the authenticated metadata via `expectedPlaintextSize(metadata)`: the file size for a single file, and `archiveSize` for an archive, see [Metadata Encryption](./metadata-encryption.md). The download Service Worker runs the same check in its own decrypt loop.
 
 A download without metadata fails instead of skipping the check. Archives uploaded by older clients carry no `archiveSize`, so their downloads cannot be checked this way.
+
+The header is not authenticated either. The counter is XORed into the base nonce, so a server that XORs a value `k` into the header and moves every record `j` to position `j XOR k` gets a stream in which each record still decrypts under the nonce it was encrypted with, in another order and at the same size. The base nonce in the authenticated metadata (`streamNonce`, read with `expectedBaseNonce(metadata)`) closes that: a header that differs from it fails before any record is decrypted. The download Service Worker runs the same check. Uploads of clients that put no `streamNonce` into the metadata still decrypt, without it.
 
 ## Size Calculation
 

@@ -16,6 +16,7 @@ interface SingleFileMetadata {
   name: string         // e.g. "document.pdf"
   size: number         // original file size in bytes
   mimeType: string     // e.g. "application/pdf"
+  streamNonce?: string // base nonce of the file stream, base64url
 }
 ```
 
@@ -30,6 +31,7 @@ interface ArchiveMetadata {
   }>
   totalSize: number    // sum of all file sizes
   archiveSize?: number // size of the zip archive, the plaintext of the file stream
+  streamNonce?: string // base nonce of the file stream, base64url
 }
 ```
 
@@ -38,6 +40,8 @@ interface ArchiveMetadata {
 The server takes at most `MAX_ENCRYPTED_METADATA_BYTES` (75,000 bytes, 100,000 characters of base64) of encrypted metadata. The names of all files of an archive travel in it, so the browser checks `encryptedMetadataLength` against that limit before an upload starts, instead of failing once every byte is up.
 
 `expectedPlaintextSize(metadata)` returns the size the decrypted file stream must have: `size` for a single file, `archiveSize` for an archive. See [Streaming Encryption](./streaming-encryption.md#decryption) for why every download checks it.
+
+`streamNonce` is the 12-byte base nonce that opens the file stream, which the header of the stream carries without authentication. `expectedBaseNonce(metadata)` returns it for `createDecryptStream`, which fails on a header that differs. Metadata whose `streamNonce` is not 12 bytes of canonical base64url is invalid. Uploads of older clients have none.
 
 ## Encryption
 

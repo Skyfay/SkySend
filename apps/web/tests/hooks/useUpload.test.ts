@@ -118,7 +118,12 @@ describe("useUpload", () => {
       metadata: unknown;
       fileCount: number;
     };
-    expect(sent.metadata).toEqual({ type: "note", size: 1024 });
+    expect(sent.metadata).toEqual({
+      type: "note",
+      size: 1024,
+      // The base nonce the worker encrypts the stream with, 12 random bytes.
+      streamNonce: expect.stringMatching(/^[A-Za-z0-9_-]{16}$/),
+    });
     expect(sent.files).toBeUndefined();
     expect(sent.fileCount).toBe(1);
     expect(await sent.file.text()).toBe(note);

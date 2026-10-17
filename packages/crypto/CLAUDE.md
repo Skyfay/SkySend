@@ -93,9 +93,9 @@ record = ciphertext (up to 65 536 B) || GCM tag (16 B)
 nonce  = baseNonce XOR counter        counter is 32-bit, so max 2^32 records
 ```
 
-The base nonce is random per encryption, each record is authenticated on its own, and the final record may be short. `calculateEncryptedSize` and `calculatePlaintextSize` are the exact conversions - the download Service Worker needs the plaintext size up front so Safari streams to disk instead of buffering.
+The base nonce is random per encryption, each record is authenticated on its own, and the final record may be short. Nothing authenticates the header, and since the counter is XORed into the base nonce, a server that XORs `k` into the header and moves record `j` to `j XOR k` gets a stream whose records all still decrypt, reordered. So the web app makes the base nonce itself, puts it into the metadata as `streamNonce` and passes it to `createEncryptStream`, and every download passes `expectedBaseNonce(metadata)` to `createDecryptStream`, which fails on a header that differs. Uploads without `streamNonce` (older clients, the CLI so far) decrypt without the check. `calculateEncryptedSize` and `calculatePlaintextSize` are the exact conversions - the download Service Worker needs the plaintext size up front so Safari streams to disk instead of buffering.
 
-`public/download-sw.js` in the web app reimplements these constants because a Service Worker cannot import the package. Any change to `RECORD_SIZE`, `TAG_LENGTH`, or `NONCE_LENGTH` has to be mirrored there in the same commit.
+`public/download-sw.js` in the web app reimplements these constants and the header check because a Service Worker cannot import the package. Any change to `RECORD_SIZE`, `TAG_LENGTH`, or `NONCE_LENGTH` has to be mirrored there in the same commit.
 
 ## Password protection
 

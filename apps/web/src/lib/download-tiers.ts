@@ -51,6 +51,11 @@ export interface SaveDownloadOptions {
    * only for archives uploaded by older clients, which carry no archive size.
    */
   plaintextSize: number | undefined;
+  /**
+   * Base nonce from the authenticated metadata, which the header of the stream must match.
+   * Undefined for uploads of clients that did not put one in.
+   */
+  baseNonce: Uint8Array | undefined;
   signal: AbortSignal;
   /** Progress in percent and the bytes received. Starts again at 0 when a tier falls back. */
   onProgress: (progress: number, loaded: number) => void;
@@ -91,6 +96,7 @@ export async function saveDecryptedDownload(options: SaveDownloadOptions): Promi
     mimeType,
     size,
     plaintextSize,
+    baseNonce,
     signal,
     onProgress,
     onDebug,
@@ -148,6 +154,7 @@ export async function saveDecryptedDownload(options: SaveDownloadOptions): Promi
         () => addEvent("S3 presigned URL received"),
         plaintextSize,
         source.tokenHeader,
+        baseNonce ? ownBuffer(baseNonce) : undefined,
       );
       downloaded = true;
     }
@@ -192,7 +199,7 @@ export async function saveDecryptedDownload(options: SaveDownloadOptions): Promi
       }),
     );
     return {
-      decrypted: counted.pipeThrough(createDecryptStream(fileKey, plaintextSize)),
+      decrypted: counted.pipeThrough(createDecryptStream(fileKey, plaintextSize, baseNonce)),
       stopStallTimer: () => {
         if (stallTimer) clearTimeout(stallTimer);
       },

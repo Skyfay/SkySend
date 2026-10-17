@@ -12,7 +12,7 @@ import {
   tokenMatches,
   UUID_PATTERN,
 } from "../lib/request-validation.js";
-import type { PasswordLockout } from "../lib/password-lockout.js";
+import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
 import type { StorageBackend } from "../storage/types.js";
@@ -64,16 +64,17 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
 
     const ip = getClientIp(c, getConfig().TRUST_PROXY);
     const resourceKey = `request:${id}`;
-    const lockState = lockout.check(resourceKey, ip);
-    if (lockState.locked) {
-      c.header("Retry-After", String(lockState.retryAfter));
-      return { response: c.json({ error: "Too many failed attempts. Try again later." }, 429) };
-    }
+    const locked = lockedResponse(c, lockout, resourceKey, ip);
+    if (locked) return { response: locked };
 
     // The lockout forgets failures that led to no lock after a while. That it never locks
     // an unknown ID tells nothing, since a request ID is a random UUID that only its links
     // carry.
     const request = await getDb().query.fileRequests.findFirst({ where: eq(fileRequests.id, id) });
+    // Checked again after the lookup, so this check, the comparison and recordFailure run in
+    // one go. Pipelined guesses otherwise all passed the first check before any failure counted.
+    const lockedNow = lockedResponse(c, lockout, resourceKey, ip);
+    if (lockedNow) return { response: lockedNow };
     const stored = header === "X-Inbox-Token" ? request?.inboxAuthToken : request?.inboxOwnerToken;
     if (!request || !stored || !tokenMatches(c.req.header(header), stored)) {
       if (request?.hasPassword) lockout.recordFailure(resourceKey, ip);

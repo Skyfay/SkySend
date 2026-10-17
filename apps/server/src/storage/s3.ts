@@ -12,10 +12,11 @@ import {
   AbortMultipartUploadCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Readable } from "node:stream";
-import type { createReadStream } from "node:fs";
+import { mkdirSync, rmSync, type createReadStream } from "node:fs";
+import { open, rm, type FileHandle } from "node:fs/promises";
+import { join } from "node:path";
 import { describeError } from "../lib/log-error.js";
 import type { StorageBackend } from "./types.js";
 
@@ -37,8 +38,41 @@ export interface S3StorageConfig {
   presignedExpiry: number;
   partSize: number;
   concurrency: number;
-  /** Most bytes all uploads together hold in parts on their way to the bucket. */
+  /**
+   * Most bytes all uploads together hold in parts on their way to the bucket. Parts that are
+   * still filling up may hold half of it again, see FillMemory.
+   */
   memoryLimit?: number;
+  /**
+   * Where a part that is still filling up waits once FillMemory is full, one file per upload.
+   * Emptied when the storage is created, so it must belong to this storage alone.
+   */
+  partDir: string;
+}
+
+/**
+ * The bytes of parts that are still filling up, over every upload, held to a limit. It never
+ * waits: a session that finds no room moves the part it is filling into a file in partDir and
+ * fills it there. Waiting for room here could leave every upload waiting for room that only
+ * more data would free, and without any limit an upload that stopped one byte short of a part
+ * held almost a part in memory for as long as its session lived, and every new session added
+ * one. Kept in memory while there is room, since a round trip through a file costs a part's
+ * worth of copies in the kernel, which cut the speed to a local bucket by up to a third.
+ */
+class FillMemory {
+  private used = 0;
+
+  constructor(private readonly limit: number) {}
+
+  tryTake(bytes: number): boolean {
+    if (this.used + bytes > this.limit) return false;
+    this.used += bytes;
+    return true;
+  }
+
+  give(bytes: number): void {
+    this.used -= bytes;
+  }
 }
 
 /**
@@ -87,8 +121,16 @@ interface MultipartSession {
   parts: Array<{ PartNumber: number; ETag: string }>;
   /** Cancels the part uploads still running when the upload is aborted. */
   abort: AbortController;
-  /** Buffered chunks waiting to reach partSize. Avoids repeated full-buffer copies. */
-  bufferChunks: Uint8Array[];
+  /**
+   * What the session read and has not sent yet, counted in FillMemory: the part that is
+   * filling up, or up to two parts while appendChunk reads ahead.
+   */
+  chunks: Uint8Array[];
+  /** True while the part that is filling up is in partFile, after FillMemory had no room. */
+  onDisk: boolean;
+  /** Opened by the first part that moves to disk, kept for the rest of the upload. */
+  partFile: FileHandle | null;
+  /** Bytes in chunks, or in partFile while onDisk. */
   bufferSize: number;
   partNumber: number;
   /** Active S3 part upload promises. Used for concurrency limiting + backpressure. */
@@ -113,6 +155,8 @@ export class S3Storage implements StorageBackend {
   private readonly partSize: number;
   private readonly concurrency: number;
   private readonly partMemory: PartMemory;
+  private readonly fillMemory: FillMemory;
+  private readonly partDir: string;
   private readonly multipartSessions = new Map<string, MultipartSession>();
 
   constructor(config: S3StorageConfig) {
@@ -121,6 +165,11 @@ export class S3Storage implements StorageBackend {
     this.partSize = Math.max(config.partSize, MIN_PART_SIZE);
     this.concurrency = config.concurrency;
     this.partMemory = new PartMemory(config.memoryLimit ?? Infinity);
+    this.fillMemory = new FillMemory((config.memoryLimit ?? Infinity) / 2);
+    // No session survives a restart, so whatever a previous process left there is garbage.
+    this.partDir = config.partDir;
+    rmSync(this.partDir, { recursive: true, force: true });
+    mkdirSync(this.partDir, { recursive: true });
 
     this.client = new S3Client({
       region: config.region,
@@ -180,31 +229,20 @@ export class S3Storage implements StorageBackend {
   }
 
   /**
-   * Save a ReadableStream to S3 using managed multipart upload.
-   * Streams data directly to S3 without buffering on disk.
+   * Save a ReadableStream to S3. Goes through the same session as a chunked upload, so its
+   * parts count against the memory limit too, and `size`, the declared size, lets an upload
+   * that fits into one part go out with one PutObject.
    */
-  async save(id: string, stream: ReadableStream<Uint8Array>): Promise<number> {
-    const nodeStream = Readable.fromWeb(stream as ReadableStream);
-
-    let bytesWritten = 0;
-    nodeStream.on("data", (chunk: Buffer) => {
-      bytesWritten += chunk.length;
-    });
-
-    const upload = new Upload({
-      client: this.client,
-      params: {
-        Bucket: this.bucket,
-        Key: this.key(id),
-        Body: nodeStream,
-      },
-      // Use configured part size and parallelism for better throughput
-      partSize: this.partSize,
-      queueSize: this.concurrency,
-    });
-
-    await upload.done();
-    return bytesWritten;
+  async save(id: string, stream: ReadableStream<Uint8Array>, size?: number): Promise<number> {
+    await this.createEmpty(id, size);
+    try {
+      const bytesWritten = await this.appendChunk(id, stream);
+      await this.finalizeChunkedUpload(id);
+      return bytesWritten;
+    } catch (err) {
+      await this.abortChunkedUpload(id);
+      throw err;
+    }
   }
 
   /**
@@ -227,7 +265,9 @@ export class S3Storage implements StorageBackend {
       uploadId: null,
       parts: [],
       abort: new AbortController(),
-      bufferChunks: [],
+      chunks: [],
+      onDisk: false,
+      partFile: null,
       bufferSize: 0,
       partNumber: 1,
       activeUploads: new Set(),
@@ -256,12 +296,21 @@ export class S3Storage implements StorageBackend {
   }
 
   /**
-   * Uploads one part in the background, tracked in activeUploads. Waits for room in the memory
-   * limit first, which holds back the caller and with it the sender, and gives it back once the
-   * part settled, stored or not.
+   * Uploads the next part of a session in the background, tracked in activeUploads: a whole
+   * part, or what is left at finalize. Waits for room in the memory limit first, which holds
+   * back the caller and with it the sender, and gives it back once the part settled, stored or
+   * not.
    */
-  private async sendPart(id: string, session: MultipartSession, data: Uint8Array, partNumber: number) {
-    await this.partMemory.take(data.byteLength);
+  private async sendPart(id: string, session: MultipartSession, partNumber: number) {
+    const size = Math.min(session.bufferSize, session.partSize);
+    await this.partMemory.take(size);
+    let data: Uint8Array;
+    try {
+      data = await this.takePart(session, size);
+    } catch (err) {
+      this.partMemory.give(size);
+      throw err;
+    }
     this.startPart(id, session, data, partNumber);
   }
 
@@ -295,25 +344,126 @@ export class S3Storage implements StorageBackend {
     session.activeUploads.add(p);
   }
 
-  /** Takes `size` bytes from the front of the buffer of a session, copied into one array. */
-  private takeFromBuffer(session: MultipartSession, size: number): Uint8Array {
-    const data = new Uint8Array(size);
+  /** Waits until a session may start another part, and passes on a part that failed. */
+  private async freeSlot(session: MultipartSession): Promise<void> {
+    while (session.activeUploads.size >= this.concurrency) {
+      await Promise.race(session.activeUploads);
+      if (session.uploadError) throw session.uploadError;
+    }
+  }
+
+  /** Sends every whole part a session holds. */
+  private async sendWholeParts(id: string, session: MultipartSession): Promise<void> {
+    while (session.bufferSize >= session.partSize) {
+      await this.freeSlot(session);
+      await this.sendPart(id, session, session.partNumber++);
+    }
+  }
+
+  /**
+   * Adds bytes to a session part by part, for when FillMemory had no room for all of them: what
+   * finds room stays in memory, the rest goes into the part file, and each part goes out as
+   * soon as it is whole.
+   */
+  private async addInParts(id: string, session: MultipartSession, data: Uint8Array): Promise<void> {
     let offset = 0;
-    while (offset < size) {
-      const chunk = session.bufferChunks[0]!;
-      const needed = size - offset;
-      if (chunk.byteLength <= needed) {
-        data.set(chunk, offset);
-        offset += chunk.byteLength;
-        session.bufferChunks.shift();
+    while (offset < data.byteLength) {
+      if (session.bufferSize >= session.partSize) await this.sendWholeParts(id, session);
+      const take = Math.min(session.partSize - session.bufferSize, data.byteLength - offset);
+      const piece = data.subarray(offset, offset + take);
+      if (!session.onDisk && this.fillMemory.tryTake(take)) {
+        session.chunks.push(piece);
+        session.bufferSize += take;
       } else {
-        data.set(chunk.subarray(0, needed), offset);
-        session.bufferChunks[0] = chunk.subarray(needed);
-        offset += needed;
+        if (!session.onDisk) await this.moveToDisk(id, session);
+        await this.writeToPart(id, session, piece);
       }
+      offset += take;
+    }
+  }
+
+  /** The file a part that is still filling up waits in once FillMemory is full. */
+  private partPath(id: string): string {
+    return join(this.partDir, `${this.key(id)}.part`);
+  }
+
+  /**
+   * Moves the part a session is filling, less than a whole one, from memory into its file and
+   * gives the room back.
+   */
+  private async moveToDisk(id: string, session: MultipartSession): Promise<void> {
+    const held = session.bufferSize;
+    session.bufferSize = 0;
+    for (const chunk of session.chunks) await this.writeToPart(id, session, chunk);
+    session.chunks = [];
+    session.onDisk = true;
+    this.fillMemory.give(held);
+  }
+
+  /** Writes bytes after the ones already in the part file of a session. */
+  private async writeToPart(id: string, session: MultipartSession, data: Uint8Array): Promise<void> {
+    session.partFile ??= await open(this.partPath(id), "w+");
+    let written = 0;
+    while (written < data.byteLength) {
+      const { bytesWritten } = await session.partFile.write(
+        data,
+        written,
+        data.byteLength - written,
+        session.bufferSize + written,
+      );
+      written += bytesWritten;
+    }
+    session.bufferSize += data.byteLength;
+  }
+
+  /**
+   * The first `size` bytes a session holds, as one piece of memory. A part in the file is all
+   * the file holds and is read back, and the next part starts in memory again, written over it
+   * from the start of the file if it moves there too. The caller takes room in the memory limit
+   * for it first.
+   */
+  private async takePart(session: MultipartSession, size: number): Promise<Uint8Array> {
+    if (session.onDisk) {
+      const data = Buffer.allocUnsafe(size);
+      let read = 0;
+      while (read < size) {
+        const { bytesRead } = await session.partFile!.read(data, read, size - read, read);
+        if (bytesRead === 0) throw new Error("Buffered part is shorter than expected");
+        read += bytesRead;
+      }
+      session.bufferSize = 0;
+      session.onDisk = false;
+      return data;
     }
     session.bufferSize -= size;
+    this.fillMemory.give(size);
+    const first = session.chunks[0];
+    if (first?.byteLength === size) {
+      session.chunks.shift();
+      return first;
+    }
+    const data = Buffer.allocUnsafe(size);
+    let filled = 0;
+    while (filled < size) {
+      const chunk = session.chunks[0]!;
+      const n = Math.min(chunk.byteLength, size - filled);
+      data.set(n === chunk.byteLength ? chunk : chunk.subarray(0, n), filled);
+      if (n === chunk.byteLength) session.chunks.shift();
+      else session.chunks[0] = chunk.subarray(n);
+      filled += n;
+    }
     return data;
+  }
+
+  /** Gives back the memory of what a session holds and deletes its part file. */
+  private async discardPart(id: string, session: MultipartSession): Promise<void> {
+    this.fillMemory.give(session.chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
+    session.chunks = [];
+    const file = session.partFile;
+    if (!file) return;
+    session.partFile = null;
+    await file.close().catch(() => {});
+    await rm(this.partPath(id), { force: true });
   }
 
   /**
@@ -331,27 +481,30 @@ export class S3Storage implements StorageBackend {
     // Propagate any error from previous background uploads
     if (session.uploadError) throw session.uploadError;
 
-    // Read incoming stream chunks (keep as-is, no extra copy)
+    // Reads two parts ahead while FillMemory has room and cuts them after, the way a chunk of the
+    // chunked transport, two parts of 8 MiB, was handled before the limit: sending each part
+    // between two reads of the same stream cost that transport a fifth more CPU, and reading a
+    // long stream further ahead only held more memory. Every byte read counts against
+    // FillMemory, so a session that waits for room in the memory limit holds no more than
+    // FillMemory allows.
     const reader = stream.getReader();
     let bytesRead = 0;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      session.bufferChunks.push(value);
-      session.bufferSize += value.byteLength;
       bytesRead += value.byteLength;
-    }
-
-    while (session.bufferSize >= session.partSize) {
-      // Wait for a free slot if all are in use
-      while (session.activeUploads.size >= this.concurrency) {
-        await Promise.race(session.activeUploads);
-        if (session.uploadError) throw session.uploadError;
+      if (!session.onDisk && this.fillMemory.tryTake(value.byteLength)) {
+        session.chunks.push(value);
+        session.bufferSize += value.byteLength;
+        if (session.bufferSize >= 2 * session.partSize) await this.sendWholeParts(id, session);
+        continue;
       }
-      const data = this.takeFromBuffer(session, session.partSize);
-      await this.sendPart(id, session, data, session.partNumber++);
+      // No room: the whole parts read so far go out first, which gives their room back.
+      await this.sendWholeParts(id, session);
+      await this.addInParts(id, session, value);
     }
+    await this.sendWholeParts(id, session);
 
     // If all slots are full, wait for ONE to finish. This delays the caller, which throttles
     // the client to the speed of the bucket.
@@ -379,23 +532,25 @@ export class S3Storage implements StorageBackend {
       if (session.uploadError) throw session.uploadError;
 
       if (session.uploadId === null) {
-        await this.client.send(
-          new PutObjectCommand({
-            Bucket: this.bucket,
-            Key: this.key(id),
-            Body: this.takeFromBuffer(session, session.bufferSize),
-          }),
-          { abortSignal: session.abort.signal },
-        );
+        // In memory only while it goes out, so it counts against the limit like a part.
+        const size = session.bufferSize;
+        await this.partMemory.take(size);
+        try {
+          const body = await this.takePart(session, size);
+          await this.client.send(
+            new PutObjectCommand({ Bucket: this.bucket, Key: this.key(id), Body: body }),
+            { abortSignal: session.abort.signal },
+          );
+        } finally {
+          this.partMemory.give(size);
+        }
         this.multipartSessions.delete(id);
+        await this.discardPart(id, session);
         return;
       }
 
       // The last part (can be < 5MB) need not wait for the parts before it.
-      if (session.bufferSize > 0) {
-        const data = this.takeFromBuffer(session, session.bufferSize);
-        await this.sendPart(id, session, data, session.partNumber++);
-      }
+      if (session.bufferSize > 0) await this.sendPart(id, session, session.partNumber++);
       await Promise.all(session.activeUploads);
       if (session.uploadError) throw session.uploadError;
 
@@ -412,6 +567,7 @@ export class S3Storage implements StorageBackend {
         }),
       );
       this.multipartSessions.delete(id);
+      await this.discardPart(id, session);
     } catch (err) {
       // The caller's abortChunkedUpload finds no session after this, so the abort happens here.
       await this.abortSession(id, session);
@@ -596,6 +752,7 @@ export class S3Storage implements StorageBackend {
     this.multipartSessions.delete(id);
     session.abort.abort();
     await Promise.allSettled(session.activeUploads);
+    await this.discardPart(id, session);
     // An upload that was stored with one PutObject, or whose creation failed, has nothing to abort.
     const uploadId = await session.uploadId?.catch(() => null);
     if (!uploadId) return;

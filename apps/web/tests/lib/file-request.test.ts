@@ -426,6 +426,18 @@ describe("sanitizeFilename", () => {
     expect(sanitizeFilename(`${"a".repeat(300)}.${"b".repeat(40)}`)).toBe("a".repeat(255));
   });
 
+  it("cleans a long run of dots inside a name in linear time", () => {
+    // The metadata limit lets a sender send a name of about 73,000 characters. The trim regex
+    // before took over a second on this one, on every render of the inbox.
+    const name = `a${". ".repeat(36_000)}b`;
+    const started = performance.now();
+    // Cut to 255 characters with the extension ". b" kept, the dots before it trimmed away.
+    expect(sanitizeFilename(name)).toBe("a. b");
+    expect(sanitizeFilename(`a${".".repeat(73_000)}`)).toBe("a");
+    expect(sanitizeFilename(`${".".repeat(73_000)}b`)).toBe("b");
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it("drops dots and spaces at either end, which Windows would drop on save", () => {
     expect(sanitizeFilename("invoice.pdf.exe.")).toBe("invoice.pdf.exe");
     expect(sanitizeFilename(`Rechnung.pdf${"_".repeat(300)}.exe.`).endsWith(".exe")).toBe(true);

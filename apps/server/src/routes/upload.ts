@@ -238,7 +238,7 @@ export function createUploadRoute(
     // Stream the encrypted body to disk, never more than it declared
     let bytesWritten: number;
     try {
-      bytesWritten = await storage.save(id, capped(body, headers.contentLength));
+      bytesWritten = await storage.save(id, capped(body, headers.contentLength), headers.contentLength);
     } catch (err) {
       // Clean up partial file on error
       await storage.delete(id).catch(() => {});

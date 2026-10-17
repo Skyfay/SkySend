@@ -41,6 +41,15 @@ import { describeError } from "../lib/log-error.js";
 export function createAuthRoute(config: Config, adapter: OidcAdapterProfile): Hono {
   const app = new Hono();
 
+  // These routes live outside /api, so the no-store of the /api group does not reach them. The
+  // session answer carries the user's name and email under a URL that is the same for everyone,
+  // and the redirects set cookies, so a caching proxy that stores responses without a directive
+  // would hand one user's answer to the next.
+  app.use("*", async (c, next) => {
+    await next();
+    c.res.headers.set("Cache-Control", "no-store");
+  });
+
   const redirectUri = config.OIDC_REDIRECT_URI ?? `${config.BASE_URL}/auth/callback`;
 
   // ── Discovery cache (lazy + single-flight) ────────────

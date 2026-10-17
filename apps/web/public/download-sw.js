@@ -36,6 +36,14 @@ function computeDecryptedSize(encryptedSize) {
 
 // ── Crypto Helpers ─────────────────────────────────────
 
+/** Whether two byte arrays are equal, in time independent of where they differ. */
+function sameBytes(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 function nonceXorCounter(baseNonce, counter) {
   const nonce = new Uint8Array(baseNonce);
   nonce[8] ^= (counter >>> 24) & 0xff;
@@ -65,7 +73,7 @@ async function deriveFileKey(secret, salt) {
 
 // ── Pending Downloads ──────────────────────────────────
 
-/** @type {Map<string, {url:string, authToken:string, tokenHeader:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number, plaintextSize:number|null}>} */
+/** @type {Map<string, {url:string, authToken:string, tokenHeader:string, secret:ArrayBuffer, salt:ArrayBuffer, filename:string, mimeType:string, size:number, plaintextSize:number|null, baseNonce:Uint8Array|null}>} */
 const pending = new Map();
 /** @type {Map<string, () => void>} Maps downloadId to a cancel function that aborts the in-progress download. */
 const pendingCancels = new Map();
@@ -102,6 +110,12 @@ function takeConfig(msg) {
     // From the authenticated metadata. Null only for archives uploaded by older
     // clients, which carry no archive size.
     plaintextSize: typeof msg.plaintextSize === "number" ? msg.plaintextSize : null,
+    // From the authenticated metadata too. The header of the stream must match it, or a
+    // server could reorder records along with it. Null for uploads of older clients.
+    baseNonce:
+      msg.baseNonce instanceof ArrayBuffer && msg.baseNonce.byteLength === NONCE_LENGTH
+        ? new Uint8Array(msg.baseNonce)
+        : null,
   });
   bc.postMessage({ type: "config-ok", id: msg.id });
 }
@@ -171,6 +185,7 @@ self.addEventListener("fetch", (event) => {
  */
 async function handleDownload(config, downloadId, streamDone) {
   const { url, authToken, tokenHeader, secret, salt, filename, mimeType, size, plaintextSize } = config;
+  const expectedNonce = config.baseNonce;
   const cleanup = () => {
     pendingCancels.delete(downloadId);
     streamDone();
@@ -427,6 +442,14 @@ async function handleDownload(config, downloadId, streamDone) {
           return;
         }
         baseNonce = readFromBuf(NONCE_LENGTH);
+        // The same check as createDecryptStream in @skysend/crypto, with its message.
+        if (expectedNonce !== null && !sameBytes(baseNonce, expectedNonce)) {
+          console.error(`[SW-dl:${downloadId}] stream header does not match the metadata`);
+          bc.postMessage({ type: "dl-error", downloadId, error: "decrypt-failed" });
+          controller.error(new Error("Decryption failed - data may be corrupted or tampered with"));
+          cleanup();
+          return;
+        }
 
         // Read more if needed for first record
         while (!readerDone && bufLen() <= ENCRYPTED_RECORD_SIZE) {

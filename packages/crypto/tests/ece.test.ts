@@ -484,6 +484,93 @@ describe("ECE streaming encryption/decryption", () => {
     ).rejects.toThrow("corrupted or tampered");
   });
 
+  /** Two full records swapped, with the header XORed by 1 so each still finds its nonce. */
+  function reorderWithHeader(encrypted: Uint8Array): Uint8Array {
+    const out = new Uint8Array(encrypted.length);
+    out.set(encrypted.subarray(0, NONCE_LENGTH), 0);
+    out[NONCE_LENGTH - 1] = out[NONCE_LENGTH - 1]! ^ 1;
+    const start = (i: number) => NONCE_LENGTH + i * ENCRYPTED_RECORD_SIZE;
+    out.set(encrypted.subarray(start(1), start(2)), start(0));
+    out.set(encrypted.subarray(start(0), start(1)), start(1));
+    return out;
+  }
+
+  it("should NOT detect records reordered along with the header without the base nonce", async () => {
+    // The counter is XORed into the header's nonce, so XORing the header by k maps record i
+    // onto the nonce of record i XOR k. Each record still authenticates, at the same size.
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey)),
+    );
+
+    const decrypted = await collectStream(
+      createReadableStream(reorderWithHeader(encrypted), 8192).pipeThrough(
+        createDecryptStream(fileKey, plaintext.length),
+      ),
+    );
+    expect(decrypted.subarray(0, RECORD_SIZE)).toEqual(plaintext.subarray(RECORD_SIZE));
+  });
+
+  it("should fail records reordered along with the header when the base nonce is checked", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+    const baseNonce = randomBytes(NONCE_LENGTH);
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey, baseNonce)),
+    );
+    expect(encrypted.subarray(0, NONCE_LENGTH)).toEqual(baseNonce);
+
+    await expect(
+      collectStream(
+        createReadableStream(reorderWithHeader(encrypted), 8192).pipeThrough(
+          createDecryptStream(fileKey, plaintext.length, baseNonce),
+        ),
+      ),
+    ).rejects.toThrow("corrupted or tampered");
+  });
+
+  it("should decrypt with the base nonce it was encrypted with, over a header split into pieces", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE + 5);
+    const baseNonce = randomBytes(NONCE_LENGTH);
+    const encrypted = await collectStream(
+      createReadableStream(plaintext).pipeThrough(createEncryptStream(fileKey, baseNonce)),
+    );
+    const decrypted = await collectStream(
+      createReadableStream(encrypted, 5).pipeThrough(
+        createDecryptStream(fileKey, plaintext.length, baseNonce),
+      ),
+    );
+    expect(decrypted).toEqual(plaintext);
+  });
+
+  it("should refuse a base nonce of the wrong length on both sides", async () => {
+    const fileKey = await getFileKey();
+    expect(() => createEncryptStream(fileKey, randomBytes(NONCE_LENGTH - 1))).toThrow("12 bytes");
+    expect(() => createDecryptStream(fileKey, undefined, randomBytes(NONCE_LENGTH + 1))).toThrow(
+      "12 bytes",
+    );
+  });
+
+  it("should keep its own copy of the base nonce", async () => {
+    const fileKey = await getFileKey();
+    const plaintext = randomBytes(RECORD_SIZE * 2);
+    const baseNonce = randomBytes(NONCE_LENGTH);
+    const expected = baseNonce.slice();
+    const encrypting = createReadableStream(plaintext).pipeThrough(
+      createEncryptStream(fileKey, baseNonce),
+    );
+    baseNonce.fill(0);
+    const encrypted = await collectStream(encrypting);
+    const decrypted = await collectStream(
+      createReadableStream(encrypted).pipeThrough(
+        createDecryptStream(fileKey, plaintext.length, expected),
+      ),
+    );
+    expect(decrypted).toEqual(plaintext);
+  });
+
   it("should NOT detect truncation without expectedPlaintextSize (application responsibility)", async () => {
     // ECE provides per-record authentication, not end-of-stream authentication.
     // Without expectedPlaintextSize, truncation is undetected at the crypto layer.

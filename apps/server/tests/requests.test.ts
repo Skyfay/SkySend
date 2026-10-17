@@ -1266,6 +1266,22 @@ describe("file requests", () => {
       ).toBe(429);
     });
 
+    it("evaluates no more guesses than the lockout allows when they arrive together", async () => {
+      const app = createApp();
+      const { id } = await createRequest(app, { hasPassword: true });
+      // Requests that arrive together, like ones pipelined on one connection, all passed the
+      // first check while the lookup was pending, so every guess was evaluated.
+      const statuses = (
+        await Promise.all(
+          Array.from({ length: 10 }, () =>
+            app.request(`/api/inbox/${id}`, { headers: { "X-Inbox-Token": fakeBase64urlToken() } }),
+          ),
+        )
+      ).map((res) => res.status);
+      expect(statuses.filter((s) => s === 404)).toHaveLength(3);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(7);
+    });
+
     it("does not count a request without a well-formed token, which a foreign page can send", async () => {
       const app = createApp();
       const { id, headers } = await createRequest(app);
@@ -2143,10 +2159,11 @@ describe("file requests", () => {
           msgEvent(wsInit(created.headers.upload["X-Upload-Token"], 3 * MiB)),
           fake.ws,
         );
-        // One MiB every nine minutes is enough to stay.
-        for (let i = 0; i < 3; i++) {
-          await events.onMessage!(msgEvent(new Uint8Array(MiB).buffer), fake.ws);
-          await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        // One MiB every nine minutes is enough to stay, sent as the 256 KiB frames the clients
+        // use. A single frame every nine minutes would hit the frame deadline instead.
+        for (let i = 0; i < 12; i++) {
+          await events.onMessage!(msgEvent(new Uint8Array(MiB / 4).buffer), fake.ws);
+          await vi.advanceTimersByTimeAsync((9 * 60 * 1000) / 4);
         }
         expect(fake.allJson().some((m) => m.type === "error")).toBe(false);
         expect(requestRow(created.id).reservedUploads).toBe(1);
