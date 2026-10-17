@@ -30,6 +30,7 @@ const PACKAGES = [
   "apps/client",
   "packages/crypto",
   "packages/note-format",
+  "packages/transfer",
   "docs",
 ].map((dir) => path.join(ROOT, dir, "package.json"));
 

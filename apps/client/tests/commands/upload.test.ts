@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/lib/api.js", () => ({
+// The API of the server, the way apiFor(server) hands it out.
+const server = vi.hoisted(() => ({
   fetchConfig: vi.fn(async () => ({
     fileUploadWs: true,
     oidcProtectFiles: false,
@@ -16,27 +17,33 @@ vi.mock("../../src/lib/api.js", () => ({
     fileMaxSize: 1024 ** 3,
     fileUploadConcurrentChunks: 3,
   })),
-  uploadInit: vi.fn(async () => ({ id: "http-upload" })),
-  uploadChunk: vi.fn(async () => {}),
-  uploadFinalize: vi.fn(async () => {}),
-  saveMeta: vi.fn(async () => {}),
 }));
 
-// The CLI keeps WebSocket uploads off for now. Turning them on here shows which
-// transport the flag picks once they return.
+vi.mock("../../src/lib/api.js", () => ({ apiFor: vi.fn(() => server) }));
+
 vi.mock("../../src/lib/config.js", () => ({
   resolveServer: vi.fn(() => "http://127.0.0.1:3000"),
   getWebSocket: vi.fn(() => true),
 }));
 
-vi.mock("../../src/lib/ws-upload.js", () => ({
-  uploadWsTransport: vi.fn(async () => ({ id: "ws-upload" })),
+vi.mock("../../src/lib/upload-job.js", () => ({
+  runUpload: vi.fn(async () => ({
+    id: "upload",
+    url: "http://127.0.0.1:3000/file/upload#secret",
+    ownerToken: "owner",
+    names: ["note.txt"],
+    size: 5,
+    totalSize: 5,
+    fileCount: 1,
+    hasPassword: false,
+    transport: "ws",
+  })),
 }));
 
 vi.mock("../../src/lib/history.js", () => ({ addUpload: vi.fn() }));
 
-import { uploadChunk } from "../../src/lib/api.js";
-import { uploadWsTransport } from "../../src/lib/ws-upload.js";
+import { getWebSocket } from "../../src/lib/config.js";
+import { runUpload } from "../../src/lib/upload-job.js";
 import { registerUploadCommand } from "../../src/commands/upload.js";
 
 let dir: string;
@@ -65,17 +72,40 @@ async function upload(...flags: string[]) {
 }
 
 describe("skysend upload", () => {
-  it("uses HTTP chunks with --no-ws", async () => {
+  it("keeps the upload off the WebSocket with --no-ws", async () => {
     await upload("--no-ws");
-
-    expect(uploadWsTransport).not.toHaveBeenCalled();
-    expect(uploadChunk).toHaveBeenCalledOnce();
+    expect(vi.mocked(runUpload).mock.calls[0]![0]).toMatchObject({ webSocket: false });
   });
 
-  it("uses the WebSocket transport without --no-ws when it is available", async () => {
+  it("keeps the upload off the WebSocket where the settings switched it off", async () => {
+    vi.mocked(getWebSocket).mockReturnValueOnce(false);
     await upload();
+    expect(vi.mocked(getWebSocket)).toHaveBeenCalledWith("http://127.0.0.1:3000");
+    expect(vi.mocked(runUpload).mock.calls[0]![0]).toMatchObject({ webSocket: false });
+  });
 
-    expect(uploadWsTransport).toHaveBeenCalledOnce();
-    expect(uploadChunk).not.toHaveBeenCalled();
+  it("lets the upload take the WebSocket without --no-ws", async () => {
+    await upload();
+    expect(vi.mocked(runUpload).mock.calls[0]![0]).toMatchObject({
+      webSocket: true,
+      paths: [file],
+      expireSec: 86400,
+      maxDownloads: 1,
+    });
+  });
+
+  it("prints the link and what was sent as one JSON object", async () => {
+    await upload();
+    const printed = JSON.parse(vi.mocked(console.log).mock.calls[0]![0] as string);
+    expect(printed).toMatchObject({
+      id: "upload",
+      url: "http://127.0.0.1:3000/file/upload#secret",
+      size: 5,
+      fileCount: 1,
+      expires: 86400,
+      maxDownloads: 1,
+      hasPassword: false,
+      transport: "ws",
+    });
   });
 });

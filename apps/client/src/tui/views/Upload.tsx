@@ -2,18 +2,10 @@ import React, { useState, useCallback } from "react";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
-import {
-  createEncryptStream, calculateEncryptedSize, encryptMetadata,
-  toBase64url, type FileMetadata, type SingleFileMetadata, type ArchiveMetadata,
-} from "@skysend/crypto";
-import { Zip, ZipDeflate } from "fflate";
-import {
-  uploadInit, uploadChunk, uploadFinalize, saveMeta,
-} from "../../lib/api.js";
-import { prepareUpload } from "../../lib/auth.js";
-import { buildShareUrl } from "../../lib/url.js";
+import { getWebSocket } from "../../lib/config.js";
 import { addUpload } from "../../lib/history.js";
 import { formatBytes, formatExpiry, formatSpeed } from "../../lib/progress.js";
+import { runUpload } from "../../lib/upload-job.js";
 import { FileExplorer } from "../components/FileExplorer.js";
 import { SelectList, type SelectItem } from "../components/SelectList.js";
 import { TextPrompt } from "../components/TextPrompt.js";
@@ -21,10 +13,7 @@ import { ProgressBar } from "../components/ProgressBar.js";
 import type { AppState } from "../types.js";
 import { useAccent } from "../theme.js";
 import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
-import { uploadWsTransport } from "../../lib/ws-upload.js";
-import { getWebSocket } from "../../lib/config.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
-import { createPrivateTempFile } from "../../lib/temp-file.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { checkNewPassword } from "../../lib/input.js";
 
@@ -36,7 +25,6 @@ type Phase =
   | "password-input"
   | "confirm"
   | "authenticating"
-  | "packing"
   | "uploading"
   | "done"
   | "error";
@@ -45,84 +33,6 @@ interface UploadViewProps {
   appState: AppState;
   onBack: () => void;
   onError: (msg: string) => void;
-}
-
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  const total = chunks.reduce((sum, c) => sum + c.byteLength, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength; }
-  return result;
-}
-
-function createFileStream(filePath: string): ReadableStream<Uint8Array> {
-  const nodeStream = fs.createReadStream(filePath);
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      nodeStream.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      nodeStream.on("end", () => controller.close());
-      nodeStream.on("error", (err) => controller.error(err));
-    },
-    cancel() { nodeStream.destroy(); },
-  });
-}
-
-const PRECOMPRESSED_EXTENSIONS = new Set([
-  // Audio
-  "mp3", "aac", "ogg", "oga", "flac", "m4a", "opus", "wma",
-  // Video
-  "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "3gp",
-  // Images
-  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "avif",
-  // Archives
-  "zip", "gz", "bz2", "xz", "7z", "rar", "zst", "br",
-  // Documents (ZIP-based formats, already compressed)
-  "pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp", "epub",
-]);
-
-function getCompressionLevel(filename: string): 0 | 6 {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-  return PRECOMPRESSED_EXTENSIONS.has(ext) ? 0 : 6;
-}
-
-async function createZipFile(
-  filePaths: string[],
-  onProgress?: (packed: number, total: number) => void,
-): Promise<{ path: string; size: number; cleanup: () => void }> {
-  const totalBytes = filePaths.reduce((sum, f) => {
-    try { return sum + fs.statSync(f).size; } catch { return sum; }
-  }, 0);
-  let packedBytes = 0;
-
-  // Stream ZIP output to a temp file instead of buffering in RAM. The zip is still
-  // plaintext, so only this user may read it, and a failed packing removes it at once.
-  const tmp = createPrivateTempFile("upload.zip");
-  try {
-    const zipper = new Zip((_err, chunk) => {
-      fs.writeSync(tmp.fd, chunk);
-    });
-    for (const filePath of filePaths) {
-      const name = path.basename(filePath);
-      const entry = new ZipDeflate(name, { level: getCompressionLevel(name) });
-      zipper.add(entry);
-      const nodeStream = fs.createReadStream(filePath);
-      for await (const chunk of nodeStream) {
-        const data = new Uint8Array(chunk as Buffer);
-        entry.push(data);
-        packedBytes += data.byteLength;
-        onProgress?.(packedBytes, totalBytes);
-        // Yield to let React re-render
-        await new Promise<void>((r) => setImmediate(r));
-      }
-      entry.push(new Uint8Array(0), true);
-    }
-    zipper.end();
-    tmp.close();
-    return { path: tmp.path, size: fs.statSync(tmp.path).size, cleanup: tmp.cleanup };
-  } catch (err) {
-    tmp.cleanup();
-    throw err;
-  }
 }
 
 export function UploadView({ appState, onBack }: UploadViewProps): React.ReactElement {
@@ -134,7 +44,6 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   const [maxDownloads, setMaxDownloads] = useState(config.fileDefaultDownload);
   const [password, setPassword] = useState<string | undefined>();
   const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
-  const [packProgress, setPackProgress] = useState({ percent: 0, packed: 0, total: 0 });
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [avgSpeed, setAvgSpeed] = useState("");
   const [shareUrl, setShareUrl] = useState("");
@@ -147,7 +56,6 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
   }, 0);
 
   const doUpload = useCallback(async () => {
-    let zipCleanup: (() => void) | undefined;
     try {
       // Authenticate with OIDC before uploading if the server requires it.
       let oidcToken: string | undefined;
@@ -159,187 +67,49 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
       setPhase("uploading");
       setIsFinalizing(false);
       setAvgSpeed("");
-      const isMulti = files.length > 1;
-
-      // The file the upload reads: the packed zip for several files, else the file itself.
-      let sourcePath: string;
-      let plaintextSize: number;
-      if (isMulti) {
-        setPhase("packing");
-        setPackProgress({ percent: 0, packed: 0, total: totalSize });
-        const zip = await createZipFile(files, (packed, total) => {
-          setPackProgress({
-            percent: total > 0 ? (packed / total) * 100 : 0,
-            packed, total,
-          });
-        });
-        sourcePath = zip.path;
-        plaintextSize = zip.size;
-        zipCleanup = zip.cleanup;
-      } else {
-        sourcePath = files[0]!;
-        plaintextSize = fs.statSync(sourcePath).size;
-      }
-      const plaintextStream = createFileStream(sourcePath);
-
-      setPhase("uploading");
-
-      const creds = await prepareUpload(password);
-      const encryptedStream = plaintextStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
-      const encryptedSize = calculateEncryptedSize(plaintextSize);
-
-      const headers: Record<string, string> = {
-        "X-Auth-Token": creds.authTokenB64,
-        "X-Owner-Token": creds.ownerTokenB64,
-        "X-Salt": toBase64url(creds.salt),
-        "X-Max-Downloads": String(maxDownloads),
-        "X-Expire-Sec": String(expireSec),
-        "X-File-Count": String(files.length),
-        "X-Has-Password": String(creds.hasPassword),
-        "X-Content-Length": String(encryptedSize),
-      };
-      if (creds.hasPassword && creds.passwordSalt && creds.passwordAlgo) {
-        headers["X-Password-Salt"] = toBase64url(creds.passwordSalt);
-        headers["X-Password-Algo"] = creds.passwordAlgo;
-      }
-      if (oidcToken) {
-        headers["Authorization"] = `Bearer ${oidcToken}`;
-      }
-
-      // Upload with progress tracking
       const startTime = Date.now();
-      const onProgress = (loaded: number) => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const speed = elapsed > 0 ? loaded / elapsed : 0;
-        setProgress({
-          percent: encryptedSize > 0 ? (loaded / encryptedSize) * 100 : 0,
-          speed: formatSpeed(speed),
-          loaded, total: encryptedSize,
-        });
-      };
-
-      let uploadId: string;
       let uploadEndTime = 0;
+      let lastTotal = 0;
+      const result = await runUpload(
+        {
+          server,
+          paths: files,
+          config,
+          expireSec,
+          maxDownloads,
+          ...(password !== undefined ? { password } : {}),
+          ...(oidcToken ? { oidcToken } : {}),
+          webSocket: getWebSocket(server),
+        },
+        {
+          onTransport: (used) => setTransport(used === "ws" ? "WebSocket" : "HTTP chunked"),
+          onProgress: (loaded, total) => {
+            lastTotal = total;
+            const elapsed = (Date.now() - startTime) / 1000;
+            setProgress({
+              percent: total > 0 ? (loaded / total) * 100 : 0,
+              speed: formatSpeed(elapsed > 0 ? loaded / elapsed : 0),
+              loaded,
+              total,
+            });
+          },
+          onPhase: (next) => {
+            if (next !== "saving-meta" || uploadEndTime > 0) return;
+            uploadEndTime = Date.now();
+            setIsFinalizing(true);
+          },
+        },
+      );
+      setShareUrl(result.url);
 
-      const useWs = config.fileUploadWs && getWebSocket(server);
-      if (useWs) {
-        try {
-          setTransport("WebSocket");
-          const result = await uploadWsTransport(
-            server, headers, encryptedStream, encryptedSize,
-            config.fileUploadSpeedLimit ?? 0, onProgress,
-            () => { uploadEndTime = Date.now(); setIsFinalizing(true); },
-          );
-          uploadId = result.id;
-        } catch {
-          // WS failed - read the same file again for the HTTP fallback. A zip stays on
-          // disk until the finally block, so it is not packed a second time.
-          setTransport("HTTP chunked");
-          const retryStream = createFileStream(sourcePath);
-          const retryEncStream = retryStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
-
-          const CHUNK_SIZE = 10 * 1024 * 1024;
-          const { id: httpId } = await uploadInit(server, headers);
-          const reader = retryEncStream.getReader();
-          let loaded = 0;
-          let chunkParts: Uint8Array[] = [];
-          let chunkSize = 0;
-          let chunkIdx = 0;
-
-          const sendChunk = async (data: Uint8Array, index: number) => {
-            await uploadChunk(server, httpId, index, data);
-            loaded += data.byteLength;
-            onProgress(loaded);
-          };
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunkParts.push(value);
-            chunkSize += value.byteLength;
-            if (chunkSize >= CHUNK_SIZE) {
-              await sendChunk(concatChunks(chunkParts), chunkIdx++);
-              chunkParts = [];
-              chunkSize = 0;
-            }
-          }
-          if (chunkSize > 0) {
-            await sendChunk(concatChunks(chunkParts), chunkIdx++);
-          }
-
-          await uploadFinalize(server, httpId, creds.ownerTokenB64);
-          uploadEndTime = Date.now();
-          uploadId = httpId;
-        }
-      } else {
-        setTransport("HTTP chunked");
-        const CHUNK_SIZE = 10 * 1024 * 1024;
-        const { id: httpId } = await uploadInit(server, headers);
-        const reader = encryptedStream.getReader();
-        let loaded = 0;
-        let chunkParts: Uint8Array[] = [];
-        let chunkSize = 0;
-        let chunkIdx = 0;
-
-        const sendChunk = async (data: Uint8Array, index: number) => {
-          await uploadChunk(server, httpId, index, data);
-          loaded += data.byteLength;
-          onProgress(loaded);
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunkParts.push(value);
-          chunkSize += value.byteLength;
-          if (chunkSize >= CHUNK_SIZE) {
-            await sendChunk(concatChunks(chunkParts), chunkIdx++);
-            chunkParts = [];
-            chunkSize = 0;
-          }
-        }
-        if (chunkSize > 0) {
-          await sendChunk(concatChunks(chunkParts), chunkIdx++);
-        }
-
-        await uploadFinalize(server, httpId, creds.ownerTokenB64);
-        uploadEndTime = Date.now();
-        uploadId = httpId;
-      }
-
-      // Save metadata
-      const metadata: FileMetadata = isMulti
-        ? {
-            type: "archive",
-            files: files.map((f) => ({ name: path.basename(f), size: fs.statSync(f).size })),
-            totalSize: files.reduce((sum, f) => sum + fs.statSync(f).size, 0),
-            archiveSize: plaintextSize,
-          } satisfies ArchiveMetadata
-        : {
-            type: "single",
-            name: path.basename(files[0]!),
-            size: plaintextSize,
-            mimeType: "application/octet-stream",
-          } satisfies SingleFileMetadata;
-
-      const encMeta = await encryptMetadata(metadata, creds.keys.metaKey);
-      const encryptedMeta = toBase64url(encMeta.ciphertext);
-      const nonce = toBase64url(encMeta.iv);
-      await saveMeta(server, uploadId, creds.ownerTokenB64, encryptedMeta, nonce);
-
-      const url = buildShareUrl(server, "file", uploadId, creds.effectiveSecretB64);
-      setShareUrl(url);
-
-      const elapsedSec = (uploadEndTime - startTime) / 1000;
-      if (elapsedSec > 0 && encryptedSize > 0) {
-        setAvgSpeed(formatSpeed(encryptedSize / elapsedSec));
-      }
+      const elapsedSec = ((uploadEndTime || Date.now()) - startTime) / 1000;
+      if (elapsedSec > 0 && lastTotal > 0) setAvgSpeed(formatSpeed(lastTotal / elapsedSec));
 
       addUpload({
-        id: uploadId, server, url,
-        ownerToken: creds.ownerTokenB64,
-        fileNames: files.map((f) => path.basename(f)),
-        totalSize, hasPassword: creds.hasPassword,
+        id: result.id, server, url: result.url,
+        ownerToken: result.ownerToken,
+        fileNames: result.names,
+        totalSize: result.totalSize, hasPassword: result.hasPassword,
         createdAt: new Date().toISOString(), expireSec,
       });
 
@@ -347,10 +117,8 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
-    } finally {
-      zipCleanup?.();
     }
-  }, [files, password, maxDownloads, expireSec, server, totalSize, config.fileUploadSpeedLimit, config.fileUploadWs, config.oidcProtectFiles]);
+  }, [files, password, maxDownloads, expireSec, server, config]);
 
   // Done / Error view - press any key to go back
   useInput((input, key) => {
@@ -386,7 +154,9 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     }));
     return (
       <SelectList
+        key="expiry"
         items={items}
+        initialValue={expireSec}
         title={`Expiry time (${files.length} file${files.length !== 1 ? "s" : ""}, ${formatBytes(totalSize)})`}
         onSelect={(val) => { setExpireSec(val); setPhase("downloads"); }}
         onCancel={onBack}
@@ -402,7 +172,9 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     }));
     return (
       <SelectList
+        key="downloads"
         items={items}
+        initialValue={maxDownloads}
         title="Max downloads"
         onSelect={(val) => { setMaxDownloads(val); setPhase("password-ask"); }}
         onCancel={() => setPhase("expiry")}
@@ -426,6 +198,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
     }
     return (
       <SelectList
+        key="password-ask"
         items={[
           { label: "No", value: "no" },
           { label: "Yes", value: "yes" },
@@ -469,6 +242,7 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         </Box>
         <Box marginTop={1}>
           <SelectList
+            key="confirm"
             items={[
               { label: "Start upload", value: "go" },
               { label: "Cancel", value: "cancel" },
@@ -492,21 +266,6 @@ export function UploadView({ appState, onBack }: UploadViewProps): React.ReactEl
         </Box>
         <Text dimColor>A browser window has been opened for authentication.</Text>
         <Text dimColor>Complete the login and return here.</Text>
-      </Box>
-    );
-  }
-
-  // Packing (multi-file ZIP)
-  if (phase === "packing") {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>Packing {files.length} files into archive...</Text>
-        </Box>
-        <ProgressBar
-          percent={packProgress.percent}
-          detail={`${formatBytes(packProgress.packed)} / ${formatBytes(packProgress.total)}`}
-        />
       </Box>
     );
   }

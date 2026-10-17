@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { deleteUpload, deleteNote } from "../lib/api.js";
+import { apiFor } from "../lib/api.js";
 import { parseShareUrl } from "../lib/url.js";
 import { writeLine } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
@@ -21,9 +21,9 @@ export function registerDeleteCommand(program: Command): void {
         const parsed = parseShareUrl(url);
 
         if (parsed.type === "file") {
-          await deleteUpload(parsed.server, parsed.id, ownerToken);
+          await apiFor(parsed.server).deleteUpload(parsed.id, ownerToken);
         } else {
-          await deleteNote(parsed.server, parsed.id, ownerToken);
+          await apiFor(parsed.server).deleteNote(parsed.id, ownerToken);
         }
 
         if (options.json) {

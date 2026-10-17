@@ -1,13 +1,3 @@
-import { forTerminal } from "./terminal.js";
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    // The message usually comes from the server, which this client does not trust, and every
-    // caller prints it.
-    super(forTerminal(message));
-    this.name = "ApiError";
-  }
-}
+// An HTTP failure. `apiFor` in lib/api.ts throws it with the server's message already disarmed
+// for the terminal, since every caller prints it.
+export { ApiError } from "@skysend/transfer";

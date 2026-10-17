@@ -1,0 +1,67 @@
+/**
+ * @skysend/transfer - Public API
+ *
+ * What an upload and a download need besides the cryptography, for the web app, the CLI and
+ * later the mobile app. Only standard APIs (Web Crypto, Web Streams, fetch, WebSocket), so it
+ * runs in a browser, a worker, Node and a Bun-compiled binary. Nothing outside this package
+ * imports a submodule.
+ */
+
+// Several files as one zip, written while the upload reads it
+export { crc32, zipSize, zipStream } from "./zip.js";
+export type { ZipEntry, ZipEntryInfo } from "./zip.js";
+
+// The metadata of an upload of several files
+export { archiveMetadata, archiveMetadataFits, uniqueNames } from "./archive.js";
+
+// An upload from plaintext to link, over WebSocket or HTTP chunks
+export {
+  CHUNK_UPLOAD_SIZE,
+  CHUNK_WINDOW,
+  plaintextOf,
+  requestHttpError,
+  toBase64,
+  uploadEncrypted,
+} from "./upload.js";
+export type {
+  DeliveredUpload,
+  OpenWebSocket,
+  RequestTarget,
+  SharedUpload,
+  SourceFile,
+  UploadEvents,
+  UploadOptions,
+} from "./upload.js";
+
+// The keys and metadata of a download, and its checked decryption
+export {
+  decryptedStream,
+  decryptUploadMetadata,
+  fromBase64,
+  keysFromLink,
+  keysFromSecret,
+} from "./download.js";
+export type { LinkKeys, LinkPassword } from "./download.js";
+
+// The HTTP API of a server, with every response checked
+export { ApiError, createApiClient, holdOf, isUploadId, withUnlockedMeta } from "./api.js";
+export type {
+  ApiClient,
+  ApiClientOptions,
+  Ciphertext,
+  CreateNoteRequest,
+  CreateNoteResponse,
+  CreateRequestBody,
+  Inbox,
+  InboxUpload,
+  NoteInfo,
+  NoteViewResponse,
+  OidcUser,
+  QuotaStatus,
+  RequestLimit,
+  SenderRequest,
+  ServerConfig,
+  UnlockedMeta,
+  UploadInfo,
+  UploadTarget,
+} from "./api.js";

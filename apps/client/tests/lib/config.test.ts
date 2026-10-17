@@ -187,22 +187,26 @@ describe("removeServer", () => {
 // ── getWebSocket / setWebSocket ───────────────────────────────────────────────
 
 describe("WebSocket preference", () => {
-  it("always returns false while WebSocket uploads are globally disabled", async () => {
+  it("defaults to true when no preference is saved", async () => {
     const { addServer, getWebSocket } = await freshConfig();
     addServer("A", "https://a.example.com");
-    expect(getWebSocket("https://a.example.com")).toBe(false);
+    expect(getWebSocket("https://a.example.com")).toBe(true);
+    expect(getWebSocket()).toBe(true);
   });
 
-  it("returns false even without a server URL", async () => {
-    const { getWebSocket } = await freshConfig();
-    expect(getWebSocket()).toBe(false);
-  });
-
-  it("setWebSocket is a no-op - getWebSocket still returns false", async () => {
+  it("persists WebSocket setting per server", async () => {
     const { addServer, setWebSocket, getWebSocket } = await freshConfig();
     addServer("A", "https://a.example.com");
-    setWebSocket("https://a.example.com", true);
+    setWebSocket("https://a.example.com", false);
     expect(getWebSocket("https://a.example.com")).toBe(false);
+  });
+
+  it("does not affect other servers", async () => {
+    const { addServer, setWebSocket, getWebSocket } = await freshConfig();
+    addServer("A", "https://a.example.com");
+    addServer("B", "https://b.example.com");
+    setWebSocket("https://a.example.com", false);
+    expect(getWebSocket("https://b.example.com")).toBe(true);
   });
 });
 

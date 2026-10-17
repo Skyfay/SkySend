@@ -1,22 +1,20 @@
 import React, { useState, useCallback } from "react";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
 import {
-  createDecryptStream,
-  decryptMetadata,
-  expectedPlaintextSize,
-  type FileMetadata,
-} from "@skysend/crypto";
-import { fetchInfo, downloadFile, verifyPassword, withUnlockedMeta } from "../../lib/api.js";
-import { prepareDownload } from "../../lib/auth.js";
+  lookUpShare,
+  openShare,
+  outputPathFor,
+  saveShare,
+  type OpenedShare,
+} from "../../lib/download-job.js";
 import { parseShareUrl } from "../../lib/url.js";
-import { availablePath, sanitizeFilename } from "../../lib/filename.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { formatBytes, formatSpeed } from "../../lib/progress.js";
 import { TextPrompt } from "../components/TextPrompt.js";
 import { ProgressBar } from "../components/ProgressBar.js";
 import type { AppState } from "../types.js";
+import type { UploadInfo } from "../../lib/api.js";
 
 type Phase = "url-input" | "password" | "save-path" | "downloading" | "done" | "error";
 
@@ -28,156 +26,83 @@ interface DownloadViewProps {
 
 export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement {
   const [phase, setPhase] = useState<Phase>("url-input");
-  const [password, setPassword] = useState<string | undefined>();
   const [savePath, setSavePath] = useState("");
-  const [metadata, setMetadata] = useState<FileMetadata | undefined>();
+  const [share, setShare] = useState<OpenedShare | null>(null);
   const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
   const [resultPath, setResultPath] = useState("");
   const [resultSize, setResultSize] = useState(0);
   const [avgSpeed, setAvgSpeed] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  /** The link and info of a share that waits for its password. */
+  const [locked, setLocked] = useState<{ link: ReturnType<typeof parseShareUrl>; info: UploadInfo } | null>(null);
 
-  // Stored parsed values
-  const [parsedUrl, setParsedUrl] = useState<ReturnType<typeof parseShareUrl> | null>(null);
-  const [fileInfo, setFileInfo] = useState<Awaited<ReturnType<typeof fetchInfo>> | null>(null);
+  const fail = (err: unknown) => {
+    setErrorMsg(err instanceof Error ? err.message : String(err));
+    setPhase("error");
+  };
+
+  /** Opens the share and proposes where to save it. */
+  const open = useCallback(async (link: ReturnType<typeof parseShareUrl>, info: UploadInfo, password?: string) => {
+    const opened = await openShare(link, info, password);
+    setShare(opened);
+    setSavePath(outputPathFor(opened.metadata));
+    setPhase("save-path");
+  }, []);
 
   const handleUrl = useCallback(async (inputUrl: string) => {
     try {
-      const parsed = parseShareUrl(inputUrl.trim());
-      if (parsed.type !== "file") {
-        setErrorMsg("This URL is a note, not a file. Use 'View note' instead.");
-        setPhase("error");
-        return;
+      if (parseShareUrl(inputUrl.trim()).type !== "file") {
+        throw new Error("This URL is a note, not a file. Use 'View note' instead.");
       }
-      setParsedUrl(parsed);
-
-      const info = await fetchInfo(parsed.server, parsed.id);
-      setFileInfo(info);
-
+      const { link, info } = await lookUpShare(inputUrl.trim());
       if (info.hasPassword) {
+        setLocked({ link, info });
         setPhase("password");
         return;
       }
-
-      // Derive keys and get metadata for filename
-      const creds = await prepareDownload(parsed.secret, info.salt);
-      let meta: FileMetadata | undefined;
-      if (info.encryptedMeta && info.nonce) {
-        const ct = new Uint8Array(Buffer.from(info.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
-        const iv = new Uint8Array(Buffer.from(info.nonce, "base64")) as Uint8Array<ArrayBuffer>;
-        meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
-      }
-      setMetadata(meta);
-      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsed.id}`;
-      setSavePath(availablePath(process.cwd(), name));
-      setPhase("save-path");
+      await open(link, info);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setPhase("error");
+      fail(err);
     }
-  }, []);
+  }, [open]);
 
   const handlePassword = useCallback(async (pw: string) => {
     try {
-      if (!parsedUrl || !fileInfo) return;
-      setPassword(pw);
-      const creds = await prepareDownload(
-        parsedUrl.secret, fileInfo.salt, pw, fileInfo.passwordSalt, fileInfo.passwordAlgo,
-      );
-      const unlocked = await verifyPassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
-      if (!unlocked) {
-        setErrorMsg("Invalid password");
-        setPhase("error");
-        return;
-      }
-      // Only a right password makes the server release the metadata.
-      const opened = withUnlockedMeta(fileInfo, unlocked);
-      setFileInfo(opened);
-      let meta: FileMetadata | undefined;
-      if (opened.encryptedMeta && opened.nonce) {
-        const ct = new Uint8Array(Buffer.from(opened.encryptedMeta, "base64")) as Uint8Array<ArrayBuffer>;
-        const iv = new Uint8Array(Buffer.from(opened.nonce, "base64")) as Uint8Array<ArrayBuffer>;
-        meta = await decryptMetadata(ct, iv, creds.keys.metaKey);
-      }
-      setMetadata(meta);
-      const name = meta?.type === "single" ? sanitizeFilename(meta.name) : meta?.type === "archive" ? "archive.zip" : `download-${parsedUrl.id}`;
-      setSavePath(availablePath(process.cwd(), name));
-      setPhase("save-path");
+      if (!locked) return;
+      await open(locked.link, locked.info, pw);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setPhase("error");
+      fail(err);
     }
-  }, [parsedUrl, fileInfo]);
+  }, [locked, open]);
 
-  const doDownload = useCallback(async () => {
-    // The file being written. A failed download removes it again, so a file
-    // the server cut short never stays behind looking complete.
-    let partial: { path: string; writer: fs.WriteStream } | undefined;
+  /** Downloads to `target`, the path the user confirmed, a directory or a file. */
+  const doDownload = useCallback(async (target: string) => {
     try {
-      if (!parsedUrl || !fileInfo) return;
-      // The metadata carries the authenticated size the download is checked against.
-      if (!metadata) throw new Error("The upload has no metadata, so the download cannot be verified");
+      if (!share) return;
       setPhase("downloading");
-
-      const creds = await prepareDownload(
-        parsedUrl.secret, fileInfo.salt, password, fileInfo.passwordSalt, fileInfo.passwordAlgo,
-      );
-
-      const outputPath = path.resolve(savePath);
-      const dir = path.dirname(outputPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-      const { stream } = await downloadFile(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
-      const decryptedStream = stream.pipeThrough(
-        createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
-      );
-
-      const partPath = path.join(dir, `.skysend-${crypto.randomUUID()}.part`);
-      const writer = fs.createWriteStream(partPath, { flags: "wx" });
-      partial = { path: partPath, writer };
-      const reader = decryptedStream.getReader();
       const startTime = Date.now();
-      let totalWritten = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        writer.write(value);
-        totalWritten += value.byteLength;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const speed = elapsed > 0 ? totalWritten / elapsed : 0;
-        setProgress({
-          percent: fileInfo.size > 0 ? (totalWritten / fileInfo.size) * 100 : 0,
-          speed: formatSpeed(speed),
-          loaded: totalWritten,
-          total: fileInfo.size,
-        });
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        writer.on("close", () => resolve());
-        writer.on("error", reject);
-        writer.end();
-      });
-      fs.renameSync(partPath, outputPath);
-      partial = undefined;
-
-      setResultPath(outputPath);
-      setResultSize(totalWritten);
+      const saved = await saveShare(
+        share,
+        outputPathFor(share.metadata, path.resolve(target)),
+        (written, total) => {
+          const elapsed = (Date.now() - startTime) / 1000;
+          setProgress({
+            percent: total > 0 ? (written / total) * 100 : 0,
+            speed: formatSpeed(elapsed > 0 ? written / elapsed : 0),
+            loaded: written,
+            total,
+          });
+        },
+      );
+      setResultPath(saved.file);
+      setResultSize(saved.size);
       const elapsedSec = (Date.now() - startTime) / 1000;
-      if (elapsedSec > 0 && totalWritten > 0) {
-        setAvgSpeed(formatSpeed(totalWritten / elapsedSec));
-      }
+      if (elapsedSec > 0 && saved.size > 0) setAvgSpeed(formatSpeed(saved.size / elapsedSec));
       setPhase("done");
     } catch (err) {
-      if (partial) {
-        partial.writer.destroy();
-        fs.rmSync(partial.path, { force: true });
-      }
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setPhase("error");
+      fail(err);
     }
-  }, [parsedUrl, fileInfo, metadata, password, savePath]);
+  }, [share]);
 
   useInput((_input, key) => {
     if ((phase === "done" || phase === "error") && (key.return || key.escape)) {
@@ -219,7 +144,7 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
       <TextPrompt
         label="Save to"
         defaultValue={savePath}
-        onSubmit={(val) => { setSavePath(val); void doDownload(); }}
+        onSubmit={(val) => { setSavePath(val); void doDownload(val); }}
         onCancel={onBack}
       />
     );
@@ -247,8 +172,8 @@ export function DownloadView({ onBack }: DownloadViewProps): React.ReactElement 
           <Text><Text dimColor>Saved: </Text>{forTerminal(resultPath)}</Text>
           <Text><Text dimColor>Size:  </Text>{formatBytes(resultSize)}</Text>
           {avgSpeed && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
-          {metadata?.type === "archive" && (
-            <Text><Text dimColor>Archive contains </Text>{metadata.files.length} files</Text>
+          {share?.metadata.type === "archive" && (
+            <Text><Text dimColor>Archive contains </Text>{share.metadata.files.length} files</Text>
           )}
         </Box>
         <Box marginTop={1}>

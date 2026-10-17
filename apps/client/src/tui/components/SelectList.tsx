@@ -15,14 +15,18 @@ interface SelectListProps<T = string> {
   onCancel?: () => void;
   title?: string;
   maxVisible?: number;
+  /** The value the cursor starts on, like the server's default. The first item without one. */
+  initialValue?: T;
 }
 
 export function SelectList<T = string>({
-  items, onSelect, onCancel, title, maxVisible = 15,
+  items, onSelect, onCancel, title, maxVisible = 15, initialValue,
 }: SelectListProps<T>): React.ReactElement {
   const accent = useAccent();
-  const [cursor, setCursor] = useState(0);
   const activeItems = items.filter((i) => !i.disabled);
+  const [cursor, setCursor] = useState(() =>
+    Math.max(0, activeItems.findIndex((item) => item.value === initialValue)),
+  );
 
   useInput((input, key) => {
     if (key.upArrow || (key.ctrl && input === "p")) {

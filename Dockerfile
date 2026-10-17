@@ -17,12 +17,13 @@ COPY apps/client/package.json apps/client/
 COPY apps/client/stubs/ apps/client/stubs/
 COPY packages/crypto/package.json packages/crypto/
 COPY packages/note-format/package.json packages/note-format/
+COPY packages/transfer/package.json packages/transfer/
 COPY workers/instances/package.json workers/instances/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/server --filter @skysend/web --filter @skysend/cli build
+RUN pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer --filter @skysend/server --filter @skysend/web --filter @skysend/cli build
 
 # ── Stage 3: Production ────────────────────────────────
 FROM base AS deploy
@@ -44,6 +45,8 @@ COPY --from=build /app/packages/crypto/dist ./packages/crypto/dist
 COPY --from=build /app/packages/crypto/package.json ./packages/crypto/
 COPY --from=build /app/packages/note-format/dist ./packages/note-format/dist
 COPY --from=build /app/packages/note-format/package.json ./packages/note-format/
+COPY --from=build /app/packages/transfer/dist ./packages/transfer/dist
+COPY --from=build /app/packages/transfer/package.json ./packages/transfer/
 
 # Install production dependencies only. better-sqlite3 ships a prebuilt binary for every
 # platform, and the image only needs the one for its own (Alpine is musl). Deleting the

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { Box, Text, useInput } from "ink";
 import { encryptNoteContent, toBase64url } from "@skysend/crypto";
 import type { NoteBlock } from "@skysend/note-format";
-import { createNote } from "../../lib/api.js";
+import { apiFor } from "../../lib/api.js";
 import { prepareUpload } from "../../lib/auth.js";
 import { buildShareUrl } from "../../lib/url.js";
 import { addNote } from "../../lib/history.js";
@@ -95,7 +95,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
       const note = prepareNote(block, config.noteBlocks);
       const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
 
-      const result = await createNote(server, {
+      const result = await apiFor(server, oidcToken).createNote({
         encryptedContent: toBase64url(encrypted.ciphertext),
         nonce: toBase64url(encrypted.nonce),
         salt: toBase64url(creds.salt),
@@ -106,7 +106,7 @@ export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React
         ...(creds.hasPassword && creds.passwordSalt && creds.passwordAlgo
           ? { passwordSalt: toBase64url(creds.passwordSalt), passwordAlgo: creds.passwordAlgo }
           : {}),
-      }, oidcToken);
+      });
 
       const url = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
       setShareUrl(url);

@@ -24,7 +24,7 @@ skysend upload <files...> [options]
 | `-e, --expires <duration>` | Expiry time (e.g. `5m`, `1h`, `1d`, `7d`) |
 | `-d, --downloads <count>` | Maximum number of downloads |
 | `-p, --password [password]` | Password protect the upload, at least 8 characters. Prompts interactively if no value is given. |
-| `--no-ws` | Use HTTP chunked upload instead of WebSocket. Currently the default anyway, see below |
+| `--no-ws` | Use HTTP chunked upload instead of WebSocket, see below |
 | `--json` | Output result as JSON |
 
 ### Examples
@@ -51,9 +51,9 @@ skysend upload ./data.csv --json
 
 ### Upload Behavior
 
-- **Single file**: Uploaded as-is after encryption.
-- **Multiple files**: Automatically zipped with [fflate](https://github.com/101arrowz/fflate) before encryption. The recipient receives a `.zip` file.
-- **Transport**: Always HTTP chunked upload for now, as WebSocket uploads are disabled in the CLI. `--no-ws` keeps it that way once they return, see [WebSocket Transport](./index.md#websocket-transport).
+- **Single file**: Read from the disk and encrypted while it uploads, so the memory stays flat whatever the size.
+- **Multiple files**: Packed into one `.zip` while they upload, stored without compression like the web app does, with ZIP64 above 4 GiB. Two files of the same name both arrive, the second as `report (2).pdf`. The recipient receives the `.zip` file.
+- **Transport**: WebSocket when the server offers it, with HTTP chunks as the fallback when the WebSocket cannot connect. `--no-ws` stays on HTTP chunks, see [WebSocket Transport](./index.md#websocket-transport).
 - **Progress**: Displays a progress bar with speed and ETA.
 
 ### JSON Output
@@ -62,12 +62,20 @@ When using `--json`, the output includes all details needed for scripting:
 
 ```json
 {
-  "url": "https://your-instance.com/file/abc123#base64url_secret",
   "id": "abc123",
+  "url": "https://your-instance.com/file/abc123#base64url_secret",
   "ownerToken": "base64url_owner_token",
-  "expiresAt": "2026-04-20T12:00:00.000Z"
+  "size": 1048576,
+  "encryptedSize": 1048844,
+  "fileCount": 1,
+  "expires": 86400,
+  "maxDownloads": 1,
+  "hasPassword": false,
+  "transport": "ws"
 }
 ```
+
+`size` is the plaintext in bytes, the zip for several files, and `expires` is in seconds. `transport` is `ws` or `http`, whichever carried the upload.
 
 ::: tip Owner Token
 The `ownerToken` is required to delete an upload. When using `--json`, save the output so you can delete the upload later with `skysend delete`.
@@ -120,6 +128,8 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 - If the file is password-protected, you will be prompted for the password (or provide it via `--password`).
 - Progress is displayed with a bar, speed, and ETA.
 - The original filename is extracted from the encrypted metadata. For multi-file uploads, the downloaded file will be a `.zip` archive.
+- The file is decrypted while it downloads and checked against the size in the encrypted metadata and against its stream nonce, which every upload from the web app and from this version of the CLI names. A server that cuts or reorders the encrypted data then fails the download.
+- It is written to a hidden `.skysend-<id>.part` file next to the target first and renamed at the end, so a download that breaks off never leaves a file that looks complete.
 
 ## note
 

@@ -1,20 +1,5 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { Command } from "commander";
-import {
-  createDecryptStream,
-  decryptMetadata,
-  expectedPlaintextSize,
-  type FileMetadata,
-} from "@skysend/crypto";
-import {
-  fetchInfo,
-  downloadFile,
-  verifyPassword,
-  withUnlockedMeta,
-} from "../lib/api.js";
-import { prepareDownload } from "../lib/auth.js";
-import { parseShareUrl } from "../lib/url.js";
+import { lookUpShare, openShare, outputPathFor, saveShare } from "../lib/download-job.js";
 import {
   formatBytes,
   formatSpeed,
@@ -26,7 +11,7 @@ import {
   type ProgressState,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
-import { availablePath, sanitizeFilename } from "../lib/filename.js";
+import { sanitizeFilename } from "../lib/filename.js";
 import { forTerminal } from "../lib/terminal.js";
 
 interface DownloadOptions {
@@ -45,23 +30,10 @@ export function registerDownloadCommand(program: Command): void {
     .option("-p, --password [password]", "Password (prompts if no value given)")
     .option("--json", "Output as JSON")
     .action(async (url: string, options: DownloadOptions) => {
-      // The file being written. A failed download removes it again, so a file
-      // the server cut short never stays behind looking complete.
-      let partial: { path: string; writer: fs.WriteStream } | undefined;
       try {
-        // Parse the share URL
-        const parsed = parseShareUrl(url);
-        const server = parsed.server;
-
-        if (parsed.type !== "file") {
-          throw new Error("This URL is a note, not a file. Use 'skysend note:view' instead.");
-        }
-
-        // Fetch upload info
         if (!options.json) writeLine("Fetching file info...");
-        let info = await fetchInfo(server, parsed.id);
+        const { link, info } = await lookUpShare(url);
 
-        // Handle password
         let password: string | undefined;
         if (info.hasPassword) {
           if (options.password === true) {
@@ -71,131 +43,49 @@ export function registerDownloadCommand(program: Command): void {
           } else {
             password = await promptPassword("This file is password protected. Password: ");
           }
-          if (!password) throw new Error("Password is required for this file");
         }
 
-        // Derive keys
         if (!options.json) writeLine("Deriving keys...");
-        const creds = await prepareDownload(
-          parsed.secret,
-          info.salt,
-          password,
-          info.passwordSalt,
-          info.passwordAlgo,
-        );
+        const share = await openShare(link, info, password);
+        const outputPath = outputPathFor(share.metadata, options.output);
+        if (!options.json) writeLine(`Downloading to: ${forTerminal(outputPath)}`);
 
-        // Verify the password. Only then does the server release the metadata.
-        if (info.hasPassword) {
-          const unlocked = await verifyPassword(server, parsed.id, creds.authTokenB64);
-          if (!unlocked) throw new Error("Invalid password");
-          info = withUnlockedMeta(info, unlocked);
-        }
-
-        // Decrypt metadata
-        let metadata: FileMetadata | undefined;
-        if (info.encryptedMeta && info.nonce) {
-          const ciphertext = new Uint8Array(
-            Buffer.from(info.encryptedMeta, "base64"),
-          ) as Uint8Array<ArrayBuffer>;
-          const iv = new Uint8Array(
-            Buffer.from(info.nonce, "base64"),
-          ) as Uint8Array<ArrayBuffer>;
-          metadata = await decryptMetadata(ciphertext, iv, creds.keys.metaKey);
-        }
-        // The metadata carries the authenticated size the download is checked against.
-        if (!metadata) throw new Error("The upload has no metadata, so the download cannot be verified");
-
-        // Determine output path. The sender picks the name, so it may neither leave the
-        // chosen directory nor replace a file there. Only an explicit -o file path overwrites.
-        let outputPath: string;
-        const defaultName = metadata.type === "single" ? sanitizeFilename(metadata.name) : "archive.zip";
-
-        if (options.output) {
-          const stat = fs.existsSync(options.output) ? fs.statSync(options.output) : null;
-          if (stat?.isDirectory()) {
-            outputPath = availablePath(options.output, defaultName);
-          } else {
-            outputPath = options.output;
-          }
-        } else {
-          outputPath = availablePath(process.cwd(), defaultName);
-        }
-
-        // Ensure output directory exists
-        const dir = path.dirname(outputPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-
-        // Download + decrypt
-        if (!options.json) {
-          writeLine(`Downloading to: ${forTerminal(outputPath)}`);
-        }
-
-        const { stream } = await downloadFile(server, parsed.id, creds.authTokenB64);
-        const decryptedStream = stream.pipeThrough(
-          createDecryptStream(creds.keys.fileKey, expectedPlaintextSize(metadata)),
-        );
-
-        const progressState: ProgressState = {
-          loaded: 0,
-          total: info.size,
-          startTime: Date.now(),
-        };
-
-        // Write to file
-        const partPath = path.join(dir, `.skysend-${crypto.randomUUID()}.part`);
-        const writer = fs.createWriteStream(partPath, { flags: "wx" });
-        partial = { path: partPath, writer };
-        const reader = decryptedStream.getReader();
-
-        let totalWritten = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          writer.write(value);
-          totalWritten += value.byteLength;
-          progressState.loaded = totalWritten;
-          if (!options.json) {
-            writeProgress(renderProgress(progressState, "Downloading"));
-          }
-        }
-
-        await new Promise<void>((resolve, reject) => {
-          writer.on("close", () => resolve());
-          writer.on("error", reject);
-          writer.end();
+        const progress: ProgressState = { loaded: 0, total: 0, startTime: Date.now() };
+        const saved = await saveShare(share, outputPath, (written, total) => {
+          progress.loaded = written;
+          progress.total = total;
+          if (!options.json) writeProgress(renderProgress(progress, "Downloading"));
         });
-        fs.renameSync(partPath, outputPath);
-        partial = undefined;
+        if (!options.json) {
+          clearLine();
+          writeLine("Download complete.");
+        }
 
-        if (!options.json) { clearLine(); writeLine("Download complete."); }
-
-        const elapsedSec = (Date.now() - progressState.startTime) / 1000;
-        const avgSpeedSuffix = elapsedSec > 0 && totalWritten > 0
-          ? ` | Avg speed: ${formatSpeed(totalWritten / elapsedSec)}`
-          : "";
-
+        const name =
+          share.metadata.type === "single" ? sanitizeFilename(share.metadata.name) : "archive.zip";
+        const elapsedSec = (Date.now() - progress.startTime) / 1000;
         if (options.json) {
-          console.log(JSON.stringify({
-            id: parsed.id,
-            file: outputPath,
-            size: totalWritten,
-            name: defaultName,
-            fileCount: info.fileCount,
-          }));
+          console.log(
+            JSON.stringify({
+              id: link.id,
+              file: saved.file,
+              size: saved.size,
+              name,
+              fileCount: info.fileCount,
+            }),
+          );
         } else {
-          writeLine(`Saved: ${forTerminal(outputPath)} (${formatBytes(totalWritten)})${avgSpeedSuffix}`);
-          if (metadata.type === "archive") {
-            writeLine(`Archive contains ${metadata.files.length} files`);
+          const avgSpeed =
+            elapsedSec > 0 && saved.size > 0
+              ? ` | Avg speed: ${formatSpeed(saved.size / elapsedSec)}`
+              : "";
+          writeLine(`Saved: ${forTerminal(saved.file)} (${formatBytes(saved.size)})${avgSpeed}`);
+          if (share.metadata.type === "archive") {
+            writeLine(`Archive contains ${share.metadata.files.length} files`);
           }
         }
       } catch (err) {
         if (!options.json) clearLine();
-        if (partial) {
-          partial.writer.destroy();
-          fs.rmSync(partial.path, { force: true });
-        }
         if (err instanceof ApiError) {
           if (options.json) {
             console.error(JSON.stringify({ error: err.message, status: err.status }));
@@ -203,11 +93,11 @@ export function registerDownloadCommand(program: Command): void {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
-          const message = err instanceof Error ? err.message : String(err);
+          const message = forTerminal(err instanceof Error ? err.message : String(err));
           if (options.json) {
             console.error(JSON.stringify({ error: message }));
           } else {
-            console.error(`Error: ${forTerminal(message)}`);
+            console.error(`Error: ${message}`);
           }
         }
         process.exit(1);

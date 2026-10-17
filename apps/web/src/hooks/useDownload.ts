@@ -1,18 +1,18 @@
 import { useState, useCallback, useRef } from "react";
 import {
-  deriveKeys,
-  computeAuthToken,
-  decryptMetadata,
   expectedBaseNonce,
   expectedPlaintextSize,
-  toBase64url,
   fromBase64url,
-  applyPasswordProtection,
-  deriveKeyFromPassword,
-  type DerivedKeys,
   type FileMetadata,
   type Argon2idHashFn,
 } from "@skysend/crypto";
+import {
+  decryptUploadMetadata,
+  keysFromLink,
+  keysFromSecret,
+  withUnlockedMeta,
+  type LinkKeys,
+} from "@skysend/transfer";
 import * as api from "@/lib/api";
 import { saveDecryptedDownload, type DownloadDebugInfo } from "@/lib/download-tiers";
 import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
@@ -46,79 +46,10 @@ interface DownloadState {
   pendingDownloadArgs: { id: string; secretB64: string; password?: string; argon2id?: Argon2idHashFn } | null;
 }
 
-interface PreparedDownload {
-  secret: Uint8Array;
-  salt: Uint8Array;
-  keys: DerivedKeys;
-  authTokenB64: string;
-}
-
-/** Derives the file, metadata, and auth keys from an already recovered secret. */
-async function deriveFromSecret(
-  secret: Uint8Array,
-  saltB64: string,
-): Promise<PreparedDownload> {
-  const salt = fromBase64url(saltB64);
-  const keys = await deriveKeys(secret, salt);
-  const authToken = await computeAuthToken(keys.authKey);
-  return { secret, salt, keys, authTokenB64: toBase64url(authToken) };
-}
-
-/**
- * Recovers the secret from the URL fragment - unwrapping the password protection
- * when one is set - and derives the download keys from it.
- */
-async function prepareKeys(
-  secretB64: string,
-  saltB64: string,
-  password?: string,
-  passwordSaltB64?: string,
-  argon2id?: Argon2idHashFn,
-): Promise<PreparedDownload> {
-  let secret = fromBase64url(secretB64);
-
-  if (password) {
-    if (!passwordSaltB64) throw new Error("Missing password salt");
-    /* v8 ignore next */
-    if (!argon2id) throw new Error("Argon2id is required to decrypt password-protected uploads");
-
-    const passwordSalt = fromBase64url(passwordSaltB64);
-    const { key: passwordKey } = await deriveKeyFromPassword(
-      password,
-      passwordSalt,
-      argon2id,
-    );
-    secret = applyPasswordProtection(secret, passwordKey);
-  }
-
-  return deriveFromSecret(secret, saltB64);
-}
-
-/**
- * The info with the metadata a password check released. GET /api/info holds it back for a
- * password-protected upload, so it arrives with a correct password only.
- */
-function withUnlockedMeta(info: api.UploadInfo, unlocked: api.UnlockedMeta): api.UploadInfo {
-  return {
-    ...info,
-    encryptedMeta: unlocked.encryptedMeta ?? info.encryptedMeta,
-    nonce: unlocked.nonce ?? info.nonce,
-  };
-}
-
-/** Decrypts the upload metadata. Returns null for uploads that carry none. */
-async function decryptMeta(
-  info: api.UploadInfo,
-  metaKey: CryptoKey,
-): Promise<FileMetadata | null> {
-  if (!info.encryptedMeta || !info.nonce) return null;
-
-  const ciphertext = Uint8Array.from(atob(info.encryptedMeta), (c) =>
-    c.charCodeAt(0),
-  );
-  const nonce = Uint8Array.from(atob(info.nonce), (c) => c.charCodeAt(0));
-  return decryptMetadata(ciphertext, nonce, metaKey);
-}
+/** Stands in when the page has no Argon2id loaded, which a protected share needs. */
+const noArgon2: Argon2idHashFn = async () => {
+  throw new Error("Argon2id is required to decrypt password-protected uploads");
+};
 
 export function useDownload() {
   const [state, setState] = useState<DownloadState>({
@@ -155,8 +86,8 @@ export function useDownload() {
       // recipient can see what the link holds without spending a download.
       let metadata: FileMetadata | null = null;
       try {
-        const { keys } = await deriveFromSecret(fromBase64url(secretB64), info.salt);
-        metadata = await decryptMeta(info, keys.metaKey);
+        const { keys } = await keysFromSecret(fromBase64url(secretB64), info.salt);
+        metadata = await decryptUploadMetadata(info, keys.metaKey);
       } catch (err) {
         // A broken fragment or corrupted metadata must not block the page - the
         // download itself surfaces the real error.
@@ -190,15 +121,13 @@ export function useDownload() {
         // Clearing the error lets PasswordPrompt toast again on a repeated failure.
         setState((s) => ({ ...s, phase: "verifying-password", info, error: null }));
 
-        const { secret, keys, authTokenB64 } = await prepareKeys(
-          secretB64,
-          info.salt,
+        const { secret, keys, authToken } = await keysFromLink(secretB64, info.salt, {
           password,
-          info.passwordSalt,
+          saltB64: info.passwordSalt ?? "",
           argon2id,
-        );
+        });
 
-        const unlocked = await api.verifyPassword(id, authTokenB64);
+        const unlocked = await api.verifyPassword(id, authToken);
         if (!unlocked) {
           setState((s) => ({
             ...s,
@@ -213,7 +142,7 @@ export function useDownload() {
 
         let metadata: FileMetadata | null = null;
         try {
-          metadata = await decryptMeta(info, keys.metaKey);
+          metadata = await decryptUploadMetadata(info, keys.metaKey);
         } catch (err) {
           console.warn("[SkySend] Could not decrypt metadata after unlock:", err);
         }
@@ -285,26 +214,26 @@ export function useDownload() {
         // A prior unlock() already recovered the secret and verified the password,
         // so both the Argon2id run and the verification round-trip are skipped.
         const unlockedSecret = unlockedSecretRef.current;
-        let prepared: PreparedDownload;
+        let prepared: LinkKeys;
 
         if (unlockedSecret) {
-          prepared = await deriveFromSecret(unlockedSecret, info.salt);
+          prepared = await keysFromSecret(unlockedSecret, info.salt);
         } else {
           if (info.hasPassword && password) {
             setState((s) => ({ ...s, phase: "verifying-password" }));
           }
 
-          prepared = await prepareKeys(
+          prepared = await keysFromLink(
             secretB64,
             info.salt,
-            info.hasPassword ? password : undefined,
-            info.passwordSalt,
-            argon2id,
+            info.hasPassword && password
+              ? { password, saltB64: info.passwordSalt ?? "", argon2id: argon2id ?? noArgon2 }
+              : undefined,
           );
 
           // Verify password if protected
           if (info.hasPassword) {
-            const unlocked = await api.verifyPassword(id, prepared.authTokenB64);
+            const unlocked = await api.verifyPassword(id, prepared.authToken);
             if (!unlocked) {
               setState((s) => ({
                 ...s,
@@ -317,10 +246,10 @@ export function useDownload() {
           }
         }
 
-        const { secret, salt, keys, authTokenB64 } = prepared;
+        const { secret, salt, keys, authToken } = prepared;
 
         // Reuse the metadata decrypted during loadInfo()/unlock() when available.
-        const metadata = state.metadata ?? (await decryptMeta(info, keys.metaKey));
+        const metadata = state.metadata ?? (await decryptUploadMetadata(info, keys.metaKey));
         // The metadata carries the authenticated size the download is checked against.
         if (!metadata) {
           throw new Error("The upload has no metadata, so the download cannot be verified");
@@ -372,9 +301,9 @@ export function useDownload() {
         await saveDecryptedDownload({
           source: {
             path: `/api/download/${id}`,
-            token: authTokenB64,
+            token: authToken,
             tokenHeader: "X-Auth-Token",
-            fetchCiphertext: () => api.downloadFile(id, authTokenB64),
+            fetchCiphertext: () => api.downloadFile(id, authToken),
           },
           secret,
           salt,

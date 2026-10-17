@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { Box, Text, useInput } from "ink";
 import { decryptNoteContent } from "@skysend/crypto";
 import { noteToText, type ReadBlock } from "@skysend/note-format";
-import { fetchNoteInfo, viewNote, verifyNotePassword } from "../../lib/api.js";
+import { apiFor, type NoteInfo } from "../../lib/api.js";
 import { prepareDownload } from "../../lib/auth.js";
 import { noteFileName, readReceivedNote } from "../../lib/note.js";
 import { forTerminal } from "../../lib/terminal.js";
@@ -124,12 +124,12 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   const [revealedPasswords, setRevealedPasswords] = useState<Set<number>>(new Set());
 
   const [parsedUrl, setParsedUrl] = useState<ReturnType<typeof parseShareUrl> | null>(null);
-  const [noteInfo, setNoteInfo] = useState<Awaited<ReturnType<typeof fetchNoteInfo>> | null>(null);
+  const [noteInfo, setNoteInfo] = useState<NoteInfo | null>(null);
   const didAutoLoad = React.useRef(false);
 
   const loadNote = useCallback(async (
     parsed: ReturnType<typeof parseShareUrl>,
-    info: Awaited<ReturnType<typeof fetchNoteInfo>>,
+    info: NoteInfo,
     pw?: string,
   ) => {
     setPhase("loading");
@@ -137,7 +137,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
       parsed.secret, info.salt, pw, info.passwordSalt, info.passwordAlgo,
     );
 
-    const response = await viewNote(parsed.server, parsed.id, creds.authTokenB64);
+    const response = await apiFor(parsed.server).viewNote(parsed.id, creds.authTokenB64);
 
     const ct = new Uint8Array(Buffer.from(response.encryptedContent, "base64")) as Uint8Array<ArrayBuffer>;
     const nonce = new Uint8Array(Buffer.from(response.nonce, "base64")) as Uint8Array<ArrayBuffer>;
@@ -162,7 +162,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
       }
       setParsedUrl(parsed);
 
-      const info = await fetchNoteInfo(parsed.server, parsed.id);
+      const info = await apiFor(parsed.server).fetchNoteInfo(parsed.id);
       setNoteInfo(info);
 
       if (info.hasPassword) {
@@ -192,7 +192,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
       const creds = await prepareDownload(
         parsedUrl.secret, noteInfo.salt, pw, noteInfo.passwordSalt, noteInfo.passwordAlgo,
       );
-      const valid = await verifyNotePassword(parsedUrl.server, parsedUrl.id, creds.authTokenB64);
+      const valid = await apiFor(parsedUrl.server).verifyNotePassword(parsedUrl.id, creds.authTokenB64);
       if (!valid) {
         setErrorMsg("Invalid password");
         setPhase("error");

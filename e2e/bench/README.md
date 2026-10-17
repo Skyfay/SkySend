@@ -33,6 +33,9 @@ browser --> [proxy A :3900] --> server :3901 --> [proxy B :3902] --> S3 :3903
 | `--direct` | | The browser talks to the server without proxy A, which runs in this process and costs some speed at several hundred MiB/s. Upload speeds then come from the worker alone |
 | `--proxy nginx` | | Puts the Nginx of the reverse proxy guide in front, in Docker, with TLS and HTTP/2 on port 3906, the way an instance runs |
 | `--port` | `3900` | First of the four ports |
+| `--client cli` | `web` | The end-user CLI instead of a browser: `skysend upload` and `skysend download` with `--json`, behind the same relays. The sampler counts the CLI process where it counts the browser, so `browserCpuPercent` and `browserPeakRssMiB` are the CLI's. One upload and its download only |
+| `--cli-bin` | `apps/client/dist/skysend` | The CLI to run, the Bun binary of `pnpm client:compile` by default, which is what people install |
+| `--files N` | `1` | Sends N files of `--size` at once, which the app and the CLI pack into one zip. They are hard links to the one source file under names of their own. A download of several files counts as intact when every entry of the zip has the hash of the source |
 
 What a result holds: total time and speed per direction, the time from the click to the first byte and from 100 % in the UI to the link (`tailSeconds`), rates in windows of 250 ms, 500 ms and 1 s with their spread (`cv`) for the UI, the wire and the bucket, CPU and peak memory of server and browser, the download tier, whether the download matched, and with S3 the multipart uploads left in the bucket.
 

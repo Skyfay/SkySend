@@ -18,7 +18,7 @@ import { argon2id } from "hash-wasm";
 
 // ── Argon2id via hash-wasm ─────────────────────────────
 
-const hashWasmArgon2: Argon2idHashFn = async (
+export const hashWasmArgon2: Argon2idHashFn = async (
   password: Uint8Array,
   salt: Uint8Array,
   params: { memory: number; iterations: number; parallelism: number; hashLength: number },

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 import { Box, Text, useApp, useInput } from "ink";
-import { fetchConfig, fetchQuota } from "../lib/api.js";
+import { apiFor } from "../lib/api.js";
 import type { View, AppState } from "./types.js";
 import { ThemeProvider, useAccent } from "./theme.js";
 import { Header } from "./components/Header.js";
@@ -46,9 +46,9 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
     setError(null);
     setHint("Connecting to server...");
     try {
-      const config = await fetchConfig(url);
+      const config = await apiFor(url).fetchConfig();
       let quota;
-      try { quota = await fetchQuota(url); } catch { /* optional */ }
+      try { quota = await apiFor(url).fetchQuota(); } catch { /* optional */ }
       setAppState({ server: url, serverName: name, config, quota });
       setAccentColor(config.customColor);
       setView(targetView ?? "menu");
@@ -75,7 +75,7 @@ function AppInner({ initialServer, initialView, initialNoteUrl, setAccentColor }
   const refreshQuota = useCallback(async () => {
     if (!appState) return;
     try {
-      const quota = await fetchQuota(appState.server);
+      const quota = await apiFor(appState.server).fetchQuota();
       setAppState((prev) => prev ? { ...prev, quota } : prev);
     } catch { /* ignore */ }
   }, [appState]);

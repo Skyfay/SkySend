@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
-import { fetchInfo, fetchNoteInfo, deleteUpload, deleteNote } from "../../lib/api.js";
+import { apiFor } from "../../lib/api.js";
 import {
   getUploads, getNotes, removeUpload, removeNote, cleanupExpired,
   type StoredUpload, type StoredNote,
@@ -93,7 +93,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
     setLiveUpload(null);
     setPhase("upload-detail");
     try {
-      const info = await fetchInfo(upload.server, upload.id);
+      const info = await apiFor(upload.server).fetchInfo(upload.id);
       setLiveUpload({
         downloadCount: info.downloadCount,
         maxDownloads: info.maxDownloads,
@@ -112,7 +112,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
     setLiveNote(null);
     setPhase("note-detail");
     try {
-      const info = await fetchNoteInfo(note.server, note.id);
+      const info = await apiFor(note.server).fetchNoteInfo(note.id);
       setLiveNote({
         viewCount: info.viewCount,
         maxViews: info.maxViews,
@@ -239,7 +239,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
                 setShowQR((v) => !v);
               } else if (val === "delete") {
                 try {
-                  await deleteUpload(u.server, u.id, u.ownerToken);
+                  await apiFor(u.server).deleteUpload(u.id, u.ownerToken);
                   removeUpload(u.id);
                 } catch (err) {
                   if (err instanceof ApiError && err.status === 404) {
@@ -327,7 +327,7 @@ export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.R
                 setShowQR((v) => !v);
               } else if (val === "delete") {
                 try {
-                  await deleteNote(n.server, n.id, n.ownerToken);
+                  await apiFor(n.server).deleteNote(n.id, n.ownerToken);
                   removeNote(n.id);
                 } catch (err) {
                   if (err instanceof ApiError && err.status === 404) {

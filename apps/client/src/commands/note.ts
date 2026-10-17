@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { encryptNoteContent, toBase64url } from "@skysend/crypto";
-import { fetchConfig, createNote } from "../lib/api.js";
+import { apiFor } from "../lib/api.js";
 import { prepareUpload } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
 import { resolveServer } from "../lib/config.js";
@@ -49,7 +49,7 @@ export function registerNoteCommand(program: Command): void {
     .action(async (text: string | undefined, options: NoteOptions) => {
       try {
         const server = resolveServer(options.server);
-        const config = await fetchConfig(server);
+        const config = await apiFor(server).fetchConfig();
 
         // Authenticate with OIDC if the server requires it for notes
         let oidcToken: string | undefined;
@@ -144,7 +144,7 @@ export function registerNoteCommand(program: Command): void {
         const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
 
         // Create note
-        const result = await createNote(server, {
+        const result = await apiFor(server, oidcToken).createNote({
           encryptedContent: toBase64url(encrypted.ciphertext),
           nonce: toBase64url(encrypted.nonce),
           salt: toBase64url(creds.salt),
@@ -156,7 +156,7 @@ export function registerNoteCommand(program: Command): void {
           hasPassword: creds.hasPassword,
           passwordSalt: creds.passwordSalt ? toBase64url(creds.passwordSalt) : undefined,
           passwordAlgo: creds.passwordAlgo,
-        }, oidcToken);
+        });
 
         // Build share URL
         const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);

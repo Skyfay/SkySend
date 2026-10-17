@@ -103,9 +103,9 @@ skysend config
 
 ### WebSocket Transport
 
-The CLI currently always uploads over HTTP chunks, even when the server offers WebSocket uploads. WebSocket uploads are disabled in the CLI until large transfers over HTTPS no longer break off midway.
+The CLI uploads over a WebSocket when the server offers WebSocket uploads (`FILE_UPLOAD_WS`), the same way the web app does. When the WebSocket cannot connect, for example behind a proxy that does not pass it on, the upload falls back to HTTP chunks by itself.
 
-`skysend upload ./file.pdf --no-ws` keeps an upload on HTTP chunks once WebSocket uploads return to the CLI.
+`skysend upload ./file.pdf --no-ws` keeps a single upload on HTTP chunks. To keep every upload to one server on HTTP chunks, switch "WebSocket upload" off under Settings in the interactive mode, which the CLI remembers per server. `skysend config` shows the setting of every server.
 
 ### Reset Config
 

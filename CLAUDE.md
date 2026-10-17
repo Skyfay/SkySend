@@ -22,6 +22,7 @@ Claude Code loads the nearest `CLAUDE.md` when you touch files in a directory. R
 | React SPA, UI components, hooks, i18n, toasts | [apps/web/CLAUDE.md](apps/web/CLAUDE.md) |
 | Encryption, key derivation, ECE streams | [packages/crypto/CLAUDE.md](packages/crypto/CLAUDE.md) |
 | Note content format, legacy notes | [packages/note-format/CLAUDE.md](packages/note-format/CLAUDE.md) |
+| Shared transfer core, API client, zip | [packages/transfer/CLAUDE.md](packages/transfer/CLAUDE.md) |
 | End-user CLI and the Ink TUI | [apps/client/CLAUDE.md](apps/client/CLAUDE.md) |
 | Admin CLI (runs on the server, direct DB access) | [apps/cli/CLAUDE.md](apps/cli/CLAUDE.md) |
 | Docs site and the changelog | [docs/CLAUDE.md](docs/CLAUDE.md) |
@@ -50,6 +51,7 @@ apps/client/     End-user CLI + Ink TUI. Talks to the API the same way a browser
 apps/cli/        Admin CLI. Runs beside the server, reads the DB directly.
 packages/crypto/ Shared Web Crypto library. Imported by web, client, and server.
 packages/note-format/ What a note holds before encryption. Imported by web and client.
+packages/transfer/ API client, zip and the transfer pipelines, shared by web and client (and the server's tests).
 docs/            VitePress docs site (docs.skysend.app).
 website/         Next.js marketing site (skysend.app).
 workers/         Cloudflare Workers: instance registry and abuse reports.
@@ -145,7 +147,7 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 
 - **Naming**: `kebab-case` for server, CLI, crypto, and website files (`upload-validation.ts`, `report-form.tsx`). `PascalCase` for React components in `apps/web/src/components/` and `apps/client/src/tui/`, `camelCase` for web hooks (`useDownload.ts`).
 - **Imports**: server, client, cli, and crypto are ESM and need the `.js` extension on relative imports (`./lib/config.js`). The web app and website use the `@/` alias with no extension.
-- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts` and `packages/note-format/src/index.ts`, the public APIs of those packages.
+- **Exports**: named exports. No barrel files except `packages/crypto/src/index.ts`, `packages/note-format/src/index.ts` and `packages/transfer/src/index.ts`, the public APIs of those packages.
 - **Prettier**: double quotes, semicolons, 2-space indent, trailing commas, 100 columns. Run `pnpm format` instead of hand-aligning.
 - **Keep functions short.** If something is used once, inline it - no abstractions for their own sake.
 
@@ -158,7 +160,7 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 | API routes | [apps/server/src/routes/](apps/server/src/routes/) |
 | Storage backends | [apps/server/src/storage/](apps/server/src/storage/) |
 | Crypto public API | [packages/crypto/src/index.ts](packages/crypto/src/index.ts) |
-| Frontend API client | [apps/web/src/lib/api.ts](apps/web/src/lib/api.ts) |
+| API client and response schemas | [packages/transfer/src/api.ts](packages/transfer/src/api.ts), bound by [apps/web/src/lib/api.ts](apps/web/src/lib/api.ts) and [apps/client/src/lib/api.ts](apps/client/src/lib/api.ts) |
 | Toast helpers | [apps/web/src/lib/toast.tsx](apps/web/src/lib/toast.tsx) |
 | Translations | [apps/web/src/i18n/](apps/web/src/i18n/) |
 | Changelog fragments (unreleased) | [changelog/unreleased/](changelog/unreleased/README.md) |
