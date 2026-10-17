@@ -109,7 +109,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. |
 | `S3_PART_SIZE` | ❌ | `8MB` | Size of each S3 multipart upload part. Smaller parts keep uploads steadier and use less memory, larger ones take fewer requests. An upload that would need more than 10,000 parts uses larger ones on its own. Minimum is `5MB` (S3 requirement). |
 | `S3_CONCURRENCY` | ❌ | `8` | Number of S3 parts uploaded in parallel per upload. Higher values improve throughput but use more memory and bandwidth. Range: 1-16. |
-| `S3_MEMORY_LIMIT` | ❌ | a quarter of the memory, at most `256MB` | Most memory all uploads to S3 together hold in parts on their way to the bucket. When it is reached, the next part waits and the senders slow down, instead of the server running out of memory. The default is a quarter of the memory the server may use, the limit of its container if it runs in one, and at most `256MB`. Minimum is `5MB`. |
+| `S3_MEMORY_LIMIT` | ❌ | a quarter of the memory, at most `256MB` | Most memory all uploads to S3 together hold in parts on their way to the bucket. When it is reached, the next part waits and the senders slow down, instead of the server running out of memory. Parts that are still filling up may hold half of it again, beyond that they wait on disk in `DATA_DIR`. For many uploads at once on a server with one core, see [Many Simultaneous Uploads](/user-guide/configuration/s3#many-simultaneous-uploads). The default is a quarter of the memory the server may use, the limit of its container if it runs in one, and at most `256MB`. Minimum is `5MB`. |
 
 → See [S3 Storage](/user-guide/configuration/s3) for provider examples and CORS configuration.
 

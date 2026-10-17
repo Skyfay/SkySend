@@ -4,6 +4,9 @@ import {
   generateSecret,
   generateSalt,
   MAX_ENCRYPTED_METADATA_BYTES,
+  NONCE_LENGTH,
+  randomBytes,
+  toBase64url,
   type RequestUploadMetadata,
 } from "@skysend/crypto";
 import { archiveMetadata } from "@/lib/archive";
@@ -205,6 +208,10 @@ export function useUpload() {
       }
 
       if (submission) metadata = { ...metadata, submission };
+      // The base nonce of the encrypted stream, which the worker encrypts with. In the
+      // authenticated metadata it lets the recipient refuse a stream whose header the server
+      // changed to reorder its records.
+      metadata = { ...metadata, streamNonce: toBase64url(randomBytes(NONCE_LENGTH)) };
       // The server takes the metadata only after the upload, so a list of names too long for it
       // has to stop the upload before it starts. The pages check the same with archiveMetadataFits.
       if (encryptedMetadataLength(metadata) > MAX_ENCRYPTED_METADATA_BYTES) {

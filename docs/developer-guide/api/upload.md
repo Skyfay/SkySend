@@ -223,7 +223,7 @@ The upgrade request counts against the global rate limit like `POST /api/upload/
 
    All header values are strings, matching the HTTP upload headers one-to-one. Password-protected uploads additionally include `passwordSalt` and `passwordAlgo`. The server validates the payload identically to the HTTP `POST /api/upload/init` endpoint.
 3. **Server → Client** (text, JSON): `{"type":"ready","id":"<uuid>"}`.
-4. **Client → Server** (binary frames): contiguous slices of ciphertext. WebSocket guarantees frame ordering on a single connection, so no per-frame index is required. Total bytes must equal `contentLength`.
+4. **Client → Server** (binary frames): contiguous slices of ciphertext, at most 320 KiB per message. The clients send 256 KiB. WebSocket guarantees frame ordering on a single connection, so no per-frame index is required. Total bytes must equal `contentLength`.
 5. **Client → Server** (text, JSON): `{"type":"finalize"}`.
 6. **Server → Client** (text, JSON): `{"type":"done","id":"<uuid>"}`, followed by close code `1000`.
 
@@ -233,8 +233,8 @@ Errors are reported as `{"type":"error","message":"…"}` followed by a non-1000
 | --- | --- |
 | `1002` | Protocol violation (e.g. binary frame after finalize) |
 | `1003` | Unsupported data type (e.g. non-JSON control frame) |
-| `1008` | Header validation, size mismatch, quota violation, or no `init` within 30 seconds |
-| `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER`, or a single message is larger than 1 MiB |
+| `1008` | Header validation, size mismatch, quota violation, no `init` within 30 seconds, less than 1 MiB in 10 minutes, or no complete message for 150 seconds while the server is not holding the session back |
+| `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER`, or a single message is larger than 320 KiB |
 | `1011` | Internal server error |
 
 ### Client Fallback

@@ -12,9 +12,9 @@ export interface StorageBackend {
 
   /**
    * Save a ReadableStream (Web API) to storage.
-   * Returns the total number of bytes written.
+   * Returns the total number of bytes written. `size` is the declared size, like for createEmpty.
    */
-  save(id: string, stream: ReadableStream<Uint8Array>): Promise<number>;
+  save(id: string, stream: ReadableStream<Uint8Array>, size?: number): Promise<number>;
 
   /**
    * Create an empty entry for chunked uploads. `size` is the declared size of the upload,

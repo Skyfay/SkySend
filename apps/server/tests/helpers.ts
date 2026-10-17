@@ -115,3 +115,32 @@ export function insertTestNote(
   db.insert(schema.notes).values(values).run();
   return values;
 }
+
+/**
+ * Sends `count` requests whose bodies stop one byte short until every handler waits on its body,
+ * then lets all of them finish. That is how a client lines up guesses behind one lockout check
+ * when the server gives a body unlimited time. Returns the statuses in the order sent.
+ */
+export async function heldBackBodies(
+  send: (body: ReadableStream<Uint8Array>) => Promise<Response>,
+  bodies: string[],
+): Promise<number[]> {
+  const releases: Array<() => void> = [];
+  const pending = bodies.map((text) => {
+    const bytes = new TextEncoder().encode(text);
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.subarray(0, bytes.length - 1));
+        releases.push(() => {
+          controller.enqueue(bytes.subarray(bytes.length - 1));
+          controller.close();
+        });
+      },
+    });
+    return send(stream);
+  });
+  // Let every handler run up to the point where it waits for the rest of its body.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  for (const release of releases) release();
+  return (await Promise.all(pending)).map((res) => res.status);
+}

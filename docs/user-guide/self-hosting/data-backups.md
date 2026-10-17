@@ -16,6 +16,7 @@ data/
     logo.svg            # Your own branding assets (optional)
   tmp/
     chunks/             # Chunks of HTTP uploads in progress, emptied on start
+    s3-parts/           # With S3 storage, parts still filling up once their memory is used up, emptied on start
 ```
 
 `tmp/` only holds uploads that are still in progress and needs no backup.

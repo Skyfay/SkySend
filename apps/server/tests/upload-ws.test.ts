@@ -21,7 +21,8 @@ vi.mock("../src/lib/config.js", () => ({
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
 import { createUploadWsRoute, type UploadWsRouteDeps } from "../src/routes/upload-ws.js";
-import { WsBufferMemory } from "../src/lib/ws-upload.js";
+import { FRAME_STALL_MS, WS_MAX_PAYLOAD, WsBufferMemory } from "../src/lib/ws-upload.js";
+import { PROGRESS_WINDOW_MS } from "../src/lib/chunked-upload.js";
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -678,6 +679,46 @@ describe("upload-ws route", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("ends a session that stops inside a frame long before the progress window ends", async () => {
+    vi.useFakeTimers();
+    try {
+      const { events } = await bootstrapShared(4 * 1024 * 1024);
+      const a = createFakeWs();
+      await init(events, a.ws, 100 * 1024 * 1024);
+      // A sender that stops sending in the middle of a frame delivers no message, and ws keeps
+      // what arrived of the frame outside the shared budget until the session ends.
+      await vi.advanceTimersByTimeAsync(FRAME_STALL_MS + 31_000);
+      expect(a.closed?.code).toBe(1008);
+      expect(a.lastJson()).toMatchObject({ type: "error", message: "Upload timed out" });
+      // Well inside the progress window, which alone would have kept it for ten minutes.
+      expect(FRAME_STALL_MS + 31_000).toBeLessThan(PROGRESS_WINDOW_MS / 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a sender as slow as the progress rule allows", async () => {
+    vi.useFakeTimers();
+    try {
+      const { events } = await bootstrapShared(4 * 1024 * 1024);
+      const a = createFakeWs();
+      await init(events, a.ws, 100 * 1024 * 1024);
+      // One 256 KiB frame shortly before each deadline is 1 MiB in ten minutes.
+      for (let i = 0; i < 6; i++) {
+        await vi.advanceTimersByTimeAsync(FRAME_STALL_MS - 2_000);
+        await events.onMessage!(msgEvent(new Uint8Array(256 * 1024).buffer), a.ws);
+      }
+      expect(a.closed).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts the 256 KiB frames the web app and the CLI send, and not much more", () => {
+    expect(WS_MAX_PAYLOAD).toBeGreaterThanOrEqual(256 * 1024);
+    expect(WS_MAX_PAYLOAD).toBeLessThan(512 * 1024);
   });
 
   it("gives the quota reservation back when the socket closes while init runs", async () => {

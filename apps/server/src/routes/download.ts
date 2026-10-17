@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Readable } from "node:stream";
 import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
-import { authMiddleware } from "../middleware/auth.js";
+import { constantTimeEqual, fromBase64url } from "@skysend/crypto";
 import type { Upload } from "../db/schema.js";
 import type { StorageBackend } from "../storage/types.js";
-import type { PasswordLockout } from "../lib/password-lockout.js";
+import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getConfig } from "../lib/config.js";
 import { getClientIp } from "../middleware/rate-limit.js";
 
@@ -20,20 +20,45 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
    * The auth token of a password-protected upload comes from the password, so a wrong token is
    * a wrong guess. It counts against the same lockout as POST /api/password/:id, under the same
    * key, so a guesser cannot switch to the download to get around it (GHSA-rxxj-c5wr-phqp).
+   *
+   * This is authMiddleware with the lockout inside it: the lockout is checked again after the
+   * lookup, right before the comparison, and the failure is recorded right after it, with no
+   * await in between. A check that ran before the lookup let pipelined guesses all pass it.
    */
-  const guessLimit = createMiddleware(async (c, next) => {
+  const guessLimitedAuth = createMiddleware<{ Variables: { upload: Upload } }>(async (c, next) => {
+    const id = c.req.param("id");
+    if (!id) return c.json({ error: "Missing upload ID" }, 400);
     const ip = getClientIp(c, getConfig().TRUST_PROXY);
-    const resourceKey = `file:${c.req.param("id")}`;
-    const lockState = lockout.check(resourceKey, ip);
-    if (lockState.locked) {
-      c.header("Retry-After", String(lockState.retryAfter));
-      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
-    }
-    await next();
+    const resourceKey = `file:${id}`;
+    const locked = lockedResponse(c, lockout, resourceKey, ip);
+    if (locked) return locked;
+
     // Only a token that was sent is a guess. A request without one, such as an image tag on
     // another site pointing here, must not lock the visitor out.
-    if (c.res.status === 401 && c.req.header("X-Auth-Token")) lockout.recordFailure(resourceKey, ip);
-    else if (c.res.ok) lockout.recordSuccess(resourceKey, ip);
+    const tokenHeader = c.req.header("X-Auth-Token");
+    if (!tokenHeader) return c.json({ error: "Missing X-Auth-Token header" }, 401);
+
+    const upload = await getDb().query.uploads.findFirst({ where: eq(uploads.id, id) });
+    if (!upload) return c.json({ error: "Upload not found" }, 404);
+
+    const lockedNow = lockedResponse(c, lockout, resourceKey, ip);
+    if (lockedNow) return lockedNow;
+
+    let providedToken: Uint8Array;
+    try {
+      providedToken = fromBase64url(tokenHeader);
+    } catch {
+      lockout.recordFailure(resourceKey, ip);
+      return c.json({ error: "Invalid auth token format" }, 401);
+    }
+    if (!constantTimeEqual(providedToken, fromBase64url(upload.authToken))) {
+      lockout.recordFailure(resourceKey, ip);
+      return c.json({ error: "Invalid auth token" }, 401);
+    }
+    lockout.recordSuccess(resourceKey, ip);
+
+    c.set("upload", upload);
+    await next();
   });
 
   /**
@@ -41,7 +66,7 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
    * Streams the encrypted file to the client.
    * Requires valid auth token. Increments download count atomically.
    */
-  route.get("/:id", guessLimit, authMiddleware, async (c) => {
+  route.get("/:id", guessLimitedAuth, async (c) => {
     const upload = c.get("upload");
 
     // Check if expired

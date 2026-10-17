@@ -14,7 +14,7 @@ import {
   TOKEN_LENGTH,
 } from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
-import type { PasswordLockout } from "../lib/password-lockout.js";
+import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 
 export function createNoteRoute(lockout: PasswordLockout) {
 const noteRoute = new Hono();
@@ -251,11 +251,8 @@ noteRoute.post(
     const ip = getClientIp(c, config.TRUST_PROXY);
     const resourceKey = `note:${id}`;
 
-    const lockState = lockout.check(resourceKey, ip);
-    if (lockState.locked) {
-      c.header("Retry-After", String(lockState.retryAfter));
-      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
-    }
+    const locked = lockedResponse(c, lockout, resourceKey, ip);
+    if (locked) return locked;
 
     let body: unknown;
     try {
@@ -282,6 +279,11 @@ noteRoute.post(
     if (!available) {
       return c.json({ error }, 410);
     }
+
+    // Checked again after the last await, so this check, the comparison and recordFailure run
+    // in one go and a burst of held-back bodies cannot pass a check from before its failures.
+    const lockedNow = lockedResponse(c, lockout, resourceKey, ip);
+    if (lockedNow) return lockedNow;
 
     // Constant-time auth token comparison
     let providedToken: Uint8Array;
@@ -338,11 +340,8 @@ noteRoute.post(
     const ip = getClientIp(c, config.TRUST_PROXY);
     const resourceKey = `note:${id}`;
 
-    const lockState = lockout.check(resourceKey, ip);
-    if (lockState.locked) {
-      c.header("Retry-After", String(lockState.retryAfter));
-      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
-    }
+    const locked = lockedResponse(c, lockout, resourceKey, ip);
+    if (locked) return locked;
 
     let body: { authToken?: string };
     try {
@@ -372,6 +371,11 @@ noteRoute.post(
     if (!available) {
       return c.json({ error }, 410);
     }
+
+    // Checked again after the last await, so this check, the comparison and recordFailure run
+    // in one go and a burst of held-back bodies cannot pass a check from before its failures.
+    const lockedNow = lockedResponse(c, lockout, resourceKey, ip);
+    if (lockedNow) return lockedNow;
 
     // Constant-time comparison
     let providedToken: Uint8Array;

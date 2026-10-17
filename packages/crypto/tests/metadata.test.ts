@@ -4,6 +4,7 @@ import {
   decryptMetadata,
   decryptRequestMetadata,
   expectedPlaintextSize,
+  expectedBaseNonce,
   encryptedMetadataLength,
   MAX_ENCRYPTED_METADATA_BYTES,
   META_IV_LENGTH,
@@ -11,7 +12,7 @@ import {
 } from "../src/metadata.js";
 import type { FileMetadata, SingleFileMetadata, ArchiveMetadata } from "../src/metadata.js";
 import { deriveKeys, generateSecret, generateSalt } from "../src/keychain.js";
-import { asBytes } from "../src/util.js";
+import { asBytes, fromBase64url, randomBytes, toBase64url } from "../src/util.js";
 import { flipped } from "./helpers.js";
 
 /**
@@ -646,6 +647,44 @@ describe("metadata of uploads into a file request", () => {
         size: 1,
       });
     }
+  });
+
+  it("should keep the base nonce of the stream on every type, and refuse a malformed one", async () => {
+    const metaKey = await getMetaKey();
+    const streamNonce = toBase64url(randomBytes(12));
+    const read = async (data: unknown) => {
+      const raw = await encryptRawJson(data, metaKey);
+      return decryptRequestMetadata(raw.ciphertext, raw.iv, metaKey);
+    };
+    const kinds = [
+      { type: "note", size: 1 },
+      { type: "single", name: "a", size: 1, mimeType: "text/plain" },
+      { type: "archive", files: [], totalSize: 0, archiveSize: 22 },
+    ];
+    for (const kind of kinds) {
+      const metadata = await read({ ...kind, streamNonce });
+      expect(metadata).toMatchObject({ streamNonce });
+      expect(expectedBaseNonce(metadata)).toEqual(fromBase64url(streamNonce));
+      // Older clients put none in, which stays readable.
+      expect(expectedBaseNonce(await read(kind))).toBeUndefined();
+      const tooShort = toBase64url(randomBytes(11));
+      for (const wrong of [tooShort, `${streamNonce}AA`, "!!!!!!!!!!!!!!!!", 42, null]) {
+        await expect(read({ ...kind, streamNonce: wrong })).rejects.toThrow("invalid stream nonce");
+      }
+    }
+  });
+
+  it("should take the base nonce through encryptMetadata and decryptMetadata", async () => {
+    const metaKey = await getMetaKey();
+    const metadata: SingleFileMetadata = {
+      type: "single",
+      name: "a.pdf",
+      size: 3,
+      mimeType: "application/pdf",
+      streamNonce: toBase64url(randomBytes(12)),
+    };
+    const encrypted = await encryptMetadata(metadata, metaKey);
+    expect(await decryptMetadata(encrypted.ciphertext, encrypted.iv, metaKey)).toEqual(metadata);
   });
 
   it("should fail like decryptMetadata on a wrong key or broken JSON", async () => {

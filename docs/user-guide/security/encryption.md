@@ -102,7 +102,7 @@ Where `i` is the 0-based record index, XOR'd into the last 4 bytes of the nonce 
 ### Security Properties
 
 - **Unique nonce per record** - Counter-based XOR ensures no nonce reuse
-- **Random base nonce** - Generated per encryption operation
+- **Random base nonce** - Generated per encryption operation, and kept in the encrypted metadata too, so a stream whose header was changed to reorder its records fails
 - **Authenticated encryption** - GCM provides both confidentiality and integrity
 - **Streaming** - Uses Web Streams API (`TransformStream`), memory-efficient for large files
 

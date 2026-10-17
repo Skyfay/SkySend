@@ -5,7 +5,7 @@ import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { constantTimeEqual, fromBase64url } from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
-import type { PasswordLockout } from "../lib/password-lockout.js";
+import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getConfig } from "../lib/config.js";
 
 export function createPasswordRoute(lockout: PasswordLockout) {
@@ -28,11 +28,8 @@ export function createPasswordRoute(lockout: PasswordLockout) {
     const ip = getClientIp(c, config.TRUST_PROXY);
     const resourceKey = `file:${id}`;
 
-    const lockState = lockout.check(resourceKey, ip);
-    if (lockState.locked) {
-      c.header("Retry-After", String(lockState.retryAfter));
-      return c.json({ error: "Too many failed attempts. Try again later." }, 429);
-    }
+    const locked = lockedResponse(c, lockout, resourceKey, ip);
+    if (locked) return locked;
 
     let body: { authToken?: string };
     try {
@@ -68,6 +65,11 @@ export function createPasswordRoute(lockout: PasswordLockout) {
     if (upload.downloadCount >= upload.maxDownloads) {
       return c.json({ error: "Download limit reached" }, 410);
     }
+
+    // Checked again after the last await, so this check, the comparison and recordFailure run
+    // in one go and a burst of held-back bodies cannot pass a check from before its failures.
+    const lockedNow = lockedResponse(c, lockout, resourceKey, ip);
+    if (lockedNow) return lockedNow;
 
     // Constant-time comparison of the provided auth token
     let providedToken: Uint8Array;

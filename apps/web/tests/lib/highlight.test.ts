@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { ReadBlock } from "@skysend/note-format";
-import { HIGHLIGHT_BUDGET, MAX_HIGHLIGHT_LENGTH, highlightAs, highlightCode, highlightedBlocks } from "../../src/lib/highlight";
+import {
+  HIGHLIGHT_BUDGET,
+  MARKDOWN_BUDGET,
+  MAX_HIGHLIGHT_LENGTH,
+  MAX_MARKDOWN_LENGTH,
+  highlightAs,
+  highlightCode,
+  highlightedBlocks,
+  markdownBlocks,
+} from "../../src/lib/highlight";
 
 describe("highlightAs", () => {
   it("highlights a language highlight.js knows", () => {
@@ -68,6 +77,26 @@ describe("highlightCode", () => {
     for (const name of ["__proto__", "constructor"]) {
       expect(highlightCode("echo hi", name).html).toContain("echo");
     }
+  });
+});
+
+describe("markdownBlocks", () => {
+  const markdown = (length: number): ReadBlock => ({ type: "text", format: "markdown", text: "*a_".repeat(length / 3) });
+  const plain = (length: number): ReadBlock => ({ type: "text", format: "plain", text: "x".repeat(length) });
+
+  it("renders Markdown while the note's budget lasts, then shows plain text", () => {
+    const half = MARKDOWN_BUDGET / 2 - 2;
+    expect(markdownBlocks([markdown(half), markdown(half), markdown(30)])).toEqual([true, true, false]);
+  });
+
+  it("shows a Markdown block above the limit as plain text and keeps the budget for the others", () => {
+    // 64 KiB of "*a_" held Chromium for 16 seconds in the Markdown parser.
+    expect(markdownBlocks([markdown(MAX_MARKDOWN_LENGTH + 3), markdown(30)])).toEqual([false, true]);
+    expect(MAX_MARKDOWN_LENGTH).toBeLessThanOrEqual(16 * 1024);
+  });
+
+  it("never counts plain text or other blocks", () => {
+    expect(markdownBlocks([plain(MARKDOWN_BUDGET * 2), markdown(30)])).toEqual([false, true]);
   });
 });
 

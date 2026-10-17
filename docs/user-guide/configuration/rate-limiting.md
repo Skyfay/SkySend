@@ -24,7 +24,7 @@ When the limit is exceeded, the server returns `429 Too Many Requests`.
 
 ## Upload Memory
 
-Uploads over WebSocket hold what they receive in memory until it is written to storage. All of them together hold at most `FILE_UPLOAD_WS_MEMORY_LIMIT`, and uploads to S3 hold at most `S3_MEMORY_LIMIT` in parts on their way to the bucket. Both default to a quarter of the memory the server may use, at most 256 MB. When a limit is reached, uploads wait and slow down instead of the server running out of memory, and none is turned away, so this does not depend on addresses. A WebSocket connection that does not start its upload within 30 seconds is closed.
+Uploads over WebSocket hold what they receive in memory until it is written to storage. All of them together hold at most `FILE_UPLOAD_WS_MEMORY_LIMIT`, and uploads to S3 hold at most `S3_MEMORY_LIMIT` in parts on their way to the bucket and half of it again in parts still filling up, which wait on disk beyond that. Both default to a quarter of the memory the server may use, at most 256 MB. When a limit is reached, uploads wait and slow down instead of the server running out of memory, and none is turned away, so this does not depend on addresses. A WebSocket connection that does not start its upload within 30 seconds is closed, and one that stops in the middle of a frame is closed after two and a half minutes, which a sender at the slowest rate the progress rule allows never hits.
 
 ## Upload Quotas
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { expectedPlaintextSize, type Argon2idHashFn } from "@skysend/crypto";
+import { expectedBaseNonce, expectedPlaintextSize, type Argon2idHashFn } from "@skysend/crypto";
 import * as api from "@/lib/api";
 import { saveDecryptedDownload } from "@/lib/download-tiers";
 import type { ReadBlock } from "@skysend/note-format";
@@ -234,6 +234,7 @@ export function useInbox(
           mimeType,
           size: entry.upload.size,
           plaintextSize: expectedPlaintextSize(entry.file.metadata),
+          baseNonce: expectedBaseNonce(entry.file.metadata),
           signal: controller.signal,
           onProgress: (progress) => setDownload(uploadId, progress),
           onDebug: () => null,

@@ -1,7 +1,13 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { createTestDb, insertTestNote, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
+import {
+  createTestDb,
+  insertTestNote,
+  TEST_UUID,
+  fakeBase64urlToken,
+  heldBackBodies,
+} from "./helpers.js";
 import { notes } from "../src/db/schema.js";
 
 vi.mock("../src/db/index.js", () => ({
@@ -649,6 +655,26 @@ describe("note routes", () => {
 
       expect(lockedRes.status).toBe(429);
       expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
+    });
+
+    it("evaluates no more guesses than the lockout allows when view bodies are held back", async () => {
+      insertTestNote(dbCtx.db, { id: TEST_UUID, hasPassword: true, maxViews: 0 });
+      const app = new Hono();
+      app.route("/api/note", createNoteRoute(createPasswordLockout(3, 60_000)));
+      for (const path of ["view", "password"]) {
+        const statuses = await heldBackBodies(
+          (body) =>
+            app.request(`/api/note/${TEST_UUID}/${path}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+              duplex: "half",
+            } as RequestInit),
+          Array.from({ length: 10 }, () => JSON.stringify({ authToken: fakeBase64urlToken() })),
+        );
+        // Both routes share the key note:<id>, so the view used up the three guesses already.
+        expect(statuses.filter((s) => s === 401)).toHaveLength(path === "view" ? 3 : 0);
+      }
     });
 
     it("should return 413 when request body exceeds 16 KB limit", async () => {

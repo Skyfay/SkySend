@@ -40,18 +40,17 @@ describe("archiveMetadataFits", () => {
   });
 
   it("counts the submission ID an upload into a file request adds", () => {
-    // Grow the last name until the metadata of a normal upload just fits, with no room left
-    // for the 48 bytes of a submission ID.
+    // Grow the last name until the metadata of a normal upload, with the stream nonce every
+    // upload adds, just fits, with no room left for the 48 bytes of a submission ID.
     const picked = files(150, 255);
     let extra = 0;
     const withExtra = () => [...picked.slice(0, -1), file(picked.at(-1)!.name + "b".repeat(extra))];
-    while (
-      encryptedMetadataLength(archiveMetadata(withExtra())) <=
-      MAX_ENCRYPTED_METADATA_BYTES - 1024
-    ) {
+    const sentLength = () =>
+      encryptedMetadataLength({ ...archiveMetadata(withExtra()), streamNonce: "A".repeat(16) });
+    while (sentLength() <= MAX_ENCRYPTED_METADATA_BYTES - 1024) {
       extra += 100;
     }
-    while (encryptedMetadataLength(archiveMetadata(withExtra())) <= MAX_ENCRYPTED_METADATA_BYTES) {
+    while (sentLength() <= MAX_ENCRYPTED_METADATA_BYTES) {
       extra += 1;
     }
     extra -= 1;

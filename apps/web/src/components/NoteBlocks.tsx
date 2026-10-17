@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
-import { highlightAs, highlightCode, highlightedBlocks } from "@/lib/highlight";
+import { highlightAs, highlightCode, highlightedBlocks, markdownBlocks } from "@/lib/highlight";
 import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
 import { entryFallback, passwordBlockTitle } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
@@ -108,8 +108,19 @@ function BlockFrame({ icon: Icon, title, actions, children }: { icon: LucideIcon
   );
 }
 
-/** Markdown as the recipient sees it. The text editor uses it for its preview too. */
-export function MarkdownView({ text, className, highlight = true }: { text: string; className?: string; highlight?: boolean }) {
+/**
+ * Markdown as the recipient sees it. The text editor uses it for its preview too. Memoized, so
+ * a block that renders again for another reason, like its copy button, is not parsed again.
+ */
+export const MarkdownView = memo(function MarkdownView({
+  text,
+  className,
+  highlight = true,
+}: {
+  text: string;
+  className?: string;
+  highlight?: boolean;
+}) {
   return (
     <div className={cn("prose prose-sm max-w-none overflow-auto scrollbar-thin dark:prose-invert", className)}>
       <ReactMarkdown
@@ -121,9 +132,18 @@ export function MarkdownView({ text, className, highlight = true }: { text: stri
       </ReactMarkdown>
     </div>
   );
-}
+});
 
-function TextBlockView({ block, highlight }: { block: TextBlock; highlight: boolean }) {
+function TextBlockView({
+  block,
+  highlight,
+  markdown,
+}: {
+  block: TextBlock;
+  highlight: boolean;
+  /** False for a Markdown block too long to parse, see MAX_MARKDOWN_LENGTH. */
+  markdown: boolean;
+}) {
   const { t } = useTranslation();
   const { copied, copy } = useCopied();
   return (
@@ -133,7 +153,7 @@ function TextBlockView({ block, highlight }: { block: TextBlock; highlight: bool
       title={block.label || (block.format === "markdown" ? t("tab.markdown") : t("tab.text"))}
       actions={<CopyAction copied={copied === "text"} onClick={() => void copy("text", block.text)} />}
     >
-      {block.format === "markdown" ? (
+      {block.format === "markdown" && markdown ? (
         <MarkdownView text={block.text} className="p-4" highlight={highlight} />
       ) : (
         <p className="whitespace-pre-wrap wrap-break-word p-4 text-[15px] leading-relaxed">{block.text}</p>
@@ -276,6 +296,7 @@ function SshKeyBlockView({ block }: { block: SshKeyBlock }) {
 export function NoteBlocks({ blocks }: { blocks: readonly ReadBlock[] }) {
   const { t } = useTranslation();
   const highlight = useMemo(() => highlightedBlocks(blocks), [blocks]);
+  const markdown = useMemo(() => markdownBlocks(blocks), [blocks]);
   // Untitled code blocks are numbered among the code blocks only.
   const codeNumbers = useMemo(() => {
     let count = 0;
@@ -286,7 +307,14 @@ export function NoteBlocks({ blocks }: { blocks: readonly ReadBlock[] }) {
       {blocks.map((block, index) => {
         switch (block.type) {
           case "text":
-            return <TextBlockView key={index} block={block} highlight={highlight[index]!} />;
+            return (
+              <TextBlockView
+                key={index}
+                block={block}
+                highlight={highlight[index]!}
+                markdown={markdown[index]!}
+              />
+            );
           case "password":
             // A legacy note could hold an empty list, which v2 showed as nothing at all.
             return block.entries.length > 0 ? <PasswordBlockView key={index} block={block} /> : null;
