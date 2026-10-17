@@ -1,7 +1,6 @@
 import {
   NOTE_KIND,
   findPrivateKey,
-  readNote,
   padNote,
   serializeNote,
   type LegacyNoteKind,
@@ -96,18 +95,6 @@ export function prepareNote(
   }
   // LEGACY(notes-v1): a server before v3 only knows one content type per note.
   return toLegacyNote(block);
-}
-
-/**
- * Reads a decrypted note. The view is used up by then, and with a limit of one the note is
- * gone, so a note that does not parse is shown as plain text instead of being lost.
- */
-export function readReceivedNote(kind: string, plaintext: string): { blocks: ReadBlock[]; unreadable: boolean } {
-  try {
-    return { blocks: readNote(kind, plaintext), unreadable: false };
-  } catch {
-    return { blocks: [{ type: "text", format: "plain", text: plaintext }], unreadable: true };
-  }
 }
 
 /** The file name the TUI suggests when a note is saved. A lone SSH key keeps its own. */

@@ -157,6 +157,33 @@ export function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+/** The secret a link carries, and what the server keeps so a recipient can undo the password. */
+export interface ProtectedSecret {
+  /** The master secret, or with a password the master secret XOR the key of the password. */
+  effectiveSecret: Uint8Array;
+  passwordSalt?: Uint8Array;
+  passwordAlgo?: "argon2id-v2";
+}
+
+/**
+ * Puts the password of a share or a note over its secret, so the link alone opens nothing.
+ * Without a password the link carries the secret itself. `keysFromLink` undoes it.
+ */
+export async function protectSecret(
+  secret: Uint8Array,
+  password: string,
+  argon2id: Argon2idHashFn,
+): Promise<ProtectedSecret> {
+  if (password.length === 0) return { effectiveSecret: secret };
+  const passwordSalt = randomBytes(PASSWORD_SALT_LENGTH);
+  const { key, algorithm } = await deriveKeyFromPassword(password, passwordSalt, argon2id);
+  return {
+    effectiveSecret: applyPasswordProtection(secret, key),
+    passwordSalt,
+    passwordAlgo: algorithm,
+  };
+}
+
 /** Why the server refused to open an upload into a request, as the key a client shows. */
 export function requestHttpError(status: number, message: string): string {
   // The upload quota of the sender answers with 413 or 429 too, and names itself.
@@ -186,16 +213,11 @@ export async function uploadEncrypted(
   const { api, request } = options;
   const keys = await deriveKeys(options.secret, options.salt);
 
-  // ── Password protection ──
-  let effectiveSecret: Uint8Array = options.secret;
-  let passwordSalt: Uint8Array | undefined;
-  let passwordAlgo: "argon2id" | "argon2id-v2" | "pbkdf2" | undefined;
-  if (options.password.length > 0) {
-    passwordSalt = randomBytes(PASSWORD_SALT_LENGTH);
-    const derived = await deriveKeyFromPassword(options.password, passwordSalt, options.argon2id);
-    passwordAlgo = derived.algorithm;
-    effectiveSecret = applyPasswordProtection(options.secret, derived.key);
-  }
+  const { effectiveSecret, passwordSalt, passwordAlgo } = await protectSecret(
+    options.secret,
+    options.password,
+    options.argon2id,
+  );
   const hasPassword = passwordSalt !== undefined;
 
   // ── What the server offers ──

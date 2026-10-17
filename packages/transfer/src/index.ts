@@ -1,8 +1,8 @@
 /**
  * @skysend/transfer - Public API
  *
- * What an upload and a download need besides the cryptography, for the web app, the CLI and
- * later the mobile app. Only standard APIs (Web Crypto, Web Streams, fetch, WebSocket), so it
+ * What an upload, a download and a note need besides the cryptography, for the web app, the CLI
+ * and later the mobile app. Only standard APIs (Web Crypto, Web Streams, fetch, WebSocket), so it
  * runs in a browser, a worker, Node and a Bun-compiled binary. Nothing outside this package
  * imports a submodule.
  */
@@ -42,6 +42,10 @@ export {
   keysFromSecret,
 } from "./download.js";
 export type { LinkKeys, LinkPassword } from "./download.js";
+
+// A note from its plaintext to the link and back to its blocks
+export { createEncryptedNote, openNote } from "./note.js";
+export type { NoteOptions, OpenedNote, OpenNoteOptions, SharedNote } from "./note.js";
 
 // The HTTP API of a server, with every response checked
 export { ApiError, createApiClient, holdOf, isUploadId, withUnlockedMeta } from "./api.js";

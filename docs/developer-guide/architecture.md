@@ -221,7 +221,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
        |
        +-----> @skysend/client  (writes and reads notes)
 
-@skysend/transfer     (API client, zip, upload and download, on top of crypto)
+@skysend/transfer     (API client, zip, upload, download and notes, on top of crypto)
        |
        +-----> @skysend/web     (upload worker, download, API calls)
        |
@@ -232,7 +232,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
 @skysend/cli          (accesses server database directly)
 ```
 
-The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the zip and the upload and download pipelines, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
+The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the zip, the upload and download pipelines and the notes, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
 
 ## Server Architecture
 
@@ -309,8 +309,8 @@ apps/web/src/
   hooks/
     useUpload.ts        # Upload logic (encrypt + stream)
     useDownload.ts      # Download logic (tier selection + decrypt)
-    useNoteUpload.ts    # Note upload logic (serialize + encrypt + submit)
-    useNoteView.ts      # Note view logic (decrypt + read blocks)
+    useNoteUpload.ts    # Note upload: serialize, then createEncryptedNote of @skysend/transfer
+    useNoteView.ts      # Note view: openNote of @skysend/transfer, password and view state
     useUploadHistory.ts # IndexedDB upload history
     useNoteHistory.ts   # IndexedDB note history
     useServerConfig.tsx # Fetch server config
@@ -367,7 +367,7 @@ apps/client/src/
     instances.ts        # Public instances from instances.skysend.app
     clipboard.ts        # Copy with a system tool and OSC 52
     paths.ts            # ~ and pasted or dropped paths
-    auth.ts             # Key generation, derivation, password handling
+    auth.ts             # Argon2id through hash-wasm
     config.ts           # Config file management (~/.config/skysend/)
     errors.ts           # ApiError class
     note.ts             # Notes of one block, legacy fallback for older servers

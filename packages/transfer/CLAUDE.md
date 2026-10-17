@@ -1,6 +1,6 @@
 # Transfer
 
-`@skysend/transfer` - what an upload and a download need besides the cryptography, shared by the web app, the CLI client and later a mobile app. The cryptography itself stays in `@skysend/crypto`, the note content in `@skysend/note-format`.
+`@skysend/transfer` - what an upload, a download and a note need besides the cryptography, shared by the web app, the CLI client and later a mobile app. The cryptography itself stays in `@skysend/crypto`, the note content in `@skysend/note-format`.
 
 ## What lives here
 
@@ -8,6 +8,7 @@
 src/api.ts      createApiClient: every route of the server, every answer parsed with Zod, ApiError
 src/upload.ts   uploadEncrypted: keys, encryption, WebSocket or HTTP chunks with CHUNK_WINDOW, metadata
 src/download.ts keysFromLink, decryptUploadMetadata, decryptedStream with the size and base nonce checks
+src/note.ts     createEncryptedNote and openNote: the caller makes the plaintext, the package the rest
 src/zip.ts      The zip of several files, written while the upload reads it (stored, ZIP64)
 src/archive.ts  The metadata of an upload of several files, whether the server takes it, uniqueNames
 src/index.ts    The public API, the only file outside this package may import from

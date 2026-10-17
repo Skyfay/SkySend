@@ -43,4 +43,4 @@
 
 ### 🔧 CI/CD
 
-- **infra**: The web app and the CLI share one package for uploads, downloads and the API of the server, built and tested with the other packages in CI, the Docker image and the release.
+- **infra**: The web app and the CLI share one package for uploads, downloads, notes and the API of the server, built and tested with the other packages in CI, the Docker image and the release.

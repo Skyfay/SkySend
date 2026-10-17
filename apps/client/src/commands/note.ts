@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { encryptNoteContent, toBase64url } from "@skysend/crypto";
+import { createEncryptedNote } from "@skysend/transfer";
 import { apiFor } from "../lib/api.js";
-import { prepareUpload } from "../lib/auth.js";
+import { hashWasmArgon2 } from "../lib/auth.js";
 import { buildShareUrl } from "../lib/url.js";
 import { resolveServer } from "../lib/config.js";
 import { ensureOidcAuth } from "../lib/oidc.js";
@@ -136,58 +136,47 @@ export function registerNoteCommand(program: Command): void {
           );
         }
 
-        // Prepare crypto
         if (!options.json) writeLine("Encrypting note...");
-        const creds = await prepareUpload(password);
-
-        // Encrypt note content
-        const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
-
-        // Create note
-        const result = await apiFor(server, oidcToken).createNote({
-          encryptedContent: toBase64url(encrypted.ciphertext),
-          nonce: toBase64url(encrypted.nonce),
-          salt: toBase64url(creds.salt),
-          ownerToken: creds.ownerTokenB64,
-          authToken: creds.authTokenB64,
+        const shared = await createEncryptedNote({
+          api: apiFor(server, oidcToken),
+          plaintext: note.plaintext,
           contentType: note.contentType,
           maxViews,
           expireSec,
-          hasPassword: creds.hasPassword,
-          passwordSalt: creds.passwordSalt ? toBase64url(creds.passwordSalt) : undefined,
-          passwordAlgo: creds.passwordAlgo,
+          password: password ?? "",
+          argon2id: hashWasmArgon2,
         });
 
         // Build share URL
-        const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
+        const shareUrl = buildShareUrl(server, "note", shared.id, shared.effectiveSecret);
 
         // Save to history
         addNote({
-          id: result.id,
+          id: shared.id,
           server,
           url: shareUrl,
-          ownerToken: creds.ownerTokenB64,
+          ownerToken: shared.ownerToken,
           contentType,
-          hasPassword: creds.hasPassword,
+          hasPassword: shared.hasPassword,
           createdAt: new Date().toISOString(),
           expireSec,
         });
 
         if (options.json) {
           console.log(JSON.stringify({
-            id: result.id,
+            id: shared.id,
             url: shareUrl,
-            ownerToken: creds.ownerTokenB64,
+            ownerToken: shared.ownerToken,
             type: contentType,
             expires: expireSec,
             maxViews,
-            hasPassword: creds.hasPassword,
+            hasPassword: shared.hasPassword,
           }));
         } else {
           writeLine("");
           writeLine(`Share URL: ${shareUrl}`);
           writeLine(`Type: ${contentType} | Expires: ${formatExpiry(expireSec)} | Views: ${maxViews === 0 ? "unlimited" : maxViews}`);
-          if (creds.hasPassword) writeLine("Password protected: yes");
+          if (shared.hasPassword) writeLine("Password protected: yes");
         }
       } catch (err) {
         if (err instanceof ApiError) {

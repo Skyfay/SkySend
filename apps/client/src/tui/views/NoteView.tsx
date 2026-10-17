@@ -2,11 +2,11 @@ import React, { useState, useCallback, useRef } from "react";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useAnimation, useBoxMetrics, useInput } from "ink";
-import { decryptNoteContent } from "@skysend/crypto";
+import { openNote } from "@skysend/transfer";
 import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { apiFor, type NoteInfo } from "../../lib/api.js";
-import { prepareDownload } from "../../lib/auth.js";
-import { noteFileName, readReceivedNote } from "../../lib/note.js";
+import { hashWasmArgon2 } from "../../lib/auth.js";
+import { noteFileName } from "../../lib/note.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { parseShareUrl } from "../../lib/url.js";
 import { copyToClipboard } from "../../lib/clipboard.js";
@@ -125,17 +125,26 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
 
   const loadNote = useCallback(async (parsed: ReturnType<typeof parseShareUrl>, info: NoteInfo, pw?: string) => {
     setPhase("loading");
-    const creds = await prepareDownload(parsed.secret, info.salt, pw, info.passwordSalt, info.passwordAlgo);
-    const response = await apiFor(parsed.server).viewNote(parsed.id, creds.authTokenB64);
-    const ct = new Uint8Array(Buffer.from(response.encryptedContent, "base64")) as Uint8Array<ArrayBuffer>;
-    const nonce = new Uint8Array(Buffer.from(response.nonce, "base64")) as Uint8Array<ArrayBuffer>;
-    const decrypted = await decryptNoteContent(ct, nonce, creds.keys.metaKey);
-    // Notes from before v3 are read in their legacy format.
-    const read = readReceivedNote(info.contentType, decrypted);
-    setBlocks(read.blocks);
-    setUnreadable(read.unreadable);
-    setViewCount(response.viewCount);
-    setMaxViews(response.maxViews);
+    // A wrong password is caught before the view, which the server counts.
+    const note = await openNote({
+      api: apiFor(parsed.server),
+      id: parsed.id,
+      info,
+      secret: parsed.secret,
+      password: pw,
+      argon2id: hashWasmArgon2,
+    });
+    if (!note) {
+      setErrorMsg("That password is wrong. The server counts every try.");
+      setPassword("");
+      setPhase("password");
+      return;
+    }
+    setErrorMsg("");
+    setBlocks(note.blocks);
+    setUnreadable(note.unreadable);
+    setViewCount(note.viewCount);
+    setMaxViews(note.maxViews);
     setPhase("display");
   }, []);
 
@@ -166,14 +175,6 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   const unlock = async () => {
     try {
       if (!parsedUrl || !noteInfo || !password) return;
-      const creds = await prepareDownload(parsedUrl.secret, noteInfo.salt, password, noteInfo.passwordSalt, noteInfo.passwordAlgo);
-      const valid = await apiFor(parsedUrl.server).verifyNotePassword(parsedUrl.id, creds.authTokenB64);
-      if (!valid) {
-        setErrorMsg("That password is wrong. The server counts every try.");
-        setPassword("");
-        return;
-      }
-      setErrorMsg("");
       await loadNote(parsedUrl, noteInfo, password);
     } catch (err) {
       fail(err);

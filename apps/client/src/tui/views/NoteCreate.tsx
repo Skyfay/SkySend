@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import * as fs from "node:fs";
 import { Text, useAnimation } from "ink";
-import { encryptNoteContent, toBase64url } from "@skysend/crypto";
+import { createEncryptedNote } from "@skysend/transfer";
 import type { NoteBlock } from "@skysend/note-format";
 import { apiFor } from "../../lib/api.js";
-import { prepareUpload } from "../../lib/auth.js";
+import { hashWasmArgon2 } from "../../lib/auth.js";
 import { buildShareUrl } from "../../lib/url.js";
 import { addNote } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
@@ -136,27 +136,20 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
       }
       setWorking("Encrypting and creating the note");
       setPhase("working");
-      const creds = await prepareUpload(password || undefined);
-      const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
-      const result = await apiFor(server, oidcToken).createNote({
-        encryptedContent: toBase64url(encrypted.ciphertext),
-        nonce: toBase64url(encrypted.nonce),
-        salt: toBase64url(creds.salt),
-        ownerToken: creds.ownerTokenB64,
-        authToken: creds.authTokenB64,
+      const shared = await createEncryptedNote({
+        api: apiFor(server, oidcToken),
+        plaintext: note.plaintext,
         contentType: note.contentType,
         maxViews,
         expireSec,
-        hasPassword: creds.hasPassword,
-        ...(creds.hasPassword && creds.passwordSalt && creds.passwordAlgo
-          ? { passwordSalt: toBase64url(creds.passwordSalt), passwordAlgo: creds.passwordAlgo }
-          : {}),
+        password,
+        argon2id: hashWasmArgon2,
       });
-      const url = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
+      const url = buildShareUrl(server, "note", shared.id, shared.effectiveSecret);
       addNote({
-        id: result.id, server, url,
-        ownerToken: creds.ownerTokenB64,
-        contentType: kind, hasPassword: creds.hasPassword,
+        id: shared.id, server, url,
+        ownerToken: shared.ownerToken,
+        contentType: kind, hasPassword: shared.hasPassword,
         createdAt: new Date().toISOString(), expireSec,
       });
       setShareUrl(url);

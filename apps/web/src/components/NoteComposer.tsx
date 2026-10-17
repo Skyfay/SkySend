@@ -74,7 +74,7 @@ export function NoteComposer({ config, startWith }: NoteComposerProps) {
     if (noteHook.phase === "error" && noteHook.error) showKnownErrorToast(noteHook.error);
   }, [noteHook.phase, noteHook.error]);
 
-  const busy = noteHook.phase === "encrypting" || noteHook.phase === "uploading";
+  const busy = noteHook.phase === "encrypting";
   const toSend = blocksToSend(drafts);
   const serialized = toSend.length > 0 ? serializeNote(toSend) : "";
   const encoder = new TextEncoder();

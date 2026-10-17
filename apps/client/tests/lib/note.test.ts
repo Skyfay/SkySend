@@ -6,13 +6,18 @@ import {
   generateSalt,
   generateSecret,
 } from "@skysend/crypto";
-import { NOTE_KIND, legacyToBlocks, parseNote, type NoteBlock } from "@skysend/note-format";
+import {
+  NOTE_KIND,
+  legacyToBlocks,
+  parseNote,
+  readNote,
+  type NoteBlock,
+} from "@skysend/note-format";
 import {
   CLI_NOTE_TYPES,
   isCliNoteType,
   noteFileName,
   prepareNote,
-  readReceivedNote,
   sshKeyFromText,
   textToBlock,
   toLegacyNote,
@@ -122,25 +127,8 @@ describe("prepareNote", () => {
       const keys = await deriveKeys(generateSecret(), generateSalt());
       const encrypted = await encryptNoteContent(note.plaintext, keys.metaKey);
       const plaintext = await decryptNoteContent(encrypted.ciphertext, encrypted.nonce, keys.metaKey);
-      expect(readReceivedNote(note.contentType, plaintext)).toEqual({ blocks: [block], unreadable: false });
+      expect(readNote(note.contentType, plaintext)).toEqual([block]);
     }
-  });
-});
-
-describe("readReceivedNote", () => {
-  // LEGACY(notes-v1): drop with the legacy readers.
-  it("reads a legacy note", () => {
-    expect(readReceivedNote("text", "old")).toEqual({
-      blocks: [{ type: "text", format: "plain", text: "old" }],
-      unreadable: false,
-    });
-  });
-
-  it("shows a note made of blocks that does not parse as it arrived", () => {
-    expect(readReceivedNote(NOTE_KIND, "garbage")).toEqual({
-      blocks: [{ type: "text", format: "plain", text: "garbage" }],
-      unreadable: true,
-    });
   });
 });
 

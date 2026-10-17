@@ -39,7 +39,8 @@ The CLI speaks the same API and the same crypto as the SPA, so a change on one s
 | Share URL shape | `hooks/useUpload.ts` | `lib/url.ts` |
 | Local history | IndexedDB (`lib/upload-store.ts`) | `~/.config/skysend/history.json` (`lib/history.ts`) |
 | Password KDF | hash-wasm Argon2id | its own `Argon2idHashFn` |
-| Note format | `@skysend/note-format` in `useNoteUpload` and `useNoteView` | `@skysend/note-format` through `lib/note.ts` |
+| Notes | `createEncryptedNote` and `openNote` of `@skysend/transfer` in `useNoteUpload` and `useNoteView` | the same functions in `commands/note.ts`, `tui/views/NoteCreate.tsx` and `NoteView.tsx` |
+| Note format | `@skysend/note-format` in `useNoteUpload` | `@skysend/note-format` through `lib/note.ts` |
 
 The CLI creates a note of one block. `prepareNote()` sends it as `blocks` to a server that reports `noteBlocks`, and in the legacy format to an older one. That fallback, `toLegacyNote()`, is marked `LEGACY(notes-v1)` and goes with the legacy content types.
 
