@@ -4,7 +4,7 @@ Detailed reference for all SkySend CLI client commands.
 
 ## upload
 
-Upload one or more files with end-to-end encryption.
+Upload one or more files or folders with end-to-end encryption.
 
 ```bash
 skysend upload <files...> [options]
@@ -14,7 +14,7 @@ skysend upload <files...> [options]
 
 | Argument | Description |
 | --- | --- |
-| `<files...>` | One or more file paths to upload |
+| `<files...>` | One or more files or folders to upload |
 
 ### Options
 
@@ -39,6 +39,9 @@ skysend upload ./report.pdf --expires 24h --downloads 5
 # Upload multiple files (zipped automatically)
 skysend upload ./file1.txt ./file2.txt ./file3.txt
 
+# Upload a folder with everything in it
+skysend upload ./photos
+
 # Upload with password (interactive prompt)
 skysend upload ./secret.zip --password
 
@@ -53,6 +56,7 @@ skysend upload ./data.csv --json
 
 - **Single file**: Read from the disk and encrypted while it uploads, so the memory stays flat whatever the size.
 - **Multiple files**: Packed into one `.zip` while they upload, stored without compression like the web app does, with ZIP64 above 4 GiB. Two files of the same name both arrive, the second as `report (2).pdf`. The recipient receives the `.zip` file.
+- **Folders**: Every file below a folder goes into the zip under its path from the folder, like `photos/2026/beach.jpg`. Links to other folders are skipped. The server's limit on files per upload counts the files inside.
 - **Transport**: WebSocket when the server offers it, with HTTP chunks as the fallback when the WebSocket cannot connect. `--no-ws` stays on HTTP chunks, see [WebSocket Transport](./index.md#websocket-transport).
 - **Progress**: Displays a progress bar with speed and ETA.
 
@@ -223,7 +227,7 @@ skysend note:view <url>
 skysend note:view https://instance.com/note/abc123#secret
 ```
 
-If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords are hidden until revealed with their number key or all at once with `a`, and `s` saves the whole note to a file. The file is created so that only you can read it. Control characters in a note, which could hide text or change the terminal, are shown as `�`.
+If the note is password-protected, the TUI prompts for the password. Each block of the note is shown in a frame of its own. Passwords stay hidden until "Show the passwords". `page down` and `page up` scroll a long note, "Copy the note" copies it and "Save it to a file" saves the whole note. The file is created so that only you can read it. Control characters in a note, which could hide text or change the terminal, are shown as `�`.
 
 Notes made of blocks need a CLI client from v3 on. Notes created before v3 open in every version.
 
@@ -482,7 +486,7 @@ Session tokens are stored per-server in `~/.config/skysend/tokens.json` with `60
 
 ## interactive (default)
 
-Launch an interactive menu-driven mode. Fetches the server configuration and displays available options, limits, and quota information.
+Starts the interactive mode, a full screen app in the terminal with tabs for everything the CLI does. It takes the colors of the dark theme of the web app and the accent color of the server, SkySend green before a server is chosen. Quitting gives the terminal back as it was.
 
 This is the **default command** - running `skysend` without a subcommand launches interactive mode automatically.
 
@@ -498,16 +502,48 @@ skysend i [options]           # short alias
 | --- | --- |
 | `-s, --server <url>` | Server URL (overrides config) |
 
-### Features
+### First start
 
-- Displays server info: name, enabled services, max file size, upload quota
-- Menu with available actions based on server capabilities
-- **Upload file(s)**: interactive file path input, expiry selection, download count, password, confirmation before upload
-- **Download file**: enter a share URL, auto-detects password protection, choose save location
-- **Create note**: type selection (text, password, code, markdown, SSH key), content input (inline or from file with `@path`), expiry, max views, password
-- **My uploads**: browse upload and note history, view share URLs, delete from server or remove from local history
-- **Check for updates**: check and install newer CLI versions from GitHub Releases
-- Loops back to the menu after each action until you choose Exit
+Without a configured server, the first screen offers the public instances listed on [instances.skysend.app](https://instances.skysend.app/) with their country and limits, your saved servers, and a field for the address of your own server. The server you pick there is saved, and the first one becomes the default, so the next start goes straight to it. A server given with `--server` is used without being saved.
+
+### Keys
+
+Every screen is one list of rows with one cursor, and the keys do the same everywhere. The bar at the bottom shows what enter does on the row the cursor is on.
+
+| Key | What it does |
+| --- | --- |
+| `↑` `↓` | Move the cursor. `tab` and `shift+tab` do the same. |
+| `enter` | Do what the row says: press a button, open an entry, go on from a field. |
+| `←` `→` | Change a value, shown as `‹ 1 day ›`. In the tab bar they switch tabs. |
+| typing | Goes into the field the cursor is on, like a path, a password or a note. Pasting works the same. |
+| `space` | Selects a file or a whole folder in the file dialog. |
+| `del` | Takes a file out before sending, or forgets a saved server. |
+| `esc` | Goes back: from a dialog to the tab, from the tab up to the tab bar. |
+| `q`, `ctrl+c` | Quit. `q` works in the tab bar, `ctrl+c` everywhere. |
+
+The tab bar is the top row. `esc`, or `↑` on the first row of a tab, moves the cursor up there, `←` `→` switch tabs and `↓` goes back in. A tab keeps what you picked or typed, and an upload or download runs on while you look at another tab.
+
+### Tabs
+
+| Tab | What it does |
+| --- | --- |
+| **Send** | Pick files or folders, or type or paste a path, set when it expires, how many downloads it allows and a password, then press Send. During the upload a bar shows the amount, the time left and a curve of the speed, and "Cancel the upload" stops it after a second enter. Afterwards the link is shown with a QR code, with buttons to copy it, open it and send more. |
+| **Receive** | Paste a file or a note link and it opens. A file shows its name, size and the files in its zip, asks for the password when it has one, and downloads to the current folder or the place you type under "Save to". A note opens on the screen with buttons to show its passwords, copy it and save it to a file. |
+| **Note** | Creates a note: text, passwords, code, markdown or an SSH key. `←` `→` on "Kind of note" picks the kind. Text is written in the editor or loaded from a file, passwords are typed or made with "Make a strong password", an SSH key is made on the spot or read from a file. |
+| **My links** | The uploads and notes sent from this computer. `enter` opens one with its link, QR code, its downloads or views and the time left on the server, and buttons to copy, open, delete it from the server or take it off the list. |
+| **Settings** | Switches the server, picks the one to start with, turns fast WebSocket uploads off for this server and forgets saved servers. |
+
+Links on the screen open with a click in terminals that support hyperlinks, also where a link wraps over two lines.
+
+### Picking files
+
+"Pick files or folders" opens a file dialog: "Go to" jumps to places such as Home, Desktop and Downloads, "Filter" narrows the folder to names you type, and the folder is listed below. `space` selects a file or a whole folder, `→` opens a folder and `←` goes up. `enter` is done: it moves the cursor to the button on top, which shows how many files are selected and how large they are together, across folders, and a second `enter` adds them. Before anything is selected, `enter` opens a folder or takes the file it is on.
+
+A folder goes up as a zip that keeps its structure, so `trip/day-1/photo.jpg` arrives under that name. On a desktop computer, dropping files on the terminal window pastes their paths, and the Send tab adds them.
+
+### Copying the link
+
+"Copy the link" puts it on the clipboard with the tool of the system: `pbcopy` on macOS, `clip` on Windows, `wl-copy`, `xclip` or `xsel` on Linux. It also sends the link to the terminal as an OSC 52 sequence, which most terminals put on the clipboard of the computer in front of you, so copying works over SSH too. The message at the top right says whether a tool of the system took it. The link with its key never appears in the process list.
 
 ### Upload History
 

@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import * as fs from "node:fs";
-import { Box, Text, useInput } from "ink";
+import { Text, useAnimation } from "ink";
 import { encryptNoteContent, toBase64url } from "@skysend/crypto";
 import type { NoteBlock } from "@skysend/note-format";
 import { apiFor } from "../../lib/api.js";
@@ -9,33 +9,40 @@ import { buildShareUrl } from "../../lib/url.js";
 import { addNote } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
 import { generatePassword } from "../../lib/password-generator.js";
-import { prepareNote, textToBlock, type CliNoteType } from "../../lib/note.js";
-import { generateEd25519KeyPair, generateRSAKeyPair, type SSHKeyPair } from "../../lib/ssh-keygen.js";
+import { prepareNote, sshKeyFromText, textToBlock, type CliNoteType } from "../../lib/note.js";
+import { generateEd25519KeyPair, generateRSAKeyPair } from "../../lib/ssh-keygen.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
-import { SelectList, type SelectItem } from "../components/SelectList.js";
-import { TextPrompt } from "../components/TextPrompt.js";
-import { MultiLineInput } from "../components/MultiLineInput.js";
-import { FileExplorer } from "../components/FileExplorer.js";
-import type { AppState } from "../types.js";
-import { useAccent } from "../theme.js";
-import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { checkNewPassword } from "../../lib/input.js";
+import type { AppState } from "../types.js";
+import { COLORS, useAccent } from "../theme.js";
+import { useFocus, useRoom } from "../shell.js";
+import { Faint, Gap, Muted, Panel, T } from "../components/Frame.js";
+import { Form, type FormRow } from "../components/Form.js";
+import { FilePicker } from "../components/FilePicker.js";
+import { LinkReady } from "../components/LinkReady.js";
+import { SPINNER, plural } from "../components/Progress.js";
 
-type Phase =
-  // Common
-  | "type" | "expiry" | "views" | "password-ask" | "password-input"
-  | "authenticating" | "creating" | "done" | "error"
-  // Text/Code/Markdown
-  | "text-source" | "text-editor" | "text-file"
-  // Password note
-  | "pw-list" | "pw-label" | "pw-value-choice" | "pw-value-input" | "pw-gen-length"
-  // SSH Key
-  | "ssh-source" | "ssh-algo" | "ssh-comment" | "ssh-passphrase" | "ssh-generating" | "ssh-file" | "ssh-share";
+type Phase = "compose" | "pick" | "working" | "done" | "error";
 
-interface PasswordEntry {
-  label: string;
-  value: string;
+const KINDS: Array<{ id: CliNoteType; label: string }> = [
+  { id: "text", label: "Text" },
+  { id: "password", label: "Passwords" },
+  { id: "code", label: "Code" },
+  { id: "markdown", label: "Markdown" },
+  { id: "sshkey", label: "SSH key" },
+];
+const TEXT_KINDS: readonly CliNoteType[] = ["text", "code", "markdown"];
+const SSH_SOURCES = [
+  { id: "ed25519", label: "make a new Ed25519 key" },
+  { id: "rsa", label: "make a new RSA 4096 key" },
+  { id: "file", label: "take one from a file" },
+] as const;
+
+interface SshParts {
+  publicKey: string;
+  privateKey: string;
+  passphrase: string;
 }
 
 interface NoteCreateViewProps {
@@ -44,560 +51,376 @@ interface NoteCreateViewProps {
   onError: (msg: string) => void;
 }
 
-export function NoteCreateView({ appState, onBack }: NoteCreateViewProps): React.ReactElement {
+function step<T>(values: readonly T[], current: T, by: number): T {
+  const at = Math.max(0, values.indexOf(current));
+  return values[Math.min(values.length - 1, Math.max(0, at + by))]!;
+}
+
+/** The Note tab: a form with the kind and content of the note, its options and the button. */
+export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactElement {
   const accent = useAccent();
+  const { width, height } = useRoom();
+  const { active, toTabs } = useFocus();
   const { server, config } = appState;
-  const [phase, setPhase] = useState<Phase>("type");
-  const [contentType, setContentType] = useState<CliNoteType>("text");
-  const [block, setBlock] = useState<NoteBlock | null>(null);
-  const [sshComment, setSshComment] = useState("");
+
+  const [phase, setPhase] = useState<Phase>("compose");
+  const [working, setWorking] = useState("");
+  const [kind, setKind] = useState<CliNoteType>("text");
+  const [text, setText] = useState("");
+  // A new number starts the editor over, with the text of a file.
+  const [editorReset, setEditorReset] = useState(0);
+  const [entries, setEntries] = useState<Array<{ label: string; value: string }>>([]);
+  const [newLabel, setNewLabel] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [sshSource, setSshSource] = useState<(typeof SSH_SOURCES)[number]["id"]>("ed25519");
+  const [comment, setComment] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [parts, setParts] = useState<SshParts | null>(null);
+  const [share, setShare] = useState({ pub: true, priv: true, pass: true });
   const [expireSec, setExpireSec] = useState(config.noteDefaultExpire);
   const [maxViews, setMaxViews] = useState(config.noteDefaultViews);
-  const [password, setPassword] = useState<string | undefined>();
+  const [password, setPassword] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  const [focus, setFocus] = useState({ id: "kind", n: 0 });
   const [shareUrl, setShareUrl] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [showQR, setShowQR] = useState(false);
+  const [failure, setFailure] = useState("");
+  const { frame } = useAnimation({ interval: 90, isActive: phase === "working" });
+  const focusOn = (id: string) => setFocus((f) => ({ id, n: f.n + 1 }));
+  const textKind = TEXT_KINDS.includes(kind);
 
-  // Password note state
-  const [pwEntries, setPwEntries] = useState<PasswordEntry[]>([]);
-  const [pwCurrentLabel, setPwCurrentLabel] = useState("");
+  /** The block of the note, or why it cannot be made yet. */
+  const block = (): NoteBlock | string => {
+    if (textKind) return text.trim() ? textToBlock(kind, text) : "Write the note first.";
+    if (kind === "password") {
+      const all = newValue ? [...entries, { label: newLabel.trim(), value: newValue }] : entries;
+      return all.length > 0 ? { type: "password", entries: all } : "Add a password first.";
+    }
+    if (!parts) return "Make or pick a key first.";
+    const chosen = {
+      publicKey: share.pub ? parts.publicKey : "",
+      privateKey: share.priv ? parts.privateKey : "",
+      passphrase: share.pass ? parts.passphrase : "",
+    };
+    if (!chosen.publicKey && !chosen.privateKey && !chosen.passphrase) return "Pick at least one part of the key.";
+    return { type: "sshkey", ...chosen };
+  };
 
-  // SSH key state
-  const [sshAlgo, setSshAlgo] = useState<"ed25519" | "rsa">("ed25519");
-  const [sshParts, setSshParts] = useState<{ publicKey: string; privateKey: string; passphrase?: string }>({ publicKey: "", privateKey: "" });
-  const [sshShare, setSshShare] = useState<{ pub: boolean; priv: boolean; pass: boolean }>({ pub: true, priv: true, pass: true });
-
-  // The note is one block. It is checked against the size the server will see.
-  const proceedWith = useCallback((next: NoteBlock) => {
-    const { plaintext } = prepareNote(next, config.noteBlocks);
-    if (new TextEncoder().encode(plaintext).byteLength > config.noteMaxSize) {
-      setErrorMsg(`Note too large (max ${formatBytes(config.noteMaxSize)})`);
-      setPhase("error");
+  const create = async () => {
+    const made = block();
+    if (typeof made === "string") {
+      setProblem(made);
       return;
     }
-    setBlock(next);
-    setPhase("expiry");
-  }, [config.noteMaxSize, config.noteBlocks]);
-
-  const doCreate = useCallback(async (passwordOverride?: string) => {
-    const effectivePassword = passwordOverride !== undefined ? passwordOverride : password;
-    if (!block) return;
+    if (password && checkNewPassword(password) !== true) {
+      setProblem(`Password: ${checkNewPassword(password) as string}`);
+      focusOn("password");
+      return;
+    }
+    if (config.forceNotePassword && !password) {
+      setProblem("This server wants a password on every note.");
+      focusOn("password");
+      return;
+    }
+    const note = prepareNote(made, config.noteBlocks);
+    if (new TextEncoder().encode(note.plaintext).byteLength > config.noteMaxSize) {
+      setProblem(`The note is too large, this server takes up to ${formatBytes(config.noteMaxSize)}.`);
+      return;
+    }
+    setProblem(null);
     try {
-      // Authenticate with OIDC before creating the note if the server requires it.
       let oidcToken: string | undefined;
       if (config.oidcProtectNotes) {
-        setPhase("authenticating");
+        setWorking("Waiting for the login in your browser");
+        setPhase("working");
         oidcToken = await ensureOidcAuth(server);
       }
-      setPhase("creating");
-      const creds = await prepareUpload(effectivePassword);
-      // A server from before v3 gets the note in the legacy format.
-      const note = prepareNote(block, config.noteBlocks);
+      setWorking("Encrypting and creating the note");
+      setPhase("working");
+      const creds = await prepareUpload(password || undefined);
       const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
-
       const result = await apiFor(server, oidcToken).createNote({
         encryptedContent: toBase64url(encrypted.ciphertext),
         nonce: toBase64url(encrypted.nonce),
         salt: toBase64url(creds.salt),
         ownerToken: creds.ownerTokenB64,
         authToken: creds.authTokenB64,
-        contentType: note.contentType, maxViews, expireSec,
+        contentType: note.contentType,
+        maxViews,
+        expireSec,
         hasPassword: creds.hasPassword,
         ...(creds.hasPassword && creds.passwordSalt && creds.passwordAlgo
           ? { passwordSalt: toBase64url(creds.passwordSalt), passwordAlgo: creds.passwordAlgo }
           : {}),
       });
-
       const url = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
-      setShareUrl(url);
-
       addNote({
         id: result.id, server, url,
         ownerToken: creds.ownerTokenB64,
-        contentType, hasPassword: creds.hasPassword,
+        contentType: kind, hasPassword: creds.hasPassword,
         createdAt: new Date().toISOString(), expireSec,
       });
-
+      setShareUrl(url);
       setPhase("done");
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setFailure(err instanceof Error ? err.message : String(err));
       setPhase("error");
     }
-  }, [block, contentType, maxViews, expireSec, password, server, config.oidcProtectNotes, config.noteBlocks]);
+  };
 
-  useInput((input, key) => {
-    if (phase === "done" && input === "q") {
-      setShowQR((v) => !v);
-      return;
+  const generate = async () => {
+    setWorking("Making the key");
+    setPhase("working");
+    try {
+      const pair = sshSource === "rsa"
+        ? await generateRSAKeyPair(4096, comment.trim() || undefined, passphrase.trim() || undefined)
+        : await generateEd25519KeyPair(comment.trim() || undefined, passphrase.trim() || undefined);
+      setParts({ publicKey: pair.publicKey, privateKey: pair.privateKey, passphrase: passphrase.trim() });
+      setShare({ pub: true, priv: true, pass: true });
+      setPhase("compose");
+      focusOn("part:pub");
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+      setPhase("compose");
     }
-    if ((phase === "done" || phase === "error") && (key.return || key.escape)) {
-      onBack();
-    }
-  }, { isActive: phase === "done" || phase === "error" });
+  };
 
-  // ─── Type selection ───────────────────────────────────────────────────
+  const addEntry = () => {
+    if (!newValue) return;
+    setEntries((prev) => [...prev, { label: newLabel.trim(), value: newValue }]);
+    setNewLabel("");
+    setNewValue("");
+    setProblem(null);
+    focusOn("newLabel");
+  };
 
-  if (phase === "type") {
-    const items: Array<SelectItem<CliNoteType>> = [
-      { label: "Text", value: "text" },
-      { label: "Password", value: "password" },
-      { label: "Code", value: "code" },
-      { label: "Markdown", value: "markdown" },
-      { label: "SSH Key", value: "sshkey" },
-    ];
+  const startOver = () => {
+    setText("");
+    setEditorReset((n) => n + 1);
+    setEntries([]);
+    setParts(null);
+    setPassword("");
+    setProblem(null);
+    setPhase("compose");
+    focusOn("kind");
+  };
+
+  // ── Screens over the form ────────────────────────────
+
+  if (phase === "pick") {
     return (
-      <SelectList
-        items={items}
-        title="Note type"
-        onSelect={(val) => {
-          setContentType(val);
-          if (val === "password") setPhase("pw-list");
-          else if (val === "sshkey") setPhase("ssh-source");
-          else setPhase("text-source");
-        }}
-        onCancel={onBack}
-      />
-    );
-  }
-
-  // ─── Text / Code / Markdown ───────────────────────────────────────────
-
-  if (phase === "text-source") {
-    return (
-      <SelectList
-        items={[
-          { label: "Write manually", value: "write" },
-          { label: "Select file", value: "file" },
-        ]}
-        title={`${contentType} - Content source`}
-        onSelect={(val) => setPhase(val === "write" ? "text-editor" : "text-file")}
-        onCancel={() => setPhase("type")}
-      />
-    );
-  }
-
-  if (phase === "text-editor") {
-    return (
-      <MultiLineInput
-        label={`${contentType} content`}
-        placeholder="Start typing..."
-        onSubmit={(val) => proceedWith(textToBlock(contentType, val))}
-        onCancel={() => setPhase("text-source")}
-      />
-    );
-  }
-
-  if (phase === "text-file") {
-    return (
-      <FileExplorer
+      <FilePicker
         maxFiles={1}
-        onConfirm={(files) => {
-          const filePath = files[0]!;
+        onDone={(picked) => {
+          setPhase("compose");
+          const file = picked[0];
+          if (!file || file.folder || picked.length > 1) {
+            setProblem("Pick one file, not a folder.");
+            return;
+          }
           try {
-            const fileContent = fs.readFileSync(filePath, "utf-8");
-            proceedWith(textToBlock(contentType, fileContent));
+            const content = fs.readFileSync(file.path, "utf-8");
+            if (kind === "sshkey") {
+              const key = sshKeyFromText(content);
+              if (!key.publicKey && !key.privateKey) {
+                setProblem("That file does not look like an SSH key.");
+                return;
+              }
+              setParts({ publicKey: key.publicKey, privateKey: key.privateKey, passphrase: key.passphrase });
+              setShare({ pub: true, priv: true, pass: true });
+              focusOn("part:pub");
+            } else {
+              setText(content);
+              setEditorReset((n) => n + 1);
+              focusOn("text");
+            }
+            setProblem(null);
           } catch (err) {
-            setErrorMsg(err instanceof Error ? err.message : String(err));
-            setPhase("error");
+            setProblem(err instanceof Error ? err.message : String(err));
           }
         }}
-        onCancel={() => setPhase("text-source")}
+        onCancel={() => setPhase("compose")}
       />
     );
   }
 
-  // ─── Password note ────────────────────────────────────────────────────
-
-  if (phase === "pw-list") {
-    const listItems: Array<SelectItem<string>> = [
-      { label: "Add entry", value: "add" },
-      ...(pwEntries.length > 0
-        ? [{ label: "Remove last entry", value: "remove" }]
-        : []),
-      ...(pwEntries.length > 0
-        ? [{ label: "Done", value: "done" }]
-        : []),
-    ];
-
+  if (phase === "working") {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}><Text bold>Password entries</Text></Box>
-        {pwEntries.length === 0 ? (
-          <Box marginLeft={2} marginBottom={1}><Text dimColor>No entries yet</Text></Box>
-        ) : (
-          <Box flexDirection="column" marginBottom={1}>
-            {pwEntries.map((entry, i) => (
-              <Box key={i} marginLeft={2}>
-                <Text dimColor>{i + 1}. </Text>
-                <Text bold>{entry.label || `Password ${i + 1}`}</Text>
-                <Text dimColor>  {"\u2022".repeat(Math.min(entry.value.length, 20))}</Text>
-              </Box>
-            ))}
-          </Box>
-        )}
-        <SelectList
-          items={listItems}
-          onSelect={(val) => {
-            if (val === "add") {
-              setPwCurrentLabel("");
-              setPhase("pw-label");
-            } else if (val === "remove") {
-              setPwEntries((prev) => prev.slice(0, -1));
-            } else if (val === "done") {
-              proceedWith({
-                type: "password",
-                entries: pwEntries.map((e) => ({ label: e.label, value: e.value })),
-              });
-            }
-          }}
-          onCancel={() => {
-            setPwEntries([]);
-            setPhase("type");
-          }}
-        />
-      </Box>
-    );
-  }
-
-  if (phase === "pw-label") {
-    return (
-      <TextPrompt
-        label="Label (optional)"
-        placeholder="e.g. Email, WiFi, API key"
-        onSubmit={(val) => {
-          setPwCurrentLabel(val.trim());
-          setPhase("pw-value-choice");
-        }}
-        onCancel={() => setPhase("pw-list")}
-      />
-    );
-  }
-
-  if (phase === "pw-value-choice") {
-    return (
-      <SelectList
-        items={[
-          { label: "Type password", value: "type" },
-          { label: "Generate password", value: "generate" },
-        ]}
-        title="Password value"
-        onSelect={(val) => setPhase(val === "type" ? "pw-value-input" : "pw-gen-length")}
-        onCancel={() => setPhase("pw-label")}
-      />
-    );
-  }
-
-  if (phase === "pw-value-input") {
-    return (
-      <TextPrompt
-        label="Password"
-        onSubmit={(val) => {
-          setPwEntries((prev) => [...prev, { label: pwCurrentLabel, value: val }]);
-          setPhase("pw-list");
-        }}
-        onCancel={() => setPhase("pw-value-choice")}
-        validate={(val) => val.length > 0 ? true : "Password cannot be empty"}
-      />
-    );
-  }
-
-  if (phase === "pw-gen-length") {
-    return (
-      <TextPrompt
-        label="Password length"
-        defaultValue="20"
-        onSubmit={(val) => {
-          const len = parseInt(val, 10);
-          if (isNaN(len) || len < 8 || len > 128) return;
-          const generated = generatePassword({
-            length: len,
-            uppercase: true,
-            lowercase: true,
-            numbers: true,
-            symbols: true,
-          });
-          setPwEntries((prev) => [...prev, { label: pwCurrentLabel, value: generated }]);
-          setPhase("pw-list");
-        }}
-        onCancel={() => setPhase("pw-value-choice")}
-        validate={(val) => {
-          const n = parseInt(val, 10);
-          if (isNaN(n) || n < 8 || n > 128) return "Length must be 8-128";
-          return true;
-        }}
-      />
-    );
-  }
-
-  // ─── SSH Key ──────────────────────────────────────────────────────────
-
-  if (phase === "ssh-source") {
-    return (
-      <SelectList
-        items={[
-          { label: "Generate new key pair", value: "generate" },
-          { label: "Select key file", value: "file" },
-        ]}
-        title="SSH Key - Source"
-        onSelect={(val) => setPhase(val === "generate" ? "ssh-algo" : "ssh-file")}
-        onCancel={() => setPhase("type")}
-      />
-    );
-  }
-
-  if (phase === "ssh-algo") {
-    return (
-      <SelectList
-        items={[
-          { label: "Ed25519 (recommended)", value: "ed25519" as const },
-          { label: "RSA 4096", value: "rsa" as const },
-        ]}
-        title="Algorithm"
-        onSelect={(val) => { setSshAlgo(val); setPhase("ssh-comment"); }}
-        onCancel={() => setPhase("ssh-source")}
-      />
-    );
-  }
-
-  if (phase === "ssh-comment") {
-    return (
-      <TextPrompt
-        label="Comment (optional)"
-        placeholder="e.g. user@hostname"
-        onSubmit={(val) => {
-          setSshComment(val.trim());
-          setPhase("ssh-passphrase");
-        }}
-        onCancel={() => setPhase("ssh-algo")}
-      />
-    );
-  }
-
-  if (phase === "ssh-passphrase") {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text dimColor>Leave empty for no passphrase</Text>
-        <TextPrompt
-          label="Key passphrase (optional)"
-          mask="*"
-          onSubmit={(val) => {
-            const comment = sshComment;
-            const passphrase = val.trim() || undefined;
-            setPhase("ssh-generating");
-            void (async () => {
-              try {
-                let keyPair: SSHKeyPair;
-                if (sshAlgo === "ed25519") {
-                  keyPair = await generateEd25519KeyPair(comment || undefined, passphrase);
-                } else {
-                  keyPair = await generateRSAKeyPair(4096, comment || undefined, passphrase);
-                }
-                setSshParts({ publicKey: keyPair.publicKey, privateKey: keyPair.privateKey, passphrase });
-                setSshShare({ pub: true, priv: true, pass: !!passphrase });
-                setPhase("ssh-share");
-              } catch (err) {
-                setErrorMsg(err instanceof Error ? err.message : String(err));
-                setPhase("error");
-              }
-            })();
-          }}
-          onCancel={() => setPhase("ssh-comment")}
-        />
-      </Box>
-    );
-  }
-
-  if (phase === "ssh-generating") {
-    return (
-      <Box paddingX={1}><Text>Generating {sshAlgo.toUpperCase()} key pair...</Text></Box>
-    );
-  }
-
-  if (phase === "ssh-file") {
-    return (
-      <FileExplorer
-        maxFiles={1}
-        onConfirm={(files) => {
-          const filePath = files[0]!;
-          try {
-            const fileContent = fs.readFileSync(filePath, "utf-8");
-            // Basic validation: should look like an SSH key
-            if (!fileContent.includes("ssh-") && !fileContent.includes("BEGIN") && !fileContent.includes("PRIVATE KEY")) {
-              setErrorMsg("File does not appear to be an SSH key");
-              setPhase("error");
-              return;
-            }
-            // Parse parts from file
-            const privMatch = fileContent.match(/(-----BEGIN[^\n]*PRIVATE KEY-----[\s\S]*?-----END[^\n]*PRIVATE KEY-----)/);
-            const passMatch = fileContent.match(/^Passphrase: (.+)$/m);
-            let pubKey = fileContent;
-            if (privMatch?.[1]) pubKey = pubKey.replace(privMatch[1], "");
-            if (passMatch?.[1]) pubKey = pubKey.replace(`Passphrase: ${passMatch[1]}`, "");
-            pubKey = pubKey.trim();
-            setSshParts({ publicKey: pubKey, privateKey: privMatch?.[1] ?? "", passphrase: passMatch?.[1] });
-            setSshShare({ pub: !!pubKey, priv: !!privMatch, pass: !!passMatch });
-            setPhase("ssh-share");
-          } catch (err) {
-            setErrorMsg(err instanceof Error ? err.message : String(err));
-            setPhase("error");
-          }
-        }}
-        onCancel={() => setPhase("ssh-source")}
-      />
-    );
-  }
-
-  if (phase === "ssh-share") {
-    const hasPub = sshParts.publicKey.length > 0;
-    const hasPriv = sshParts.privateKey.length > 0;
-    const hasPass = !!sshParts.passphrase;
-    const anySelected = (hasPub && sshShare.pub) || (hasPriv && sshShare.priv) || (hasPass && sshShare.pass);
-
-    const items: Array<SelectItem<string>> = [];
-    if (hasPub) items.push({ label: `[${sshShare.pub ? "x" : " "}] Public Key`, value: "pub" });
-    if (hasPriv) items.push({ label: `[${sshShare.priv ? "x" : " "}] Private Key`, value: "priv" });
-    if (hasPass) items.push({ label: `[${sshShare.pass ? "x" : " "}] Passphrase`, value: "pass" });
-    if (anySelected) items.push({ label: "Done", value: "done" });
-
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}><Text bold>Share selection</Text></Box>
-        <Text dimColor>Toggle which parts to include in the note</Text>
-        <Box marginTop={1}>
-          <SelectList
-            items={items}
-            onSelect={(val) => {
-              if (val === "pub") { setSshShare((s) => ({ ...s, pub: !s.pub })); return; }
-              if (val === "priv") { setSshShare((s) => ({ ...s, priv: !s.priv })); return; }
-              if (val === "pass") { setSshShare((s) => ({ ...s, pass: !s.pass })); return; }
-              if (val === "done") {
-                if (!anySelected) return;
-                proceedWith({
-                  type: "sshkey",
-                  publicKey: sshShare.pub && hasPub ? sshParts.publicKey : "",
-                  privateKey: sshShare.priv && hasPriv ? sshParts.privateKey : "",
-                  passphrase: sshShare.pass && hasPass ? (sshParts.passphrase ?? "") : "",
-                });
-              }
-            }}
-            onCancel={() => setPhase("ssh-source")}
-          />
-        </Box>
-      </Box>
-    );
-  }
-
-  // ─── Common: Expiry, Views, Password, Create, Done ────────────────────
-
-  if (phase === "expiry") {
-    const items: Array<SelectItem<number>> = config.noteExpireOptions.map((s) => ({
-      label: formatExpiry(s), value: s,
-    }));
-    return (
-      <SelectList items={items} title="Expiry time" onSelect={(val) => { setExpireSec(val); setPhase("views"); }} onCancel={() => {
-        // Go back to appropriate content phase
-        if (contentType === "password") setPhase("pw-list");
-        else if (contentType === "sshkey") setPhase("ssh-source");
-        else setPhase("text-source");
-      }} />
-    );
-  }
-
-  if (phase === "views") {
-    const items: Array<SelectItem<number>> = config.noteViewOptions.map((v) => ({
-      label: String(v), value: v,
-    }));
-    return (
-      <SelectList items={items} title="Max views" onSelect={(val) => { setMaxViews(val); setPhase("password-ask"); }} onCancel={() => setPhase("expiry")} />
-    );
-  }
-
-  if (phase === "password-ask") {
-    if (config.forceNotePassword) {
-      // Skip the Yes/No question - password is required
-      return (
-        <TextPrompt
-          label="Password (required by server policy)"
-          mask="*"
-          onSubmit={(val) => { setPassword(val); void doCreate(val); }}
-          onCancel={() => setPhase("views")}
-          validate={checkNewPassword}
-        />
-      );
-    }
-    return (
-      <SelectList
-        items={[{ label: "No", value: "no" }, { label: "Yes", value: "yes" }]}
-        title="Password protect?"
-        onSelect={(val) => {
-          if (val === "yes") setPhase("password-input");
-          else { setPassword(undefined); void doCreate(undefined); }
-        }}
-        onCancel={() => setPhase("views")}
-      />
-    );
-  }
-
-  if (phase === "password-input") {
-    return (
-      <TextPrompt
-        label="Password"
-        mask="*"
-        onSubmit={(val) => { setPassword(val); void doCreate(val); }}
-        onCancel={() => setPhase("password-ask")}
-        validate={checkNewPassword}
-      />
-    );
-  }
-
-  if (phase === "authenticating") {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>Waiting for browser login...</Text>
-        </Box>
-        <Text dimColor>A browser window has been opened for authentication.</Text>
-        <Text dimColor>Complete the login and return here.</Text>
-      </Box>
-    );
-  }
-
-  if (phase === "creating") {
-    return (
-      <Box paddingX={1}><Text>Creating note...</Text></Box>
+      <Panel width={width}>
+        <Gap />
+        <T>  <Text color={accent}>{SPINNER[frame % SPINNER.length]}</Text> <Text bold>{working}</Text></T>
+        <Gap />
+      </Panel>
     );
   }
 
   if (phase === "done") {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold color="green">Note created!</Text>
-        <Box flexDirection="column" marginLeft={2} marginTop={1}>
-          <Text><Text dimColor>Share URL: </Text><Text color={accent}>{shareUrl}</Text></Text>
-          <Text><Text dimColor>Type:      </Text>{contentType}</Text>
-          <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
-          <Text><Text dimColor>Views:     </Text>{maxViews}</Text>
-          {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
-        </Box>
-        {showQR && (
-          <Box marginTop={1}>
-            <QRCodeDisplay url={shareUrl} />
-          </Box>
-        )}
-        <Box marginTop={1}><Text dimColor>q QR code  Enter/Esc back</Text></Box>
-      </Box>
+      <LinkReady
+        url={shareUrl}
+        title="Your note is ready"
+        actions={[{ id: "more", label: "Write another note", onPress: startOver }]}
+        active={active}
+        onExit={toTabs}
+        exitHint="tabs"
+      >
+        <Muted>
+          {KINDS.find((k) => k.id === kind)?.label}, deleted after {formatExpiry(expireSec)}
+          {maxViews > 0 ? ` or ${plural(maxViews, "view")}, whichever comes first` : ""}.
+        </Muted>
+        <Muted>{password ? "Protected with a password. Tell it on another way than the link." : "No password."}</Muted>
+        <Faint>It is in My links, where you can delete it early.</Faint>
+      </LinkReady>
     );
   }
 
   if (phase === "error") {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text color="red" bold>Error</Text>
-        <Text color="red">{forTerminal(errorMsg)}</Text>
-        <Box marginTop={1}><Text dimColor>Press Enter or Esc to go back</Text></Box>
-      </Box>
+      <Panel width={width}>
+        <Gap />
+        <Text color={COLORS.danger} bold>  The note could not be created</Text>
+        <T>  {forTerminal(failure)}</T>
+        <Gap />
+        <Form
+          rows={[{ kind: "button", id: "back", label: "Back to the note", primary: true, onPress: () => setPhase("compose") }]}
+          active={active}
+          height={1}
+          onExit={toTabs}
+          exitHint="tabs"
+        />
+        <Gap />
+      </Panel>
     );
   }
 
-  return <Box />;
+  // ── The form ─────────────────────────────────────────
+
+  const content: FormRow[] = [];
+  if (textKind) {
+    content.push({
+      kind: "editor",
+      id: "text",
+      label: kind === "code" ? "Code" : "Text",
+      value: text,
+      onChange: setText,
+      height: Math.max(3, height - 22),
+      placeholder: "Write here. Enter makes a new line, tab goes on.",
+      reset: editorReset,
+    });
+    content.push({ kind: "button", id: "load", label: "Load the text from a file instead", onPress: () => setPhase("pick") });
+  } else if (kind === "password") {
+    entries.forEach((e, i) => {
+      content.push({
+        kind: "item",
+        id: `entry:${i}`,
+        onRemove: () => setEntries((prev) => prev.filter((_, j) => j !== i)),
+        removeHint: "take it out",
+        render: (focused) => (
+          <Text wrap="truncate-end">
+            <Text color={COLORS.text} bold={focused}>{e.label ? forTerminal(e.label) : `Password ${i + 1}`}</Text>
+            <Text color={COLORS.muted}>   {"•".repeat(Math.min(e.value.length, 20))}</Text>
+          </Text>
+        ),
+      });
+    });
+    content.push({ kind: "input", id: "newLabel", label: "Label", value: newLabel, onChange: setNewLabel, placeholder: "like WiFi or Email, can stay empty" });
+    content.push({ kind: "input", id: "newValue", label: "Password", value: newValue, onChange: setNewValue, placeholder: "type it, or make one below", submitHint: "add it", onSubmit: addEntry });
+    content.push({
+      kind: "button",
+      id: "generate",
+      label: "Make a strong password",
+      onPress: () => {
+        setNewValue(generatePassword({ length: 20, uppercase: true, lowercase: true, numbers: true, symbols: true }));
+        focusOn("newValue");
+      },
+    });
+    content.push({ kind: "button", id: "addEntry", label: entries.length ? "Add another password" : "Add this password", disabled: !newValue, onPress: addEntry });
+  } else if (!parts) {
+    content.push({
+      kind: "choice",
+      id: "sshSource",
+      label: "Key",
+      value: SSH_SOURCES.find((s) => s.id === sshSource)!.label,
+      onChange: (by) => setSshSource((s) => step(SSH_SOURCES.map((x) => x.id), s, by)),
+    });
+    if (sshSource === "file") {
+      content.push({ kind: "button", id: "pickKey", label: "Pick the key file", onPress: () => setPhase("pick") });
+    } else {
+      content.push({ kind: "input", id: "comment", label: "Comment", value: comment, onChange: setComment, placeholder: "like you@laptop, can stay empty" });
+      content.push({ kind: "input", id: "passphrase", label: "Passphrase", value: passphrase, onChange: setPassphrase, mask: true, placeholder: "can stay empty" });
+      content.push({ kind: "button", id: "makeKey", label: "Make the key", onPress: () => void generate() });
+    }
+  } else {
+    const partRows: Array<{ key: "pub" | "priv" | "pass"; label: string; present: boolean }> = [
+      { key: "pub", label: "Public key", present: !!parts.publicKey },
+      { key: "priv", label: "Private key", present: !!parts.privateKey },
+      { key: "pass", label: "Passphrase", present: !!parts.passphrase },
+    ];
+    for (const p of partRows.filter((x) => x.present)) {
+      content.push({
+        kind: "item",
+        id: `part:${p.key}`,
+        pressHint: share[p.key] ? "leave it out" : "put it in",
+        onPress: () => setShare((prev) => ({ ...prev, [p.key]: !prev[p.key] })),
+        render: (focused) => (
+          <Text wrap="truncate-end">
+            <Text color={share[p.key] ? accent : COLORS.faint}>{share[p.key] ? "[✓]" : "[ ]"}</Text>
+            <Text color={COLORS.text} bold={focused}> {p.label}</Text>
+            {p.key === "pub" && <Text color={COLORS.faint}>   {forTerminal(parts.publicKey)}</Text>}
+          </Text>
+        ),
+      });
+    }
+    content.push({ kind: "button", id: "again", label: "Start over with another key", onPress: () => setParts(null) });
+  }
+
+  const rows: FormRow[] = [
+    {
+      kind: "choice",
+      id: "kind",
+      label: "Kind of note",
+      value: KINDS.find((k) => k.id === kind)!.label,
+      onChange: (by) => {
+        setKind((k) => step(KINDS.map((x) => x.id), k, by));
+        setProblem(null);
+      },
+    },
+    { kind: "section", label: "Content" },
+    ...content,
+    { kind: "section", label: "Options" },
+    {
+      kind: "choice",
+      id: "expires",
+      label: "Expires after",
+      value: formatExpiry(expireSec),
+      onChange: (by) => setExpireSec((v) => step(config.noteExpireOptions, v, by)),
+    },
+    {
+      kind: "choice",
+      id: "views",
+      label: "Views",
+      value: maxViews === 0 ? "no limit" : maxViews === 1 ? "1 view" : `${maxViews} views`,
+      onChange: (by) => setMaxViews((v) => step(config.noteViewOptions, v, by)),
+    },
+    {
+      kind: "input",
+      id: "password",
+      label: "Password",
+      value: password,
+      onChange: setPassword,
+      mask: true,
+      placeholder: config.forceNotePassword ? "required by this server" : "none, or type one",
+    },
+    { kind: "section", label: "" },
+    ...(problem ? [{ kind: "note" as const, content: <Text color={COLORS.danger}>{forTerminal(problem)}</Text> }] : []),
+    { kind: "button", id: "create", label: "Create the note", primary: true, onPress: () => void create() },
+    { kind: "note", content: <Faint>Up to {formatBytes(config.noteMaxSize)}. Encrypted on this computer before it is sent.</Faint> },
+  ];
+
+  return (
+    <Panel width={width}>
+      <Gap />
+      <Form rows={rows} active={active} height={Math.max(8, height - 4)} focus={focus} onExit={toTabs} exitHint="tabs" />
+      <Gap />
+    </Panel>
+  );
 }

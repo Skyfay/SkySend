@@ -29,10 +29,9 @@ export function registerNoteViewCommand(program: Command): void {
         const { waitUntilExit } = render(
           React.createElement(App, {
             initialServer,
-            initialView: "note-view" as const,
             initialNoteUrl: url,
           }),
-          { exitOnCtrlC: true },
+          { exitOnCtrlC: true, alternateScreen: true },
         );
 
         await waitUntilExit();

@@ -1,3 +1,11 @@
+### ✨ Features
+
+- **client**: The interactive mode is rebuilt as a full screen app with tabs for sending, receiving, notes, your links and settings, in the colors of the web app and the accent color of the server. Every screen works the same way with the arrows, enter and esc, and a tab keeps what was picked while another one is open.
+- **client**: The first start of the interactive mode offers the public instances from instances.skysend.app and a field for your own server.
+- **client**: Folders go up as a zip that keeps their structure, from `skysend upload` and from the new file dialog of the interactive mode.
+- **client**: After an upload the interactive mode shows the link as a QR code and as a link that opens with a click, and copies it to the clipboard, over SSH too.
+- **client**: Uploads in the interactive mode show the time left and a curve of the speed, and can be cancelled.
+
 ### 🐛 Bug Fixes
 
 - **client**: Uploading several files packs them while they upload instead of in memory or in a temporary file first.
@@ -5,8 +13,7 @@
 - **client**: An upload on a slow connection no longer reads the file into memory faster than it can send it.
 - **client**: Uploads larger than about 640 MB no longer fail with a 502 behind Nginx.
 - **client**: Two files of the same name sent together both arrive, the second one as `report (2).pdf`.
-- **client**: The TUI saves a download to the edited save path instead of the one it first suggested.
-- **client**: The option lists of a TUI upload start on the server's default instead of where the list before left the cursor.
+- **client**: Expiry times read "1 day" and "1 hour" instead of "1 days" and "1 hours".
 
 ### 🔒 Security
 
@@ -23,7 +30,7 @@
 
 ### 📝 Documentation
 
-- **docs**: The CLI pages describe the WebSocket transport, the packing of several files, the checks of a download and every field of `upload --json`.
+- **docs**: The CLI pages describe the new interactive mode, folders, the WebSocket transport, the checks of a download and every field of `upload --json`.
 
 ### 🧪 Tests
 

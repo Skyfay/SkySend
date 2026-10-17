@@ -19,7 +19,7 @@ import { buildShareUrl } from "./url.js";
 /** One upload of the CLI, from the command and from the TUI alike. */
 export interface UploadJob {
   server: string;
-  /** The files to send, several go up as one zip. */
+  /** The files and folders to send. Several files, or a folder, go up as one zip. */
   paths: readonly string[];
   /** The config the caller checked the options against. */
   config: ServerConfig;
@@ -30,6 +30,8 @@ export interface UploadJob {
   oidcToken?: string;
   /** False with --no-ws, true lets the upload take the WebSocket when the server offers it. */
   webSocket: boolean;
+  /** Ends the upload with "Upload cancelled", the TUI's Escape. */
+  signal?: AbortSignal;
 }
 
 export interface UploadJobResult {
@@ -69,16 +71,74 @@ function openWebSocket(oidcToken: string | undefined) {
   };
 }
 
+/** A file to send and its name in the upload, `folder/sub/file.txt` when it came in a folder. */
+export interface SourceEntry {
+  path: string;
+  name: string;
+  size: number;
+}
+
+/**
+ * The files behind the given paths. A folder brings every file below it, named by its path from
+ * the folder's parent, so the zip keeps the folder. Links to folders are skipped, which keeps a
+ * loop of links from walking forever, links to files are followed. With a `limit`, the walk
+ * stops soon after passing it and says so, for measuring a folder that may be huge.
+ */
+export function listSources(
+  paths: readonly string[],
+  limit = Infinity,
+): { entries: SourceEntry[]; folders: boolean; truncated: boolean } {
+  const entries: SourceEntry[] = [];
+  let folders = false;
+  const walk = (dir: string, prefix: string) => {
+    if (entries.length > limit) return;
+    const children = fs.readdirSync(dir, { withFileTypes: true });
+    children.sort((a, b) => a.name.localeCompare(b.name));
+    for (const child of children) {
+      if (entries.length > limit) return;
+      const full = path.join(dir, child.name);
+      const name = `${prefix}/${child.name}`;
+      if (child.isDirectory()) {
+        walk(full, name);
+      } else if (child.isFile() || child.isSymbolicLink()) {
+        const stat = fs.statSync(full, { throwIfNoEntry: false });
+        if (stat?.isFile()) entries.push({ path: full, name, size: stat.size });
+      }
+    }
+  };
+  for (const given of paths) {
+    const stat = fs.statSync(given, { throwIfNoEntry: false });
+    if (!stat) throw new Error(`File not found: ${given}`);
+    if (stat.isDirectory()) {
+      folders = true;
+      walk(given, path.basename(path.resolve(given)));
+    } else if (stat.isFile()) {
+      entries.push({ path: given, name: path.basename(given), size: stat.size });
+    } else {
+      throw new Error(`Not a file or folder: ${given}`);
+    }
+  }
+  return { entries, folders, truncated: entries.length > limit };
+}
+
 /**
  * The metadata of these files and checks the server would otherwise only answer at the end:
- * the size of one upload and the length of the file list.
+ * the number of files, the size of one upload and the length of the file list.
  */
 export async function describeUpload(paths: readonly string[], config: ServerConfig) {
-  const files = await Promise.all(paths.map(openFile));
-  const names = uniqueNames(paths.map((p) => path.basename(p)));
+  const { entries, folders } = listSources(paths);
+  if (entries.length === 0) throw new Error("There are no files to send in what you picked");
+  if (entries.length > config.fileMaxFilesPerUpload) {
+    throw new Error(
+      `Too many files (${entries.length}). Max: ${config.fileMaxFilesPerUpload} in one upload`,
+    );
+  }
+  const files = await Promise.all(entries.map((entry) => openFile(entry.path)));
+  const names = uniqueNames(entries.map((entry) => entry.name));
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
   let metadata: FileMetadata;
-  if (files.length === 1) {
+  // A folder stays a zip even with one file in it, so its name keeps the folder.
+  if (files.length === 1 && !folders) {
     metadata = {
       type: "single",
       name: names[0]!,
@@ -99,6 +159,34 @@ export async function describeUpload(paths: readonly string[], config: ServerCon
   return { files, names, totalSize, metadata, size };
 }
 
+/**
+ * The plaintext, ended with "Upload cancelled" once `signal` aborts. Both transports read the
+ * plaintext, so an error here stops either of them at its next read.
+ */
+function abortable<T extends { stream: ReadableStream<Uint8Array> }>(plaintext: T, signal?: AbortSignal): T {
+  if (!signal) return plaintext;
+  const reader = plaintext.stream.getReader();
+  const cancelled = () => new Error("Upload cancelled");
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      signal.addEventListener("abort", () => {
+        controller.error(cancelled());
+        void reader.cancel().catch(() => {});
+      }, { once: true });
+    },
+    async pull(controller) {
+      if (signal.aborted) throw cancelled();
+      const { done, value } = await reader.read();
+      if (done) controller.close();
+      else controller.enqueue(value);
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+  return { ...plaintext, stream };
+}
+
 export async function runUpload(job: UploadJob, events: UploadEvents = {}): Promise<UploadJobResult> {
   const { files, names, totalSize, metadata, size } = await describeUpload(job.paths, job.config);
   let transport: "ws" | "http" = "http";
@@ -115,7 +203,7 @@ export async function runUpload(job: UploadJob, events: UploadEvents = {}): Prom
     expireSec: job.expireSec,
     fileCount: files.length,
     metadata,
-    plaintext: plaintextOf(files, metadata),
+    plaintext: abortable(plaintextOf(files, metadata), job.signal),
     ...events,
     onTransport: (used, fallback, reason) => {
       transport = used;

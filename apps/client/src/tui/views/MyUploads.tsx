@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import { Box, Text, useInput } from "ink";
+import React, { useEffect, useRef, useState } from "react";
+import { Box, Text } from "ink";
 import { apiFor } from "../../lib/api.js";
 import {
   getUploads, getNotes, removeUpload, removeNote, cleanupExpired,
@@ -7,12 +7,23 @@ import {
 } from "../../lib/history.js";
 import { ApiError } from "../../lib/errors.js";
 import { formatBytes } from "../../lib/progress.js";
-import { SelectList, type SelectItem } from "../components/SelectList.js";
+import { forTerminal } from "../../lib/terminal.js";
 import type { AppState } from "../types.js";
-import { useAccent } from "../theme.js";
-import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
+import { COLORS } from "../theme.js";
+import { useFocus, useRoom, useToast } from "../shell.js";
+import { Faint, Gap, Muted, Panel, T } from "../components/Frame.js";
+import { Form, type FormRow } from "../components/Form.js";
+import { LinkReady } from "../components/LinkReady.js";
+import { plural } from "../components/Progress.js";
 
-type Phase = "list" | "upload-detail" | "note-detail" | "confirm-delete";
+type Item = { kind: "file"; record: StoredUpload } | { kind: "note"; record: StoredNote };
+
+/** What the server says about a link now: how often it was used and when it goes. */
+type Live =
+  | { state: "loading" }
+  | { state: "gone" }
+  | { state: "error" }
+  | { state: "live"; used: number; max: number; expiresAt: string };
 
 interface MyUploadsViewProps {
   appState: AppState;
@@ -20,337 +31,184 @@ interface MyUploadsViewProps {
   onError: (msg: string) => void;
 }
 
-interface LiveUploadInfo {
-  downloadCount: number;
-  maxDownloads: number;
-  expiresAt: string;
-  gone: boolean;
-}
-
-interface LiveNoteInfo {
-  viewCount: number;
-  maxViews: number;
-  expiresAt: string;
-  gone: boolean;
-}
-
-function formatTimeRemaining(ms: number): string {
+function timeLeft(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
   if (ms <= 0) return "expired";
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m`;
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return `${Math.max(1, min)} min left`;
   const hours = Math.floor(min / 60);
-  const remMin = min % 60;
-  if (hours < 24) return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
-  const days = Math.floor(hours / 24);
-  const remHours = hours % 24;
-  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+  if (hours < 24) return `${hours} h ${min % 60} min left`;
+  return `${Math.floor(hours / 24)} days ${hours % 24} h left`;
 }
 
-function formatAge(isoDate: string): string {
-  const ms = Date.now() - new Date(isoDate).getTime();
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return "just now";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+function age(iso: string): string {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  if (hours < 24) return `${hours} h ago`;
+  return `${Math.floor(hours / 24)} days ago`;
 }
 
-export function MyUploadsView({ appState, onBack }: MyUploadsViewProps): React.ReactElement {
-  const accent = useAccent();
+function title(item: Item): string {
+  if (item.kind === "note") return `Note, ${item.record.contentType}`;
+  const names = item.record.fileNames;
+  return names.length === 1 ? names[0]! : `${names[0]} and ${names.length - 1} more`;
+}
+
+/** The My links tab: what this computer sent to the server, with its state and the link. */
+export function MyUploadsView({ appState }: MyUploadsViewProps): React.ReactElement {
+  const toast = useToast();
+  const { width, height } = useRoom();
+  const { active, toTabs } = useFocus();
   const { server } = appState;
-  const [phase, setPhase] = useState<Phase>("list");
-  const [selectedUpload, setSelectedUpload] = useState<StoredUpload | null>(null);
-  const [selectedNote, setSelectedNote] = useState<StoredNote | null>(null);
-  const [liveUpload, setLiveUpload] = useState<LiveUploadInfo | null>(null);
-  const [liveNote, setLiveNote] = useState<LiveNoteInfo | null>(null);
-  const [now] = useState(() => Date.now());
-  const [cleanupMsg] = useState(() => {
-    const cleaned = cleanupExpired();
-    const parts: string[] = [];
-    if (cleaned.removedUploads > 0) parts.push(`${cleaned.removedUploads} upload(s)`);
-    if (cleaned.removedNotes > 0) parts.push(`${cleaned.removedNotes} note(s)`);
-    return parts.length > 0 ? `Cleaned ${parts.join(" and ")} (expired)` : "";
+  const [, setVersion] = useState(0);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [live, setLive] = useState<Record<string, Live>>({});
+  const requested = useRef(new Set<string>());
+  const [cleaned] = useState(() => {
+    const { removedUploads, removedNotes } = cleanupExpired();
+    return removedUploads + removedNotes;
   });
-  const [, setRefreshKey] = useState(0);
-  const [showQR, setShowQR] = useState(false);
 
-  const uploads = getUploads().filter((u) => u.server === server);
-  const notes = getNotes().filter((n) => n.server === server);
+  // Read on every render, a change to the history bumps `version` to render again.
+  const items: Item[] = [
+    ...getUploads().filter((u) => u.server === server).map((record) => ({ kind: "file" as const, record })),
+    ...getNotes().filter((n) => n.server === server).map((record) => ({ kind: "note" as const, record })),
+  ].sort((a, b) => b.record.createdAt.localeCompare(a.record.createdAt));
+  const item = items.find((it) => it.record.id === openId);
+  const id = item?.record.id;
+  const kind = item?.kind;
+  const itemServer = item?.record.server;
 
-  const isEmpty = uploads.length === 0 && notes.length === 0;
+  // Ask the server once about the link that is open.
+  useEffect(() => {
+    if (!id || !kind || !itemServer || requested.current.has(id)) return;
+    requested.current.add(id);
+    const api = apiFor(itemServer);
+    const request = kind === "file"
+      ? api.fetchInfo(id).then((info) => ({ used: info.downloadCount, max: info.maxDownloads, expiresAt: info.expiresAt }))
+      : api.fetchNoteInfo(id).then((info) => ({ used: info.viewCount, max: info.maxViews, expiresAt: info.expiresAt }));
+    request
+      .then((info) => setLive((prev) => ({ ...prev, [id]: { state: "live", ...info } })))
+      .catch((err: unknown) => {
+        const gone = err instanceof ApiError && (err.status === 404 || err.status === 410);
+        setLive((prev) => ({ ...prev, [id]: { state: gone ? "gone" : "error" } }));
+      });
+  }, [id, kind, itemServer]);
 
-  useInput((_input, key) => {
-    if (key.escape) onBack();
-  }, { isActive: phase === "list" && isEmpty });
+  const removeLocal = (target: Item) => {
+    if (target.kind === "file") removeUpload(target.record.id);
+    else removeNote(target.record.id);
+    setOpenId(null);
+    setVersion((v) => v + 1);
+  };
 
-  const showUpload = useCallback(async (upload: StoredUpload) => {
-    setSelectedUpload(upload);
-    setLiveUpload(null);
-    setPhase("upload-detail");
+  const deleteRemote = async (target: Item) => {
+    const api = apiFor(target.record.server);
     try {
-      const info = await apiFor(upload.server).fetchInfo(upload.id);
-      setLiveUpload({
-        downloadCount: info.downloadCount,
-        maxDownloads: info.maxDownloads,
-        expiresAt: info.expiresAt,
-        gone: false,
-      });
+      if (target.kind === "file") await api.deleteUpload(target.record.id, target.record.ownerToken);
+      else await api.deleteNote(target.record.id, target.record.ownerToken);
+      toast("Deleted from the server");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setLiveUpload({ downloadCount: 0, maxDownloads: 0, expiresAt: "", gone: true });
+      if (!(err instanceof ApiError && (err.status === 404 || err.status === 410))) {
+        toast(`Not deleted: ${err instanceof Error ? err.message : String(err)}`);
+        return;
       }
+      toast("It was already gone from the server");
     }
-  }, []);
+    removeLocal(target);
+  };
 
-  const showNote = useCallback(async (note: StoredNote) => {
-    setSelectedNote(note);
-    setLiveNote(null);
-    setPhase("note-detail");
-    try {
-      const info = await apiFor(note.server).fetchNoteInfo(note.id);
-      setLiveNote({
-        viewCount: info.viewCount,
-        maxViews: info.maxViews,
-        expiresAt: info.expiresAt,
-        gone: false,
-      });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setLiveNote({ viewCount: 0, maxViews: 0, expiresAt: "", gone: true });
-      }
-    }
-  }, []);
-
-  // List view
-  if (phase === "list") {
-    if (uploads.length === 0 && notes.length === 0) {
-      return (
-        <Box flexDirection="column" paddingX={1}>
-          {cleanupMsg && <Text dimColor>{cleanupMsg}</Text>}
-          <Text>No uploads or notes in history for this server.</Text>
-          <Box marginTop={1}><Text dimColor>Press Esc to go back</Text></Box>
-        </Box>
-      );
-    }
-
-    const items: Array<SelectItem<string>> = [];
-    for (const u of uploads) {
-      const names = u.fileNames.join(", ");
-      items.push({
-        label: `[File] ${names}`,
-        value: `upload:${u.id}`,
-        description: `${formatBytes(u.totalSize)} - ${formatAge(u.createdAt)}`,
-      });
-    }
-    for (const n of notes) {
-      items.push({
-        label: `[Note] ${n.contentType}`,
-        value: `note:${n.id}`,
-        description: formatAge(n.createdAt),
-      });
-    }
-
+  if (item) {
+    const state: Live = live[item.record.id] ?? { state: "loading" };
+    const gone = state.state === "gone";
     return (
-      <Box flexDirection="column">
-        {cleanupMsg && <Box paddingX={1}><Text dimColor>{cleanupMsg}</Text></Box>}
-        <SelectList
-          items={items}
-          title="My uploads"
-          onSelect={(val) => {
-            const [type, id] = val.split(":") as [string, string];
-            if (type === "upload") {
-              const upload = uploads.find((u) => u.id === id);
-              if (upload) void showUpload(upload);
-            } else {
-              const note = notes.find((n) => n.id === id);
-              if (note) void showNote(note);
-            }
-          }}
-          onCancel={onBack}
-        />
-      </Box>
-    );
-  }
-
-  // Upload detail
-  if (phase === "upload-detail" && selectedUpload) {
-    const u = selectedUpload;
-    const gone = liveUpload?.gone;
-    const items: Array<SelectItem<string>> = gone
-      ? [
-          { label: "Remove from history", value: "remove" },
-          { label: "Back", value: "back" },
-        ]
-      : [
-          { label: "Copy URL (print)", value: "url" },
-          { label: showQR ? "Hide QR code" : "Show QR code", value: "qr" },
-          { label: "Delete from server", value: "delete" },
-          { label: "Remove from history", value: "remove" },
-          { label: "Back", value: "back" },
-        ];
-
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}><Text bold>Upload detail</Text></Box>
-        <Box flexDirection="column" marginLeft={2}>
-          <Text><Text dimColor>ID:        </Text>{u.id}</Text>
-          <Text><Text dimColor>Files:     </Text>{u.fileNames.join(", ")}</Text>
-          <Text><Text dimColor>Size:      </Text>{formatBytes(u.totalSize)}</Text>
-          <Text><Text dimColor>Password:  </Text>{u.hasPassword ? "yes" : "no"}</Text>
-          <Text><Text dimColor>Created:   </Text>{formatAge(u.createdAt)}</Text>
-          {liveUpload && !gone && (
-            <>
-              <Text>
-                <Text dimColor>Downloads: </Text>
-                {liveUpload.downloadCount} / {liveUpload.maxDownloads}
-                <Text dimColor> ({liveUpload.maxDownloads - liveUpload.downloadCount} remaining)</Text>
-              </Text>
-              <Text>
-                <Text dimColor>Expires:   </Text>
-                {formatTimeRemaining(new Date(liveUpload.expiresAt).getTime() - now)}
-              </Text>
-            </>
-          )}
-          {gone && (
-            <Text color="yellow">Status: deleted or expired on server</Text>
-          )}
-          {!liveUpload && !gone && (
-            <Text dimColor>Loading live info...</Text>
-          )}
-          <Text><Text dimColor>URL:       </Text><Text color={accent}>{u.url}</Text></Text>
-        </Box>
-        {showQR && (
-          <Box marginTop={1} marginLeft={2}>
-            <QRCodeDisplay url={u.url} />
-          </Box>
-        )}
-        <Box marginTop={1}>
-          <SelectList
-            items={items}
-            onSelect={async (val) => {
-              if (val === "url") {
-                process.stdout.write(u.url + "\n");
-              } else if (val === "qr") {
-                setShowQR((v) => !v);
-              } else if (val === "delete") {
-                try {
-                  await apiFor(u.server).deleteUpload(u.id, u.ownerToken);
-                  removeUpload(u.id);
-                } catch (err) {
-                  if (err instanceof ApiError && err.status === 404) {
-                    removeUpload(u.id);
+      <LinkReady
+        url={item.record.url}
+        title={title(item)}
+        fresh={false}
+        active={active}
+        onExit={() => {
+          setOpenId(null);
+          setConfirm(false);
+        }}
+        exitHint="back to the list"
+        actions={[
+          ...(gone
+            ? []
+            : [{
+                id: "delete",
+                label: confirm ? "Press enter again to delete it for good" : "Delete it from the server now",
+                onPress: () => {
+                  if (!confirm) setConfirm(true);
+                  else {
+                    setConfirm(false);
+                    void deleteRemote(item);
                   }
-                }
-                setPhase("list");
-                setRefreshKey((k) => k + 1);
-              } else if (val === "remove") {
-                removeUpload(u.id);
-                setPhase("list");
-                setShowQR(false);
-                setRefreshKey((k) => k + 1);
-              } else {
-                setPhase("list");
-                setShowQR(false);
-              }
-            }}
-          />
-        </Box>
-      </Box>
-    );
-  }
-
-  // Note detail
-  if (phase === "note-detail" && selectedNote) {
-    const n = selectedNote;
-    const gone = liveNote?.gone;
-    const items: Array<SelectItem<string>> = gone
-      ? [
-          { label: "Remove from history", value: "remove" },
-          { label: "Back", value: "back" },
-        ]
-      : [
-          { label: "Copy URL (print)", value: "url" },
-          { label: showQR ? "Hide QR code" : "Show QR code", value: "qr" },
-          { label: "Delete from server", value: "delete" },
-          { label: "Remove from history", value: "remove" },
-          { label: "Back", value: "back" },
-        ];
-
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}><Text bold>Note detail</Text></Box>
-        <Box flexDirection="column" marginLeft={2}>
-          <Text><Text dimColor>ID:        </Text>{n.id}</Text>
-          <Text><Text dimColor>Type:      </Text>{n.contentType}</Text>
-          <Text><Text dimColor>Password:  </Text>{n.hasPassword ? "yes" : "no"}</Text>
-          <Text><Text dimColor>Created:   </Text>{formatAge(n.createdAt)}</Text>
-          {liveNote && !gone && (
-            <>
-              <Text>
-                <Text dimColor>Views:     </Text>
-                {liveNote.viewCount} / {liveNote.maxViews === 0 ? "∞" : liveNote.maxViews}
-                {liveNote.maxViews > 0 && (
-                  <Text dimColor> ({liveNote.maxViews - liveNote.viewCount} remaining)</Text>
-                )}
-              </Text>
-              <Text>
-                <Text dimColor>Expires:   </Text>
-                {formatTimeRemaining(new Date(liveNote.expiresAt).getTime() - now)}
-              </Text>
-            </>
-          )}
-          {gone && (
-            <Text color="yellow">Status: deleted or expired on server</Text>
-          )}
-          {!liveNote && !gone && (
-            <Text dimColor>Loading live info...</Text>
-          )}
-          <Text><Text dimColor>URL:       </Text><Text color={accent}>{n.url}</Text></Text>
-        </Box>
-        {showQR && (
-          <Box marginTop={1} marginLeft={2}>
-            <QRCodeDisplay url={n.url} />
-          </Box>
+                },
+              }]),
+          { id: "forget", label: "Take it off this list", onPress: () => removeLocal(item) },
+        ]}
+      >
+        {item.kind === "file" && (
+          <Muted>{plural(item.record.fileNames.length, "file")}, {formatBytes(item.record.totalSize)}</Muted>
         )}
-        <Box marginTop={1}>
-          <SelectList
-            items={items}
-            onSelect={async (val) => {
-              if (val === "url") {
-                process.stdout.write(n.url + "\n");
-              } else if (val === "qr") {
-                setShowQR((v) => !v);
-              } else if (val === "delete") {
-                try {
-                  await apiFor(n.server).deleteNote(n.id, n.ownerToken);
-                  removeNote(n.id);
-                } catch (err) {
-                  if (err instanceof ApiError && err.status === 404) {
-                    removeNote(n.id);
-                  }
-                }
-                setPhase("list");
-                setRefreshKey((k) => k + 1);
-              } else if (val === "remove") {
-                removeNote(n.id);
-                setPhase("list");
-                setShowQR(false);
-                setRefreshKey((k) => k + 1);
-              } else {
-                setPhase("list");
-                setShowQR(false);
-              }
-            }}
-          />
-        </Box>
-      </Box>
+        <Muted>Sent {age(item.record.createdAt)}, {item.record.hasPassword ? "with a password" : "no password"}.</Muted>
+        {state.state === "live" && (
+          <Muted>
+            {item.kind === "file" ? "Downloaded" : "Viewed"} {state.used} of {state.max === 0 ? "unlimited" : state.max} times, {timeLeft(state.expiresAt)}.
+          </Muted>
+        )}
+        {state.state === "loading" && <Faint>Asking the server how it stands…</Faint>}
+        {gone && <Text color={COLORS.danger}>Gone from the server, used up or expired.</Text>}
+        {state.state === "error" && <Faint>The server did not answer.</Faint>}
+      </LinkReady>
     );
   }
 
-  return <Box />;
+  if (items.length === 0) {
+    return (
+      <Panel width={width}>
+        <Gap />
+        <T bold>  Nothing here yet</T>
+        <Muted>  Files you send and notes you write from this computer to {forTerminal(new URL(server).host)} show up here,</Muted>
+        <Muted>  with their links, so you can copy them again or delete them early.</Muted>
+        {cleaned > 0 && <Faint>  {plural(cleaned, "link")} that ran out were taken off the list.</Faint>}
+        <Form rows={[]} active={active} height={1} onExit={toTabs} exitHint="tabs" />
+      </Panel>
+    );
+  }
+
+  const rows: FormRow[] = [
+    { kind: "section", label: `${plural(items.length, "link")} sent to ${new URL(server).host}` },
+    ...items.map((it): FormRow => ({
+      kind: "item",
+      id: `link:${it.record.id}`,
+      pressHint: "open",
+      onPress: () => {
+        setOpenId(it.record.id);
+        setConfirm(false);
+      },
+      render: (focused) => (
+        <Box justifyContent="space-between" flexGrow={1}>
+          <Text wrap="truncate-end">
+            <Text color={COLORS.faint}>{it.kind === "file" ? "file  " : "note  "}</Text>
+            <Text color={COLORS.text} bold={focused}>{forTerminal(title(it))}</Text>
+          </Text>
+          <Text color={COLORS.muted}>{age(it.record.createdAt)} </Text>
+        </Box>
+      ),
+    })),
+    ...(cleaned > 0 ? [{ kind: "note" as const, content: <Faint>{plural(cleaned, "link")} that ran out were taken off the list.</Faint> }] : []),
+  ];
+
+  return (
+    <Panel width={width}>
+      <Gap />
+      <Form rows={rows} active={active} height={Math.max(6, height - 4)} onExit={toTabs} exitHint="tabs" />
+      <Gap />
+    </Panel>
+  );
 }

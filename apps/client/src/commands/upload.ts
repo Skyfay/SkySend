@@ -36,7 +36,7 @@ export function registerUploadCommand(program: Command): void {
   program
     .command("upload")
     .description("Upload file(s) with end-to-end encryption")
-    .argument("<files...>", "File path(s) to upload")
+    .argument("<files...>", "Files or folders to upload")
     .option("-s, --server <url>", "Server URL")
     .option("-e, --expires <duration>", "Expiry time (e.g. 5m, 1h, 1d, 7d)")
     .option("-d, --downloads <count>", "Max download count")
@@ -49,7 +49,8 @@ export function registerUploadCommand(program: Command): void {
 
         for (const file of files) {
           if (!fs.existsSync(file)) throw new Error(`File not found: ${file}`);
-          if (!fs.statSync(file).isFile()) throw new Error(`Not a file: ${file}`);
+          const stat = fs.statSync(file);
+          if (!stat.isFile() && !stat.isDirectory()) throw new Error(`Not a file or folder: ${file}`);
         }
 
         const config = await apiFor(server).fetchConfig();

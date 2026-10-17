@@ -21,11 +21,12 @@ export function formatDuration(seconds: number): string {
   return `${h}h ${m}m`;
 }
 
+/** A period in the largest unit that holds it whole: "1 day", "2 hours", "90 seconds". */
 export function formatExpiry(seconds: number): string {
-  if (seconds < 60) return `${seconds} seconds`;
-  if (seconds < 3600) return `${seconds / 60} minutes`;
-  if (seconds < 86400) return `${seconds / 3600} hours`;
-  return `${seconds / 86400} days`;
+  const units: Array<[number, string]> = [[86400, "day"], [3600, "hour"], [60, "minute"]];
+  const [size, unit] = units.find(([size]) => seconds >= size && seconds % size === 0) ?? [1, "second"];
+  const count = seconds / size;
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
 }
 
 // ── Progress Bar ───────────────────────────────────────

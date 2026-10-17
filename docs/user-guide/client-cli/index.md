@@ -13,7 +13,7 @@ The CLI client (`skysend`) lets you:
 - **Delete** uploads and notes using the owner token
 - **Authenticate** with OIDC/SSO when required by the server (`auth login`, `auth logout`, `auth status`)
 - **Self-update** to the latest version from GitHub Releases
-- **Interactive mode** with menu-driven TUI - displays server config, limits, and quota
+- **Interactive mode** with tabs for sending, receiving, notes and your links, a file dialog, upload progress with speed, and the link as a QR code
 
 All cryptographic operations use the same `@skysend/crypto` library as the web frontend - AES-256-GCM streaming encryption, HKDF-SHA256 key derivation, and Argon2id password protection.
 
@@ -140,7 +140,7 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 
 | Command | Description |
 | --- | --- |
-| `skysend` | Interactive menu-driven mode (recommended) |
+| `skysend` | Interactive mode with tabs (recommended) |
 | `skysend upload <files...>` | Upload files with E2E encryption |
 | `skysend download <url>` | Download and decrypt a file |
 | `skysend note [text]` | Create an encrypted note |
