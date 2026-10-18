@@ -293,7 +293,7 @@ If the note has a view limit of 1 (burn-after-reading), viewing it will permanen
 
 ## delete
 
-Delete an upload or note using the owner token.
+Delete an upload or note using the owner token. Once the server deleted it, it also comes off the history of this computer, so `skysend ls` and My links no longer list it. A delete the server refuses leaves the history as it is.
 
 ```bash
 skysend delete <url> <ownerToken> [options]

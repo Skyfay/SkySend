@@ -20,6 +20,7 @@
 - **client**: The CLI no longer crashes when it cannot open a browser for a login, like on a server without a desktop or over SSH.
 - **client**: A file name made of a long run of dots no longer holds up a download while it is cleaned.
 - **client**: Errors printed with `--json` stay plain JSON in the binary where `FORCE_COLOR` is set, as in many CI runners.
+- **client**: `skysend delete` also takes the upload or note off the local history, so `skysend ls` and My links no longer list it.
 
 ### 🔒 Security
 
