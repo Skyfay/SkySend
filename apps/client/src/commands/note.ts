@@ -1,8 +1,7 @@
 import type { Command } from "commander";
-import { createEncryptedNote } from "@skysend/transfer";
+import { buildShareLink, createEncryptedNote } from "@skysend/transfer";
 import { apiFor } from "../lib/api.js";
 import { hashWasmArgon2 } from "../lib/auth.js";
-import { buildShareUrl } from "../lib/url.js";
 import { resolveServer } from "../lib/config.js";
 import { ensureOidcAuth } from "../lib/oidc.js";
 import {
@@ -148,7 +147,7 @@ export function registerNoteCommand(program: Command): void {
         });
 
         // Build share URL
-        const shareUrl = buildShareUrl(server, "note", shared.id, shared.effectiveSecret);
+        const shareUrl = buildShareLink(server, "note", shared.id, shared.effectiveSecret);
 
         // Save to history
         addNote({

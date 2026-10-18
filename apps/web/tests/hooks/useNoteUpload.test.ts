@@ -5,7 +5,8 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 // The encryption and the request are the shared core's, tested in packages/transfer.
-vi.mock("@skysend/transfer", () => ({
+vi.mock("@skysend/transfer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@skysend/transfer")>()),
   createEncryptedNote: vi.fn(),
 }));
 

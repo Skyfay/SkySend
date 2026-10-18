@@ -6,7 +6,8 @@ import { renderHook, act } from "@testing-library/react";
 
 // Keys, the password check, the view and the reading of the note are the shared core's,
 // tested in packages/transfer.
-vi.mock("@skysend/transfer", () => ({
+vi.mock("@skysend/transfer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@skysend/transfer")>()),
   openNote: vi.fn(),
 }));
 

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import * as fs from "node:fs";
 import { Text, useAnimation } from "ink";
-import { createEncryptedNote } from "@skysend/transfer";
+import { buildShareLink, createEncryptedNote } from "@skysend/transfer";
 import type { NoteBlock } from "@skysend/note-format";
 import { apiFor } from "../../lib/api.js";
 import { hashWasmArgon2 } from "../../lib/auth.js";
-import { buildShareUrl } from "../../lib/url.js";
 import { addNote } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
 import { generatePassword } from "../../lib/password-generator.js";
@@ -145,7 +144,7 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
         password,
         argon2id: hashWasmArgon2,
       });
-      const url = buildShareUrl(server, "note", shared.id, shared.effectiveSecret);
+      const url = buildShareLink(server, "note", shared.id, shared.effectiveSecret);
       addNote({
         id: shared.id, server, url,
         ownerToken: shared.ownerToken,

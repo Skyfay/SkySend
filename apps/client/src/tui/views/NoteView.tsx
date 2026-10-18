@@ -2,13 +2,12 @@ import React, { useState, useCallback, useRef } from "react";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Box, Text, useAnimation, useBoxMetrics, useInput } from "ink";
-import { openNote } from "@skysend/transfer";
+import { openNote, parseShareLink, type ShareLink } from "@skysend/transfer";
 import { noteToText, type ReadBlock } from "@skysend/note-format";
 import { apiFor, type NoteInfo } from "../../lib/api.js";
 import { hashWasmArgon2 } from "../../lib/auth.js";
 import { noteFileName } from "../../lib/note.js";
 import { forTerminal } from "../../lib/terminal.js";
-import { parseShareUrl } from "../../lib/url.js";
 import { copyToClipboard } from "../../lib/clipboard.js";
 import { expandPath } from "../../lib/paths.js";
 import type { AppState } from "../types.js";
@@ -111,7 +110,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
   const [password, setPassword] = useState("");
   const [savePath, setSavePath] = useState("");
   const [scroll, setScroll] = useState(0);
-  const [parsedUrl, setParsedUrl] = useState<ReturnType<typeof parseShareUrl> | null>(null);
+  const [parsedUrl, setParsedUrl] = useState<ShareLink | null>(null);
   const [noteInfo, setNoteInfo] = useState<NoteInfo | null>(null);
   const didAutoLoad = useRef(false);
   const content = useRef(null);
@@ -123,7 +122,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
     setPhase("error");
   };
 
-  const loadNote = useCallback(async (parsed: ReturnType<typeof parseShareUrl>, info: NoteInfo, pw?: string) => {
+  const loadNote = useCallback(async (parsed: ShareLink, info: NoteInfo, pw?: string) => {
     setPhase("loading");
     // A wrong password is caught before the view, which the server counts.
     const note = await openNote({
@@ -150,7 +149,7 @@ export function NoteViewView({ onBack, initialUrl }: NoteViewViewProps): React.R
 
   const handleUrl = useCallback(async (inputUrl: string) => {
     try {
-      const parsed = parseShareUrl(inputUrl.trim());
+      const parsed = parseShareLink(inputUrl.trim(), ["file", "note"]);
       if (parsed.type !== "note") throw new Error("This link is a file, not a note");
       setParsedUrl(parsed);
       const info = await apiFor(parsed.server).fetchNoteInfo(parsed.id);

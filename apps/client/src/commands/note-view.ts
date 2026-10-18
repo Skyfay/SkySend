@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "ink";
 import type { Command } from "commander";
-import { parseShareUrl } from "../lib/url.js";
+import { parseShareLink } from "@skysend/transfer";
 import { App } from "../tui/App.js";
 import { resolveServer } from "../lib/config.js";
 import { forTerminal } from "../lib/terminal.js";
@@ -13,7 +13,7 @@ export function registerNoteViewCommand(program: Command): void {
     .argument("<url>", "SkySend note share URL")
     .action(async (url: string) => {
       try {
-        const parsed = parseShareUrl(url);
+        const parsed = parseShareLink(url, ["file", "note"]);
 
         if (parsed.type !== "note") {
           throw new Error("This URL is a file, not a note. Use 'skysend download' instead.");

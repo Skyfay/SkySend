@@ -34,6 +34,7 @@ import {
   type NoteBlock,
   type ReadBlock,
 } from "@skysend/note-format";
+import { buildShareLink } from "@skysend/transfer";
 import type { CreateRequestBody, Inbox, InboxUpload } from "@/lib/api";
 
 /**
@@ -134,8 +135,8 @@ export function requestLinks(request: {
 }): RequestLinks {
   const origin = window.location.origin;
   return {
-    uploadLink: `${origin}/request/${request.id}#${request.uploadFragment}`,
-    inboxLink: `${origin}/inbox/${request.id}#${request.inboxFragment}`,
+    uploadLink: buildShareLink(origin, "request", request.id, request.uploadFragment),
+    inboxLink: buildShareLink(origin, "inbox", request.id, request.inboxFragment),
   };
 }
 

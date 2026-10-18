@@ -221,7 +221,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
        |
        +-----> @skysend/client  (writes and reads notes)
 
-@skysend/transfer     (API client, zip, upload, download and notes, on top of crypto)
+@skysend/transfer     (API client, links, zip, upload, download and notes, on top of crypto)
        |
        +-----> @skysend/web     (upload worker, download, API calls)
        |
@@ -232,7 +232,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
 @skysend/cli          (accesses server database directly)
 ```
 
-The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the zip, the upload and download pipelines and the notes, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
+The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the links, the zip, the upload and download pipelines and the notes, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
 
 ## Server Architecture
 
@@ -372,7 +372,6 @@ apps/client/src/
     errors.ts           # ApiError class
     note.ts             # Notes of one block, legacy fallback for older servers
     progress.ts         # Terminal progress bar, formatting, password prompt
-    url.ts              # Share URL parsing and building
 ```
 
 The CLI client uses the same `@skysend/crypto` library and the same API endpoints as the web frontend. Key differences:

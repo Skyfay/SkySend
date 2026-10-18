@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { createEncryptedNote } from "@skysend/transfer";
+import { buildShareLink, createEncryptedNote } from "@skysend/transfer";
 import { NOTE_KIND, padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { createNote } from "@/lib/api";
@@ -53,7 +53,7 @@ export function useNoteUpload() {
         argon2id: hashWasmArgon2,
       });
 
-      const shareLink = `${window.location.origin}/note/${note.id}#${note.effectiveSecret}`;
+      const shareLink = buildShareLink(window.location.origin, "note", note.id, note.effectiveSecret);
 
       // Save to IndexedDB
       await saveNote({

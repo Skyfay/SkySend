@@ -9,6 +9,7 @@ src/api.ts      createApiClient: every route of the server, every answer parsed 
 src/upload.ts   uploadEncrypted: keys, encryption, WebSocket or HTTP chunks with CHUNK_WINDOW, metadata
 src/download.ts keysFromLink, decryptUploadMetadata, decryptedStream with the size and base nonce checks
 src/note.ts     createEncryptedNote and openNote: the caller makes the plaintext, the package the rest
+src/links.ts    buildShareLink and parseShareLink, the caller names the types it opens
 src/zip.ts      The zip of several files, written while the upload reads it (stored, ZIP64)
 src/archive.ts  The metadata of an upload of several files, whether the server takes it, uniqueNames
 src/index.ts    The public API, the only file outside this package may import from

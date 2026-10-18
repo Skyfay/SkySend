@@ -4,6 +4,7 @@ import { generateSalt, generateSecret, type FileMetadata } from "@skysend/crypto
 import {
   archiveMetadata,
   archiveMetadataFits,
+  buildShareLink,
   plaintextOf,
   uniqueNames,
   uploadEncrypted,
@@ -14,7 +15,6 @@ import {
 import { apiFor } from "./api.js";
 import { hashWasmArgon2 } from "./auth.js";
 import { formatBytes } from "./progress.js";
-import { buildShareUrl } from "./url.js";
 
 /** One upload of the CLI, from the command and from the TUI alike. */
 export interface UploadJob {
@@ -213,7 +213,7 @@ export async function runUpload(job: UploadJob, events: UploadEvents = {}): Prom
   if (result.kind !== "share") throw new Error("The server treated the upload as a file request");
   return {
     id: result.id,
-    url: buildShareUrl(job.server, "file", result.id, result.effectiveSecret),
+    url: buildShareLink(job.server, "file", result.id, result.effectiveSecret),
     ownerToken: result.ownerToken,
     names,
     size,

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { apiFor } from "../lib/api.js";
-import { parseShareUrl } from "../lib/url.js";
+import { parseShareLink } from "@skysend/transfer";
 import { writeLine } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { forTerminal } from "../lib/terminal.js";
@@ -18,7 +18,7 @@ export function registerDeleteCommand(program: Command): void {
     .option("--json", "Output as JSON")
     .action(async (url: string, ownerToken: string, options: DeleteOptions) => {
       try {
-        const parsed = parseShareUrl(url);
+        const parsed = parseShareLink(url, ["file", "note"]);
 
         if (parsed.type === "file") {
           await apiFor(parsed.server).deleteUpload(parsed.id, ownerToken);

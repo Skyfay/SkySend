@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import * as path from "node:path";
 import { Box, Text, useAnimation } from "ink";
+import { parseShareLink, type ShareLink } from "@skysend/transfer";
 import {
   lookUpShare,
   openShare,
@@ -8,7 +9,6 @@ import {
   saveShare,
   type OpenedShare,
 } from "../../lib/download-job.js";
-import { parseShareUrl, type ParsedUrl } from "../../lib/url.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { formatBytes } from "../../lib/progress.js";
 import { expandPath } from "../../lib/paths.js";
@@ -42,7 +42,7 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
   const [password, setPassword] = useState("");
   const [place, setPlace] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  const [locked, setLocked] = useState<{ link: ParsedUrl; info: UploadInfo } | null>(null);
+  const [locked, setLocked] = useState<{ link: ShareLink; info: UploadInfo } | null>(null);
   const [share, setShare] = useState<OpenedShare | null>(null);
   const [progress, setProgress] = useState({ written: 0, total: 0, ticks: 0 });
   const [saved, setSaved] = useState<{ file: string; size: number; seconds: number } | null>(null);
@@ -67,7 +67,7 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
     setSaved(null);
   };
 
-  const open = useCallback(async (parsed: ParsedUrl, info: UploadInfo, secret?: string) => {
+  const open = useCallback(async (parsed: ShareLink, info: UploadInfo, secret?: string) => {
     const opened = await openShare(parsed, info, secret);
     setShare(opened);
     setPlace(outputPathFor(opened.metadata));
@@ -75,9 +75,9 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
   }, []);
 
   const submitLink = async (given = link) => {
-    let parsed: ParsedUrl;
+    let parsed: ShareLink;
     try {
-      parsed = parseShareUrl(given.trim());
+      parsed = parseShareLink(given.trim(), ["file", "note"]);
     } catch {
       setProblem("That is not a SkySend link. It looks like https://host/file/…#…");
       return;

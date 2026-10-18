@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseShareUrl, buildShareUrl } from "../../src/lib/url.js";
+import { buildShareLink, parseShareLink } from "../src/links.js";
 
-// ── parseShareUrl ─────────────────────────────────────────────────────────────
+/** What the CLI opens. */
+const parseShareUrl = (url: string) => parseShareLink(url, ["file", "note"]);
 
-describe("parseShareUrl", () => {
+// ── parseShareLink ────────────────────────────────────────────────────────────
+
+describe("parseShareLink", () => {
   describe("valid file URLs", () => {
     it("parses a standard file URL", () => {
       const result = parseShareUrl("https://send.example.com/file/abc123#mysecret");
@@ -62,9 +65,7 @@ describe("parseShareUrl", () => {
     });
 
     it("handles base64url-style secrets", () => {
-      const result = parseShareUrl(
-        "https://send.example.com/file/abc123#dGVzdC1zZWNyZXQ",
-      );
+      const result = parseShareUrl("https://send.example.com/file/abc123#dGVzdC1zZWNyZXQ");
       expect(result.secret).toBe("dGVzdC1zZWNyZXQ");
     });
   });
@@ -73,6 +74,31 @@ describe("parseShareUrl", () => {
     it("includes port in the server origin", () => {
       const result = parseShareUrl("http://localhost:3000/file/abc#secret");
       expect(result.server).toBe("http://localhost:3000");
+    });
+  });
+
+  describe("links of a file request", () => {
+    it("reads the upload link and the inbox link when they are asked for", () => {
+      const both = ["request", "inbox"] as const;
+      expect(parseShareLink("https://send.example.com/request/r1#pk.ls", both)).toEqual({
+        server: "https://send.example.com",
+        type: "request",
+        id: "r1",
+        secret: "pk.ls",
+      });
+      expect(parseShareLink("https://send.example.com/inbox/r1#inbox", both).type).toBe("inbox");
+    });
+
+    it("refuses them where only files and notes are asked for", () => {
+      expect(() => parseShareUrl("https://send.example.com/request/r1#pk")).toThrow(
+        "path must be /file/<id> or /note/<id>, got: /request/r1",
+      );
+    });
+
+    it("does not take the old /d/ path for anything but a file", () => {
+      expect(() => parseShareLink("https://send.example.com/d/x#s", ["note"])).toThrow(
+        "path must be /note/<id>",
+      );
     });
   });
 
@@ -88,9 +114,9 @@ describe("parseShareUrl", () => {
     });
 
     it("throws when the path does not match expected format", () => {
-      expect(() =>
-        parseShareUrl("https://send.example.com/download/abc123#secret"),
-      ).toThrow("path must be /file/<id> or /note/<id>");
+      expect(() => parseShareUrl("https://send.example.com/download/abc123#secret")).toThrow(
+        "path must be /file/<id> or /note/<id>",
+      );
     });
 
     it("throws for root path with no id", () => {
@@ -100,45 +126,54 @@ describe("parseShareUrl", () => {
     });
 
     it("throws for path with extra segments", () => {
-      expect(() =>
-        parseShareUrl("https://send.example.com/file/abc/extra#secret"),
-      ).toThrow("path must be /file/<id> or /note/<id>");
+      expect(() => parseShareUrl("https://send.example.com/file/abc/extra#secret")).toThrow(
+        "path must be /file/<id> or /note/<id>",
+      );
     });
   });
 });
 
-// ── buildShareUrl ─────────────────────────────────────────────────────────────
+// ── buildShareLink ────────────────────────────────────────────────────────────
 
-describe("buildShareUrl", () => {
+describe("buildShareLink", () => {
   it("builds a file share URL", () => {
-    expect(buildShareUrl("https://send.example.com", "file", "abc123", "mysecret")).toBe(
+    expect(buildShareLink("https://send.example.com", "file", "abc123", "mysecret")).toBe(
       "https://send.example.com/file/abc123#mysecret",
     );
   });
 
   it("builds a note share URL", () => {
-    expect(buildShareUrl("https://send.example.com", "note", "note42", "notesecret")).toBe(
+    expect(buildShareLink("https://send.example.com", "note", "note42", "notesecret")).toBe(
       "https://send.example.com/note/note42#notesecret",
     );
   });
 
   it("strips trailing slashes from server URL", () => {
-    expect(buildShareUrl("https://send.example.com/", "file", "abc", "sec")).toBe(
+    expect(buildShareLink("https://send.example.com/", "file", "abc", "sec")).toBe(
       "https://send.example.com/file/abc#sec",
     );
-    expect(buildShareUrl("https://send.example.com///", "file", "abc", "sec")).toBe(
+    expect(buildShareLink("https://send.example.com///", "file", "abc", "sec")).toBe(
       "https://send.example.com/file/abc#sec",
+    );
+  });
+
+  it("builds the upload and inbox links of a file request", () => {
+    expect(buildShareLink("https://send.example.com", "request", "r1", "pk.ls")).toBe(
+      "https://send.example.com/request/r1#pk.ls",
+    );
+    expect(buildShareLink("https://send.example.com", "inbox", "r1", "inbox")).toBe(
+      "https://send.example.com/inbox/r1#inbox",
     );
   });
 
   it("percent-encodes special characters in the ID", () => {
-    expect(buildShareUrl("https://send.example.com", "file", "a/b", "sec")).toBe(
+    expect(buildShareLink("https://send.example.com", "file", "a/b", "sec")).toBe(
       "https://send.example.com/file/a%2Fb#sec",
     );
   });
 
-  it("roundtrips correctly with parseShareUrl", () => {
-    const built = buildShareUrl(
+  it("roundtrips correctly with parseShareLink", () => {
+    const built = buildShareLink(
       "https://send.example.com",
       "file",
       "roundtrip-id",

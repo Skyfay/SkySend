@@ -6,26 +6,27 @@ import {
   decryptedStream,
   decryptUploadMetadata,
   keysFromLink,
+  parseShareLink,
   withUnlockedMeta,
   type LinkKeys,
+  type ShareLink,
   type UploadInfo,
 } from "@skysend/transfer";
 import { apiFor } from "./api.js";
 import { hashWasmArgon2 } from "./auth.js";
 import { availablePath, sanitizeFilename } from "./filename.js";
-import { parseShareUrl, type ParsedUrl } from "./url.js";
 
 /** A share opened with its link and, when it has one, its password. */
 export interface OpenedShare {
-  link: ParsedUrl;
+  link: ShareLink;
   info: UploadInfo;
   keys: LinkKeys;
   metadata: FileMetadata;
 }
 
 /** The link and info of a share, before its password. */
-export async function lookUpShare(url: string): Promise<{ link: ParsedUrl; info: UploadInfo }> {
-  const link = parseShareUrl(url);
+export async function lookUpShare(url: string): Promise<{ link: ShareLink; info: UploadInfo }> {
+  const link = parseShareLink(url, ["file", "note"]);
   if (link.type !== "file") {
     throw new Error("This URL is a note, not a file. Use 'skysend note-view' instead.");
   }
@@ -37,7 +38,7 @@ export async function lookUpShare(url: string): Promise<{ link: ParsedUrl; info:
  * the metadata. A wrong password throws "Invalid password", the server counts it.
  */
 export async function openShare(
-  link: ParsedUrl,
+  link: ShareLink,
   info: UploadInfo,
   password?: string,
 ): Promise<OpenedShare> {

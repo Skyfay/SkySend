@@ -1,8 +1,8 @@
 # Transfer Core
 
-`@skysend/transfer` in `packages/transfer` holds what an upload, a download and a note need besides the cryptography: the API client, the zip of several files, the upload pipeline with both transports, the decryption of a download with its checks, and the creating and opening of a note. The web app, the CLI client and the server's contract tests use it, and a mobile app can later. The cryptography itself stays in [`@skysend/crypto`](/developer-guide/crypto/), the note content in [`@skysend/note-format`](/developer-guide/crypto/note-format).
+`@skysend/transfer` in `packages/transfer` holds what an upload, a download and a note need besides the cryptography: the API client, the links, the zip of several files, the upload pipeline with both transports, the decryption of a download with its checks, and the creating and opening of a note. The web app, the CLI client and the server's contract tests use it, and a mobile app can later. The cryptography itself stays in [`@skysend/crypto`](/developer-guide/crypto/), the note content in [`@skysend/note-format`](/developer-guide/crypto/note-format).
 
-Before this package, the web app and the CLI each had their own copy of the upload, the download, the notes and the API schemas, and the copies drifted apart: the CLI read whole files into memory on a slow connection, packed several files with fflate in memory and broke them past 4 GiB, put no stream nonce into the metadata and did not check one on download.
+Before this package, the web app and the CLI each had their own copy of the upload, the download, the notes, the links and the API schemas, and the copies drifted apart: the CLI read whole files into memory on a slow connection, packed several files with fflate in memory and broke them past 4 GiB, put no stream nonce into the metadata and did not check one on download.
 
 ## What it holds
 
@@ -11,6 +11,7 @@ Before this package, the web app and the CLI each had their own copy of the uplo
 | `src/api.ts` | `createApiClient`: every route of the server, every answer parsed with Zod, failures as `ApiError` |
 | `src/upload.ts` | `uploadEncrypted`: keys, encryption, WebSocket or HTTP chunks, metadata at the end, for a share and for a file request |
 | `src/download.ts` | `keysFromLink`, `decryptUploadMetadata`, `decryptedStream`: from the link to the checked plaintext |
+| `src/links.ts` | `buildShareLink` and `parseShareLink`: `<server>/<type>/<id>#<secret>` for a share, a note, a request and an inbox, `/d/<id>` as the old form of a file link |
 | `src/note.ts` | `createEncryptedNote` and `openNote`: a note from its plaintext to the link, and from the link back to its blocks |
 | `src/zip.ts` | The zip of several files, stored without compression, written while the upload reads it, ZIP64 from 4 GiB on |
 | `src/archive.ts` | The metadata of several files, whether it fits the server's limit, and unique names in the zip |
@@ -66,6 +67,7 @@ pnpm --filter @skysend/transfer test
 | `archive.test.ts` | The metadata of several files, its size check, unique names in the zip |
 | `upload.test.ts` | Both transports against a fake server, the fallback, the chunk window with a chunk held back, the error texts |
 | `download.test.ts` | Keys from a link with and without a password, the checks of size and base nonce |
+| `links.test.ts` | Links of every type built and read, the old `/d/` path, a link without its fragment, a type the caller does not open |
 | `note.test.ts` | A note through a fake server and back, with and without a password, a wrong password that uses up no view, a legacy note and one that does not parse |
 
 The end-to-end tests send shares between the browser and the CLI in both directions, see the [Testing Guide](/developer-guide/reference/testing#end-to-end-tests).

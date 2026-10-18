@@ -47,6 +47,10 @@ export type { LinkKeys, LinkPassword } from "./download.js";
 export { createEncryptedNote, openNote } from "./note.js";
 export type { NoteOptions, OpenedNote, OpenNoteOptions, SharedNote } from "./note.js";
 
+// The links of an instance, with the key in the fragment
+export { buildShareLink, parseShareLink } from "./links.js";
+export type { LinkType, ShareLink } from "./links.js";
+
 // The HTTP API of a server, with every response checked
 export { ApiError, createApiClient, holdOf, isUploadId, withUnlockedMeta } from "./api.js";
 export type {
