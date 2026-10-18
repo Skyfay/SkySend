@@ -104,34 +104,57 @@ interface HeaderProps<T extends string> {
   width: number;
 }
 
-/** The bar at the top: the brand, the tabs and the server. */
+/**
+ * The bar at the top: the brand, the tabs and the server. The tabs always show in full, as there
+ * may be more of them one day. When the row gets tight they move closer together first, then the
+ * name of the instance is cut, down to the ◆ alone. The server shows only when it fits whole,
+ * Settings names it too.
+ */
 export function Header<T extends string>({ title, tabs, active, focused, host, width }: HeaderProps<T>): React.ReactElement {
   const accent = useAccent();
   const tint = useTint();
+  // Inside the card: its two edges and a column of padding on either side.
+  const room = width - 4;
+  const brand = `◆ ${title}`;
+  const labels = tabs.reduce((sum, tab) => sum + tab.label.length, 0);
+  const tabsAt = (pad: number) => labels + tabs.length * (2 * pad + 1);
+  // The cursor mark, the brand up to "◆ SkySend" and three columns before the tabs.
+  const pad = 1 + Math.min(brand.length, 9) + 3 + tabsAt(2) <= room ? 2 : 1;
+  const forBrand = room - 1 - 3 - tabsAt(pad);
+  // A name cut to two or three letters says nothing, the ◆ alone says as much.
+  const brandWidth = forBrand >= Math.min(brand.length, 8) ? Math.min(brand.length, forBrand) : 1;
+  const left = room - 1 - brandWidth - 3 - tabsAt(pad);
+  const showHost = left >= host.length + 4;
+  const space = " ".repeat(pad);
   return (
     <Panel width={width}>
-      <Box justifyContent="space-between" {...(focused ? { backgroundColor: tint } : {})}>
-        <Text wrap="truncate-end">
-          <Text color={accent}>{focused ? "▌" : " "}</Text>
-          <Text color={accent} bold>◆ {title}</Text>
-          <Text>   </Text>
-          {tabs.map((tab) => (
-            <Text key={tab.id}>
-              {tab.id === active ? (
-                <Text color={focused ? COLORS.onAccent : accent} backgroundColor={focused ? accent : tint} bold>
-                  {focused ? `‹ ${tab.label} ›` : `  ${tab.label}  `}
-                </Text>
-              ) : (
-                <Text color={focused ? COLORS.text : COLORS.muted}>  {tab.label}  </Text>
-              )}
-              <Text> </Text>
-            </Text>
-          ))}
-        </Text>
-        {/* Below 96 columns the tabs need the room, the server stands in Settings. */}
-        {width >= 96 && (
-          <Box marginLeft={2} flexShrink={1}>
-            <Text wrap="truncate-start">
+      <Box {...(focused ? { backgroundColor: tint } : {})}>
+        <Text color={accent}>{focused ? "▌" : " "}</Text>
+        <Box width={brandWidth} flexShrink={0}>
+          <Text color={accent} bold wrap="truncate-end">
+            {brandWidth === 1 ? "◆" : brand}
+          </Text>
+        </Box>
+        <Text>   </Text>
+        <Box flexShrink={0}>
+          <Text>
+            {tabs.map((tab) => (
+              <Text key={tab.id}>
+                {tab.id === active ? (
+                  <Text color={focused ? COLORS.onAccent : accent} backgroundColor={focused ? accent : tint} bold>
+                    {focused ? `‹${space.slice(1)}${tab.label}${space.slice(1)}›` : `${space}${tab.label}${space}`}
+                  </Text>
+                ) : (
+                  <Text color={focused ? COLORS.text : COLORS.muted}>{`${space}${tab.label}${space}`}</Text>
+                )}
+                <Text> </Text>
+              </Text>
+            ))}
+          </Text>
+        </Box>
+        {showHost && (
+          <Box flexGrow={1} justifyContent="flex-end">
+            <Text>
               <Text color={accent}>●</Text>
               <Text color={COLORS.muted}> {host}</Text>
             </Text>
