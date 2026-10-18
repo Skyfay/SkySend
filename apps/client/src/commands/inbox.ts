@@ -20,6 +20,7 @@ import {
   writeJsonError,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
+import { sanitizeFilename } from "../lib/filename.js";
 import { forTerminal } from "../lib/terminal.js";
 
 interface InboxOptions {
@@ -43,7 +44,10 @@ function entryJson(entry: OpenedUpload, submission: number) {
     submission,
     type: metadata ? metadata.type : "damaged",
     ...(metadata?.type === "single" ? { name: describeEntry(entry) } : {}),
-    ...(metadata?.type === "archive" ? { files: metadata.files.map((f) => f.name) } : {}),
+    // JSON escapes ESC but not the C1 controls or the reordering marks a sender can put in.
+    ...(metadata?.type === "archive"
+      ? { files: metadata.files.map((f) => sanitizeFilename(f.name)) }
+      : {}),
     size: sizeOf(entry),
     downloads: entry.upload.downloadCount,
     maxDownloads: entry.upload.maxDownloads,
@@ -158,8 +162,7 @@ export function registerInboxCommand(program: Command): void {
       } catch (err) {
         if (!options.json) clearLine();
         if (err instanceof ApiError) {
-          if (options.json)
-            writeJsonError({ error: err.message, status: err.status });
+          if (options.json) writeJsonError({ error: err.message, status: err.status });
           else console.error(`Error: ${err.message} (HTTP ${err.status})`);
         } else {
           const message = forTerminal(err instanceof Error ? err.message : String(err));

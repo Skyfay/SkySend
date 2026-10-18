@@ -459,7 +459,7 @@ Manage OIDC authentication sessions for a server. When a server has OIDC enabled
 skysend auth login [options]
 ```
 
-Starts a browser-based OIDC login for the configured server. A temporary local server is started to receive the callback, and your default browser is opened automatically. After completing the login, the session token is saved to `~/.config/skysend/tokens.json` and reused for future commands until it expires.
+Starts a browser-based OIDC login for the configured server. A temporary local server is started to receive the callback on `127.0.0.1` under a random path that nothing else knows, so no other program and no web page can hand in a session of its own, and your default browser is opened automatically. After completing the login, the session token is saved to `~/.config/skysend/tokens.json` and reused for future commands until it expires.
 
 #### Options
 
@@ -531,7 +531,7 @@ When you run `skysend upload` or `skysend note` on an OIDC-protected server:
 1. The CLI fetches the server config and detects that OIDC is required
 2. It checks `~/.config/skysend/tokens.json` for a valid, non-expired token
 3. If none exists, it starts a local callback server, opens your browser, and waits
-4. You complete login in the browser - the server redirects back to the local server with the session token
+4. You complete login in the browser - the server redirects back to the local server with the session token, to the random path only this login knows
 5. The token is saved and the upload/note creation continues automatically
 
 In the **interactive TUI mode**, a "Waiting for browser login..." screen is shown during this step.

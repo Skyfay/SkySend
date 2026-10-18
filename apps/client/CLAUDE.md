@@ -58,7 +58,7 @@ Both files hold owner tokens. Never print their raw contents in a log line or an
 
 ## OIDC
 
-`lib/oidc.ts` runs a loopback HTTP listener, opens the browser, and stores the resulting JWT. Requests then send `Authorization: Bearer <token>`. The local JWT decode reads `exp` only and never verifies - the server re-verifies on every request, and the comment saying so should stay.
+`lib/oidc.ts` runs a loopback HTTP listener, opens the browser, and stores the resulting JWT. The listener answers only on `/callback/<32 random bytes>`, which goes to the server as `cli_callback`, since any local program or web page can reach the port. `openBrowser` opens http and https only, and on Windows through `rundll32 url.dll,FileProtocolHandler`, never `cmd /c start`: cmd.exe reads `&` and `|` in an address as its own syntax, and the address starts with a server from the public list or one typed in. Requests then send `Authorization: Bearer <token>`. The local JWT decode reads `exp` only and never verifies - the server re-verifies on every request, and the comment saying so should stay.
 
 `ensureOidcAuth()` is the entry point commands use. Call it only where the server actually enforces auth (upload init, note creation), not on read paths.
 

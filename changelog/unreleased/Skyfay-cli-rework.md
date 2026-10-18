@@ -19,12 +19,15 @@
 - **client**: Expiry times read "1 day" and "1 hour" instead of "1 days" and "1 hours".
 - **client**: The CLI no longer crashes when it cannot open a browser for a login, like on a server without a desktop or over SSH.
 - **client**: A file name made of a long run of dots no longer holds up a download while it is cleaned.
-- **client**: Errors printed with `--json` stay plain JSON in the binary where `FORCE_COLOR` is set, as in many CI runners.
+- **client**: Errors printed with `--json` and the address of a login stay free of color codes in the binary where `FORCE_COLOR` is set, as in many CI runners.
 - **client**: `skysend delete` also takes the upload or note off the local history, so `skysend ls` and My links no longer list it.
 
 ### 🔒 Security
 
 - **client**: Uploads name the stream nonce in their encrypted metadata and downloads check it, so a server can no longer reorder the encrypted records of a file unnoticed.
+- **client**: On Windows the CLI opens the browser without `cmd.exe`, which could run a command hidden in the address of a server, and it opens web addresses only.
+- **client**: The login in the browser returns to a random local address only that login knows, so another program or a web page can no longer slip in a session of another account.
+- **client**: `skysend inbox --json` cleans the names inside a zip like every other name a sender wrote.
 
 ### 🎨 Improvements
 

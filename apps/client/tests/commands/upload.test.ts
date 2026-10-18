@@ -147,7 +147,7 @@ describe("skysend upload --to", () => {
   });
 
   it("refuses options the request decides itself", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     for (const flags of [["--password", "x"], ["--expires", "1d"], ["--downloads", "3"]]) {
       await expect(upload("--to", LINK, ...flags)).rejects.toThrow("process.exit(1)");
     }
