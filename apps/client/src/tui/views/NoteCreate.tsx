@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import * as fs from "node:fs";
 import { Text, useAnimation } from "ink";
 import { buildShareLink, createEncryptedNote } from "@skysend/transfer";
-import type { NoteBlock } from "@skysend/note-format";
+import { MAX_BLOCKS, type NoteBlock } from "@skysend/note-format";
 import { apiFor } from "../../lib/api.js";
 import { hashWasmArgon2 } from "../../lib/auth.js";
 import { addNote } from "../../lib/history.js";
@@ -44,6 +44,53 @@ interface SshParts {
   passphrase: string;
 }
 
+/** One part of the note while it is written: its kind and what each kind needs. */
+interface Draft {
+  /** Names the rows of the part, and stays while parts before it come and go. */
+  key: number;
+  kind: CliNoteType;
+  text: string;
+  /** A new number starts the editor over, with the text of a file. */
+  editorReset: number;
+  entries: Array<{ label: string; value: string }>;
+  newLabel: string;
+  newValue: string;
+  sshSource: (typeof SSH_SOURCES)[number]["id"];
+  comment: string;
+  passphrase: string;
+  sshKey: SshParts | null;
+  share: { pub: boolean; priv: boolean; pass: boolean };
+}
+
+function newDraft(key: number): Draft {
+  return {
+    key, kind: "text", text: "", editorReset: 0, entries: [], newLabel: "", newValue: "",
+    sshSource: "ed25519", comment: "", passphrase: "", sshKey: null, share: { pub: true, priv: true, pass: true },
+  };
+}
+
+/** Whether a part holds nothing yet, so removing it throws no work away. */
+function isEmpty(d: Draft): boolean {
+  return !d.text.trim() && d.entries.length === 0 && !d.newValue && !d.sshKey;
+}
+
+/** The block of a part, or why it cannot be made yet. */
+function blockOf(d: Draft): NoteBlock | string {
+  if (TEXT_KINDS.includes(d.kind)) return d.text.trim() ? textToBlock(d.kind, d.text) : "Write the note first.";
+  if (d.kind === "password") {
+    const all = d.newValue ? [...d.entries, { label: d.newLabel.trim(), value: d.newValue }] : d.entries;
+    return all.length > 0 ? { type: "password", entries: all } : "Add a password first.";
+  }
+  if (!d.sshKey) return "Make or pick a key first.";
+  const chosen = {
+    publicKey: d.share.pub ? d.sshKey.publicKey : "",
+    privateKey: d.share.priv ? d.sshKey.privateKey : "",
+    passphrase: d.share.pass ? d.sshKey.passphrase : "",
+  };
+  if (!chosen.publicKey && !chosen.privateKey && !chosen.passphrase) return "Pick at least one part of the key.";
+  return { type: "sshkey", ...chosen };
+}
+
 interface NoteCreateViewProps {
   appState: AppState;
   onBack: () => void;
@@ -55,7 +102,10 @@ function step<T>(values: readonly T[], current: T, by: number): T {
   return values[Math.min(values.length - 1, Math.max(0, at + by))]!;
 }
 
-/** The Note tab: a form with the kind and content of the note, its options and the button. */
+/**
+ * The Note tab: a form with the parts of the note, each with its kind and content, then the
+ * options and the button. A note of one part looks the way it always did.
+ */
 export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactElement {
   const accent = useAccent();
   const { width, height } = useRoom();
@@ -64,51 +114,59 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
 
   const [phase, setPhase] = useState<Phase>("compose");
   const [working, setWorking] = useState("");
-  const [kind, setKind] = useState<CliNoteType>("text");
-  const [text, setText] = useState("");
-  // A new number starts the editor over, with the text of a file.
-  const [editorReset, setEditorReset] = useState(0);
-  const [entries, setEntries] = useState<Array<{ label: string; value: string }>>([]);
-  const [newLabel, setNewLabel] = useState("");
-  const [newValue, setNewValue] = useState("");
-  const [sshSource, setSshSource] = useState<(typeof SSH_SOURCES)[number]["id"]>("ed25519");
-  const [comment, setComment] = useState("");
-  const [passphrase, setPassphrase] = useState("");
-  const [parts, setParts] = useState<SshParts | null>(null);
-  const [share, setShare] = useState({ pub: true, priv: true, pass: true });
+  const [drafts, setDrafts] = useState<Draft[]>(() => [newDraft(0)]);
+  const [nextKey, setNextKey] = useState(1);
+  // The part the file picker fills, and the part whose removal waits for a second enter.
+  const [pickFor, setPickFor] = useState(0);
+  const [removeAsked, setRemoveAsked] = useState<number | null>(null);
   const [expireSec, setExpireSec] = useState(config.noteDefaultExpire);
   const [maxViews, setMaxViews] = useState(config.noteDefaultViews);
   const [password, setPassword] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  const [focus, setFocus] = useState({ id: "kind", n: 0 });
+  const [focus, setFocus] = useState({ id: "0:kind", n: 0 });
   const [shareUrl, setShareUrl] = useState("");
   const [failure, setFailure] = useState("");
   const { frame } = useAnimation({ interval: 90, isActive: phase === "working" });
   const focusOn = (id: string) => setFocus((f) => ({ id, n: f.n + 1 }));
-  const textKind = TEXT_KINDS.includes(kind);
+  const several = drafts.length > 1;
+  const canAdd = config.noteBlocks && drafts.length < MAX_BLOCKS;
 
-  /** The block of the note, or why it cannot be made yet. */
-  const block = (): NoteBlock | string => {
-    if (textKind) return text.trim() ? textToBlock(kind, text) : "Write the note first.";
-    if (kind === "password") {
-      const all = newValue ? [...entries, { label: newLabel.trim(), value: newValue }] : entries;
-      return all.length > 0 ? { type: "password", entries: all } : "Add a password first.";
+  /** Changes one part. Any change takes back a pending removal. */
+  const update = (key: number, change: Partial<Draft> | ((d: Draft) => Partial<Draft>)) => {
+    setRemoveAsked(null);
+    setDrafts((all) => all.map((d) => (d.key === key ? { ...d, ...(typeof change === "function" ? change(d) : change) } : d)));
+  };
+
+  const addPart = () => {
+    const key = nextKey;
+    setNextKey(key + 1);
+    setDrafts((all) => [...all, newDraft(key)]);
+    setRemoveAsked(null);
+    setProblem(null);
+    focusOn(`${key}:kind`);
+  };
+
+  /** Removes a part. One with something in it asks for a second enter first. */
+  const removePart = (d: Draft) => {
+    if (!isEmpty(d) && removeAsked !== d.key) {
+      setRemoveAsked(d.key);
+      return;
     }
-    if (!parts) return "Make or pick a key first.";
-    const chosen = {
-      publicKey: share.pub ? parts.publicKey : "",
-      privateKey: share.priv ? parts.privateKey : "",
-      passphrase: share.pass ? parts.passphrase : "",
-    };
-    if (!chosen.publicKey && !chosen.privateKey && !chosen.passphrase) return "Pick at least one part of the key.";
-    return { type: "sshkey", ...chosen };
+    setDrafts((all) => all.filter((x) => x.key !== d.key));
+    setRemoveAsked(null);
+    setProblem(null);
+    focusOn("add");
   };
 
   const create = async () => {
-    const made = block();
-    if (typeof made === "string") {
-      setProblem(made);
-      return;
+    const blocks: NoteBlock[] = [];
+    for (const [i, d] of drafts.entries()) {
+      const made = blockOf(d);
+      if (typeof made === "string") {
+        setProblem(several ? `Part ${i + 1}: ${made}` : made);
+        return;
+      }
+      blocks.push(made);
     }
     if (password && checkNewPassword(password) !== true) {
       setProblem(`Password: ${checkNewPassword(password) as string}`);
@@ -120,7 +178,7 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
       focusOn("password");
       return;
     }
-    const note = prepareNote(made, config.noteBlocks);
+    const note = prepareNote(blocks, config.noteBlocks);
     if (new TextEncoder().encode(note.plaintext).byteLength > config.noteMaxSize) {
       setProblem(`The note is too large, this server takes up to ${formatBytes(config.noteMaxSize)}.`);
       return;
@@ -148,7 +206,7 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
       addNote({
         id: shared.id, server, url,
         ownerToken: shared.ownerToken,
-        contentType: kind, hasPassword: shared.hasPassword,
+        contentType: drafts.map((d) => d.kind).join(", "), hasPassword: shared.hasPassword,
         createdAt: new Date().toISOString(), expireSec,
       });
       setShareUrl(url);
@@ -159,41 +217,42 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
     }
   };
 
-  const generate = async () => {
+  const generate = async (d: Draft) => {
     setWorking("Making the key");
     setPhase("working");
     try {
-      const pair = sshSource === "rsa"
-        ? await generateRSAKeyPair(4096, comment.trim() || undefined, passphrase.trim() || undefined)
-        : await generateEd25519KeyPair(comment.trim() || undefined, passphrase.trim() || undefined);
-      setParts({ publicKey: pair.publicKey, privateKey: pair.privateKey, passphrase: passphrase.trim() });
-      setShare({ pub: true, priv: true, pass: true });
+      const comment = d.comment.trim() || undefined;
+      const passphrase = d.passphrase.trim() || undefined;
+      const pair = d.sshSource === "rsa"
+        ? await generateRSAKeyPair(4096, comment, passphrase)
+        : await generateEd25519KeyPair(comment, passphrase);
+      update(d.key, {
+        sshKey: { publicKey: pair.publicKey, privateKey: pair.privateKey, passphrase: d.passphrase.trim() },
+        share: { pub: true, priv: true, pass: true },
+      });
       setPhase("compose");
-      focusOn("part:pub");
+      focusOn(`${d.key}:part:pub`);
     } catch (err) {
       setProblem(err instanceof Error ? err.message : String(err));
       setPhase("compose");
     }
   };
 
-  const addEntry = () => {
-    if (!newValue) return;
-    setEntries((prev) => [...prev, { label: newLabel.trim(), value: newValue }]);
-    setNewLabel("");
-    setNewValue("");
+  const addEntry = (d: Draft) => {
+    if (!d.newValue) return;
+    update(d.key, { entries: [...d.entries, { label: d.newLabel.trim(), value: d.newValue }], newLabel: "", newValue: "" });
     setProblem(null);
-    focusOn("newLabel");
+    focusOn(`${d.key}:newLabel`);
   };
 
   const startOver = () => {
-    setText("");
-    setEditorReset((n) => n + 1);
-    setEntries([]);
-    setParts(null);
+    const key = nextKey;
+    setNextKey(key + 1);
+    setDrafts([newDraft(key)]);
     setPassword("");
     setProblem(null);
     setPhase("compose");
-    focusOn("kind");
+    focusOn(`${key}:kind`);
   };
 
   // ── Screens over the form ────────────────────────────
@@ -209,21 +268,24 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
             setProblem("Pick one file, not a folder.");
             return;
           }
+          const d = drafts.find((x) => x.key === pickFor);
+          if (!d) return;
           try {
             const content = fs.readFileSync(file.path, "utf-8");
-            if (kind === "sshkey") {
+            if (d.kind === "sshkey") {
               const key = sshKeyFromText(content);
               if (!key.publicKey && !key.privateKey) {
                 setProblem("That file does not look like an SSH key.");
                 return;
               }
-              setParts({ publicKey: key.publicKey, privateKey: key.privateKey, passphrase: key.passphrase });
-              setShare({ pub: true, priv: true, pass: true });
-              focusOn("part:pub");
+              update(d.key, {
+                sshKey: { publicKey: key.publicKey, privateKey: key.privateKey, passphrase: key.passphrase },
+                share: { pub: true, priv: true, pass: true },
+              });
+              focusOn(`${d.key}:part:pub`);
             } else {
-              setText(content);
-              setEditorReset((n) => n + 1);
-              focusOn("text");
+              update(d.key, (x) => ({ text: content, editorReset: x.editorReset + 1 }));
+              focusOn(`${d.key}:text`);
             }
             setProblem(null);
           } catch (err) {
@@ -256,7 +318,7 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
         exitHint="tabs"
       >
         <Muted>
-          {KINDS.find((k) => k.id === kind)?.label}, deleted after {formatExpiry(expireSec)}
+          {several ? `${drafts.length} parts` : KINDS.find((k) => k.id === drafts[0]?.kind)?.label}, deleted after {formatExpiry(expireSec)}
           {maxViews > 0 ? ` or ${plural(maxViews, "view")}, whichever comes first` : ""}.
         </Muted>
         <Muted>{password ? "Protected with a password. Tell it on another way than the link." : "No password."}</Muted>
@@ -286,98 +348,137 @@ export function NoteCreateView({ appState }: NoteCreateViewProps): React.ReactEl
 
   // ── The form ─────────────────────────────────────────
 
-  const content: FormRow[] = [];
-  if (textKind) {
-    content.push({
-      kind: "editor",
-      id: "text",
-      label: kind === "code" ? "Code" : "Text",
-      value: text,
-      onChange: setText,
-      height: Math.max(3, height - 22),
-      placeholder: "Write here. Enter makes a new line, tab goes on.",
-      reset: editorReset,
-    });
-    content.push({ kind: "button", id: "load", label: "Load the text from a file instead", onPress: () => setPhase("pick") });
-  } else if (kind === "password") {
-    entries.forEach((e, i) => {
-      content.push({
-        kind: "item",
-        id: `entry:${i}`,
-        onRemove: () => setEntries((prev) => prev.filter((_, j) => j !== i)),
-        removeHint: "take it out",
-        render: (focused) => (
-          <Text wrap="truncate-end">
-            <Text color={COLORS.text} bold={focused}>{e.label ? forTerminal(e.label) : `Password ${i + 1}`}</Text>
-            <Text color={COLORS.muted}>   {"•".repeat(Math.min(e.value.length, 20))}</Text>
-          </Text>
-        ),
+  /** The rows of one part, after its kind. */
+  const contentOf = (d: Draft): FormRow[] => {
+    const id = (name: string) => `${d.key}:${name}`;
+    const rows: FormRow[] = [];
+    if (TEXT_KINDS.includes(d.kind)) {
+      rows.push({
+        kind: "editor",
+        id: id("text"),
+        label: d.kind === "code" ? "Code" : "Text",
+        value: d.text,
+        onChange: (text) => update(d.key, { text }),
+        height: several ? Math.max(3, Math.min(6, height - 22)) : Math.max(3, height - 22),
+        placeholder: "Write here. Enter makes a new line, tab goes on.",
+        reset: d.editorReset,
       });
-    });
-    content.push({ kind: "input", id: "newLabel", label: "Label", value: newLabel, onChange: setNewLabel, placeholder: "like WiFi or Email, can stay empty" });
-    content.push({ kind: "input", id: "newValue", label: "Password", value: newValue, onChange: setNewValue, placeholder: "type it, or make one below", submitHint: "add it", onSubmit: addEntry });
-    content.push({
-      kind: "button",
-      id: "generate",
-      label: "Make a strong password",
-      onPress: () => {
-        setNewValue(generatePassword({ length: 20, uppercase: true, lowercase: true, numbers: true, symbols: true }));
-        focusOn("newValue");
-      },
-    });
-    content.push({ kind: "button", id: "addEntry", label: entries.length ? "Add another password" : "Add this password", disabled: !newValue, onPress: addEntry });
-  } else if (!parts) {
-    content.push({
-      kind: "choice",
-      id: "sshSource",
-      label: "Key",
-      value: SSH_SOURCES.find((s) => s.id === sshSource)!.label,
-      onChange: (by) => setSshSource((s) => step(SSH_SOURCES.map((x) => x.id), s, by)),
-    });
-    if (sshSource === "file") {
-      content.push({ kind: "button", id: "pickKey", label: "Pick the key file", onPress: () => setPhase("pick") });
+      rows.push({
+        kind: "button",
+        id: id("load"),
+        label: "Load the text from a file instead",
+        onPress: () => {
+          setPickFor(d.key);
+          setPhase("pick");
+        },
+      });
+    } else if (d.kind === "password") {
+      d.entries.forEach((e, i) => {
+        rows.push({
+          kind: "item",
+          id: id(`entry:${i}`),
+          onRemove: () => update(d.key, (x) => ({ entries: x.entries.filter((_, j) => j !== i) })),
+          removeHint: "take it out",
+          render: (focused) => (
+            <Text wrap="truncate-end">
+              <Text color={COLORS.text} bold={focused}>{e.label ? forTerminal(e.label) : `Password ${i + 1}`}</Text>
+              <Text color={COLORS.muted}>   {"•".repeat(Math.min(e.value.length, 20))}</Text>
+            </Text>
+          ),
+        });
+      });
+      rows.push({ kind: "input", id: id("newLabel"), label: "Label", value: d.newLabel, onChange: (newLabel) => update(d.key, { newLabel }), placeholder: "like WiFi or Email, can stay empty" });
+      rows.push({ kind: "input", id: id("newValue"), label: "Password", value: d.newValue, onChange: (newValue) => update(d.key, { newValue }), placeholder: "type it, or make one below", submitHint: "add it", onSubmit: () => addEntry(d) });
+      rows.push({
+        kind: "button",
+        id: id("generate"),
+        label: "Make a strong password",
+        onPress: () => {
+          update(d.key, { newValue: generatePassword({ length: 20, uppercase: true, lowercase: true, numbers: true, symbols: true }) });
+          focusOn(id("newValue"));
+        },
+      });
+      rows.push({ kind: "button", id: id("addEntry"), label: d.entries.length ? "Add another password" : "Add this password", disabled: !d.newValue, onPress: () => addEntry(d) });
+    } else if (!d.sshKey) {
+      rows.push({
+        kind: "choice",
+        id: id("sshSource"),
+        label: "Key",
+        value: SSH_SOURCES.find((x) => x.id === d.sshSource)!.label,
+        onChange: (by) => update(d.key, (x) => ({ sshSource: step(SSH_SOURCES.map((y) => y.id), x.sshSource, by) })),
+      });
+      if (d.sshSource === "file") {
+        rows.push({
+          kind: "button",
+          id: id("pickKey"),
+          label: "Pick the key file",
+          onPress: () => {
+            setPickFor(d.key);
+            setPhase("pick");
+          },
+        });
+      } else {
+        rows.push({ kind: "input", id: id("comment"), label: "Comment", value: d.comment, onChange: (comment) => update(d.key, { comment }), placeholder: "like you@laptop, can stay empty" });
+        rows.push({ kind: "input", id: id("passphrase"), label: "Passphrase", value: d.passphrase, onChange: (passphrase) => update(d.key, { passphrase }), mask: true, placeholder: "can stay empty" });
+        rows.push({ kind: "button", id: id("makeKey"), label: "Make the key", onPress: () => void generate(d) });
+      }
     } else {
-      content.push({ kind: "input", id: "comment", label: "Comment", value: comment, onChange: setComment, placeholder: "like you@laptop, can stay empty" });
-      content.push({ kind: "input", id: "passphrase", label: "Passphrase", value: passphrase, onChange: setPassphrase, mask: true, placeholder: "can stay empty" });
-      content.push({ kind: "button", id: "makeKey", label: "Make the key", onPress: () => void generate() });
+      const sshKey = d.sshKey;
+      const partRows: Array<{ key: "pub" | "priv" | "pass"; label: string; present: boolean }> = [
+        { key: "pub", label: "Public key", present: !!sshKey.publicKey },
+        { key: "priv", label: "Private key", present: !!sshKey.privateKey },
+        { key: "pass", label: "Passphrase", present: !!sshKey.passphrase },
+      ];
+      for (const p of partRows.filter((x) => x.present)) {
+        rows.push({
+          kind: "item",
+          id: id(`part:${p.key}`),
+          pressHint: d.share[p.key] ? "leave it out" : "put it in",
+          onPress: () => update(d.key, (x) => ({ share: { ...x.share, [p.key]: !x.share[p.key] } })),
+          render: (focused) => (
+            <Text wrap="truncate-end">
+              <Text color={d.share[p.key] ? accent : COLORS.faint}>{d.share[p.key] ? "[✓]" : "[ ]"}</Text>
+              <Text color={COLORS.text} bold={focused}> {p.label}</Text>
+              {p.key === "pub" && <Text color={COLORS.faint}>   {forTerminal(sshKey.publicKey)}</Text>}
+            </Text>
+          ),
+        });
+      }
+      rows.push({ kind: "button", id: id("again"), label: "Start over with another key", onPress: () => update(d.key, { sshKey: null }) });
     }
-  } else {
-    const partRows: Array<{ key: "pub" | "priv" | "pass"; label: string; present: boolean }> = [
-      { key: "pub", label: "Public key", present: !!parts.publicKey },
-      { key: "priv", label: "Private key", present: !!parts.privateKey },
-      { key: "pass", label: "Passphrase", present: !!parts.passphrase },
-    ];
-    for (const p of partRows.filter((x) => x.present)) {
-      content.push({
-        kind: "item",
-        id: `part:${p.key}`,
-        pressHint: share[p.key] ? "leave it out" : "put it in",
-        onPress: () => setShare((prev) => ({ ...prev, [p.key]: !prev[p.key] })),
-        render: (focused) => (
-          <Text wrap="truncate-end">
-            <Text color={share[p.key] ? accent : COLORS.faint}>{share[p.key] ? "[✓]" : "[ ]"}</Text>
-            <Text color={COLORS.text} bold={focused}> {p.label}</Text>
-            {p.key === "pub" && <Text color={COLORS.faint}>   {forTerminal(parts.publicKey)}</Text>}
-          </Text>
-        ),
-      });
-    }
-    content.push({ kind: "button", id: "again", label: "Start over with another key", onPress: () => setParts(null) });
-  }
+    return rows;
+  };
 
-  const rows: FormRow[] = [
-    {
+  const parts: FormRow[] = [];
+  drafts.forEach((d, i) => {
+    const kindRow: FormRow = {
       kind: "choice",
-      id: "kind",
-      label: "Kind of note",
-      value: KINDS.find((k) => k.id === kind)!.label,
+      id: `${d.key}:kind`,
+      label: several ? "Kind" : "Kind of note",
+      value: KINDS.find((k) => k.id === d.kind)!.label,
       onChange: (by) => {
-        setKind((k) => step(KINDS.map((x) => x.id), k, by));
+        update(d.key, (x) => ({ kind: step(KINDS.map((k) => k.id), x.kind, by) }));
         setProblem(null);
       },
-    },
-    { kind: "section", label: "Content" },
-    ...content,
+    };
+    // One part keeps the form of a note of one kind. Several get a heading each.
+    if (several) parts.push({ kind: "section", label: `Part ${i + 1}` }, kindRow);
+    else parts.push(kindRow, { kind: "section", label: "Content" });
+    parts.push(...contentOf(d));
+    if (several) {
+      parts.push({
+        kind: "button",
+        id: `${d.key}:remove`,
+        label: removeAsked === d.key ? "Press enter again to remove this part" : "Remove this part",
+        onPress: () => removePart(d),
+      });
+    }
+  });
+  if (canAdd) parts.push({ kind: "button", id: "add", label: "+ Add a part", onPress: addPart });
+  else if (!config.noteBlocks) parts.push({ kind: "note", content: <Faint>This server takes notes of one part only.</Faint> });
+
+  const rows: FormRow[] = [
+    ...parts,
     { kind: "section", label: "Options" },
     {
       kind: "choice",

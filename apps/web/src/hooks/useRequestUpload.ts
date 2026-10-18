@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { padNote, serializeNote, type NoteBlock } from "@skysend/note-format";
 import {
-  decodeUploadFragment,
-  decryptRequestBrief,
-  deriveLinkKeys,
-  fromBase64url,
-  toBase64url,
-  type RequestAsk,
-} from "@skysend/crypto";
-import { padNote, parseTemplate, serializeNote, type NoteBlock } from "@skysend/note-format";
+  newSubmission,
+  openRequestLink,
+  type RequestAccess,
+  type SenderBrief,
+} from "@skysend/transfer";
 import * as api from "@/lib/api";
-import { sanitizeTitle } from "@/lib/file-request";
 import { useUpload, type UploadPhase } from "@/hooks/useUpload";
 
 export type RequestUploadPhase =
@@ -22,34 +19,7 @@ export type RequestUploadPhase =
   | "uploading"
   | "delivered";
 
-/** What the requester asked for, read from the brief. */
-export interface SenderBrief {
-  /** Cleaned for showing, or null when there is none. */
-  title: string | null;
-  asks: RequestAsk[];
-  /** The blocks to fill in, or null for a note written freely. */
-  template: NoteBlock[] | null;
-}
-
-/** The keys behind an upload link. The public key comes only from the link, never from the server. */
-interface LinkAccess {
-  publicKey: Uint8Array;
-  uploadToken: string;
-}
-
-/** A request that was deleted, or a server that does not offer requests. */
-function isGone(err: unknown): boolean {
-  return err instanceof api.ApiError && (err.status === 404 || err.status === 403);
-}
-
 const BUSY: UploadPhase[] = ["uploading", "saving-meta"];
-
-/** A random submission ID, 16 bytes as hex. */
-function newSubmission(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
-}
 
 /**
  * The sender side of a file request: reads the link, asks the server how much the request
@@ -68,7 +38,7 @@ export function useRequestUpload(id: string, fragment: string) {
   );
   const [status, setStatus] = useState<api.SenderRequest | null>(null);
   const [brief, setBrief] = useState<SenderBrief | null>(null);
-  const accessRef = useRef<LinkAccess | null>(null);
+  const accessRef = useRef<RequestAccess | null>(null);
   /** Set at the click already, so a double click cannot open two uploads. */
   const sendingRef = useRef(false);
 
@@ -84,56 +54,21 @@ export function useRequestUpload(id: string, fragment: string) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      let access: LinkAccess;
-      let briefKey: CryptoKey;
-      try {
-        const { publicKey, linkSecret } = await decodeUploadFragment(fragment);
-        const keys = await deriveLinkKeys(linkSecret, publicKey);
-        access = { publicKey, uploadToken: toBase64url(keys.uploadToken) };
-        briefKey = keys.briefKey;
-      } catch {
-        if (!cancelled) setPhase("invalid");
-        return;
-      }
-      if (cancelled) return;
-      accessRef.current = access;
-      let sender: api.SenderRequest;
-      try {
-        sender = await api.fetchRequestForSender(id, access.uploadToken);
-      } catch (err) {
-        if (!cancelled) setPhase(isGone(err) ? "gone" : "error");
-        return;
-      }
-      if (cancelled) return;
-      // Every request has a brief. One that is missing or does not open was dropped or
-      // swapped, and guessing what the requester wanted would only help whoever did that.
-      const stored = sender.brief;
-      const opened = stored
-        ? await decryptRequestBrief(
-            { ciphertext: fromBase64url(stored.ciphertext), nonce: fromBase64url(stored.nonce) },
-            briefKey,
-          ).catch(() => null)
-        : null;
-      if (cancelled) return;
-      if (!opened) {
-        setPhase("broken");
-        return;
-      }
-      let template: NoteBlock[] | null = null;
-      if (opened.asks.includes("note") && opened.template) {
-        try {
-          template = parseTemplate(opened.template);
-        } catch {
-          // A template nothing in can be filled in leaves a note written freely.
-          template = null;
+    openRequestLink(api, id, fragment)
+      .then((opened) => {
+        if (cancelled) return;
+        if (opened.state !== "ready") {
+          setPhase(opened.state);
+          return;
         }
-      }
-      const title = opened.title === null ? "" : sanitizeTitle(opened.title);
-      setBrief({ title: title || null, asks: opened.asks, template });
-      setStatus(sender);
-      setPhase("ready");
-    })();
+        accessRef.current = opened.access;
+        setBrief(opened.brief);
+        setStatus(opened.status);
+        setPhase("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setPhase("error");
+      });
     return () => {
       cancelled = true;
     };

@@ -142,9 +142,11 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 | --- | --- |
 | `skysend` | Interactive mode with tabs (recommended) |
 | `skysend upload <files...>` | Upload files with E2E encryption |
+| `skysend upload --to <link> <files...>` | Send files into a file request |
 | `skysend download <url>` | Download and decrypt a file |
 | `skysend note [text]` | Create an encrypted note |
 | `skysend note:view <url>` | View an encrypted note |
+| `skysend inbox <link>` | List the inbox of a file request, `--save <dir>` saves it |
 | `skysend ls` | List upload and note history |
 | `skysend delete <url> <ownerToken>` | Delete an upload or note |
 | `skysend config` | Show current configuration |

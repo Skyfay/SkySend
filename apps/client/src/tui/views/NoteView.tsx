@@ -31,7 +31,7 @@ function Part({ title, children }: { title: string; children: React.ReactNode })
 }
 
 /** The blocks of a note. Passwords stay dots until `revealed`. */
-function Blocks({ blocks, revealed }: { blocks: readonly ReadBlock[]; revealed: boolean }): React.ReactElement {
+export function Blocks({ blocks, revealed }: { blocks: readonly ReadBlock[]; revealed: boolean }): React.ReactElement {
   return (
     <Box flexDirection="column">
       {blocks.map((block, i) => {

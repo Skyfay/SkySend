@@ -1,8 +1,8 @@
 # Transfer Core
 
-`@skysend/transfer` in `packages/transfer` holds what an upload, a download and a note need besides the cryptography: the API client, the links, the zip of several files, the upload pipeline with both transports, the decryption of a download with its checks, and the creating and opening of a note. The web app, the CLI client and the server's contract tests use it, and a mobile app can later. The cryptography itself stays in [`@skysend/crypto`](/developer-guide/crypto/), the note content in [`@skysend/note-format`](/developer-guide/crypto/note-format).
+`@skysend/transfer` in `packages/transfer` holds what an upload, a download, a note and a file request need besides the cryptography: the API client, the links, the zip of several files, the upload pipeline with both transports, the decryption of a download with its checks, the creating and opening of a note, and both sides of a file request. The web app, the CLI client and the server's contract tests use it, and a mobile app can later. The cryptography itself stays in [`@skysend/crypto`](/developer-guide/crypto/), the note content in [`@skysend/note-format`](/developer-guide/crypto/note-format).
 
-Before this package, the web app and the CLI each had their own copy of the upload, the download, the notes, the links and the API schemas, and the copies drifted apart: the CLI read whole files into memory on a slow connection, packed several files with fflate in memory and broke them past 4 GiB, put no stream nonce into the metadata and did not check one on download.
+Before this package, the web app and the CLI each had their own copy of the upload, the download, the notes, the links, the cleaning of names and the API schemas, and the copies drifted apart: the CLI read whole files into memory on a slow connection, packed several files with fflate in memory and broke them past 4 GiB, put no stream nonce into the metadata and did not check one on download.
 
 ## What it holds
 
@@ -12,6 +12,9 @@ Before this package, the web app and the CLI each had their own copy of the uplo
 | `src/upload.ts` | `uploadEncrypted`: keys, encryption, WebSocket or HTTP chunks, metadata at the end, for a share and for a file request |
 | `src/download.ts` | `keysFromLink`, `decryptUploadMetadata`, `decryptedStream`: from the link to the checked plaintext |
 | `src/links.ts` | `buildShareLink` and `parseShareLink`: `<server>/<type>/<id>#<secret>` for a share, a note, a request and an inbox, `/d/<id>` as the old form of a file link |
+| `src/request.ts` | `prepareRequest` and `briefFits` for making a request, `openRequestLink` and `newSubmission` for a sender |
+| `src/inbox.ts` | `openInboxLink`, `openInbox`, `groupBySubmission`, `readInboxNote`: the inbox opened with the key in its link |
+| `src/names.ts` | `sanitizeFilename` and `sanitizeTitle` for names and titles from someone else |
 | `src/note.ts` | `createEncryptedNote` and `openNote`: a note from its plaintext to the link, and from the link back to its blocks |
 | `src/zip.ts` | The zip of several files, stored without compression, written while the upload reads it, ZIP64 from 4 GiB on |
 | `src/archive.ts` | The metadata of several files, whether it fits the server's limit, and unique names in the zip |
@@ -49,6 +52,14 @@ The events of an upload, `onPhase`, `onProgress`, `onTransport`, `onStorage` and
 
 `openNote` checks the password of a protected note before it asks for the view, so a wrong password uses up no view and comes back as `null`. The view counts on the server, and with a limit of one it destroys the note, so a note that does not parse comes back as its plain text with `unreadable` set instead of being lost. Notes from before v3 read through the legacy readers of `readNote`.
 
+## File Requests
+
+`openRequestLink` reads an upload link the way every sender does: the keys from its fragment, then from the server how much the request still takes and its brief, which only the key from the link opens. It answers `invalid` for a link that does not decode, `gone` for a request the server does not have, `broken` for a brief that is missing or does not open, and otherwise the request with its cleaned title, what it asks for and its note template. The public key of the request comes from the link and never from the server, which could swap in its own. The upload itself is `uploadEncrypted` with a `request` target, its metadata marked with a `newSubmission`.
+
+`openInbox` opens the vault of an inbox and every upload in it, each on its own, so a damaged or crafted upload shows as damaged and does not hide the others. `readInboxNote` checks the size of a note before it reads it and cleans every label a sender wrote. Names and titles go through `sanitizeFilename` and `sanitizeTitle` before anyone sees them. The CLI adds what a local disk needs on top.
+
+Making a request stays in the web app, which keeps its links in the browser. The CLI sends into requests that ask for files and opens inboxes, see the [CLI commands](/user-guide/client-cli/commands#inbox).
+
 ## The API client and older servers
 
 `createApiClient({ baseUrl, fetch, bearer, cleanMessage })` returns one method per route. Every answer goes through a Zod schema before the caller sees it, since the server is not trusted. The web app always talks to the server it came from, the CLI to instances of every version, so a field that an older supported server does not send gets `.optional().default(...)` or `.catch(...)`, never a plain required schema. `bearer` goes only to the routes that create something, and `cleanMessage` lets a terminal disarm a server's error message before `ApiError` carries it.
@@ -68,6 +79,7 @@ pnpm --filter @skysend/transfer test
 | `upload.test.ts` | Both transports against a fake server, the fallback, the chunk window with a chunk held back, the error texts |
 | `download.test.ts` | Keys from a link with and without a password, the checks of size and base nonce |
 | `links.test.ts` | Links of every type built and read, the old `/d/` path, a link without its fragment, a type the caller does not open |
+| `requests.test.ts` | A request made and its brief read, an upload link opened, gone or with a swapped brief, inboxes with and without a password, damaged uploads, notes in an inbox, names and titles cleaned |
 | `note.test.ts` | A note through a fake server and back, with and without a password, a wrong password that uses up no view, a legacy note and one that does not parse |
 
 The end-to-end tests send shares between the browser and the CLI in both directions, see the [Testing Guide](/developer-guide/reference/testing#end-to-end-tests).

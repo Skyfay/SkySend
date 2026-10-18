@@ -9,6 +9,7 @@ import {
   parseDuration,
   writeLine,
   promptPassword,
+  writeJsonError,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
@@ -90,7 +91,7 @@ export function registerNoteCommand(program: Command): void {
         if (content === "") throw new Error("Note cannot be empty");
 
         // The note is one block. A server from before v3 gets it in the legacy format.
-        const note = prepareNote(textToBlock(contentType, content), config.noteBlocks);
+        const note = prepareNote([textToBlock(contentType, content)], config.noteBlocks);
 
         // Validate size
         const contentBytes = new TextEncoder().encode(note.plaintext);
@@ -180,14 +181,14 @@ export function registerNoteCommand(program: Command): void {
       } catch (err) {
         if (err instanceof ApiError) {
           if (options.json) {
-            console.error(JSON.stringify({ error: err.message, status: err.status }));
+            writeJsonError({ error: err.message, status: err.status });
           } else {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
           const message = err instanceof Error ? err.message : String(err);
           if (options.json) {
-            console.error(JSON.stringify({ error: message }));
+            writeJsonError({ error: message });
           } else {
             console.error(`Error: ${forTerminal(message)}`);
           }

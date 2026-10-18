@@ -9,6 +9,7 @@ import {
   saveShare,
   type OpenedShare,
 } from "../../lib/download-job.js";
+import { openRequest } from "../../lib/upload-job.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { formatBytes } from "../../lib/progress.js";
 import { expandPath } from "../../lib/paths.js";
@@ -16,13 +17,14 @@ import { sanitizeFilename } from "../../lib/filename.js";
 import type { UploadInfo } from "../../lib/api.js";
 import type { AppState } from "../types.js";
 import { COLORS, useAccent } from "../theme.js";
-import { useFocus, useRoom } from "../shell.js";
+import { useFocus, useRoom, useSendInto } from "../shell.js";
 import { Faint, Gap, Muted, Panel, T } from "../components/Frame.js";
 import { Form } from "../components/Form.js";
 import { SPINNER, TransferProgress, plural, seconds, useRate } from "../components/Progress.js";
 import { NoteViewView } from "./NoteView.js";
+import { InboxView } from "./Inbox.js";
 
-type Phase = "link" | "looking" | "password" | "target" | "downloading" | "done" | "error" | "note";
+type Phase = "link" | "looking" | "password" | "target" | "downloading" | "done" | "error" | "note" | "inbox";
 
 interface ReceiveViewProps {
   appState: AppState;
@@ -37,6 +39,7 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
   const accent = useAccent();
   const { width } = useRoom();
   const { active, toTabs } = useFocus();
+  const sendInto = useSendInto();
   const [phase, setPhase] = useState<Phase>(initialUrl ? "note" : "link");
   const [link, setLink] = useState(initialUrl ?? "");
   const [password, setPassword] = useState("");
@@ -77,12 +80,30 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
   const submitLink = async (given = link) => {
     let parsed: ShareLink;
     try {
-      parsed = parseShareLink(given.trim(), ["file", "note"]);
+      parsed = parseShareLink(given.trim(), ["file", "note", "request", "inbox"]);
     } catch {
       setProblem("That is not a SkySend link. It looks like https://host/file/…#…");
       return;
     }
     setProblem(null);
+    if (parsed.type === "inbox") {
+      setLink(given.trim());
+      setPhase("inbox");
+      return;
+    }
+    // An upload link is for sending, so it goes on to the Send tab once it opened.
+    if (parsed.type === "request") {
+      setPhase("looking");
+      try {
+        const request = await openRequest(given.trim());
+        setLink("");
+        setPhase("link");
+        sendInto({ ...request, link: given.trim() });
+      } catch (err) {
+        fail(err);
+      }
+      return;
+    }
     if (parsed.type === "note") {
       setPhase("note");
       return;
@@ -142,6 +163,8 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
     }
   };
 
+  if (phase === "inbox") return <InboxView link={link} onBack={again} />;
+
   if (phase === "note") {
     return (
       <NoteViewView
@@ -166,7 +189,7 @@ export function ReceiveView({ appState, onBack, onError, initialUrl }: ReceiveVi
       {phase === "link" && (
         <>
           <T bold>  Receive a file or a note</T>
-          <Muted>  Paste the link you got. Everything after the # is the key, it never reaches the server.</Muted>
+          <Muted>  Paste the link you got, or the inbox link of a file request you made. Everything after the # is the key, it never reaches the server.</Muted>
           <Gap />
           <Form
             rows={[

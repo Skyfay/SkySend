@@ -2,13 +2,8 @@ import { useCallback, useState, useSyncExternalStore } from "react";
 import type { Argon2idHashFn, RequestAsk } from "@skysend/crypto";
 import type { NoteBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
-import {
-  openInboxLink,
-  prepareRequest,
-  requestLinks,
-  requestOutlived,
-  type RequestLinks,
-} from "@/lib/file-request";
+import { openInboxLink, prepareRequest } from "@skysend/transfer";
+import { requestLinks, requestOutlived, type RequestLinks } from "@/lib/file-request";
 import { getAllRequests, removeRequest, saveRequest, type StoredRequest } from "@/lib/upload-store";
 import { countUnseen, keepUnseen, setUnseen } from "@/lib/unseen-uploads";
 

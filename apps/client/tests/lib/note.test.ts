@@ -102,28 +102,38 @@ describe("toLegacyNote", () => {
 
 describe("prepareNote", () => {
   it("makes a note of one block for a server that takes blocks", () => {
-    const note = prepareNote(BLOCKS[2]!, true);
+    const note = prepareNote([BLOCKS[2]!], true);
     expect(note.contentType).toBe(NOTE_KIND);
     expect(parseNote(note.plaintext)).toEqual([BLOCKS[2]]);
   });
 
+  it("makes one note of several blocks, in their order", () => {
+    const note = prepareNote([BLOCKS[0]!, BLOCKS[2]!, BLOCKS[5]!], true);
+    expect(parseNote(note.plaintext)).toEqual([BLOCKS[0], BLOCKS[2], BLOCKS[5]]);
+  });
+
   it("pads the note to whole blocks, so its length hides how long a password is", () => {
     const password = (value: string): NoteBlock => ({ type: "password", entries: [{ label: "", value }] });
-    const short = prepareNote(password("pw12"), true).plaintext;
-    const long = prepareNote(password("a-much-longer-password-28ch"), true).plaintext;
+    const short = prepareNote([password("pw12")], true).plaintext;
+    const long = prepareNote([password("a-much-longer-password-28ch")], true).plaintext;
     expect(new TextEncoder().encode(short).length % 1024).toBe(0);
     expect(short.length).toBe(long.length);
   });
 
   // LEGACY(notes-v1): drop with toLegacyNote.
   it("falls back to the legacy format for an older server", () => {
-    expect(prepareNote(BLOCKS[3]!, false)).toEqual(toLegacyNote(BLOCKS[3]!));
+    expect(prepareNote([BLOCKS[3]!], false)).toEqual(toLegacyNote(BLOCKS[3]!));
+  });
+
+  // LEGACY(notes-v1): drop with toLegacyNote.
+  it("refuses several blocks for an older server, which keeps one per note", () => {
+    expect(() => prepareNote([BLOCKS[0]!, BLOCKS[2]!], false)).toThrow("one part only");
   });
 
   // LEGACY(notes-v1): the false case goes with toLegacyNote.
   it.each([true, false])("round-trips through the real encryption (server takes blocks: %s)", async (takesBlocks) => {
     for (const block of BLOCKS) {
-      const note = prepareNote(block, takesBlocks);
+      const note = prepareNote([block], takesBlocks);
       const keys = await deriveKeys(generateSecret(), generateSalt());
       const encrypted = await encryptNoteContent(note.plaintext, keys.metaKey);
       const plaintext = await decryptNoteContent(encrypted.ciphertext, encrypted.nonce, keys.metaKey);

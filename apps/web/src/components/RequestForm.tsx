@@ -34,7 +34,7 @@ import { TemplateStart, builtInOf, type TemplateStartValue } from "@/components/
 import type { NewRequestOptions } from "@/hooks/useFileRequests";
 import type { RequestLimit, ServerConfig } from "@/lib/api";
 import { requestSizeOptions, requestStart } from "@/lib/defaults";
-import { briefFits } from "@/lib/file-request";
+import { briefFits } from "@skysend/transfer";
 import { toDrafts, type DraftBlock } from "@/lib/note-editor";
 import {
   builtInTemplate,

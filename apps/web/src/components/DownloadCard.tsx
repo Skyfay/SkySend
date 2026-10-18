@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatBytes, formatTimeRemaining } from "@/lib/utils";
 import { fileBadge } from "@/lib/file-badge";
-import { sanitizeFilename } from "@/lib/file-request";
+import { sanitizeFilename } from "@skysend/transfer";
 import type { UploadInfo } from "@/lib/api";
 import { calculatePlaintextSize, type FileMetadata } from "@skysend/crypto";
 import type { DownloadPhase } from "@/hooks/useDownload";

@@ -4,21 +4,27 @@ import { Box, Text, useAnimation } from "ink";
 import { getWebSocket } from "../../lib/config.js";
 import { addUpload } from "../../lib/history.js";
 import { formatBytes, formatExpiry } from "../../lib/progress.js";
-import { runUpload, type UploadJobResult } from "../../lib/upload-job.js";
+import {
+  openRequest,
+  runRequestUpload,
+  runUpload,
+  type OpenRequest,
+  type UploadJobResult,
+} from "../../lib/upload-job.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { checkNewPassword } from "../../lib/input.js";
 import { expandPath, pastedPaths } from "../../lib/paths.js";
 import type { AppState } from "../types.js";
 import { COLORS, useAccent } from "../theme.js";
-import { useFocus, useRoom } from "../shell.js";
+import { useFocus, useRoom, type HandedRequest } from "../shell.js";
 import { Faint, Gap, Muted, Panel, T } from "../components/Frame.js";
 import { Form, type FormRow } from "../components/Form.js";
 import { FilePicker, measure, type PickedItem } from "../components/FilePicker.js";
 import { LinkReady } from "../components/LinkReady.js";
 import { SPINNER, TransferProgress, plural, seconds, useRate } from "../components/Progress.js";
 
-type Phase = "compose" | "pick" | "auth" | "uploading" | "done" | "error";
+type Phase = "compose" | "pick" | "auth" | "opening" | "uploading" | "done" | "delivered" | "error";
 
 interface UploadViewProps {
   appState: AppState;
@@ -26,6 +32,8 @@ interface UploadViewProps {
   onError: (msg: string) => void;
   /** After an upload, so the quota can be read again. */
   onUploaded: () => void;
+  /** A file request another tab opened, to send into. Each new `n` is taken once. */
+  handOver?: { request: HandedRequest; n: number } | null;
 }
 
 /** "Deleted after 1 day or 1 download, whichever comes first." */
@@ -40,7 +48,7 @@ function step<T>(values: readonly T[], current: T, by: number): T {
 }
 
 /** The Send tab: a form with the files, the options and the button, then the upload and its link. */
-export function UploadView({ appState, onUploaded }: UploadViewProps): React.ReactElement {
+export function UploadView({ appState, onUploaded, handOver }: UploadViewProps): React.ReactElement {
   const accent = useAccent();
   const { width, height } = useRoom();
   const { active, toTabs } = useFocus();
@@ -54,6 +62,10 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
   const [maxDownloads, setMaxDownloads] = useState(config.fileDefaultDownload);
   const [password, setPassword] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  // A file request to send into instead of a link of one's own, and its upload link.
+  const [requestInput, setRequestInput] = useState("");
+  const [request, setRequest] = useState<HandedRequest | null>(null);
+  const [handedN, setHandedN] = useState(0);
   const [focus, setFocus] = useState<{ id: string; n: number }>({ id: "add", n: 0 });
   const [progress, setProgress] = useState({ loaded: 0, total: 0, finishing: false });
   const { rate, track, reset } = useRate();
@@ -62,12 +74,15 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
   // Cancelling takes a second enter, so a stray one does not throw the upload away.
   const [cancelAsked, setCancelAsked] = useState(false);
   const abort = useRef<AbortController | null>(null);
-  const { frame } = useAnimation({ interval: 90, isActive: phase === "uploading" || phase === "auth" });
+  const { frame } = useAnimation({ interval: 90, isActive: phase === "uploading" || phase === "auth" || phase === "opening" });
 
+  // A request sets its own limits, which are never above those of the server.
+  const maxSize = request ? request.status.maxUploadSize : config.fileMaxSize;
+  const maxFiles = request ? request.status.maxFilesPerUpload : config.fileMaxFilesPerUpload;
   const totalSize = items.reduce((sum, item) => sum + item.size, 0);
   const fileCount = items.reduce((sum, item) => sum + item.count, 0);
-  const tooBig = totalSize > config.fileMaxSize;
-  const tooMany = fileCount > config.fileMaxFilesPerUpload || items.some((i) => i.tooMany);
+  const tooBig = totalSize > maxSize;
+  const tooMany = fileCount > maxFiles || items.some((i) => i.tooMany);
   const what = plural(fileCount, "file");
   const focusOn = (id: string) => setFocus((f) => ({ id, n: f.n + 1 }));
 
@@ -84,7 +99,84 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
     return found.length;
   }, [config.fileMaxFilesPerUpload]);
 
+  /**
+   * Opens the upload link of a request, which then takes the place of the options. The cursor
+   * goes on to `next`, the button when files are already picked.
+   */
+  const openRequestLink = async (link: string, next = items.length > 0 ? "send" : "add") => {
+    if (!link.trim()) return;
+    setPhase("opening");
+    try {
+      const opened = await openRequest(link.trim());
+      setRequest({ ...opened, link: link.trim() });
+      setRequestInput("");
+      setProblem(null);
+      setPhase("compose");
+      focusOn(next);
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+      setPhase("compose");
+      focusOn("request");
+    }
+  };
+
+  // A request handed over from another tab is taken in while nothing runs here, else after.
+  if (handOver && handOver.n !== handedN && !["uploading", "auth", "opening", "pick"].includes(phase)) {
+    setHandedN(handOver.n);
+    setRequest(handOver.request);
+    setResult(null);
+    setProblem(null);
+    setPhase("compose");
+    setFocus((f) => ({ id: items.length > 0 ? "send" : "add", n: f.n + 1 }));
+  }
+
+  /** Sends into the open request: no link comes back, only whoever made it opens the files. */
+  const deliver = async (into: OpenRequest) => {
+    const controller = new AbortController();
+    abort.current = controller;
+    setPhase("uploading");
+    setCancelAsked(false);
+    setProgress({ loaded: 0, total: 0, finishing: false });
+    reset();
+    const started = Date.now();
+    let doneAt = 0;
+    try {
+      const delivered = await runRequestUpload(
+        { request: into, paths: items.map((item) => item.path), webSocket: getWebSocket(into.server), signal: controller.signal },
+        {
+          onProgress: (loaded, total) => {
+            setProgress({ loaded, total, finishing: false });
+            track(loaded);
+          },
+          onPhase: (next) => {
+            if (next !== "saving-meta" || doneAt > 0) return;
+            doneAt = Date.now();
+            setProgress((prev) => ({ ...prev, finishing: true }));
+          },
+        },
+      );
+      setResult({ ...delivered, url: "", ownerToken: "", hasPassword: false, seconds: ((doneAt || Date.now()) - started) / 1000 });
+      setPhase("delivered");
+      onUploaded();
+    } catch (err) {
+      if (controller.signal.aborted) {
+        setProblem("The upload was cancelled, nothing was sent.");
+        setPhase("compose");
+        focusOn("send");
+      } else {
+        setFailure(err instanceof Error ? err.message : String(err));
+        setPhase("error");
+      }
+    } finally {
+      abort.current = null;
+    }
+  };
+
   const send = async () => {
+    if (request) {
+      await deliver(request);
+      return;
+    }
     if (password && checkNewPassword(password) !== true) {
       setProblem(`Password: ${checkNewPassword(password) as string}`);
       focusOn("password");
@@ -167,8 +259,18 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
     setPassword("");
     setResult(null);
     setProblem(null);
+    setRequest(null);
     setPhase("compose");
     focusOn("add");
+  };
+
+  /** More files into the same request, which is asked again how much it still takes. */
+  const sendMoreIntoRequest = () => {
+    const link = request?.link;
+    setItems([]);
+    setResult(null);
+    setRequest(null);
+    if (link) void openRequestLink(link, "add");
   };
 
   // ── Screens over the form ────────────────────────────
@@ -176,7 +278,7 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
   if (phase === "pick") {
     return (
       <FilePicker
-        maxFiles={config.fileMaxFilesPerUpload}
+        maxFiles={maxFiles}
         onDone={(picked) => {
           setItems((prev) => [...prev, ...picked.filter((p) => !prev.some((i) => i.path === p.path))]);
           setProblem(null);
@@ -199,6 +301,16 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
     );
   }
 
+  if (phase === "opening") {
+    return (
+      <Panel width={width}>
+        <Gap />
+        <T>  <Text color={accent}>{SPINNER[frame % SPINNER.length]}</Text> <Text bold>Opening the request</Text></T>
+        <Gap />
+      </Panel>
+    );
+  }
+
   if (phase === "uploading") {
     const ratio = progress.total > 0 ? Math.min(1, progress.loaded / progress.total) : 0;
     const sentPlain = ratio * totalSize;
@@ -209,7 +321,7 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
     return (
       <Panel width={width} paddingX={2}>
         <Gap />
-        <T><Text color={accent}>{spin}</Text> <Text bold>{progress.finishing ? "Finishing up" : `Sending ${what} to ${forTerminal(host)}`}</Text></T>
+        <T><Text color={accent}>{spin}</Text> <Text bold>{progress.finishing ? "Finishing up" : request ? `Sending ${what} into the request` : `Sending ${what} to ${forTerminal(host)}`}</Text></T>
         <Gap />
         <TransferProgress ratio={ratio} done={sentPlain} total={totalSize} rate={rate} width={width - 8} finishing={progress.finishing} />
         <Gap />
@@ -274,6 +386,31 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
     );
   }
 
+  if (phase === "delivered" && result) {
+    const speed = result.seconds > 0 ? result.size / result.seconds : 0;
+    const left = (request?.status.uploadsLeft ?? 1) - 1;
+    return (
+      <Panel width={width}>
+        <Gap />
+        <Text color={accent} bold>  ✓ Delivered</Text>
+        <Muted>  {plural(result.fileCount, "file")}, {formatBytes(result.size)}, sent in {seconds(result.seconds)}{speed > 0 ? ` (${formatBytes(speed)}/s)` : ""}</Muted>
+        <Muted>  Only whoever made the request can open it. You keep no link.</Muted>
+        <Gap />
+        <Form
+          rows={[
+            ...(left > 0 ? [{ kind: "button" as const, id: "more", label: "Send more into the request", primary: true, onPress: sendMoreIntoRequest }] : []),
+            { kind: "button", id: "done", label: "Done", primary: left <= 0, onPress: startOver },
+          ]}
+          active={active}
+          height={2}
+          onExit={toTabs}
+          exitHint="tabs"
+        />
+        <Gap />
+      </Panel>
+    );
+  }
+
   if (phase === "error") {
     return (
       <Panel width={width}>
@@ -296,6 +433,68 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
   // ── The form ─────────────────────────────────────────
 
   const ready = items.length > 0 && !tooBig && !tooMany;
+  const optionRows: FormRow[] = [
+    { kind: "section", label: "Options" },
+    {
+      kind: "choice",
+      id: "expires",
+      label: "Expires after",
+      value: formatExpiry(expireSec),
+      onChange: (by) => setExpireSec((v) => step(config.fileExpireOptions, v, by)),
+    },
+    {
+      kind: "choice",
+      id: "downloads",
+      label: "Downloads",
+      value: maxDownloads === 1 ? "1 download" : `${maxDownloads} downloads`,
+      onChange: (by) => setMaxDownloads((v) => step(config.fileDownloadOptions, v, by)),
+    },
+    {
+      kind: "input",
+      id: "password",
+      label: "Password",
+      value: password,
+      onChange: setPassword,
+      mask: true,
+      placeholder: config.forceFilePassword ? "required by this server" : "none, or type one",
+    },
+    {
+      kind: "input",
+      id: "request",
+      label: "Into a request",
+      value: requestInput,
+      onChange: setRequestInput,
+      placeholder: "paste the upload link of a file request",
+      submitHint: "open it",
+      onSubmit: () => void openRequestLink(requestInput),
+    },
+  ];
+  const requestRows: FormRow[] = request
+    ? [
+        { kind: "section", label: "File request" },
+        {
+          kind: "note",
+          lines: 2,
+          content: (
+            <>
+              <T bold>{request.brief.title ? forTerminal(request.brief.title) : `A file request on ${forTerminal(new URL(request.server).host)}`}</T>
+              <Muted>
+                Takes {plural(request.status.uploadsLeft, "more upload")} of up to {formatBytes(request.status.maxUploadSize)}. Only whoever made it opens what you send.
+              </Muted>
+            </>
+          ),
+        },
+        {
+          kind: "button",
+          id: "leave",
+          label: "Make a link of my own instead",
+          onPress: () => {
+            setRequest(null);
+            focusOn("request");
+          },
+        },
+      ]
+    : [];
   const used = quota?.enabled ? Math.min(10, Math.round((quota.used / Math.max(quota.limit, 1)) * 10)) : 0;
   const rows: FormRow[] = [
     { kind: "section", label: items.length ? `Files, ${what}, ${formatBytes(totalSize)}` : "Files" },
@@ -331,30 +530,7 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
         }
       },
     },
-    { kind: "section", label: "Options" },
-    {
-      kind: "choice",
-      id: "expires",
-      label: "Expires after",
-      value: formatExpiry(expireSec),
-      onChange: (by) => setExpireSec((v) => step(config.fileExpireOptions, v, by)),
-    },
-    {
-      kind: "choice",
-      id: "downloads",
-      label: "Downloads",
-      value: maxDownloads === 1 ? "1 download" : `${maxDownloads} downloads`,
-      onChange: (by) => setMaxDownloads((v) => step(config.fileDownloadOptions, v, by)),
-    },
-    {
-      kind: "input",
-      id: "password",
-      label: "Password",
-      value: password,
-      onChange: setPassword,
-      mask: true,
-      placeholder: config.forceFilePassword ? "required by this server" : "none, or type one",
-    },
+    ...(request ? requestRows : optionRows),
     { kind: "section", label: "" },
     ...(problem || tooBig || tooMany
       ? [{
@@ -364,8 +540,8 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
             <Text color={COLORS.danger} wrap="truncate-end">
               {problem
                 ?? (tooBig
-                  ? `Too large, ${forTerminal(host)} takes up to ${formatBytes(config.fileMaxSize)}.`
-                  : `Too many files, ${forTerminal(host)} takes up to ${config.fileMaxFilesPerUpload} at once.`)}
+                  ? `Too large, ${request ? "the request" : forTerminal(host)} takes up to ${formatBytes(maxSize)}.`
+                  : `Too many files, ${request ? "the request" : forTerminal(host)} takes up to ${maxFiles} at once.`)}
             </Text>
           ),
         }]
@@ -375,7 +551,7 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
       id: "send",
       primary: true,
       disabled: !ready,
-      label: ready ? `Send ${what}` : "Send (pick files first)",
+      label: ready ? (request ? `Send ${what} into the request` : `Send ${what}`) : "Send (pick files first)",
       onPress: () => void send(),
     },
     {
@@ -386,7 +562,7 @@ export function UploadView({ appState, onUploaded }: UploadViewProps): React.Rea
           <Faint>
             {fileCount > 1 || items.some((i) => i.folder)
               ? "Several files go up as one zip, with the names you see."
-              : `Up to ${formatBytes(config.fileMaxSize)} and ${config.fileMaxFilesPerUpload} files. Several go up as one zip.`}
+              : `Up to ${formatBytes(maxSize)} and ${maxFiles} files. Several go up as one zip.`}
           </Faint>
           {quota?.enabled && (
             <Text>

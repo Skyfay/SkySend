@@ -5,6 +5,9 @@
 - **client**: Folders go up as a zip that keeps their structure, from `skysend upload` and from the new file dialog of the interactive mode.
 - **client**: After an upload the interactive mode shows the link as a QR code and as a link that opens with a click, and copies it to the clipboard, over SSH too.
 - **client**: Uploads in the interactive mode show the time left and a curve of the speed, and can be cancelled.
+- **client**: A note from the interactive mode can hold several parts, like text, passwords and code together, the same as from the web app.
+- **client**: `skysend upload --to` and the Send tab send files and folders into a file request from its upload link.
+- **client**: `skysend inbox` lists and saves what arrived in a file request, and the Receive tab opens its inbox to download, read and delete uploads.
 
 ### 🐛 Bug Fixes
 
@@ -15,6 +18,8 @@
 - **client**: Two files of the same name sent together both arrive, the second one as `report (2).pdf`.
 - **client**: Expiry times read "1 day" and "1 hour" instead of "1 days" and "1 hours".
 - **client**: The CLI no longer crashes when it cannot open a browser for a login, like on a server without a desktop or over SSH.
+- **client**: A file name made of a long run of dots no longer holds up a download while it is cleaned.
+- **client**: Errors printed with `--json` stay plain JSON in the binary where `FORCE_COLOR` is set, as in many CI runners.
 
 ### 🔒 Security
 
@@ -39,8 +44,8 @@
 
 - **server**: Tests read the answers of the real routes with the client the web app and the CLI share, so a change the clients would no longer read fails before a release.
 - **infra**: The transfer benchmark measures the CLI as well as the browser, and uploads of several files at once.
-- **infra**: End-to-end tests cover the CLI logging in through OIDC and sending over the WebSocket, folders and zips of several files between the browser and the CLI, and run against the Bun binary with `E2E_CLI=binary`.
+- **infra**: End-to-end tests cover the CLI logging in through OIDC and sending over the WebSocket, folders and zips of several files between the browser and the CLI, file requests from both sides, and run against the Bun binary with `E2E_CLI=binary`.
 
 ### 🔧 CI/CD
 
-- **infra**: The web app and the CLI share one package for uploads, downloads, notes, links and the API of the server, built and tested with the other packages in CI, the Docker image and the release.
+- **infra**: The web app and the CLI share one package for uploads, downloads, notes, links, file requests and the API of the server, built and tested with the other packages in CI, the Docker image and the release.

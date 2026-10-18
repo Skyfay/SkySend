@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { apiFor } from "../lib/api.js";
 import { parseShareLink } from "@skysend/transfer";
-import { writeLine } from "../lib/progress.js";
+import { writeLine, writeJsonError } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { forTerminal } from "../lib/terminal.js";
 
@@ -34,14 +34,14 @@ export function registerDeleteCommand(program: Command): void {
       } catch (err) {
         if (err instanceof ApiError) {
           if (options.json) {
-            console.error(JSON.stringify({ error: err.message, status: err.status }));
+            writeJsonError({ error: err.message, status: err.status });
           } else {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
           const message = err instanceof Error ? err.message : String(err);
           if (options.json) {
-            console.error(JSON.stringify({ error: message }));
+            writeJsonError({ error: message });
           } else {
             console.error(`Error: ${forTerminal(message)}`);
           }

@@ -221,7 +221,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
        |
        +-----> @skysend/client  (writes and reads notes)
 
-@skysend/transfer     (API client, links, zip, upload, download and notes, on top of crypto)
+@skysend/transfer     (API client, links, zip, upload, download, notes, requests, on top of crypto)
        |
        +-----> @skysend/web     (upload worker, download, API calls)
        |
@@ -232,7 +232,7 @@ Files of a request live in `request_uploads`, apart from `uploads`, so no route 
 @skysend/cli          (accesses server database directly)
 ```
 
-The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the links, the zip, the upload and download pipelines and the notes, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
+The `@skysend/crypto` package is the foundation. It is used by the server (for token validation), the web frontend (for encryption/decryption in the browser), and the CLI client (for encryption/decryption on the command line). `@skysend/note-format` defines what a note holds before it is encrypted, so the web app and the CLI client write and read the same notes. `@skysend/transfer` holds the API client, the links, the zip, the upload and download pipelines, the notes and file requests, so the web app and the CLI send and receive with the same code, see [Transfer Core](/developer-guide/transfer).
 
 ## Server Architecture
 
@@ -357,6 +357,7 @@ apps/client/src/
     download.ts         # skysend download - file download and decryption
     note.ts             # skysend note - create encrypted notes
     note-view.ts        # skysend note:view - view encrypted notes
+    inbox.ts            # skysend inbox - list and save the inbox of a file request
     config.ts           # skysend config - manage client configuration
     delete.ts           # skysend delete - delete uploads/notes
     update.ts           # skysend update - self-update from GitHub Releases
@@ -364,6 +365,7 @@ apps/client/src/
     api.ts              # apiFor(server): the API client of @skysend/transfer
     upload-job.ts       # One upload for command and TUI: files, folders, zip, transport
     download-job.ts     # One download: link, password, checked decryption, .part file
+    inbox-job.ts        # The inbox of a file request: open, save, read notes, delete
     instances.ts        # Public instances from instances.skysend.app
     clipboard.ts        # Copy with a system tool and OSC 52
     paths.ts            # ~ and pasted or dropped paths

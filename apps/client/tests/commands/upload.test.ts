@@ -38,12 +38,28 @@ vi.mock("../../src/lib/upload-job.js", () => ({
     hasPassword: false,
     transport: "ws",
   })),
+  openRequest: vi.fn(async () => ({
+    server: "https://send.example.com",
+    id: "request",
+    access: { publicKey: new Uint8Array(65), uploadToken: "token" },
+    status: { open: true, uploadsLeft: 2, maxUploadSize: 1024, maxFilesPerUpload: 32 },
+    brief: { title: "Logs", asks: ["files"], template: null },
+    config: {},
+  })),
+  runRequestUpload: vi.fn(async () => ({
+    id: "delivered",
+    names: ["note.txt"],
+    size: 5,
+    totalSize: 5,
+    fileCount: 1,
+    transport: "http",
+  })),
 }));
 
 vi.mock("../../src/lib/history.js", () => ({ addUpload: vi.fn() }));
 
 import { getWebSocket } from "../../src/lib/config.js";
-import { runUpload } from "../../src/lib/upload-job.js";
+import { openRequest, runRequestUpload, runUpload } from "../../src/lib/upload-job.js";
 import { registerUploadCommand } from "../../src/commands/upload.js";
 
 let dir: string;
@@ -107,5 +123,34 @@ describe("skysend upload", () => {
       hasPassword: false,
       transport: "ws",
     });
+  });
+});
+
+describe("skysend upload --to", () => {
+  const LINK = "https://send.example.com/request/request#fragment";
+
+  it("sends into the request of the link and prints what was delivered", async () => {
+    await upload("--to", LINK);
+    expect(openRequest).toHaveBeenCalledWith(LINK);
+    expect(vi.mocked(runRequestUpload).mock.calls[0]![0]).toMatchObject({
+      paths: [file],
+      webSocket: true,
+    });
+    expect(runUpload).not.toHaveBeenCalled();
+    expect(JSON.parse(vi.mocked(console.log).mock.calls[0]![0] as string)).toEqual({
+      delivered: true,
+      id: "delivered",
+      size: 5,
+      fileCount: 1,
+      transport: "http",
+    });
+  });
+
+  it("refuses options the request decides itself", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const flags of [["--password", "x"], ["--expires", "1d"], ["--downloads", "3"]]) {
+      await expect(upload("--to", LINK, ...flags)).rejects.toThrow("process.exit(1)");
+    }
+    expect(openRequest).not.toHaveBeenCalled();
   });
 });

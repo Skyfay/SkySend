@@ -13,6 +13,7 @@ import {
   clearLine,
   writeProgress,
   writeLine,
+  writeJsonError,
   promptPassword,
   type ProgressState,
 } from "../../src/lib/progress.js";
@@ -449,5 +450,16 @@ describe("promptPassword", () => {
       term.type("late\r");
       expect(term.shown).toEqual(["Pass: ", "\n"]);
     });
+  });
+});
+
+describe("writeJsonError", () => {
+  it("writes one line of plain JSON to stderr, also where FORCE_COLOR is set", () => {
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    vi.stubEnv("FORCE_COLOR", "1");
+    writeJsonError({ error: "This request no longer exists.", status: 404 });
+    expect(write).toHaveBeenCalledWith('{"error":"This request no longer exists.","status":404}\n');
+    vi.unstubAllEnvs();
+    write.mockRestore();
   });
 });

@@ -20,7 +20,7 @@ import {
   type NoteBlock,
   type NoteTemplate,
 } from "@skysend/note-format";
-import { briefFits, sanitizeTitle } from "@/lib/file-request";
+import { briefFits, sanitizeTitle } from "@skysend/transfer";
 import { formatBytes, formatDuration } from "@/lib/utils";
 
 /** The `t` of i18next, as far as this module needs it. */

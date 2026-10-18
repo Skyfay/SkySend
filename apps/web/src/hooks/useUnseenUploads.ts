@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import * as api from "@/lib/api";
-import { openInboxLink } from "@/lib/file-request";
+import { openInboxLink } from "@skysend/transfer";
 import { getAllRequests } from "@/lib/upload-store";
 import {
   countUnseen,

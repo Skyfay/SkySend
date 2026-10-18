@@ -63,6 +63,14 @@ export function writeLine(line: string): void {
   process.stderr.write(`${line}\n`);
 }
 
+/**
+ * The error of a command run with --json, one line of JSON on stderr. Not console.error, which
+ * the Bun binary wraps in a red color code when FORCE_COLOR is set, as in many CI runners.
+ */
+export function writeJsonError(error: { error: string; status?: number }): void {
+  process.stderr.write(`${JSON.stringify(error)}\n`);
+}
+
 // ── Duration Parsing ───────────────────────────────────
 
 const DURATION_MAP: Record<string, number> = {

@@ -1,10 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { sanitizeFilename as cleanName } from "@skysend/transfer";
 
-/** Blank-looking characters that pad a name until its real extension is out of sight. */
-const BLANK_FILLERS = /[\u2800\u3164\u115F\u1160\uFFA0]/g;
-/** Combining marks stacked past what any script needs. */
-const MARK_STACKS = /(\p{M}{3})\p{M}+/gu;
 /**
  * Device names Windows reserves in every directory, with or without an extension. Windows
  * also counts the superscript digits one to three as port numbers.
@@ -17,22 +14,16 @@ const MAX_NAME_BYTES = 255;
 const MAX_KEPT_EXTENSION_BYTES = 32;
 
 /**
- * A file name from a sender, made safe to save under and to print. The same rules as the
- * web inbox (sanitizeFilename in apps/web/src/lib/file-request.ts), plus what a local disk
- * needs: no path separators and no characters Windows forbids, so the file lands where the
- * user chose, no leading dots, so a sender cannot plant a hidden file such as ".zshenv" in
- * the home directory, no reserved Windows device names, at most 255 bytes with the
- * extension kept, and never empty.
+ * A file name from a sender, made safe to save under and to print. First the rules the web
+ * inbox shows names by (`sanitizeFilename` of @skysend/transfer: no control or format
+ * characters, no path separators, no padding that hides the extension, no dots or spaces at
+ * either end, never empty), then what a local disk needs: no characters Windows forbids, so
+ * the file lands where the user chose, no reserved Windows device names, and at most 255
+ * bytes with the extension kept. No dot at the start either, so a sender cannot plant a
+ * hidden file such as ".zshenv" in the home directory.
  */
 export function sanitizeFilename(name: string): string {
-  const cleaned = name
-    .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, "")
-    .replace(BLANK_FILLERS, " ")
-    .replace(MARK_STACKS, "$1")
-    .replace(/[/\\<>:"|?*]/g, "_")
-    .replace(/\s+/g, " ")
-    .replace(/^[\s.]+|[\s.]+$/g, "");
-  if (cleaned === "") return "download";
+  const cleaned = cleanName(name).replace(/[<>:"|?*]/g, "_");
   return limitBytes(WINDOWS_RESERVED.test(cleaned) ? `_${cleaned}` : cleaned);
 }
 
@@ -44,7 +35,7 @@ function limitBytes(name: string): string {
   const stem = Array.from(name.slice(0, name.length - kept.length)).slice(0, MAX_NAME_BYTES);
   while (stem.length > 0 && Buffer.byteLength(stem.join("") + kept) > MAX_NAME_BYTES) stem.pop();
   const shortened = stem.join("").replace(/[\s.]+$/, "");
-  return shortened === "" ? `download${kept}` : `${shortened}${kept}`;
+  return shortened === "" ? `file${kept}` : `${shortened}${kept}`;
 }
 
 /** Whether anything sits at the path, a dangling symbolic link included. */

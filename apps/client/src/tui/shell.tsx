@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect } from "react";
+import type { OpenRequest } from "../lib/upload-job.js";
 
 /** One key of the bar at the bottom, like `{ key: "enter", label: "send" }`. */
 export interface KeyHint {
   key: string;
   label: string;
 }
+
+/** A file request opened from its upload link, the link kept to ask it again later. */
+export type HandedRequest = OpenRequest & { link: string };
 
 export interface ShellState {
   hints: KeyHint[];
@@ -17,6 +21,8 @@ interface ShellApi {
   toast: (message: string) => void;
   /** Moves the cursor up into the tab bar. */
   toTabs: () => void;
+  /** Hands an opened file request to the Send tab, which sends into it. */
+  sendInto: (request: HandedRequest) => void;
   /** The cursor is in the tab, not in the tab bar. */
   active: boolean;
   /** The room a tab has below the header and above the key bar. */
@@ -28,6 +34,7 @@ export const ShellContext = createContext<ShellApi>({
   set: () => {},
   toast: () => {},
   toTabs: () => {},
+  sendInto: () => {},
   active: true,
   width: 100,
   height: 30,
@@ -62,4 +69,9 @@ export function useRoom(): { width: number; height: number } {
 export function useFocus(): { active: boolean; toTabs: () => void } {
   const { active, toTabs } = useContext(ShellContext);
   return { active, toTabs };
+}
+
+/** Hands an opened file request to the Send tab. */
+export function useSendInto(): (request: HandedRequest) => void {
+  return useContext(ShellContext).sendInto;
 }

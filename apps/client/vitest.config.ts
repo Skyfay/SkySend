@@ -10,6 +10,7 @@ export default defineConfig({
         "src/lib/auth.ts",
         "src/lib/upload-job.ts",
         "src/lib/download-job.ts",
+        "src/lib/inbox-job.ts",
         // Complex browser crypto (ssh-keygen) - no test environment support
         "src/lib/ssh-keygen.ts",
       ],

@@ -25,6 +25,7 @@ skysend upload <files...> [options]
 | `-d, --downloads <count>` | Maximum number of downloads |
 | `-p, --password [password]` | Password protect the upload, at least 8 characters. Prompts interactively if no value is given. |
 | `--no-ws` | Use HTTP chunked upload instead of WebSocket, see below |
+| `--to <link>` | Send into a [file request](/user-guide/file-requests) from its upload link instead, see [Sending into a File Request](#sending-into-a-file-request) |
 | `--json` | Output result as JSON |
 
 ### Examples
@@ -85,6 +86,20 @@ When using `--json`, the output includes all details needed for scripting:
 The `ownerToken` is required to delete an upload. When using `--json`, save the output so you can delete the upload later with `skysend delete`.
 :::
 
+### Sending into a File Request
+
+Someone who made a [file request](/user-guide/file-requests) sends you its upload link. `--to` sends files and folders into it, from a server without a browser too:
+
+```bash
+skysend upload --to "https://instance.com/request/abc123#..." ./backup.tar.gz ./logs
+```
+
+- The request decides how long the files stay, how often they can be downloaded and that only its inbox opens them, so `--to` goes without `--expires`, `--downloads`, `--password` and `--server`.
+- The title of the request and how many uploads it still takes are shown before the upload starts. A request that is closed or full is refused before anything is sent.
+- You get no link back and nothing goes into your history. Only whoever made the request can open what you sent.
+- The CLI sends files only. A request that asks for a note, alone or with files, is left to the browser, which opens the same link.
+- With `--json` the output is `{ "delivered": true, "id", "size", "fileCount", "transport" }`.
+
 ## download
 
 Download and decrypt a file from a SkySend share URL.
@@ -134,6 +149,47 @@ skysend download https://instance.com/file/abc123#secret --password "my-secret"
 - The original filename is extracted from the encrypted metadata. For multi-file uploads, the downloaded file will be a `.zip` archive.
 - The file is decrypted while it downloads and checked against the size in the encrypted metadata and against its stream nonce, which every upload from the web app and from this version of the CLI names. A server that cuts or reorders the encrypted data then fails the download.
 - It is written to a hidden `.skysend-<id>.part` file next to the target first and renamed at the end, so a download that breaks off never leaves a file that looks complete.
+
+## inbox
+
+List what arrived in a [file request](/user-guide/file-requests) you made, and save it.
+
+```bash
+skysend inbox <link> [options]
+```
+
+### Arguments
+
+| Argument | Description |
+| --- | --- |
+| `<link>` | The inbox link of the request, the one you kept when you made it |
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `--save <dir>` | Save every upload into this folder |
+| `-p, --password [password]` | Password of the inbox. Prompts interactively if no value is given and the inbox has one. |
+| `--json` | Output result as JSON |
+
+### Examples
+
+```bash
+# See what arrived, without downloading anything
+skysend inbox "https://instance.com/inbox/abc123#..."
+
+# Save everything into a folder, for example from a cron job
+skysend inbox "https://instance.com/inbox/abc123#..." --save ./received --json
+```
+
+### Inbox Behavior
+
+- Listing downloads nothing, so it uses up no download the request allows. Each upload shows its name, its size and how often it was downloaded, and uploads a sender sent together share a number.
+- `--save` saves every upload: a file under its name, several files as `archive.zip`, a note as `note.txt` that only you can read, since it can hold passwords. A name that is already taken gets a number. Each saved upload counts as one download.
+- Every name comes from the sender and is cleaned before it is shown or used as a file name. An upload that does not open is reported as damaged and does not stop the others.
+- A wrong password and a request that no longer exists look the same to the server. After too many wrong tries the server locks the inbox for a while.
+- With `--json`, the list is `{ "title", "asks", "uploads": [...] }` with `id`, `submission`, `type`, `name` or `files`, `size`, `downloads` and `maxDownloads` for each upload, and a save is `{ "saved": [...], "failed": [...] }`.
+- Making, closing and deleting a request stays in the web app. Deleting single uploads works in the interactive mode.
 
 ## note
 
@@ -192,7 +248,7 @@ skysend note --password --expires 24h --views 5
 
 ### Note Types
 
-The CLI creates a note of one block. Notes that combine several blocks can be created in the web app.
+`skysend note` creates a note of one block. Notes that combine several blocks can be created in the interactive mode and in the web app.
 
 | Type | Description |
 | --- | --- |
@@ -527,9 +583,9 @@ The tab bar is the top row. `esc`, or `↑` on the first row of a tab, moves the
 
 | Tab | What it does |
 | --- | --- |
-| **Send** | Pick files or folders, or type or paste a path, set when it expires, how many downloads it allows and a password, then press Send. During the upload a bar shows the amount, the time left and a curve of the speed, and "Cancel the upload" stops it after a second enter. Afterwards the link is shown with a QR code, with buttons to copy it, open it and send more. |
-| **Receive** | Paste a file or a note link and it opens. A file shows its name, size and the files in its zip, asks for the password when it has one, and downloads to the current folder or the place you type under "Save to". A note opens on the screen with buttons to show its passwords, copy it and save it to a file. |
-| **Note** | Creates a note: text, passwords, code, markdown or an SSH key. `←` `→` on "Kind of note" picks the kind. Text is written in the editor or loaded from a file, passwords are typed or made with "Make a strong password", an SSH key is made on the spot or read from a file. |
+| **Send** | Pick files or folders, or type or paste a path, set when it expires, how many downloads it allows and a password, then press Send. During the upload a bar shows the amount, the time left and a curve of the speed, and "Cancel the upload" stops it after a second enter. Afterwards the link is shown with a QR code, with buttons to copy it, open it and send more. To send into a file request instead, paste its upload link under "Into a request": the options make way for the title of the request and what it still takes, and the files go into its inbox without a link of your own. |
+| **Receive** | Paste a file or a note link and it opens. A file shows its name, size and the files in its zip, asks for the password when it has one, and downloads to the current folder or the place you type under "Save to". A note opens on the screen with buttons to show its passwords, copy it and save it to a file. The inbox link of a file request you made opens its inbox: `enter` downloads an upload or reads a note, `del` twice deletes one, "Download everything" saves all into a folder. An upload link pasted here goes on to the Send tab. |
+| **Note** | Creates a note: text, passwords, code, markdown or an SSH key. `←` `→` on "Kind of note" picks the kind. Text is written in the editor or loaded from a file, passwords are typed or made with "Make a strong password", an SSH key is made on the spot or read from a file. "+ Add a part" puts more into the same note, like the access to a server with its passwords and a command, each part with a kind of its own. "Remove this part" takes one out again, a part with something in it after a second `enter`. |
 | **My links** | The uploads and notes sent from this computer. `enter` opens one with its link, QR code, its downloads or views and the time left on the server, and buttons to copy, open, delete it from the server or take it off the list. |
 | **Settings** | Switches the server, picks the one to start with, turns fast WebSocket uploads off for this server and forgets saved servers. |
 

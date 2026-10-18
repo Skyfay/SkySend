@@ -9,6 +9,7 @@ import {
   writeLine,
   promptPassword,
   type ProgressState,
+  writeJsonError,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { sanitizeFilename } from "../lib/filename.js";
@@ -88,14 +89,14 @@ export function registerDownloadCommand(program: Command): void {
         if (!options.json) clearLine();
         if (err instanceof ApiError) {
           if (options.json) {
-            console.error(JSON.stringify({ error: err.message, status: err.status }));
+            writeJsonError({ error: err.message, status: err.status });
           } else {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
           const message = forTerminal(err instanceof Error ? err.message : String(err));
           if (options.json) {
-            console.error(JSON.stringify({ error: message }));
+            writeJsonError({ error: message });
           } else {
             console.error(`Error: ${message}`);
           }

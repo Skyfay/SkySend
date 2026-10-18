@@ -163,6 +163,7 @@ Three checks run wherever a test shares, uploads or downloads:
 | `crafted-note.spec.ts` | A note full of markup that would run, load or restyle shows inert in every engine, checked in the rendered page |
 | `large.spec.ts` | A file of 5 GiB up and down byte for byte, in a job of its own, see below |
 | `cli.spec.ts` | The CLI and the browser open each other's shares, with a password both ways, a zip of several files both ways, a folder from the CLI, a note made in the CLI, and the checks of the stream nonce |
+| `cli-requests.spec.ts` | The CLI sends files and a folder into a request made in the browser, stops at a full request and at one that asks for a note, and lists and saves an inbox a browser sent to, with and without a password |
 | `guard.spec.ts` | The recording of the proxy sees headers, bodies and WebSocket frames |
 | `transport.spec.ts` | The page arrives over HTTP/1.1 or HTTP/2 as its setup promises, and an upload takes its transport |
 | `service-worker.spec.ts` | The download Service Worker controls no page, a registration of an older release for the whole origin is replaced and downloads still take tier 1, and a download without a Service Worker goes through OPFS |
@@ -172,7 +173,7 @@ The CLI tests run the CLI built with Node by default. `E2E_CLI=binary` runs them
 
 ```bash
 pnpm client:compile
-E2E_CLI=binary E2E_BROWSER=chromium pnpm test:e2e tests/cli.spec.ts tests/config.spec.ts
+E2E_CLI=binary E2E_BROWSER=chromium pnpm test:e2e tests/cli.spec.ts tests/cli-requests.spec.ts tests/config.spec.ts
 ```
 
 The **E2E Tests** jobs in `.github/workflows/validate.yml` run them on pull requests, one job per browser. A pull request into `dev` that changes nothing they build, run or read skips them, like one that only touches the website, the Workers or other docs. The **Changes** job decides that from the changed files in a few seconds. Pull requests into `main`, the release and a run started by hand always run them. `E2E_BROWSER` picks the engine, and a run then starts only the servers, proxies and containers that engine's projects need, so the Firefox job never pulls the S3 store. The same works locally, like `E2E_BROWSER=webkit pnpm test:e2e`, or with a list like `chromium,webkit`. When a job fails, its report with screenshots, videos and traces is attached to the run as the `e2e-report-<browser>` artifact. A trace opens with `pnpm --filter @skysend/e2e exec playwright show-trace <trace.zip>`.

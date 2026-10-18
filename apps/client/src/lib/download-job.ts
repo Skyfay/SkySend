@@ -82,11 +82,25 @@ export async function saveShare(
   outputPath: string,
   onProgress?: (written: number, total: number) => void,
 ): Promise<{ file: string; size: number }> {
+  const { stream } = await apiFor(share.link.server).downloadFile(share.link.id, share.keys.authToken);
+  return writeDecrypted(stream, share.metadata, share.keys.keys.fileKey, outputPath, onProgress);
+}
+
+/**
+ * Decrypts a ciphertext into `outputPath`, checked against the metadata, through a hidden part
+ * file that is renamed once everything arrived. A share and a file in an inbox alike.
+ */
+export async function writeDecrypted(
+  ciphertext: ReadableStream<Uint8Array>,
+  metadata: FileMetadata,
+  fileKey: CryptoKey,
+  outputPath: string,
+  onProgress?: (written: number, total: number) => void,
+): Promise<{ file: string; size: number }> {
   const dir = path.dirname(outputPath);
   fs.mkdirSync(dir, { recursive: true });
-  const { stream } = await apiFor(share.link.server).downloadFile(share.link.id, share.keys.authToken);
-  const plain = decryptedStream(stream, share.metadata, share.keys.keys.fileKey);
-  const total = share.metadata.type === "single" ? share.metadata.size : (share.metadata.archiveSize ?? 0);
+  const plain = decryptedStream(ciphertext, metadata, fileKey);
+  const total = metadata.type === "single" ? metadata.size : (metadata.archiveSize ?? 0);
 
   const partPath = path.join(dir, `.skysend-${crypto.randomUUID()}.part`);
   const writer = fs.createWriteStream(partPath, { flags: "wx" });

@@ -15,10 +15,11 @@ import {
   writeLine,
   promptPassword,
   type ProgressState,
+  writeJsonError,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { addUpload } from "../lib/history.js";
-import { runUpload } from "../lib/upload-job.js";
+import { openRequest, runRequestUpload, runUpload } from "../lib/upload-job.js";
 import { forTerminal } from "../lib/terminal.js";
 import { checkNewPassword } from "../lib/input.js";
 
@@ -30,6 +31,64 @@ interface UploadOptions {
   json?: boolean;
   /** False with --no-ws. Commander stores a negated flag under its positive name. */
   ws?: boolean;
+  /** The upload link of a file request to send into. */
+  to?: string;
+}
+
+/**
+ * Sends files into a file request. The request decides how long they stay, how often they are
+ * downloaded and that only its inbox opens them, so none of that is asked here.
+ */
+async function sendToRequest(files: string[], link: string, options: UploadOptions): Promise<void> {
+  if (options.expires || options.downloads || options.password !== undefined || options.server) {
+    throw new Error(
+      "A request sets how long its files stay and who opens them, so --to goes without --expires, --downloads, --password and --server.",
+    );
+  }
+  const request = await openRequest(link);
+  if (!options.json) {
+    const host = new URL(request.server).host;
+    writeLine(request.brief.title ? `Request: ${forTerminal(request.brief.title)}` : `A file request on ${forTerminal(host)}`);
+    writeLine(
+      `Takes ${request.status.uploadsLeft === 1 ? "1 more upload" : `${request.status.uploadsLeft} more uploads`} of up to ${formatBytes(request.status.maxUploadSize)}.`,
+    );
+  }
+
+  const progress: ProgressState = { loaded: 0, total: 0, startTime: Date.now() };
+  let uploadEndTime = 0;
+  const result = await runRequestUpload(
+    { request, paths: files, webSocket: options.ws !== false && getWebSocket(request.server) },
+    {
+      onProgress: (loaded, total) => {
+        progress.loaded = loaded;
+        progress.total = total;
+        if (!options.json) writeProgress(renderProgress(progress, "Uploading"));
+      },
+      onPhase: (phase) => {
+        if (phase !== "saving-meta" || uploadEndTime > 0) return;
+        uploadEndTime = Date.now();
+        if (!options.json) writeProgress("Finalizing...");
+      },
+    },
+  );
+
+  if (options.json) {
+    console.log(
+      JSON.stringify({
+        delivered: true,
+        id: result.id,
+        size: result.size,
+        fileCount: result.fileCount,
+        transport: result.transport,
+      }),
+    );
+    return;
+  }
+  clearLine();
+  const elapsedSec = ((uploadEndTime || Date.now()) - progress.startTime) / 1000;
+  const avgSpeed = elapsedSec > 0 ? ` | Avg speed: ${formatSpeed(calculateEncryptedSize(result.size) / elapsedSec)}` : "";
+  writeLine("Delivered. Only whoever made the request can open it.");
+  writeLine(`Files: ${result.fileCount} | Size: ${formatBytes(result.size)}${avgSpeed}`);
 }
 
 export function registerUploadCommand(program: Command): void {
@@ -42,16 +101,22 @@ export function registerUploadCommand(program: Command): void {
     .option("-d, --downloads <count>", "Max download count")
     .option("-p, --password [password]", "Password protect (prompts if no value given)")
     .option("--no-ws", "Disable WebSocket transport, use HTTP chunked upload")
+    .option("--to <link>", "Send into a file request, from its upload link")
     .option("--json", "Output as JSON")
     .action(async (files: string[], options: UploadOptions) => {
       try {
-        const server = resolveServer(options.server);
-
         for (const file of files) {
           if (!fs.existsSync(file)) throw new Error(`File not found: ${file}`);
           const stat = fs.statSync(file);
           if (!stat.isFile() && !stat.isDirectory()) throw new Error(`Not a file or folder: ${file}`);
         }
+
+        if (options.to !== undefined) {
+          await sendToRequest(files, options.to, options);
+          return;
+        }
+
+        const server = resolveServer(options.server);
 
         const config = await apiFor(server).fetchConfig();
 
@@ -168,14 +233,14 @@ export function registerUploadCommand(program: Command): void {
         if (!options.json) clearLine();
         if (err instanceof ApiError) {
           if (options.json) {
-            console.error(JSON.stringify({ error: err.message, status: err.status }));
+            writeJsonError({ error: err.message, status: err.status });
           } else {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
           const message = forTerminal(err instanceof Error ? err.message : String(err));
           if (options.json) {
-            console.error(JSON.stringify({ error: message }));
+            writeJsonError({ error: message });
           } else {
             console.error(`Error: ${message}`);
           }

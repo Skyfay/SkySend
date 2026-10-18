@@ -30,6 +30,22 @@ export async function cli(args: string[], home: string) {
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 
+/** Runs a command of the CLI that has to fail and returns the error it printed as JSON. */
+export async function cliError(args: string[], home: string) {
+  const [file, argv] = command([...args, "--json"]);
+  try {
+    await promisify(execFile)(file, argv, { env: envFor(home), timeout: 60_000 });
+  } catch (err) {
+    const stderr = String((err as { stderr?: string }).stderr ?? "").trim();
+    try {
+      return JSON.parse(stderr.split("\n").at(-1) ?? "{}") as { error?: string; status?: number };
+    } catch {
+      throw new Error(`The CLI printed no JSON error: ${JSON.stringify(stderr)}`, { cause: err });
+    }
+  }
+  throw new Error(`The CLI should have failed: ${args.join(" ")}`);
+}
+
 /**
  * Runs a command of the CLI that logs in through the browser: hands the login address it prints
  * to `login`, which plays the browser, then returns the JSON it printed. The stand-in for

@@ -10,6 +10,7 @@ import {
   decryptUploadMetadata,
   keysFromLink,
   keysFromSecret,
+  sanitizeFilename,
   withUnlockedMeta,
   type LinkKeys,
 } from "@skysend/transfer";
@@ -18,7 +19,6 @@ import { saveDecryptedDownload, type DownloadDebugInfo } from "@/lib/download-ti
 import { isSafari, isFirefox, isDevToolsOpen, SAFARI_BIG_SIZE, formatBytes } from "@/lib/utils";
 import { opfsFits } from "@/lib/opfs-file";
 import { createSpeedMeter } from "@/lib/speed";
-import { sanitizeFilename } from "@/lib/file-request";
 
 export type DownloadPhase =
   | "idle"

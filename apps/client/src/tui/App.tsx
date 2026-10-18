@@ -5,7 +5,7 @@ import { addServer, getServers } from "../lib/config.js";
 import { forTerminal } from "../lib/terminal.js";
 import type { TabId, AppState } from "./types.js";
 import { COLORS, ThemeProvider, useAccent } from "./theme.js";
-import { ShellContext, type KeyHint, type ShellState } from "./shell.js";
+import { ShellContext, type HandedRequest, type KeyHint, type ShellState } from "./shell.js";
 import { Header, KeyBar, Panel, T, Toast, Gap, type Tab } from "./components/Frame.js";
 import { WelcomeView } from "./views/Welcome.js";
 import { UploadView } from "./views/Upload.js";
@@ -55,6 +55,8 @@ function Shell({ initialServer, initialNoteUrl, setAccentColor }: AppProps & {
   const [keys, setKeys] = useState<Record<TabId, number>>({ send: 0, receive: 0, note: 0, links: 0, settings: 0 });
   const [shell, setShell] = useState<ShellState>({ hints: [], typing: false });
   const [toast, setToast] = useState<string | null>(null);
+  // An upload link of a file request, handed from another tab to the Send tab.
+  const [handOver, setHandOver] = useState<{ request: HandedRequest; n: number } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didAutoConnect = useRef(false);
 
@@ -67,9 +69,18 @@ function Shell({ initialServer, initialNoteUrl, setAccentColor }: AppProps & {
 
   // The header takes 3 rows and the key bar 1, the rest is the tab's.
   const height = Math.max(10, rows - (appState ? 5 : 2));
+  const sendInto = useCallback((request: HandedRequest) => {
+    if (!appState?.config.enabledServices.includes("file")) {
+      showToast("This server has no Send tab to send into the request from.");
+      return;
+    }
+    setHandOver((prev) => ({ request, n: (prev?.n ?? 0) + 1 }));
+    setTab("send");
+    setInTabs(false);
+  }, [appState, showToast]);
   const shellApi = useMemo(
-    () => ({ set: setShell, toast: showToast, toTabs, active: !inTabs, width, height }),
-    [showToast, toTabs, inTabs, width, height],
+    () => ({ set: setShell, toast: showToast, toTabs, sendInto, active: !inTabs, width, height }),
+    [showToast, toTabs, sendInto, inTabs, width, height],
   );
 
   /** `remember` saves a server picked on the welcome screen, not one given with --server. */
@@ -180,7 +191,7 @@ function Shell({ initialServer, initialNoteUrl, setAccentColor }: AppProps & {
     const view = (id: TabId): React.ReactNode => {
       switch (id) {
         case "send":
-          return <UploadView {...common(id)} onUploaded={() => void refreshQuota()} />;
+          return <UploadView {...common(id)} onUploaded={() => void refreshQuota()} handOver={handOver} />;
         case "receive":
           return <ReceiveView {...common(id)} initialUrl={initialNoteUrl} />;
         case "note":

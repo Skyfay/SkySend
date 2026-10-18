@@ -20,8 +20,8 @@ vi.mock("../../src/lib/api.js", () => ({
   },
 }));
 
-vi.mock("../../src/lib/file-request.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../src/lib/file-request.js")>();
+vi.mock("@skysend/transfer", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@skysend/transfer")>();
   return {
     ...original,
     inboxNeedsPassword: vi.fn(),
@@ -42,12 +42,12 @@ vi.mock("../../src/lib/upload-store.js", () => ({
 }));
 
 import * as api from "../../src/lib/api.js";
-import * as fileRequest from "../../src/lib/file-request.js";
+import * as fileRequest from "@skysend/transfer";
 import { saveDecryptedDownload } from "../../src/lib/download-tiers.js";
 import { getRequest, markUploadsSeen, removeRequest } from "../../src/lib/upload-store.js";
 import { keepUnseen, setUnseen, unseenFor } from "../../src/lib/unseen-uploads.js";
 import { downloadName, useInbox } from "../../src/hooks/useInbox.js";
-import type { OpenedUpload } from "../../src/lib/file-request.js";
+import type { OpenedUpload } from "@skysend/transfer";
 
 const ID = "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const UPLOAD_ID = "11111111-2222-4333-8444-555555555555";
