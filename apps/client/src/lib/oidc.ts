@@ -2,6 +2,7 @@ import * as http from "node:http";
 import * as net from "node:net";
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { getStoredToken, saveStoredToken } from "./config.js";
 
 // ── Token helpers ──────────────────────────────────────
@@ -191,7 +192,7 @@ export function openBrowser(url: string, onFail?: () => void): void {
  * Returns the session JWT after the user completes the login.
  */
 export async function performOidcLogin(serverUrl: string): Promise<string> {
-  const normalized = serverUrl.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(serverUrl);
   const callbackServer = await startLocalCallbackServer();
   const callbackUrl = `http://127.0.0.1:${callbackServer.port}${callbackServer.path}`;
   const loginUrl = `${normalized}/auth/login?cli_callback=${encodeURIComponent(callbackUrl)}`;
@@ -223,7 +224,7 @@ export async function performOidcLogin(serverUrl: string): Promise<string> {
  * Otherwise initiates a new browser-based OIDC login.
  */
 export async function ensureOidcAuth(serverUrl: string): Promise<string> {
-  const normalized = serverUrl.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(serverUrl);
   const stored = getStoredToken(normalized);
   if (stored && !isTokenExpired(stored)) {
     return stored;

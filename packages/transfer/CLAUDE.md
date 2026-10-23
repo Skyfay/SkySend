@@ -9,7 +9,7 @@ src/api.ts      createApiClient: every route of the server, every answer parsed 
 src/upload.ts   uploadEncrypted: keys, encryption, WebSocket or HTTP chunks with CHUNK_WINDOW, metadata
 src/download.ts keysFromLink, decryptUploadMetadata, decryptedStream with the size and base nonce checks
 src/note.ts     createEncryptedNote and openNote: the caller makes the plaintext, the package the rest
-src/links.ts    buildShareLink and parseShareLink, the caller names the types it opens
+src/links.ts    buildShareLink, parseShareLink (the caller names the types it opens), trimTrailingSlashes
 src/request.ts  prepareRequest, briefFits, openRequestLink (a sender's view), newSubmission
 src/inbox.ts    openInboxLink, openInbox, groupBySubmission, readInboxNote, noteTooLarge
 src/names.ts    sanitizeFilename and sanitizeTitle, the web app's rules, the CLI adds the disk's

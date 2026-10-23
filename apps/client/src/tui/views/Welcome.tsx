@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text } from "ink";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { getServers } from "../../lib/config.js";
 import { fetchPublicInstances, type PublicInstance } from "../../lib/instances.js";
 import { formatBytes } from "../../lib/progress.js";
@@ -22,7 +23,7 @@ const LOGO = ["█▀ █▄▀ █▄█ █▀ █▀▀ █▄ █ █▀▄"
 
 /** Accepts what people paste: a bare host gets https://, the result has to be a web address. */
 function serverUrl(input: string): string | null {
-  const trimmed = input.trim().replace(/\/+$/, "");
+  const trimmed = trimTrailingSlashes(input.trim());
   if (!trimmed) return null;
   try {
     const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
@@ -53,7 +54,7 @@ export function WelcomeView({ width, height, onConnect, error, initialUrl }: Wel
   }, []);
 
   const known = new Set(saved.map((s) => s.url));
-  const publics = (instances ?? []).filter((i) => !known.has(i.url.replace(/\/+$/, "")));
+  const publics = (instances ?? []).filter((i) => !known.has(trimTrailingSlashes(i.url)));
   const wide = width >= 90;
 
   const rows: FormRow[] = [];
@@ -86,7 +87,7 @@ export function WelcomeView({ width, height, onConnect, error, initialUrl }: Wel
       kind: "item",
       id: `public:${i.url}`,
       pressHint: "connect",
-      onPress: () => onConnect(i.url.replace(/\/+$/, "")),
+      onPress: () => onConnect(trimTrailingSlashes(i.url)),
       render: (focused) => (
         <Box>
           <Box width={26}><Text color={COLORS.text} bold={focused} wrap="truncate-end">{forTerminal(i.name)}</Text></Box>

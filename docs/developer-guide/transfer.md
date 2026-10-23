@@ -11,7 +11,7 @@ Before this package, the web app and the CLI each had their own copy of the uplo
 | `src/api.ts` | `createApiClient`: every route of the server, every answer parsed with Zod, failures as `ApiError` |
 | `src/upload.ts` | `uploadEncrypted`: keys, encryption, WebSocket or HTTP chunks, metadata at the end, for a share and for a file request |
 | `src/download.ts` | `keysFromLink`, `decryptUploadMetadata`, `decryptedStream`: from the link to the checked plaintext |
-| `src/links.ts` | `buildShareLink` and `parseShareLink`: `<server>/<type>/<id>#<secret>` for a share, a note, a request and an inbox, `/d/<id>` as the old form of a file link |
+| `src/links.ts` | `buildShareLink`, `parseShareLink` and `trimTrailingSlashes`: `<server>/<type>/<id>#<secret>` for a share, a note, a request and an inbox, `/d/<id>` as the old form of a file link |
 | `src/request.ts` | `prepareRequest` and `briefFits` for making a request, `openRequestLink` and `newSubmission` for a sender |
 | `src/inbox.ts` | `openInboxLink`, `openInbox`, `groupBySubmission`, `readInboxNote`: the inbox opened with the key in its link |
 | `src/names.ts` | `sanitizeFilename` and `sanitizeTitle` for names and titles from someone else |

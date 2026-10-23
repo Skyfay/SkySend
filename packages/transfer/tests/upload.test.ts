@@ -173,19 +173,25 @@ async function received(server: ReturnType<typeof fakeServer>, opts: UploadOptio
 }
 
 describe("uploadEncrypted over HTTP chunks", () => {
-  it("uploads what a recipient decrypts, with the base nonce in the metadata", async () => {
-    const data = new Uint8Array(randomData(2_500_000));
-    const server = fakeServer();
-    const opts = options(server, bytesOf(data));
-    const result = await uploadEncrypted(opts);
+  // Real encryption of 2.5 MB, which took ten seconds on a CI runner with coverage beside the
+  // ZIP64 test.
+  it(
+    "uploads what a recipient decrypts, with the base nonce in the metadata",
+    { timeout: 60_000 },
+    async () => {
+      const data = new Uint8Array(randomData(2_500_000));
+      const server = fakeServer();
+      const opts = options(server, bytesOf(data));
+      const result = await uploadEncrypted(opts);
 
-    expect(result).toMatchObject({ kind: "share", id: UPLOAD_ID });
-    if (result.kind !== "share") throw new Error("unreachable");
-    expect(fromBase64url(result.effectiveSecret)).toEqual(opts.secret);
-    const { metadata, data: back } = await received(server, opts);
-    expect(metadata.streamNonce).toMatch(/^[A-Za-z0-9_-]{16}$/);
-    expect(back).toEqual(data);
-  });
+      expect(result).toMatchObject({ kind: "share", id: UPLOAD_ID });
+      if (result.kind !== "share") throw new Error("unreachable");
+      expect(fromBase64url(result.effectiveSecret)).toEqual(opts.secret);
+      const { metadata, data: back } = await received(server, opts);
+      expect(metadata.streamNonce).toMatch(/^[A-Za-z0-9_-]{16}$/);
+      expect(back).toEqual(data);
+    },
+  );
 
   it(
     "waits for a chunk that hangs instead of running into the limit of the server",

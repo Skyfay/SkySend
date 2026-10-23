@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import type { LegacyNoteKind, NOTE_KIND } from "@skysend/note-format";
+import { trimTrailingSlashes } from "./links.js";
 
 // ── Schemas ────────────────────────────────────────────
 
@@ -325,7 +326,7 @@ export interface ApiClientOptions {
 export type UploadTarget = { requestId?: string };
 
 export function createApiClient(options: ApiClientOptions) {
-  const base = options.baseUrl.replace(/\/+$/, "");
+  const base = trimTrailingSlashes(options.baseUrl);
   const doFetch = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
   const url = (path: string) => `${base}${path}`;
   const call = (path: string, init?: RequestInit) => doFetch(url(path), init);

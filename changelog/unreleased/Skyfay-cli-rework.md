@@ -28,6 +28,7 @@
 - **client**: On Windows the CLI opens the browser without `cmd.exe`, which could run a command hidden in the address of a server, and it opens web addresses only.
 - **client**: The login in the browser returns to a random local address only that login knows, so another program or a web page can no longer slip in a session of another account.
 - **client**: `skysend inbox --json` cleans the names inside a zip like every other name a sender wrote.
+- **client**: Slashes at the end of a server address come off in linear time, so a crafted address can no longer hold up the CLI.
 
 ### 🎨 Improvements
 

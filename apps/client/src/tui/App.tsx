@@ -1,5 +1,6 @@
 import React, { Activity, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Box, Text, useApp, useInput, useWindowSize } from "ink";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { apiFor } from "../lib/api.js";
 import { addServer, getServers } from "../lib/config.js";
 import { forTerminal } from "../lib/terminal.js";
@@ -85,7 +86,7 @@ function Shell({ initialServer, initialNoteUrl, setAccentColor }: AppProps & {
 
   /** `remember` saves a server picked on the welcome screen, not one given with --server. */
   const connect = useCallback(async (url: string, remember: boolean) => {
-    const server = url.replace(/\/+$/, "");
+    const server = trimTrailingSlashes(url);
     setConnecting(server);
     setLastTried(server);
     setConnectError(null);

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { writePrivateFile } from "./private-file.js";
 
 export interface ServerEntry {
@@ -55,10 +56,10 @@ export function resetConfig(): void {
  * 4. Legacy top-level server field
  */
 export function resolveServer(flagValue?: string): string {
-  if (flagValue) return flagValue.replace(/\/+$/, "");
+  if (flagValue) return trimTrailingSlashes(flagValue);
 
   const env = process.env["SKYSEND_SERVER"];
-  if (env) return env.replace(/\/+$/, "");
+  if (env) return trimTrailingSlashes(env);
 
   const config = loadConfig();
   if (config.defaultServer) return config.defaultServer;
@@ -90,7 +91,7 @@ export function getServers(): ServerEntry[] {
 export function addServer(name: string, url: string): void {
   const config = loadConfig();
   const servers = config.servers ?? [];
-  const normalized = url.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(url);
   if (servers.some((s) => s.url === normalized)) {
     throw new Error(`Server already exists: ${normalized}`);
   }
@@ -112,7 +113,7 @@ export function removeServer(url: string): void {
 
 export function setDefaultServer(url: string): void {
   const config = loadConfig();
-  saveConfig({ ...config, defaultServer: url.replace(/\/+$/, "") });
+  saveConfig({ ...config, defaultServer: trimTrailingSlashes(url) });
 }
 
 export function getDefaultServer(): string | undefined {
@@ -170,17 +171,17 @@ function writeTokens(tokens: Record<string, string>): void {
 
 export function getStoredToken(serverUrl: string): string | undefined {
   const tokens = loadTokens();
-  return tokens[serverUrl.replace(/\/+$/, "")];
+  return tokens[trimTrailingSlashes(serverUrl)];
 }
 
 export function saveStoredToken(serverUrl: string, token: string): void {
   const tokens = loadTokens();
-  tokens[serverUrl.replace(/\/+$/, "")] = token;
+  tokens[trimTrailingSlashes(serverUrl)] = token;
   writeTokens(tokens);
 }
 
 export function clearStoredToken(serverUrl: string): void {
   const tokens = loadTokens();
-  delete tokens[serverUrl.replace(/\/+$/, "")];
+  delete tokens[trimTrailingSlashes(serverUrl)];
   writeTokens(tokens);
 }

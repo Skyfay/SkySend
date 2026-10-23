@@ -15,9 +15,20 @@ export interface ShareLink<T extends LinkType = LinkType> {
   secret: string;
 }
 
+/**
+ * `text` without the slashes at its end, like an address someone typed as `https://host/`.
+ * A loop and not `/\/+$/`, which tries every slash of a long run again and takes quadratic
+ * time on a run that something else follows.
+ */
+export function trimTrailingSlashes(text: string): string {
+  let end = text.length;
+  while (end > 0 && text.charCodeAt(end - 1) === 47) end--;
+  return text.slice(0, end);
+}
+
 /** Builds a link. A slash at the end of `server` is dropped. */
 export function buildShareLink(server: string, type: LinkType, id: string, secret: string): string {
-  return `${server.replace(/\/+$/, "")}/${type}/${encodeURIComponent(id)}#${secret}`;
+  return `${trimTrailingSlashes(server)}/${type}/${encodeURIComponent(id)}#${secret}`;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildShareLink, parseShareLink } from "../src/links.js";
+import { buildShareLink, parseShareLink, trimTrailingSlashes } from "../src/links.js";
 
 /** What the CLI opens. */
 const parseShareUrl = (url: string) => parseShareLink(url, ["file", "note"]);
@@ -184,5 +184,26 @@ describe("buildShareLink", () => {
     expect(parsed.type).toBe("file");
     expect(parsed.id).toBe("roundtrip-id");
     expect(parsed.secret).toBe("roundtrip-secret");
+  });
+});
+
+describe("trimTrailingSlashes", () => {
+  it("takes every slash off the end and nothing else", () => {
+    expect(trimTrailingSlashes("https://send.example.com/")).toBe("https://send.example.com");
+    expect(trimTrailingSlashes("https://send.example.com///")).toBe("https://send.example.com");
+    expect(trimTrailingSlashes("https://send.example.com/sub/")).toBe(
+      "https://send.example.com/sub",
+    );
+    expect(trimTrailingSlashes("https://send.example.com")).toBe("https://send.example.com");
+    expect(trimTrailingSlashes("///")).toBe("");
+    expect(trimTrailingSlashes("")).toBe("");
+  });
+
+  it("takes linear time on a long run of slashes that something follows", () => {
+    // /\/+$/ tried every slash of such a run again, quadratic in its length.
+    const start = Date.now();
+    expect(trimTrailingSlashes(`https://a${"/".repeat(200_000)}b`)).toHaveLength(200_010);
+    expect(trimTrailingSlashes(`https://a${"/".repeat(200_000)}`)).toBe("https://a");
+    expect(Date.now() - start).toBeLessThan(200);
   });
 });

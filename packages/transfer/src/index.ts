@@ -67,7 +67,7 @@ export type { InboxAccess, OpenedInbox, OpenedUpload } from "./inbox.js";
 export { sanitizeFilename, sanitizeTitle } from "./names.js";
 
 // The links of an instance, with the key in the fragment
-export { buildShareLink, parseShareLink } from "./links.js";
+export { buildShareLink, parseShareLink, trimTrailingSlashes } from "./links.js";
 export type { LinkType, ShareLink } from "./links.js";
 
 // The HTTP API of a server, with every response checked
