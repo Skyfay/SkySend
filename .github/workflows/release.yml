@@ -77,6 +77,8 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          # Always pull the base image, so every release ships the latest Node patch release.
+          pull: true
           push: true
           tags: ${{ env.GHCR_IMAGE }}:${{ github.ref_name }}-${{ matrix.suffix }}
           labels: ${{ steps.meta.outputs.labels }}
