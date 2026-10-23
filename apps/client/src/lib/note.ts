@@ -1,7 +1,6 @@
 import {
   NOTE_KIND,
   findPrivateKey,
-  readNote,
   padNote,
   serializeNote,
   type LegacyNoteKind,
@@ -83,31 +82,20 @@ export function toLegacyNote(block: NoteBlock): { contentType: LegacyNoteKind; p
 }
 
 /**
- * The content type and the plaintext to encrypt for a note of one block. A server that
- * reports noteBlocks gets a note made of blocks, padded to whole blocks so its length does
- * not give away how long a password in it is. An older one gets the legacy format.
+ * The content type and the plaintext to encrypt for a note. A server that reports noteBlocks
+ * gets a note made of blocks, padded to whole blocks so its length does not give away how
+ * long a password in it is. An older one gets the legacy format, which holds one block only.
  */
 export function prepareNote(
-  block: NoteBlock,
+  blocks: readonly NoteBlock[],
   serverTakesBlocks: boolean,
 ): { contentType: typeof NOTE_KIND | LegacyNoteKind; plaintext: string } {
   if (serverTakesBlocks) {
-    return { contentType: NOTE_KIND, plaintext: padNote(serializeNote([block])) };
+    return { contentType: NOTE_KIND, plaintext: padNote(serializeNote(blocks)) };
   }
   // LEGACY(notes-v1): a server before v3 only knows one content type per note.
-  return toLegacyNote(block);
-}
-
-/**
- * Reads a decrypted note. The view is used up by then, and with a limit of one the note is
- * gone, so a note that does not parse is shown as plain text instead of being lost.
- */
-export function readReceivedNote(kind: string, plaintext: string): { blocks: ReadBlock[]; unreadable: boolean } {
-  try {
-    return { blocks: readNote(kind, plaintext), unreadable: false };
-  } catch {
-    return { blocks: [{ type: "text", format: "plain", text: plaintext }], unreadable: true };
-  }
+  if (blocks.length !== 1) throw new Error("This server takes notes of one part only.");
+  return toLegacyNote(blocks[0]!);
 }
 
 /** The file name the TUI suggests when a note is saved. A lone SSH key keeps its own. */

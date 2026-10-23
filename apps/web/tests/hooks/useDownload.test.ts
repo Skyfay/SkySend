@@ -8,6 +8,7 @@ vi.mock("@skysend/crypto", () => ({
   deriveKeys: vi.fn(async () => ({ metaKey: {}, authKey: {} })),
   computeAuthToken: vi.fn(async () => new Uint8Array(32)),
   createDecryptStream: vi.fn(() => new TransformStream()),
+  expectedBaseNonce: vi.fn(() => undefined),
   expectedPlaintextSize: vi.fn((meta: { type: string; size?: number; archiveSize?: number }) =>
     meta.type === "single" ? meta.size : meta.archiveSize,
   ),
@@ -288,6 +289,29 @@ describe("useDownload", () => {
 
     expect(result.current.phase).toBe("needs-password");
     expect(result.current.error).toBe("wrong-password");
+  });
+
+  it("names the missing Argon2id when a password comes without it", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true, encryptedMeta: null, nonce: null, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+    // The real derivation hashes with the function it is given, the stand-in of the hook here.
+    vi.mocked(cryptoMod.deriveKeyFromPassword).mockImplementationOnce(async (password, salt, hash) => ({
+      key: await hash(new TextEncoder().encode(password), salt, { hashLength: 32 } as never),
+    }) as never);
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64", "pw");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Argon2id is required to decrypt password-protected uploads");
+    expect(apiMod.verifyPassword).not.toHaveBeenCalled();
   });
 
   it("download() AbortError → phase='idle'", async () => {
@@ -1264,7 +1288,26 @@ describe("useDownload", () => {
     });
 
     expect(result.current.phase).toBe("done");
-    expect(cryptoMod.createDecryptStream).toHaveBeenCalledWith(undefined, 42);
+    expect(cryptoMod.createDecryptStream).toHaveBeenCalledWith(undefined, 42, undefined);
+  });
+
+  it("download() checks the header of the stream against the base nonce from the metadata", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    const baseNonce = new Uint8Array(12).fill(7);
+    vi.mocked(cryptoMod.expectedBaseNonce).mockReturnValueOnce(baseNonce);
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());
+    vi.mocked(apiMod.downloadFile).mockResolvedValueOnce(threeBytes());
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64");
+    });
+
+    expect(result.current.phase).toBe("done");
+    expect(cryptoMod.createDecryptStream).toHaveBeenCalledWith(undefined, 42, baseNonce);
   });
 
   it("download() hands the archive size to the Service Worker", async () => {

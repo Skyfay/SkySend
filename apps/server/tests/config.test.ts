@@ -517,8 +517,17 @@ describe("config", () => {
       await expect(loadFreshConfig()).rejects.toThrow("OIDC_SESSION_SECRET must be at least 32 characters");
     });
 
-    it("should warn (not throw) when OIDC_ISSUER uses HTTP", async () => {
+    it("should throw when OIDC_ISSUER uses HTTP", async () => {
       process.env.OIDC_ISSUER = "http://provider.example";
+      process.env.OIDC_CLIENT_ID = "client-id";
+      process.env.OIDC_CLIENT_SECRET = "client-secret";
+      process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";
+      await expect(loadFreshConfig()).rejects.toThrow("HTTP instead of HTTPS");
+    });
+
+    it("should warn when OIDC_ISSUER uses HTTP and OIDC_ALLOW_INSECURE_ISSUER is set", async () => {
+      process.env.OIDC_ISSUER = "http://provider.example";
+      process.env.OIDC_ALLOW_INSECURE_ISSUER = "true";
       process.env.OIDC_CLIENT_ID = "client-id";
       process.env.OIDC_CLIENT_SECRET = "client-secret";
       process.env.OIDC_SESSION_SECRET = "a-session-secret-that-is-at-least-32-chars!!";

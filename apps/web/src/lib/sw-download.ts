@@ -117,7 +117,8 @@ export async function ensureSwController(
  * `plaintextSize` is the size from the authenticated metadata. The SW fails the
  * download when the decrypted stream ends up any other size. `tokenHeader` names the
  * header the SW sends the token in: X-Auth-Token for a download, X-Inbox-Token for a
- * file in the inbox of a file request.
+ * file in the inbox of a file request. `baseNonce`, from the authenticated metadata too, is
+ * what the SW checks the header of the stream against.
  */
 export async function streamDownloadViaSw(
   url: string,
@@ -133,6 +134,7 @@ export async function streamDownloadViaSw(
   onS3Info?: () => void,
   plaintextSize?: number,
   tokenHeader: "X-Auth-Token" | "X-Inbox-Token" = "X-Auth-Token",
+  baseNonce?: ArrayBuffer,
 ): Promise<void> {
   const sw = await ensureSwController();
   if (!sw) throw new Error("Service Worker not available");
@@ -182,6 +184,7 @@ export async function streamDownloadViaSw(
       mimeType,
       size: encryptedSize,
       plaintextSize,
+      baseNonce,
     };
     // A message to the worker starts it if the browser stopped it while the page sat open,
     // a BroadcastChannel message does not. The copies over the BroadcastChannel reach a worker

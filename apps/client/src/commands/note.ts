@@ -1,8 +1,7 @@
 import type { Command } from "commander";
-import { encryptNoteContent, toBase64url } from "@skysend/crypto";
-import { fetchConfig, createNote } from "../lib/api.js";
-import { prepareUpload } from "../lib/auth.js";
-import { buildShareUrl } from "../lib/url.js";
+import { buildShareLink, createEncryptedNote } from "@skysend/transfer";
+import { apiFor } from "../lib/api.js";
+import { hashWasmArgon2 } from "../lib/auth.js";
 import { resolveServer } from "../lib/config.js";
 import { ensureOidcAuth } from "../lib/oidc.js";
 import {
@@ -10,6 +9,7 @@ import {
   parseDuration,
   writeLine,
   promptPassword,
+  writeJsonError,
 } from "../lib/progress.js";
 import { ApiError } from "../lib/errors.js";
 import { addNote } from "../lib/history.js";
@@ -49,7 +49,7 @@ export function registerNoteCommand(program: Command): void {
     .action(async (text: string | undefined, options: NoteOptions) => {
       try {
         const server = resolveServer(options.server);
-        const config = await fetchConfig(server);
+        const config = await apiFor(server).fetchConfig();
 
         // Authenticate with OIDC if the server requires it for notes
         let oidcToken: string | undefined;
@@ -91,7 +91,7 @@ export function registerNoteCommand(program: Command): void {
         if (content === "") throw new Error("Note cannot be empty");
 
         // The note is one block. A server from before v3 gets it in the legacy format.
-        const note = prepareNote(textToBlock(contentType, content), config.noteBlocks);
+        const note = prepareNote([textToBlock(contentType, content)], config.noteBlocks);
 
         // Validate size
         const contentBytes = new TextEncoder().encode(note.plaintext);
@@ -136,70 +136,59 @@ export function registerNoteCommand(program: Command): void {
           );
         }
 
-        // Prepare crypto
         if (!options.json) writeLine("Encrypting note...");
-        const creds = await prepareUpload(password);
-
-        // Encrypt note content
-        const encrypted = await encryptNoteContent(note.plaintext, creds.keys.metaKey);
-
-        // Create note
-        const result = await createNote(server, {
-          encryptedContent: toBase64url(encrypted.ciphertext),
-          nonce: toBase64url(encrypted.nonce),
-          salt: toBase64url(creds.salt),
-          ownerToken: creds.ownerTokenB64,
-          authToken: creds.authTokenB64,
+        const shared = await createEncryptedNote({
+          api: apiFor(server, oidcToken),
+          plaintext: note.plaintext,
           contentType: note.contentType,
           maxViews,
           expireSec,
-          hasPassword: creds.hasPassword,
-          passwordSalt: creds.passwordSalt ? toBase64url(creds.passwordSalt) : undefined,
-          passwordAlgo: creds.passwordAlgo,
-        }, oidcToken);
+          password: password ?? "",
+          argon2id: hashWasmArgon2,
+        });
 
         // Build share URL
-        const shareUrl = buildShareUrl(server, "note", result.id, creds.effectiveSecretB64);
+        const shareUrl = buildShareLink(server, "note", shared.id, shared.effectiveSecret);
 
         // Save to history
         addNote({
-          id: result.id,
+          id: shared.id,
           server,
           url: shareUrl,
-          ownerToken: creds.ownerTokenB64,
+          ownerToken: shared.ownerToken,
           contentType,
-          hasPassword: creds.hasPassword,
+          hasPassword: shared.hasPassword,
           createdAt: new Date().toISOString(),
           expireSec,
         });
 
         if (options.json) {
           console.log(JSON.stringify({
-            id: result.id,
+            id: shared.id,
             url: shareUrl,
-            ownerToken: creds.ownerTokenB64,
+            ownerToken: shared.ownerToken,
             type: contentType,
             expires: expireSec,
             maxViews,
-            hasPassword: creds.hasPassword,
+            hasPassword: shared.hasPassword,
           }));
         } else {
           writeLine("");
           writeLine(`Share URL: ${shareUrl}`);
           writeLine(`Type: ${contentType} | Expires: ${formatExpiry(expireSec)} | Views: ${maxViews === 0 ? "unlimited" : maxViews}`);
-          if (creds.hasPassword) writeLine("Password protected: yes");
+          if (shared.hasPassword) writeLine("Password protected: yes");
         }
       } catch (err) {
         if (err instanceof ApiError) {
           if (options.json) {
-            console.error(JSON.stringify({ error: err.message, status: err.status }));
+            writeJsonError({ error: err.message, status: err.status });
           } else {
             console.error(`Error: ${err.message} (HTTP ${err.status})`);
           }
         } else {
           const message = err instanceof Error ? err.message : String(err);
           if (options.json) {
-            console.error(JSON.stringify({ error: message }));
+            writeJsonError({ error: message });
           } else {
             console.error(`Error: ${forTerminal(message)}`);
           }

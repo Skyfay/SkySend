@@ -1,3 +1,5 @@
+import { writeFile } from "node:fs/promises";
+import { cliWithLogin } from "./support/cli.js";
 import { expect, test } from "./support/fixtures.js";
 import {
   downloadFile,
@@ -142,6 +144,40 @@ test.describe("[oidc]", () => {
     guard.secretOf(link);
 
     // Whoever holds the link reads without an account.
+    const recipient = await openRecipient();
+    await recipient.goto(link);
+    const received = await downloadFile(recipient);
+    expect(received.data.equals(file.buffer)).toBe(true);
+  });
+
+  test("the CLI logs in through the browser and sends over the WebSocket", async ({
+    page,
+    baseURL,
+    openRecipient,
+    guard,
+  }, testInfo) => {
+    test.skip(process.platform !== "linux", "The stand-in for the browser opener is xdg-open");
+    const file = randomFile(300_000);
+    guard.text(file.name);
+    guard.content(file.name, file.buffer);
+    const path = testInfo.outputPath(file.name);
+    await writeFile(path, file.buffer);
+
+    // The CLI prints the login address, the page logs in there, the server sends the session
+    // back to the CLI on 127.0.0.1, and the CLI sends it with the WebSocket handshake.
+    const home = testInfo.outputPath("home");
+    const sent = await cliWithLogin(["upload", path, "--server", baseURL!], home, async (url) => {
+      await page.goto(url);
+      await page.locator('input[name="login"]').fill("e2e-cli-user");
+      await page.locator('input[name="password"]').fill("any-password");
+      await page.getByRole("button", { name: "Sign-in" }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expect(page.getByText("Login successful")).toBeVisible();
+    });
+    const link = String(sent.url);
+    guard.secretOf(link);
+    expect(sent.transport).toBe("ws");
+
     const recipient = await openRecipient();
     await recipient.goto(link);
     const received = await downloadFile(recipient);

@@ -9,6 +9,9 @@
 // the browser downloads from the bucket. Both are plain TCP relays, so they change nothing on the
 // wire. The page records the progress the upload worker reports, which is what the UI shows.
 //
+// With --client cli the end-user CLI takes the place of the browser: the same server, relays and
+// sampler, the CLI process measured where the browser would be.
+//
 // Build first (pnpm test:e2e:build), then for example:
 //   node e2e/bench/transfer.mjs --browser firefox --storage s3 --size 2048
 // See e2e/bench/README.md for every option.
@@ -18,6 +21,7 @@ import { createHash, randomFillSync } from "node:crypto";
 import {
   createReadStream,
   existsSync,
+  linkSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -76,6 +80,13 @@ const { values: opts } = parseArgs({
     // The browser talks to the server directly, without proxy A, which runs in this process
     // and could be the limit itself. Upload speeds then come from the worker alone.
     direct: { type: "boolean", default: false },
+    // "cli" runs the end-user CLI instead of a browser, the binary of --cli-bin.
+    client: { type: "string", default: "web" },
+    // The Bun binary people install, which `pnpm client:compile` writes. `node dist/index.js`
+    // would measure Node instead.
+    "cli-bin": { type: "string", default: "apps/client/dist/skysend" },
+    // Sends this many files of --size at once, which the app and the CLI pack into one zip.
+    files: { type: "string", default: "1" },
   },
 });
 
@@ -92,6 +103,10 @@ function s3FromEnvFile(file) {
   return { STORAGE_BACKEND: "s3", ...env };
 }
 
+if (!["web", "cli"].includes(opts.client)) throw new Error("--client must be web or cli");
+const CLI = opts.client === "cli";
+if (CLI && (opts.uploads || opts.downloads || Number(opts.parallel) > 1 || opts["cancel-after"]))
+  throw new Error("--client cli runs one upload and its download only");
 const engines = { chromium, firefox, webkit };
 const engine = engines[opts.browser];
 if (!engine) throw new Error(`--browser must be one of ${Object.keys(engines).join(", ")}`);
@@ -99,6 +114,10 @@ if (!["fs", "s3"].includes(opts.storage)) throw new Error("--storage must be fs 
 if (!["ws", "http"].includes(opts.transport)) throw new Error("--transport must be ws or http");
 
 const SIZE = Number(opts.size) * MIB;
+const FILES = Number(opts.files);
+if (!Number.isInteger(FILES) || FILES < 1) throw new Error("--files must be a whole number from 1");
+/** What one upload sends, all files together. */
+const TOTAL = SIZE * FILES;
 const BASE = Number(opts.port);
 const PORTS = { proxyA: BASE, server: BASE + 1, proxyB: BASE + 2, s3: BASE + 3 };
 if (opts.proxy && opts.proxy !== "nginx") throw new Error("--proxy must be nginx");
@@ -109,7 +128,7 @@ const ORIGIN = opts.proxy
 const BUCKET = "skysend-bench";
 const label =
   opts.label ??
-  `${opts.browser}-${opts.storage}${opts.storage === "s3" ? `-${opts.s3}` : ""}-${opts.transport}-${opts.size}m`;
+  `${CLI ? "cli" : opts.browser}-${opts.storage}${opts.storage === "s3" ? `-${opts.s3}` : ""}-${opts.transport}-${opts.size}m${FILES > 1 ? `x${FILES}` : ""}`;
 
 const cleanups = [];
 async function cleanup() {
@@ -140,6 +159,50 @@ async function sourceFile(size) {
   const sha256 = hash.digest("hex");
   writeFileSync(sidecar, sha256);
   return { path, sha256 };
+}
+
+/**
+ * The files one upload sends. Several are hard links to the one source file under names of their
+ * own, so they cost no disk and the zip gets distinct names.
+ */
+async function sourceFiles(size, count) {
+  const source = await sourceFile(size);
+  if (count === 1) return { ...source, paths: [source.path] };
+  const dir = join(WORK, `multi-${size}`);
+  mkdirSync(dir, { recursive: true });
+  const paths = [];
+  for (let i = 1; i <= count; i++) {
+    const path = join(dir, `part-${i}.bin`);
+    if (!existsSync(path)) linkSync(source.path, path);
+    paths.push(path);
+  }
+  return { ...source, paths };
+}
+
+/**
+ * Whether a download is what was sent: the file itself, or for several files a zip whose every
+ * entry has the hash of the source. Python's zipfile reads ZIP64 the way unzip tools do.
+ */
+async function downloadIntact(path, source) {
+  if (FILES === 1) return (await hashFile(path)) === source.sha256;
+  const check = [
+    "import hashlib, sys, zipfile",
+    "z = zipfile.ZipFile(sys.argv[1])",
+    "names = z.namelist()",
+    "ok = len(names) == int(sys.argv[3])",
+    "for n in names:",
+    "    h = hashlib.sha256()",
+    "    with z.open(n) as f:",
+    "        for b in iter(lambda: f.read(8 << 20), b''): h.update(b)",
+    "    ok = ok and h.hexdigest() == sys.argv[2]",
+    "print('ok' if ok else 'bad')",
+  ].join("\n");
+  try {
+    const out = execFileSync("python3", ["-c", check, path, source.sha256, String(FILES)]);
+    return out.toString().trim() === "ok";
+  } catch {
+    return false;
+  }
 }
 
 async function hashFile(path) {
@@ -397,7 +460,8 @@ function startSampler(counters, serverPid) {
   let tree = browserTree(serverPid);
   let treeAge = 0;
   const sample = () => {
-    if (++treeAge >= 8) {
+    // A browser keeps its processes, a CLI is a new process per command and has to be found at once.
+    if (++treeAge >= (CLI ? 1 : 8)) {
       tree = browserTree(serverPid);
       treeAge = 0;
     }
@@ -719,7 +783,7 @@ async function singleTransfer(browser, source, result, sampler, counters) {
     ),
   );
   await page.goto(`${ORIGIN}/`);
-  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles(source.path);
+  await page.locator('input[type="file"]:not([webkitdirectory])').setInputFiles(source.paths);
   const uploadStart = Date.now();
   await page.getByRole("button", { name: "Encrypt and upload" }).click();
   const uploadShot = screenshotAtHalf(page, "upload");
@@ -762,7 +826,7 @@ async function singleTransfer(browser, source, result, sampler, counters) {
   const firstProgress = progress[0];
   result.upload = {
     seconds: (uploadEnd - uploadStart) / 1000,
-    mibPerSecond: Math.round((SIZE / MIB / ((uploadEnd - uploadStart) / 1000)) * 10) / 10,
+    mibPerSecond: Math.round((TOTAL / MIB / ((uploadEnd - uploadStart) / 1000)) * 10) / 10,
     transport: events.find((e) => e.type === "transport")?.transport,
     // From the click to the first byte the worker reports: keys, the socket, the session.
     startupSeconds: firstProgress ? (firstProgress.t - uploadStart) / 1000 : null,
@@ -781,7 +845,7 @@ async function singleTransfer(browser, source, result, sampler, counters) {
   result.upload.cost = cost(sampler.samples, uploadStart, uploadEnd);
   // The progress the worker reported, as [time, bytes], for timeline.mjs.
   result.upload.shown = {
-    ...shownSummary(shownUpload, uploadStart, uploadEnd, SIZE / MIB / ((uploadEnd - uploadStart) / 1000)),
+    ...shownSummary(shownUpload, uploadStart, uploadEnd, TOTAL / MIB / ((uploadEnd - uploadStart) / 1000)),
     average: shownAverage,
   };
   result.upload.screenshot = await finishedShot(uploadShot);
@@ -843,7 +907,7 @@ async function singleTransfer(browser, source, result, sampler, counters) {
       (await page2.locator("main").innerText()).match(/Ø\s*[\d.]+\s*[KMG]?B\/s/)?.[0] ?? null;
     result.download = {
       seconds: (downloadEnd - downloadStart) / 1000,
-      mibPerSecond: Math.round((SIZE / MIB / ((downloadEnd - downloadStart) / 1000)) * 10) / 10,
+      mibPerSecond: Math.round((TOTAL / MIB / ((downloadEnd - downloadStart) / 1000)) * 10) / 10,
       // Closing the sender, loading the link and the Download button showing up.
       steps: {
         closeSender: (closeEnd - closeStart) / 1000,
@@ -857,19 +921,92 @@ async function singleTransfer(browser, source, result, sampler, counters) {
           shownDownload,
           downloadStart,
           downloadEnd,
-          SIZE / MIB / ((downloadEnd - downloadStart) / 1000),
+          TOTAL / MIB / ((downloadEnd - downloadStart) / 1000),
         ),
         average: shownDownloadAverage,
       },
       screenshot: await finishedShot(downloadShot),
       cost: cost(sampler.samples, downloadStart, downloadEnd),
     };
-    if (!opts["no-verify"]) {
-      result.download.intact = (await hashFile(path)) === source.sha256;
-    }
+    if (!opts["no-verify"]) result.download.intact = await downloadIntact(path, source);
     await download.delete();
     await recipient.close();
   }
+}
+
+/** Runs the CLI with --json and returns what it printed, with the times it started and ended. */
+function runCli(args, home) {
+  const start = Date.now();
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(resolve(ROOT, opts["cli-bin"]), [...args, "--json"], {
+      env: {
+        ...process.env,
+        HOME: home,
+        XDG_CONFIG_HOME: join(home, "config"),
+        // The Nginx of --proxy has a self-signed certificate.
+        ...(opts.proxy ? { NODE_TLS_REJECT_UNAUTHORIZED: "0" } : {}),
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (data) => (stdout += data));
+    child.stderr.on("data", (data) => (stderr += data));
+    const timer = setTimeout(() => child.kill("SIGKILL"), 60 * 60_000);
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      const end = Date.now();
+      if (code !== 0) {
+        reject(new Error(`skysend ${args[0]} exited with ${code}: ${stderr.slice(-2000)}`));
+        return;
+      }
+      resolveRun({ json: JSON.parse(stdout.trim().split("\n").at(-1)), start, end });
+    });
+  });
+}
+
+/**
+ * One upload and its download with the CLI. The CLI is a child of this process like a browser,
+ * so the sampler counts its CPU and memory where it counts the browser's.
+ */
+async function cliTransfer(source, result, sampler, counters) {
+  const home = join(WORK, "cli-home");
+  rmSync(home, { recursive: true, force: true });
+  mkdirSync(home, { recursive: true });
+  cleanups.push(() => rmSync(home, { recursive: true, force: true }));
+  const firstByte = (key, from, before) =>
+    sampler.samples.find((s) => s.t >= from && s[key] > before)?.t;
+  const mibPerSecond = (from, to) => Math.round((TOTAL / MIB / ((to - from) / 1000)) * 10) / 10;
+
+  const sentBefore = counters.a.up;
+  const noWs = opts.transport === "http" ? ["--no-ws"] : [];
+  const up = await runCli(["upload", ...source.paths, "--server", ORIGIN, ...noWs], home);
+  const firstUp = firstByte("aUp", up.start, sentBefore);
+  result.upload = {
+    transport: up.json.transport,
+    seconds: (up.end - up.start) / 1000,
+    mibPerSecond: mibPerSecond(up.start, up.end),
+    // From the start of the process to the first byte on the wire: startup, keys, the session.
+    startupSeconds: firstUp ? (firstUp - up.start) / 1000 : null,
+    wireRate1s: stats(rates(sampler.samples, "aUp", up.start, up.end, 1000)),
+    wireRate250ms: stats(rates(sampler.samples, "aUp", up.start, up.end, 250)),
+    s3Rate1s: counters.b ? stats(rates(sampler.samples, "bUp", up.start, up.end, 1000)) : undefined,
+    cost: cost(sampler.samples, up.start, up.end),
+    wireBytes: { a: counters.a.up, b: counters.b?.up },
+    connections: { a: counters.a.connections, b: counters.b?.connections },
+  };
+
+  if (opts["no-download"]) return;
+  const down = await runCli(["download", up.json.url, "--output", join(WORK, "downloads")], home);
+  const key = opts.storage === "s3" ? (counters.b ? "bDown" : null) : "aDown";
+  result.download = {
+    seconds: (down.end - down.start) / 1000,
+    mibPerSecond: mibPerSecond(down.start, down.end),
+    wireRate1s: key ? stats(rates(sampler.samples, key, down.start, down.end, 1000)) : null,
+    cost: cost(sampler.samples, down.start, down.end),
+  };
+  if (!opts["no-verify"]) result.download.intact = await downloadIntact(down.json.file, source);
+  rmSync(down.json.file, { force: true });
 }
 
 /** The channel a browser is launched with: the full Chromium unless --channel says otherwise. */
@@ -1093,7 +1230,7 @@ async function parallelUploads(browser, source, count, result, sampler) {
 }
 
 async function main() {
-  const source = await sourceFile(SIZE);
+  const source = await sourceFiles(SIZE, FILES);
   const counters = { a: null, b: null };
   let storageEnv = {};
   let store = null;
@@ -1137,16 +1274,22 @@ async function main() {
   rmSync(downloads, { recursive: true, force: true });
   mkdirSync(downloads, { recursive: true });
   cleanups.push(() => rmSync(downloads, { recursive: true, force: true }));
-  const channel = launchChannel();
-  const browser = await engine.launch({ ...launchOptions(), downloadsPath: downloads });
-  cleanups.push(() => browser.close());
+  const channel = CLI ? undefined : launchChannel();
+  const browser = CLI
+    ? null
+    : await engine.launch({ ...launchOptions(), downloadsPath: downloads });
+  if (browser) cleanups.push(() => browser.close());
   const sampler = startSampler(counters, server.child.pid);
 
   const result = {
     label,
-    browser: opts.browser,
+    client: opts.client,
+    browser: CLI ? undefined : opts.browser,
     channel,
-    version: browser.version(),
+    version: CLI
+      ? execFileSync(resolve(ROOT, opts["cli-bin"]), ["--version"]).toString().trim()
+      : browser.version(),
+    files: FILES,
     storage: opts.storage,
     s3: opts.storage === "s3" ? opts.s3 : undefined,
     executable: opts.executable,
@@ -1161,6 +1304,7 @@ async function main() {
       await mixedTransfers(browser, source, uploads, Number(opts.downloads ?? 0), result, sampler);
     } else if (Number(opts.parallel) > 1)
       await parallelUploads(browser, source, Number(opts.parallel), result, sampler);
+    else if (CLI) await cliTransfer(source, result, sampler, counters);
     else await singleTransfer(browser, source, result, sampler, counters);
   } finally {
     sampler.stop();
@@ -1168,7 +1312,7 @@ async function main() {
     // Drops the request log lines. startsWith, since CodeQL reads /^-->/ as HTML filtering.
     const notRequest = (line) => !line.startsWith("<--") && !line.startsWith("-->");
     result.serverLog = server.log.filter(notRequest).slice(-50);
-    await browser.close().catch(() => {});
+    await browser?.close().catch(() => {});
     // Aborts run after the socket closed, so the cleanup gives them a moment first.
     if (realBucket) result.s3Leftovers = await cleanBucket();
     if (store) {

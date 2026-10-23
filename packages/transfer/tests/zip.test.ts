@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { crc32 as zlibCrc32 } from "node:zlib";
 import { randomBytes } from "node:crypto";
 import { unzipSync } from "fflate";
-import { crc32, zipSize, zipStream, type ZipEntry } from "../../src/lib/zip.js";
+import { crc32, zipSize, zipStream, type ZipEntry } from "../src/zip.js";
 
 /** An entry whose stream hands out `data` in pieces of `piece` bytes. */
 function entry(name: string, data: Uint8Array, piece = 1000): ZipEntry {

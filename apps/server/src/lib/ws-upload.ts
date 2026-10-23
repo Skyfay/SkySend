@@ -148,6 +148,8 @@ interface Session<M> {
   /** Start of the current progress window and the bytes received when it began. */
   windowStart: number;
   windowBytes: number;
+  /** When the last whole message arrived, or the session was last held back. */
+  lastMessageAt: number;
   progressTimer: ReturnType<typeof setInterval> | null;
   /** Writes out a buffer that sat below the flush threshold, see FLUSH_DELAY_MS. */
   flushTimer: ReturnType<typeof setTimeout> | null;
@@ -170,6 +172,26 @@ const FLUSH_DELAY_MS = 1000;
 
 /** How long a connection may stay open before it sends its init. */
 const INIT_TIMEOUT_MS = 30_000;
+
+/**
+ * The largest message the server accepts. The web app and the CLI send upload frames of
+ * 256 KiB. ws holds a message in its own buffer until all of it arrived, before onMessage and
+ * so before WsBufferMemory sees a byte, so this is what a sender that stops inside a frame
+ * holds outside the budget. Its default of 100 MiB, and the 1 MiB used before, were far more
+ * than a frame needs.
+ */
+export const WS_MAX_PAYLOAD = 320 * 1024;
+
+/**
+ * A receiving session that completes no message for this long is ended. A frame of 256 KiB
+ * fits into it at the slowest rate the progress rule allows (MIN_PROGRESS_BYTES per
+ * PROGRESS_WINDOW_MS), so no sender the progress rule lets through is cut off. Without it, a
+ * sender that stopped inside a frame kept that frame in memory for the whole progress window.
+ */
+export const FRAME_STALL_MS = Math.ceil((PROGRESS_WINDOW_MS * (256 * 1024)) / MIN_PROGRESS_BYTES);
+
+/** How often a receiving session is checked for progress and stalled frames. */
+const PROGRESS_CHECK_MS = 30_000;
 
 export interface WsUploadDeps {
   storage: StorageBackend;
@@ -510,6 +532,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             clientGone: false,
             windowStart: Date.now(),
             windowBytes: 0,
+            lastMessageAt: Date.now(),
             progressTimer: null,
             flushTimer: null,
           };
@@ -522,6 +545,12 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             }
             if (started.stage !== "receiving") return;
             const now = Date.now();
+            // Time the server holds the socket back is no stall of the sender.
+            if (started.paused) started.lastMessageAt = now;
+            if (now - started.lastMessageAt > FRAME_STALL_MS) {
+              fail(ws, started, "Upload timed out", 1008);
+              return;
+            }
             if (now - started.windowStart < PROGRESS_WINDOW_MS) return;
             // A window in which the server held the socket back says nothing about the sender.
             if (started.paused || started.heldInWindow) {
@@ -538,7 +567,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
             }
             started.windowStart = now;
             started.windowBytes = started.bytesReceived;
-          }, 60_000);
+          }, PROGRESS_CHECK_MS);
           started.progressTimer.unref?.();
           sessions.set(ws, session);
           sendJson(ws, { type: "ready", id });
@@ -551,6 +580,7 @@ export function createWsUploadHandler<M>(deps: WsUploadDeps, target: WsUploadTar
 
         // ── After init ──────────────────────────────────
         if (session.stage === "closed") return;
+        session.lastMessageAt = Date.now();
 
         if (typeof data === "string") {
           // Finalize message

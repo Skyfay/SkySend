@@ -100,6 +100,19 @@ environment:
 Open `{your-issuer}/.well-known/openid-configuration` in a browser. If you get a JSON document with an `authorization_endpoint` field, the URL is correct. SkySend reads this document automatically at login time.
 :::
 
+## Local Testing Without HTTPS
+
+If you are using a `localhost` issuer without HTTPS, set `OIDC_ALLOW_INSECURE_ISSUER` to `true`. This variable is only for testing; issuers in production should use HTTPS.
+
+```yaml
+environment:
+  OIDC_PROVIDER: generic
+  OIDC_ISSUER: "http://localhost:8000"
+  OIDC_ALLOW_INSECURE_ISSUER: "true"
+  OIDC_CLIENT_ID: "your-client-id"
+  OIDC_CLIENT_SECRET: "your-client-secret"
+```
+
 ## Partial Protection
 
 You can require login for one service type while allowing anonymous access to the other:

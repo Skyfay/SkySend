@@ -23,6 +23,7 @@
   "references": [
     { "path": "packages/crypto" },
     { "path": "packages/note-format" },
+    { "path": "packages/transfer" },
     { "path": "apps/server" },
     { "path": "apps/web" },
     { "path": "apps/cli" },

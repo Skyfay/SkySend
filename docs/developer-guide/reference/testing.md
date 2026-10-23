@@ -26,6 +26,17 @@ cd apps/server && pnpm test
 | `util.test.ts` | Base64url encoding, constant-time comparison, byte utilities |
 | `integration.test.ts` | Full encrypt-decrypt roundtrip |
 
+### Transfer Tests (`packages/transfer/tests/`)
+
+| File | Tests |
+| --- | --- |
+| `zip.test.ts` | The zip against `node:zlib` and fflate, ZIP64 past 4 GiB |
+| `archive.test.ts` | Metadata of several files, its size check, unique names |
+| `upload.test.ts` | Both transports against a fake server, the fallback, the chunk window |
+| `download.test.ts` | Keys from a link, the checks of size and base nonce |
+
+See [Transfer Core](/developer-guide/transfer).
+
 ### Server Tests (`apps/server/tests/`)
 
 | File | Tests |
@@ -148,16 +159,24 @@ Three checks run wherever a test shares, uploads or downloads:
 | `my-links.spec.ts` | Shares and requests show in My Links, open from there and are deleted there |
 | `templates.spec.ts` | A template saved from the form starts a request, a sealed templates link moves one to another browser |
 | `mobile.spec.ts` | Sharing through the sheets of a phone screen, and no page wider than the screen |
-| `config.spec.ts` | Forced passwords, a single enabled service, a cancelled upload, sharing behind an OIDC login |
+| `config.spec.ts` | Forced passwords, a single enabled service, a cancelled upload, sharing behind an OIDC login, and the CLI logging in through the browser to send over the WebSocket |
 | `crafted-note.spec.ts` | A note full of markup that would run, load or restyle shows inert in every engine, checked in the rendered page |
 | `large.spec.ts` | A file of 5 GiB up and down byte for byte, in a job of its own, see below |
-| `cli.spec.ts` | The CLI and the browser open each other's shares, with a password both ways, and a note made in the CLI |
+| `cli.spec.ts` | The CLI and the browser open each other's shares, with a password both ways, a zip of several files both ways, a folder from the CLI, a note made in the CLI, and the checks of the stream nonce |
+| `cli-requests.spec.ts` | The CLI sends files and a folder into a request made in the browser, stops at a full request and at one that asks for a note, and lists and saves an inbox a browser sent to, with and without a password |
 | `guard.spec.ts` | The recording of the proxy sees headers, bodies and WebSocket frames |
 | `transport.spec.ts` | The page arrives over HTTP/1.1 or HTTP/2 as its setup promises, and an upload takes its transport |
 | `service-worker.spec.ts` | The download Service Worker controls no page, a registration of an older release for the whole origin is replaced and downloads still take tier 1, and a download without a Service Worker goes through OPFS |
 | `compat.spec.ts` | Every link of an older release still opens after an update, see below |
 
-The **E2E Tests** jobs in `.github/workflows/validate.yml` run them on pull requests, one job per browser. A pull request into `dev` that changes nothing they build, run or read skips them, like one that only touches the website, the Workers or other docs. The **Changes** job decides that from the changed files in a few seconds. Pull requests into `main`, the release and a run started by hand always run them. `E2E_BROWSER` picks the engine, and a run then starts only the servers, proxies and containers that engine's projects need, so the Firefox job never pulls the S3 store. The same works locally, like `E2E_BROWSER=webkit pnpm test:e2e`, or with a list like `chromium,webkit`. When a job fails, its report with screenshots, videos and traces is attached to the run as the `e2e-report-<browser>` artifact. A trace opens with `pnpm --filter @skysend/e2e exec playwright show-trace <trace.zip>`.
+The CLI tests run the CLI built with Node by default. `E2E_CLI=binary` runs them against the Bun binary instead, which is what people install, so run that before a change to the CLI is done:
+
+```bash
+pnpm client:compile
+E2E_CLI=binary E2E_BROWSER=chromium pnpm test:e2e tests/cli.spec.ts tests/cli-requests.spec.ts tests/config.spec.ts
+```
+
+The **E2E Tests** jobs in `.github/workflows/validate.yml` run them on pull requests, one job per browser. A pull request into `dev` that changes nothing they build, run or read skips them, like one that only touches the website, the Workers or other docs. The **Changes** job decides that from the changed files in a few seconds. Pull requests into `main`, the release and a run started by hand always run them. `E2E_BROWSER` picks the engine, and a run then starts only the servers, proxies and containers that engine's projects need, so the Firefox job never pulls the S3 store. Each job keeps its browser in the cache of the Playwright version, and `e2e/scripts/install-browser.sh` cuts the install of its system libraries off after eight minutes and starts it again up to three times, since the Ubuntu mirror of the runners sometimes delivers them at a crawl. The same works locally, like `E2E_BROWSER=webkit pnpm test:e2e`, or with a list like `chromium,webkit`. When a job fails, its report with screenshots, videos and traces is attached to the run as the `e2e-report-<browser>` artifact. A trace opens with `pnpm --filter @skysend/e2e exec playwright show-trace <trace.zip>`.
 
 ### A file of 5 GiB
 

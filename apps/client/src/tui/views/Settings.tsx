@@ -1,161 +1,96 @@
 import React, { useState } from "react";
-import { Box, Text } from "ink";
-import { SelectList, type SelectItem } from "../components/SelectList.js";
-import { TextPrompt } from "../components/TextPrompt.js";
+import { Text } from "ink";
 import {
-  getServers, addServer, removeServer, setDefaultServer, getDefaultServer,
-  getWebSocket,
+  getServers, removeServer, setDefaultServer, getDefaultServer, getWebSocket, setWebSocket,
 } from "../../lib/config.js";
+import { forTerminal } from "../../lib/terminal.js";
 import type { AppState } from "../types.js";
+import { COLORS } from "../theme.js";
+import { useFocus, useRoom } from "../shell.js";
+import { Faint, Gap, Panel } from "../components/Frame.js";
+import { Form, type FormRow } from "../components/Form.js";
 
 interface SettingsViewProps {
   appState: AppState;
   onBack: () => void;
+  onError: (msg: string) => void;
   onServerChange: () => void;
 }
 
-type Phase = "menu" | "add-url" | "add-name" | "manage" | "server-actions";
-
-export function SettingsView({ appState, onBack }: SettingsViewProps): React.ReactElement {
-  const [phase, setPhase] = useState<Phase>("menu");
-  const [newUrl, setNewUrl] = useState("");
-  const [, setRefreshKey] = useState(0);
-  const [selectedServerUrl, setSelectedServerUrl] = useState<string | null>(null);
+/** The Settings tab: the server, the one to start with, WebSocket uploads, the saved servers. */
+export function SettingsView({ appState, onServerChange }: SettingsViewProps): React.ReactElement {
+  const { width, height } = useRoom();
+  const { active, toTabs } = useFocus();
+  const [, setVersion] = useState(0);
+  const [note, setNote] = useState<string | null>(null);
   const servers = getServers();
   const defaultUrl = getDefaultServer();
+  const serverWs = appState.config.fileUploadWs;
+  const clientWs = getWebSocket(appState.server);
+  const refresh = () => setVersion((v) => v + 1);
+  const host = new URL(appState.server).host;
 
-  const serverWsEnabled = appState.config.fileUploadWs;
-  // getWebSocket is always false while WebSocket uploads are globally disabled
-  const clientWsEnabled = getWebSocket(appState.server);
-
-  if (phase === "add-url") {
-    return (
-      <TextPrompt
-        label="Server URL"
-        placeholder="https://send.example.com"
-        onSubmit={(url) => {
-          setNewUrl(url.replace(/\/+$/, ""));
-          setPhase("add-name");
-        }}
-        onCancel={() => setPhase("menu")}
-        validate={(val) => {
-          try { new URL(val); return true; } catch { return "Invalid URL"; }
-        }}
-      />
-    );
-  }
-
-  if (phase === "add-name") {
-    const urlObj = new URL(newUrl);
-    return (
-      <TextPrompt
-        label="Server name"
-        defaultValue={urlObj.hostname}
-        onSubmit={(name) => {
-          try { addServer(name, newUrl); } catch { /* exists */ }
-          setRefreshKey((k) => k + 1);
-          setPhase("menu");
-        }}
-        onCancel={() => setPhase("menu")}
-      />
-    );
-  }
-
-  if (phase === "manage") {
-    const items: Array<SelectItem<string>> = servers.map((s) => ({
-      label: `${s.name}${s.url === defaultUrl ? " (default)" : ""}`,
-      value: s.url,
-      description: s.url,
-    }));
-    items.push({ label: "Add server", value: "__add__" });
-    items.push({ label: "Back", value: "__back__" });
-
-    return (
-      <Box flexDirection="column">
-        <SelectList
-          items={items}
-          title="Manage servers"
-          onSelect={(url) => {
-            if (url === "__back__") { setPhase("menu"); return; }
-            if (url === "__add__") { setPhase("add-url"); return; }
-            setSelectedServerUrl(url);
-            setPhase("server-actions");
-          }}
-          onCancel={() => setPhase("menu")}
-        />
-      </Box>
-    );
-  }
-
-  if (phase === "server-actions" && selectedServerUrl) {
-    const entry = servers.find((s) => s.url === selectedServerUrl);
-    const isDefault = selectedServerUrl === defaultUrl;
-    const isActive = selectedServerUrl === appState.server;
-
-    const items: Array<SelectItem<string>> = [];
-    if (!isDefault) {
-      items.push({ label: "Set as default", value: "set-default" });
-    }
-    items.push({
-      label: "Delete server",
-      value: "delete",
-      description: isActive ? "Currently connected" : undefined,
-    });
-    items.push({ label: "Back", value: "__back__" });
-
-    return (
-      <Box flexDirection="column">
-        <SelectList
-          items={items}
-          title={`Server: ${entry?.name ?? selectedServerUrl}`}
-          onSelect={(action) => {
-            if (action === "__back__") { setPhase("manage"); return; }
-            if (action === "set-default") {
-              setDefaultServer(selectedServerUrl);
-              setRefreshKey((k) => k + 1);
-              setPhase("manage");
-            } else if (action === "delete") {
-              removeServer(selectedServerUrl);
-              setSelectedServerUrl(null);
-              setRefreshKey((k) => k + 1);
-              setPhase("manage");
-            }
-          }}
-          onCancel={() => setPhase("manage")}
-        />
-      </Box>
-    );
-  }
-
-  // serverWsEnabled and clientWsEnabled are kept for future use once the
-  // WebSocket issue is resolved.
-  void serverWsEnabled;
-  void clientWsEnabled;
-
-  const items: Array<SelectItem<string>> = [
-    { label: "Add server", value: "add" },
-    { label: "Manage servers", value: "manage", description: `${servers.length} server(s)` },
-    { label: "Back", value: "back" },
+  const rows: FormRow[] = [
+    { kind: "section", label: `Connected to ${host}` },
+    { kind: "button", id: "switch", label: "Switch to another server", onPress: onServerChange },
+    {
+      kind: "choice",
+      id: "start",
+      label: "Start with",
+      value: forTerminal(servers.find((s) => s.url === defaultUrl)?.name ?? defaultUrl ?? "the first one you pick"),
+      onChange: (by) => {
+        if (servers.length === 0) return;
+        const now = Math.max(0, servers.findIndex((s) => s.url === defaultUrl));
+        setDefaultServer(servers[(now + by + servers.length) % servers.length]!.url);
+        refresh();
+      },
+    },
+    {
+      kind: "choice",
+      id: "ws",
+      label: "Fast uploads",
+      value: !serverWs ? "not offered by this server" : clientWs ? "on, over WebSocket" : "off, over plain HTTP",
+      onChange: () => {
+        if (!serverWs) {
+          setNote("This server does not offer WebSocket uploads.");
+          return;
+        }
+        setWebSocket(appState.server, !clientWs);
+        refresh();
+      },
+    },
+    { kind: "note", content: <Faint>Turn fast uploads off when a proxy in between breaks them. Only for {forTerminal(host)}.</Faint> },
+    { kind: "section", label: "Saved servers" },
+    ...servers.map((s): FormRow => ({
+      kind: "item",
+      id: `server:${s.url}`,
+      onRemove: () => {
+        if (s.url === appState.server) {
+          setNote("That is the server you are connected to. Switch to another one first.");
+          return;
+        }
+        removeServer(s.url);
+        setNote(null);
+        refresh();
+      },
+      removeHint: "forget it",
+      render: (focused) => (
+        <Text wrap="truncate-end">
+          <Text color={COLORS.text} bold={focused}>{forTerminal(s.name)}</Text>
+          <Text color={COLORS.muted}>   {forTerminal(s.url)}</Text>
+          <Text color={COLORS.faint}>{s.url === appState.server ? "   connected" : ""}{s.url === defaultUrl ? "   starts with" : ""}</Text>
+        </Text>
+      ),
+    })),
+    ...(servers.length === 0 ? [{ kind: "note" as const, content: <Faint>None yet. A server you pick is saved here.</Faint> }] : []),
+    ...(note ? [{ kind: "note" as const, content: <Text color={COLORS.danger}>{note}</Text> }] : []),
   ];
 
   return (
-    <Box flexDirection="column">
-      <SelectList
-        items={items}
-        title="Settings"
-        onSelect={(val) => {
-          if (val === "add") setPhase("add-url");
-          else if (val === "manage") setPhase("manage");
-          else onBack();
-        }}
-        onCancel={onBack}
-      />
-      {/* WebSocket uploads are globally disabled due to known connection issues
-          with HTTPS servers - large file transfers fail mid-transfer.
-          HTTP chunked upload is used instead until the root cause is fixed. */}
-      <Box marginX={2} marginTop={1}>
-        <Text dimColor>WebSocket upload: Off (globally disabled - HTTP chunked upload is used)</Text>
-      </Box>
-    </Box>
+    <Panel width={width}>
+      <Gap />
+      <Form rows={rows} active={active} height={Math.max(6, height - 4)} onExit={toTabs} exitHint="tabs" labelWidth={14} />
+      <Gap />
+    </Panel>
   );
 }

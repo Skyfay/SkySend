@@ -22,7 +22,7 @@
  * - Base nonce is random per encryption to prevent nonce reuse
  */
 
-import { asBytes, nonceXorCounter, randomBytes } from "./util.js";
+import { asBytes, constantTimeEqual, nonceXorCounter, randomBytes } from "./util.js";
 
 /** TypeScript 6 Uint8Array with any buffer backing. */
 type AnyBytes = Uint8Array<ArrayBufferLike>;
@@ -49,13 +49,21 @@ const MAX_RECORDS = 0xffffffff;
  * Output: Uint8Array chunks - first chunk is the 12-byte nonce header,
  *         followed by encrypted records of ENCRYPTED_RECORD_SIZE (last may be smaller).
  *
+ * `baseNonce` is random per encryption. A client passes its own to put it into the metadata,
+ * see `expectedBaseNonce()` in metadata.ts, so the recipient can check the header against it.
+ *
  * Usage:
- *   readableStream.pipeThrough(createEncryptStream(fileKey))
+ *   readableStream.pipeThrough(createEncryptStream(fileKey, baseNonce))
  */
 export function createEncryptStream(
   fileKey: CryptoKey,
+  baseNonce: Uint8Array = randomBytes(NONCE_LENGTH),
 ): TransformStream<Uint8Array, Uint8Array> {
-  const baseNonce = randomBytes(NONCE_LENGTH);
+  if (baseNonce.length !== NONCE_LENGTH) {
+    throw new Error(`Base nonce must be exactly ${NONCE_LENGTH} bytes`);
+  }
+  // A copy, so the record nonces do not change with the caller's array.
+  baseNonce = baseNonce.slice();
   // The start of a record that the chunks so far did not fill. Whole records are encrypted
   // straight from the chunk they arrive in, so only this rest is ever copied. Copying the
   // remainder of every chunk once per record instead cost time quadratic in the chunk size,
@@ -121,13 +129,26 @@ export function createEncryptStream(
  * download passes the size from the authenticated metadata, see
  * `expectedPlaintextSize()` in metadata.ts.
  *
+ * The base nonce in the header is not authenticated either. With the header XORed by k, the
+ * record at position i decrypts under the nonce of record i XOR k, so a server that moves
+ * every record j to j XOR k gets a stream whose records all decrypt, in another order, at the
+ * same size. `expectedBaseNonce`, from the authenticated metadata, closes that: a header that
+ * differs from it fails before any record is decrypted. Undefined only for uploads of clients
+ * that put no base nonce into the metadata.
+ *
  * Usage:
- *   encryptedStream.pipeThrough(createDecryptStream(fileKey, expectedPlaintextSize(metadata)))
+ *   encryptedStream.pipeThrough(
+ *     createDecryptStream(fileKey, expectedPlaintextSize(metadata), expectedBaseNonce(metadata)),
+ *   )
  */
 export function createDecryptStream(
   fileKey: CryptoKey,
   expectedPlaintextSize?: number,
+  expectedBaseNonce?: Uint8Array,
 ): TransformStream<Uint8Array, Uint8Array> {
+  if (expectedBaseNonce !== undefined && expectedBaseNonce.length !== NONCE_LENGTH) {
+    throw new Error(`Base nonce must be exactly ${NONCE_LENGTH} bytes`);
+  }
   let baseNonce: AnyBytes | null = null;
   const nonce = new Uint8Array(NONCE_LENGTH);
   let nonceLength = 0;
@@ -151,6 +172,9 @@ export function createDecryptStream(
         nonceLength += offset;
         if (nonceLength < NONCE_LENGTH) {
           return; // Need more data for nonce
+        }
+        if (expectedBaseNonce !== undefined && !constantTimeEqual(nonce, expectedBaseNonce)) {
+          throw new Error("Decryption failed - data may be corrupted or tampered with");
         }
         baseNonce = nonce;
       }

@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
+  // `next dev` would otherwise write an AGENTS.md here. The guide for agents is CLAUDE.md.
+  agentRules: false,
   // Each language has its own root layout, so the 404 page brings its own document.
   experimental: {
     globalNotFound: true,

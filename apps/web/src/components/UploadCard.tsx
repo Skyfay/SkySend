@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Archive, Loader2, Clock, Download } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { buildShareLink } from "@skysend/transfer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,7 +34,7 @@ export function UploadCard({ upload, onDelete, onRename }: UploadCardProps) {
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const shareLink = `${window.location.origin}/file/${upload.id}#${upload.secret}`;
+  const shareLink = buildShareLink(window.location.origin, "file", upload.id, upload.secret);
 
   const handleDelete = async () => {
     setDeleting(true);

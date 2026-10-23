@@ -13,7 +13,7 @@
  * - GCM provides both confidentiality and authenticity
  */
 
-import { randomBytes, asBytes } from "./util.js";
+import { randomBytes, asBytes, fromBase64url, toBase64url } from "./util.js";
 
 /** IV length for metadata encryption (12 bytes for AES-GCM). */
 export const META_IV_LENGTH = 12;
@@ -57,6 +57,43 @@ export interface Submission {
 
 const SUBMISSION = /^[0-9a-f]{32}$/;
 
+/**
+ * The base nonce of the encrypted stream, base64url, 12 bytes. The header of the stream carries
+ * it too, but nothing authenticates the header, and a server that changes it can reorder the
+ * records undetected, see createDecryptStream. The metadata is authenticated, so the copy here
+ * is the one to check against. Missing in the metadata of older clients.
+ */
+export interface StreamNonce {
+  streamNonce?: string;
+}
+
+/** Bytes of a base nonce, the NONCE_LENGTH of ece.ts. */
+const STREAM_NONCE_LENGTH = 12;
+
+/** The stream nonce of parsed metadata. A malformed one makes the metadata invalid. */
+function streamNonceOf(obj: Record<string, unknown>): StreamNonce {
+  if (obj.streamNonce === undefined) return {};
+  if (typeof obj.streamNonce === "string") {
+    try {
+      const bytes = fromBase64url(obj.streamNonce);
+      if (bytes.length === STREAM_NONCE_LENGTH && toBase64url(bytes) === obj.streamNonce) {
+        return { streamNonce: obj.streamNonce };
+      }
+    } catch {
+      // Falls through to the error below.
+    }
+  }
+  throw new Error("Invalid metadata: invalid stream nonce");
+}
+
+/**
+ * The base nonce to pass to `createDecryptStream`, from the authenticated metadata. Undefined
+ * for the uploads of clients that did not put one in.
+ */
+export function expectedBaseNonce(metadata: RequestUploadMetadata): Uint8Array | undefined {
+  return metadata.streamNonce === undefined ? undefined : fromBase64url(metadata.streamNonce);
+}
+
 /** The submission of parsed metadata, when it has one of the right form. Anything else is left out. */
 function submissionOf(obj: Record<string, unknown>): Submission {
   return typeof obj.submission === "string" && SUBMISSION.test(obj.submission)
@@ -65,7 +102,7 @@ function submissionOf(obj: Record<string, unknown>): Submission {
 }
 
 /** Metadata for a single-file upload. */
-export interface SingleFileMetadata extends Submission {
+export interface SingleFileMetadata extends Submission, StreamNonce {
   type: "single";
   name: string;
   size: number;
@@ -73,7 +110,7 @@ export interface SingleFileMetadata extends Submission {
 }
 
 /** Metadata for a multi-file/folder upload (archived as zip). */
-export interface ArchiveMetadata extends Submission {
+export interface ArchiveMetadata extends Submission, StreamNonce {
   type: "archive";
   files: Array<{
     name: string;
@@ -95,7 +132,7 @@ export type FileMetadata = SingleFileMetadata | ArchiveMetadata;
  * and `size` is its byte length. Only an inbox reads it: decryptMetadata refuses it, so a
  * crafted normal upload never sends a download page down the path of a note.
  */
-export interface NoteUploadMetadata extends Submission {
+export interface NoteUploadMetadata extends Submission, StreamNonce {
   type: "note";
   size: number;
 }
@@ -178,7 +215,8 @@ export async function decryptRequestMetadata(
     if (!isByteCount(size)) {
       throw new Error("Invalid metadata: invalid note size");
     }
-    return { type: "note", size, ...submissionOf(data as Record<string, unknown>) };
+    const obj = data as Record<string, unknown>;
+    return { type: "note", size, ...submissionOf(obj), ...streamNonceOf(obj) };
   }
   return validateMetadata(data);
 }
@@ -249,6 +287,7 @@ function validateMetadata(data: unknown): FileMetadata {
       size: obj.size,
       mimeType: obj.mimeType,
       ...submissionOf(obj),
+      ...streamNonceOf(obj),
     };
   }
 
@@ -282,6 +321,7 @@ function validateMetadata(data: unknown): FileMetadata {
       totalSize: obj.totalSize,
       ...(obj.archiveSize !== undefined ? { archiveSize: obj.archiveSize } : {}),
       ...submissionOf(obj),
+      ...streamNonceOf(obj),
     };
   }
 

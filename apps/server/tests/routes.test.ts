@@ -5,7 +5,14 @@ import { Hono } from "hono";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { eq } from "drizzle-orm";
 import { MAX_ENCRYPTED_METADATA_BYTES } from "@skysend/crypto";
-import { createTestDb, createTestStorage, insertTestUpload, TEST_UUID, fakeBase64urlToken } from "./helpers.js";
+import {
+  createTestDb,
+  createTestStorage,
+  insertTestUpload,
+  TEST_UUID,
+  fakeBase64urlToken,
+  heldBackBodies,
+} from "./helpers.js";
 import { uploads } from "../src/db/schema.js";
 import type { FileStorage } from "../src/storage/filesystem.js";
 import type { StorageBackend } from "../src/storage/types.js";
@@ -2261,6 +2268,35 @@ describe("routes", () => {
       expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
       expect((await guessDownload(app, fakeBase64urlToken())).status).toBe(401);
       expect((await guessPassword(app, authToken)).status).toBe(200);
+    });
+
+    it("evaluates no more guesses than the lockout allows when bodies are held back", async () => {
+      insertProtected();
+      const app = appWithLockout(3);
+      const statuses = await heldBackBodies(
+        (body) =>
+          app.request(`/api/password/${TEST_UUID}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            duplex: "half",
+          } as RequestInit),
+        Array.from({ length: 10 }, () => JSON.stringify({ authToken: fakeBase64urlToken() })),
+      );
+      // Every request passed the first check while no failure was recorded yet. Before the
+      // second check right at the comparison, all ten guesses were evaluated.
+      expect(statuses.filter((s) => s === 401)).toHaveLength(3);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(7);
+    });
+
+    it("evaluates no more guesses than the lockout allows when downloads arrive together", async () => {
+      insertProtected();
+      const app = appWithLockout(3);
+      const statuses = (
+        await Promise.all(Array.from({ length: 10 }, () => guessDownload(app, fakeBase64urlToken())))
+      ).map((res) => res.status);
+      expect(statuses.filter((s) => s === 401)).toHaveLength(3);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(7);
     });
 
     it("shares one count between the password check and the download", async () => {

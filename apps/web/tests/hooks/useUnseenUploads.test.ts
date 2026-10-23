@@ -15,7 +15,8 @@ vi.mock("../../src/lib/api.js", () => ({
   },
 }));
 
-vi.mock("../../src/lib/file-request.js", () => ({
+vi.mock("@skysend/transfer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@skysend/transfer")>()),
   openInboxLink: vi.fn(),
 }));
 
@@ -25,7 +26,7 @@ vi.mock("../../src/lib/upload-store.js", () => ({
 }));
 
 import * as api from "../../src/lib/api.js";
-import { openInboxLink } from "../../src/lib/file-request.js";
+import { openInboxLink } from "@skysend/transfer";
 import { getAllRequests, removeRequest, type StoredRequest } from "../../src/lib/upload-store.js";
 import { keepUnseen, setUnseen, unseenFor, unseenTotal } from "../../src/lib/unseen-uploads.js";
 import {

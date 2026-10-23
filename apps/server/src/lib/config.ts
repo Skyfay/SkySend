@@ -458,6 +458,12 @@ const configSchema = z.object({
   /** OIDC issuer URL (e.g. https://auth.example.com/realms/myrealm). Required when OIDC is active. */
   OIDC_ISSUER: z.string().url("OIDC_ISSUER must be a valid URL").optional(),
 
+  /** Allow the issuer to be insecure (non-HTTPS) for testing and local development. */
+  OIDC_ALLOW_INSECURE_ISSUER: z
+    .string()
+    .default("false")
+    .transform((v) => v.toLowerCase() === "true"),
+
   /** OIDC client ID registered at the provider. Required when OIDC is active. */
   OIDC_CLIENT_ID: z.string().optional(),
 
@@ -652,7 +658,14 @@ export function loadConfig(): Config {
       throw new Error("OIDC_SESSION_SECRET must be at least 32 characters long");
     }
     if (!_config.OIDC_ISSUER!.startsWith("https://")) {
-      console.warn("[oidc] WARNING: OIDC_ISSUER is using HTTP instead of HTTPS. This exposes OAuth tokens to network interception and is insecure in production.");
+      if (_config.OIDC_ALLOW_INSECURE_ISSUER) {
+        console.warn("[oidc] WARNING: OIDC_ISSUER is using HTTP instead of HTTPS. This exposes OAuth tokens to network interception and is insecure in production.");
+      } else {
+        throw new Error(
+          "OIDC_ISSUER is using HTTP instead of HTTPS. This exposes OAuth tokens to network interception and is insecure in production. "
+          + "To allow a non-HTTPS issuer for testing, set OIDC_ALLOW_INSECURE_ISSUER to true.",
+        );
+      }
     }
     if (
       !_config.OIDC_PROTECT_FILES

@@ -1,0 +1,109 @@
+{
+  "version": "v3.1.0",
+  "image": "ghcr.io/skyfay/skysend@sha256:12ec06476a2a55e8ae5f71f760d9a98546e1b60f99d93a9a2b9c977a62ae69c9",
+  "createdAt": "2026-10-15T08:56:15.042Z",
+  "shares": [
+    {
+      "kind": "file",
+      "title": "a file",
+      "files": [
+        {
+          "name": "compat-v3.1.0-single.bin",
+          "seed": "v3.1.0/single",
+          "size": 150000
+        }
+      ],
+      "link": "/file/e5b5e4a1-2efa-4c10-a7db-8096fb9e680b#foP3qACxFtWcJRQR3pSnRDl25P_pjoQlUoXAkiHfb7E"
+    },
+    {
+      "kind": "file",
+      "title": "a file with a password",
+      "files": [
+        {
+          "name": "compat-v3.1.0-password.bin",
+          "seed": "v3.1.0/password",
+          "size": 70000
+        }
+      ],
+      "password": "v3.1.0-file-password",
+      "link": "/file/72f6bff6-a3d1-4be4-a83b-14758f8858af#UazfSvQNi2qsoF_fajQyLig_6emHPLhm6q0zjltEaCc"
+    },
+    {
+      "kind": "file",
+      "title": "several files as a zip",
+      "files": [
+        {
+          "name": "compat-v3.1.0-part-a.bin",
+          "seed": "v3.1.0/part-a",
+          "size": 90000
+        },
+        {
+          "name": "compat-v3.1.0-part-b.txt",
+          "seed": "v3.1.0/part-b",
+          "size": 20000
+        }
+      ],
+      "link": "/file/9e3832cc-bedf-40fc-b886-554bae8fb3f9#eEIptmlfnioDapc7fpu9AZ5ZOgjmsGnccy7YeYcLtzc"
+    },
+    {
+      "kind": "note",
+      "title": "a note of text, password and code",
+      "texts": [
+        "Notes of v3.1.0",
+        "const release = \"v3.1.0\";"
+      ],
+      "secrets": [
+        "v3.1.0-secret-value"
+      ],
+      "link": "/note/ac79ade3-1728-4503-bf00-8ae960417cf4#1ulSrVGLnvBgs1yR0poqW5ZaLetmd1fY3j4tp_oEhGw"
+    },
+    {
+      "kind": "note",
+      "title": "a note with a password",
+      "texts": [
+        "Protected note of v3.1.0"
+      ],
+      "secrets": [],
+      "password": "v3.1.0-note-password",
+      "link": "/note/961a2c40-9ce7-4993-8e01-858e4104f992#fD5jApgr8b5ndt_YVDMMPzjsaiVTR3rveRUUiHoJTIM"
+    },
+    {
+      "kind": "inbox",
+      "title": "files and a note in an inbox",
+      "uploadLink": "/request/b6d921bb-2833-4466-9f9d-6d8d1654f640#AQRVQxqFmShqjyjwunNQvHdrgrIFXMC_fxYZOmtAZ9ntxeL5JKkPAoJuRBPYdAK2p7w6zCsLAfcax9xA4Ru4EecH5sawisLIJKc-dtyaBGIewO5-sXK7HYcmmAdIpHauOik",
+      "inboxLink": "/inbox/b6d921bb-2833-4466-9f9d-6d8d1654f640#AT7Tb57F8l2Jc16ecA0cx4xZ1YuA7EoWEWq-EOeY-c5F",
+      "requestTitle": "Request of v3.1.0",
+      "files": [
+        {
+          "name": "compat-v3.1.0-request.bin",
+          "seed": "v3.1.0/request",
+          "size": 80000
+        }
+      ],
+      "texts": [
+        "Server password of v3.1.0"
+      ],
+      "secrets": [
+        "v3.1.0-field-value"
+      ]
+    },
+    {
+      "kind": "inbox",
+      "title": "a note in an inbox with a password",
+      "uploadLink": "/request/74d1c190-f463-461e-98b8-fbf54d60c5af#AQSSJw9Rr_TG1vN4QcufU_6jk1vhxYPvJbhdczY4NkqCAsknuxmmk9Ub1hyKahmW1NtwXXxxxZD0RqBIz-rKnkh-oxbB0UJ4i4IQ5mV7TPl6p2YsoWasg8j7mr7jJzB8PnI",
+      "inboxLink": "/inbox/74d1c190-f463-461e-98b8-fbf54d60c5af#AYkK5UahOMvu4xVPA_QdU6ZJ3xu1p5d1o4LX7kzkGzV_Bj34BOCYo_wlSgqIS7wlEQ",
+      "password": "v3.1.0-inbox-password",
+      "files": [],
+      "texts": [
+        "Reply to v3.1.0"
+      ],
+      "secrets": []
+    },
+    {
+      "kind": "open-request",
+      "title": "an open request",
+      "uploadLink": "/request/f7e0696d-71a5-4662-88ea-39fbc0a7a535#AQQVq2a0iOaxTD5H3UsWXnLRfqib6s-I80msuu-nhFbgIcy5rW2pCkkrOR7ctUnzHwA7SP1yTjYKGeqAAvx1wdeBlalk6e30nODhjSuYAF5GgHBeABzManwVuXqJ-0K7rLY",
+      "inboxLink": "/inbox/f7e0696d-71a5-4662-88ea-39fbc0a7a535#AYTgm3klR9iPJTaY1ZEzsZQUOds0ZWWuE8IMEVs8lXoF"
+    }
+  ]
+}

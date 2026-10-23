@@ -15,6 +15,15 @@ const KV_KEY = 'instances'
 const DEFAULT_INSTANCES_URL = 'https://docs.skysend.app/instances.json'
 const FETCH_TIMEOUT_MS = 8000
 
+/**
+ * The most bytes read from the health or config answer of one instance. Both are a few hundred
+ * bytes. An instance is run by whoever registered it, and one that answered with 30 MiB made the
+ * single KV value of all instances too large, so the write failed and no instance was refreshed.
+ */
+const MAX_INSTANCE_RESPONSE_BYTES = 64 * 1024
+/** The most bytes read from the registry, which the project itself maintains. */
+const MAX_REGISTRY_BYTES = 1024 * 1024
+
 /* ---------- Types ---------- */
 
 interface StaticInstance {
@@ -23,29 +32,6 @@ interface StaticInstance {
   country: string
   flag: string
   contact: { label: string; url: string }
-}
-
-interface HealthResponse {
-  status: string
-  version: string
-  timestamp: string
-}
-
-interface ConfigResponse {
-  enabledServices: string[]
-  fileMaxSize: number
-  fileMaxFilesPerUpload: number
-  fileExpireOptions: number[]
-  fileDefaultExpire: number
-  fileDownloadOptions: number[]
-  fileDefaultDownload: number
-  fileUploadQuotaBytes: number
-  fileUploadQuotaWindow: number
-  noteMaxSize: number
-  noteExpireOptions: number[]
-  noteDefaultExpire: number
-  noteViewOptions: number[]
-  noteDefaultViews: number
 }
 
 interface CachedInstance {
@@ -77,28 +63,85 @@ interface CachedData {
 
 /* ---------- Fetch helpers ---------- */
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+/**
+ * Fetches JSON, or null for a failed request, a body over `maxBytes` or one that is no JSON.
+ * The body is read in pieces and dropped at the limit, never parsed whole first.
+ */
+async function fetchJson(url: string, maxBytes: number): Promise<unknown> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-    if (!res.ok) return null
-    return (await res.json()) as T
+    if (!res.ok || !res.body) return null
+    if (Number(res.headers.get('Content-Length') ?? 0) > maxBytes) {
+      await res.body.cancel()
+      return null
+    }
+    const reader = res.body.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel()
+        return null
+      }
+      chunks.push(value)
+    }
+    const bytes = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return JSON.parse(new TextDecoder().decode(bytes))
   } catch {
     return null
   }
 }
 
-function maxFromArray(arr: number[] | undefined): number | null {
-  if (!arr || arr.length === 0) return null
-  return Math.max(...arr)
+/* ---------- What an instance may put into the cache ---------- */
+
+// An instance answers with whatever its operator serves, so only values of the expected type and
+// size go into the cache and on to the docs site. Anything else counts as missing.
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function shortString(value: unknown, max: number): string | null {
+  return typeof value === 'string' && value.length <= max ? value : null
+}
+
+function count(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function maxFromArray(value: unknown): number | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 64) return null
+  let max: number | null = null
+  for (const item of value) {
+    const n = count(item)
+    if (n === null) return null
+    if (max === null || n > max) max = n
+  }
+  return max
+}
+
+function services(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is string => typeof item === 'string' && /^[a-z]{1,16}$/.test(item))
+    .slice(0, 8)
 }
 
 async function fetchInstanceData(inst: StaticInstance): Promise<CachedInstance> {
-  const [health, config] = await Promise.all([
-    fetchJson<HealthResponse>(`${inst.url}/api/health`),
-    fetchJson<ConfigResponse>(`${inst.url}/api/config`),
+  const [healthBody, configBody] = await Promise.all([
+    fetchJson(`${inst.url}/api/health`, MAX_INSTANCE_RESPONSE_BYTES),
+    fetchJson(`${inst.url}/api/config`, MAX_INSTANCE_RESPONSE_BYTES),
   ])
-
-  const online = health !== null && health.status === 'ok'
+  const health = isObject(healthBody) ? healthBody : {}
+  const config = isObject(configBody) ? configBody : {}
 
   return {
     name: inst.name,
@@ -106,18 +149,18 @@ async function fetchInstanceData(inst: StaticInstance): Promise<CachedInstance> 
     country: inst.country,
     flag: inst.flag,
     contact: inst.contact,
-    online,
-    version: health?.version ?? null,
-    enabledServices: config?.enabledServices ?? [],
-    fileMaxSize: config?.fileMaxSize ?? null,
-    fileMaxFilesPerUpload: config?.fileMaxFilesPerUpload ?? null,
-    fileMaxExpiry: maxFromArray(config?.fileExpireOptions),
-    fileMaxDownloads: maxFromArray(config?.fileDownloadOptions),
-    fileUploadQuotaBytes: config?.fileUploadQuotaBytes ?? null,
-    fileUploadQuotaWindow: config?.fileUploadQuotaWindow ?? null,
-    noteMaxSize: config?.noteMaxSize ?? null,
-    noteMaxExpiry: maxFromArray(config?.noteExpireOptions),
-    noteMaxViews: maxFromArray(config?.noteViewOptions),
+    online: health.status === 'ok',
+    version: shortString(health.version, 64),
+    enabledServices: services(config.enabledServices),
+    fileMaxSize: count(config.fileMaxSize),
+    fileMaxFilesPerUpload: count(config.fileMaxFilesPerUpload),
+    fileMaxExpiry: maxFromArray(config.fileExpireOptions),
+    fileMaxDownloads: maxFromArray(config.fileDownloadOptions),
+    fileUploadQuotaBytes: count(config.fileUploadQuotaBytes),
+    fileUploadQuotaWindow: count(config.fileUploadQuotaWindow),
+    noteMaxSize: count(config.noteMaxSize),
+    noteMaxExpiry: maxFromArray(config.noteExpireOptions),
+    noteMaxViews: maxFromArray(config.noteViewOptions),
   }
 }
 
@@ -125,7 +168,8 @@ async function fetchInstanceData(inst: StaticInstance): Promise<CachedInstance> 
 
 async function handleScheduled(env: Env): Promise<void> {
   const instancesUrl = env.INSTANCES_JSON_URL ?? DEFAULT_INSTANCES_URL
-  const staticInstances = await fetchJson<StaticInstance[]>(instancesUrl)
+  const registry = await fetchJson(instancesUrl, MAX_REGISTRY_BYTES)
+  const staticInstances = Array.isArray(registry) ? (registry as StaticInstance[]) : null
 
   if (!staticInstances || staticInstances.length === 0) {
     console.error('Failed to fetch instances.json or list is empty')
@@ -145,8 +189,13 @@ async function handleScheduled(env: Env): Promise<void> {
     lastUpdated: new Date().toISOString(),
   }
 
-  await env.SKYSEND_INSTANCES.put(KV_KEY, JSON.stringify(data))
-  console.log(`Cached ${instances.length} instances at ${data.lastUpdated}`)
+  try {
+    await env.SKYSEND_INSTANCES.put(KV_KEY, JSON.stringify(data))
+    console.log(`Cached ${instances.length} instances at ${data.lastUpdated}`)
+  } catch (err) {
+    // The previous value stays and is served until the next run.
+    console.error('Writing the instances to KV failed:', err instanceof Error ? err.message : 'unknown')
+  }
 }
 
 /* ---------- HTTP handler ---------- */

@@ -4,8 +4,12 @@ import {
   generateSecret,
   generateSalt,
   MAX_ENCRYPTED_METADATA_BYTES,
+  NONCE_LENGTH,
+  randomBytes,
+  toBase64url,
   type RequestUploadMetadata,
 } from "@skysend/crypto";
+import { buildShareLink } from "@skysend/transfer";
 import { archiveMetadata } from "@/lib/archive";
 import { saveUpload } from "@/lib/upload-store";
 import type { UploadWorkerMessage } from "@/lib/upload-worker";
@@ -205,6 +209,10 @@ export function useUpload() {
       }
 
       if (submission) metadata = { ...metadata, submission };
+      // The base nonce of the encrypted stream, which the worker encrypts with. In the
+      // authenticated metadata it lets the recipient refuse a stream whose header the server
+      // changed to reorder its records.
+      metadata = { ...metadata, streamNonce: toBase64url(randomBytes(NONCE_LENGTH)) };
       // The server takes the metadata only after the upload, so a list of names too long for it
       // has to stop the upload before it starts. The pages check the same with archiveMetadataFits.
       if (encryptedMetadataLength(metadata) > MAX_ENCRYPTED_METADATA_BYTES) {
@@ -390,7 +398,7 @@ export function useUpload() {
       // An upload into a request has no link to share and nothing to keep.
       let shareLink: string | null = null;
       if (!request && result.ownerToken && result.effectiveSecret) {
-        shareLink = `${window.location.origin}/file/${result.id}#${result.effectiveSecret}`;
+        shareLink = buildShareLink(window.location.origin, "file", result.id, result.effectiveSecret);
         // Store in IndexedDB (main thread - needs DOM)
         await saveUpload({
           id: result.id,

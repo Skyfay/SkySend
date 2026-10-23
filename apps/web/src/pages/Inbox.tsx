@@ -37,12 +37,8 @@ import { NotFoundPage } from "@/pages/NotFound";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { copyText } from "@/lib/clipboard";
 import { opfsFits } from "@/lib/opfs-file";
-import {
-  groupBySubmission,
-  NoteTooLargeError,
-  requestLinks,
-  type OpenedUpload,
-} from "@/lib/file-request";
+import { groupBySubmission, NoteTooLargeError, type OpenedUpload } from "@skysend/transfer";
+import { requestLinks } from "@/lib/file-request";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
 import {

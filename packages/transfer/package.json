@@ -1,0 +1,29 @@
+{
+  "name": "@skysend/transfer",
+  "version": "3.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
+  },
+  "dependencies": {
+    "@skysend/crypto": "workspace:*",
+    "@skysend/note-format": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "fflate": "^0.8.3",
+    "hash-wasm": "^4.12.0"
+  }
+}

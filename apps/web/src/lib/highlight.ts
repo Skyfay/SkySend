@@ -104,6 +104,15 @@ const SAFE_HTML = { ALLOWED_TAGS: ["span"], ALLOWED_ATTR: ["class"] };
 export const MAX_HIGHLIGHT_LENGTH = 16 * 1024;
 export const HIGHLIGHT_BUDGET = 32 * 1024;
 
+/**
+ * Markdown is parsed on the recipient's main thread too, and its emphasis takes quadratic time
+ * on crafted input: 32 KiB of `*a_` held Chromium for 4 seconds, 64 KiB for 16, and a note may
+ * be 1 MB. A Markdown block above this length is shown as plain text, and a note gets
+ * MARKDOWN_BUDGET characters of Markdown in total, the same bounds as for highlighting.
+ */
+export const MAX_MARKDOWN_LENGTH = 16 * 1024;
+export const MARKDOWN_BUDGET = 32 * 1024;
+
 function escapeHtml(code: string): string {
   return code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -138,6 +147,22 @@ export function highlightCode(
     html: DOMPurify.sanitize(detected.value, SAFE_HTML),
     language: language === "auto" ? (detected.language ?? "plaintext") : language,
   };
+}
+
+/**
+ * Which blocks of a note are rendered as Markdown. A Markdown block above MAX_MARKDOWN_LENGTH
+ * shows as plain text, and so does every Markdown block once the note has used up
+ * MARKDOWN_BUDGET.
+ */
+export function markdownBlocks(blocks: readonly ReadBlock[]): boolean[] {
+  let budget = MARKDOWN_BUDGET;
+  return blocks.map((block) => {
+    if (block.type !== "text" || block.format !== "markdown") return false;
+    const size = block.text.length;
+    if (size > MAX_MARKDOWN_LENGTH || size > budget) return false;
+    budget -= size;
+    return true;
+  });
 }
 
 /**

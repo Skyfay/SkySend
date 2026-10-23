@@ -20,7 +20,7 @@ export function registerInteractiveCommand(program: Command): void {
 
       const { waitUntilExit } = render(
         React.createElement(App, { initialServer }),
-        { exitOnCtrlC: true },
+        { exitOnCtrlC: true, alternateScreen: true },
       );
 
       await waitUntilExit();

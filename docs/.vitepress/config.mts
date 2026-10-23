@@ -137,6 +137,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/developer-guide/' },
             { text: 'Architecture', link: '/developer-guide/architecture' },
+            { text: 'Transfer Core', link: '/developer-guide/transfer' },
             { text: 'Project Setup', link: '/developer-guide/setup' }
           ]
         },

@@ -82,36 +82,42 @@ download_and_install() {
   printf "  Downloading %s...\n" "$ASSET_NAME"
   if command -v curl > /dev/null 2>&1; then
     curl -fL --progress-bar -o "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
-    curl -fsSL -o "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" 2>/dev/null || true
+    CHECKSUMS_OK=0
+    curl -fsSL -o "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" && CHECKSUMS_OK=1
   else
     wget -O "${TMPDIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
-    wget -qO "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" 2>/dev/null || true
+    CHECKSUMS_OK=0
+    wget -qO "${TMPDIR}/checksums.txt" "$CHECKSUM_URL" && CHECKSUMS_OK=1
   fi
 
-  # Verify checksum if available
-  if [ -f "${TMPDIR}/checksums.txt" ]; then
-    EXPECTED="$(grep "${ASSET_NAME}$" "${TMPDIR}/checksums.txt" | awk '{print $1}')"
-    if [ -n "$EXPECTED" ]; then
-      if command -v sha256sum > /dev/null 2>&1; then
-        ACTUAL="$(sha256sum "${TMPDIR}/${ASSET_NAME}" | awk '{print $1}')"
-      elif command -v shasum > /dev/null 2>&1; then
-        ACTUAL="$(shasum -a 256 "${TMPDIR}/${ASSET_NAME}" | awk '{print $1}')"
-      else
-        ACTUAL=""
-      fi
-
-      if [ -n "$ACTUAL" ]; then
-        if [ "$EXPECTED" = "$ACTUAL" ]; then
-          echo "  Checksum verified."
-        else
-          echo "Error: Checksum mismatch!"
-          echo "  Expected: ${EXPECTED}"
-          echo "  Actual:   ${ACTUAL}"
-          exit 1
-        fi
-      fi
-    fi
+  # Verify the checksum. A binary that cannot be verified is never installed.
+  if [ "$CHECKSUMS_OK" != 1 ]; then
+    echo "Error: Could not download ${CHECKSUM_URL}. Refusing to install an unverified binary."
+    exit 1
   fi
+
+  EXPECTED="$(awk -v name="$ASSET_NAME" '{ f = $2; sub(/^\*/, "", f) } f == name { print $1 }' "${TMPDIR}/checksums.txt")"
+  if [ -z "$EXPECTED" ]; then
+    echo "Error: checksums.txt lists no checksum for ${ASSET_NAME}. Refusing to install an unverified binary."
+    exit 1
+  fi
+
+  if command -v sha256sum > /dev/null 2>&1; then
+    ACTUAL="$(sha256sum "${TMPDIR}/${ASSET_NAME}" | awk '{print $1}')"
+  elif command -v shasum > /dev/null 2>&1; then
+    ACTUAL="$(shasum -a 256 "${TMPDIR}/${ASSET_NAME}" | awk '{print $1}')"
+  else
+    echo "Error: sha256sum or shasum is required to verify the download."
+    exit 1
+  fi
+
+  if [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "Error: Checksum mismatch!"
+    echo "  Expected: ${EXPECTED}"
+    echo "  Actual:   ${ACTUAL}"
+    exit 1
+  fi
+  echo "  Checksum verified."
 
   # Install
   chmod +x "${TMPDIR}/${ASSET_NAME}"

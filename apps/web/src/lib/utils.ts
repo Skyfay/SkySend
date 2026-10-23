@@ -61,10 +61,13 @@ export function isBrave(): boolean {
 
 /**
  * Detect whether browser DevTools are currently open by measuring the
- * difference between outer and inner window dimensions. A docked DevTools
- * panel (bottom/left/right) creates a gap larger than the threshold.
+ * difference between outer and inner window height. DevTools docked at the
+ * bottom, where Firefox puts them by default, create a gap larger than the threshold.
  *
- * Limitation: undocked DevTools in a separate window are not detectable.
+ * Only the height counts. The sidebars of Firefox (vertical tabs, bookmarks), Chrome and Edge
+ * narrow the page exactly like DevTools docked to the side, so a width gap tells nothing.
+ *
+ * Limitation: DevTools docked to the side or undocked in a separate window are not detectable.
  *
  * A phone or tablet docks no DevTools, and the address bar and toolbar of its browser alone
  * make a gap above the threshold, so a touch screen as the main pointer always answers no.
@@ -72,10 +75,7 @@ export function isBrave(): boolean {
 export function isDevToolsOpen(): boolean {
   if (window.matchMedia?.("(pointer: coarse)").matches) return false;
   const threshold = 160;
-  return (
-    window.outerWidth - window.innerWidth > threshold ||
-    window.outerHeight - window.innerHeight > threshold
-  );
+  return window.outerHeight - window.innerHeight > threshold;
 }
 
 /** 256 MB - files above this threshold show a warning on Safari */

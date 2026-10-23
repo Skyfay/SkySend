@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { writePrivateFile } from "./private-file.js";
 
 export interface ServerEntry {
@@ -55,10 +56,10 @@ export function resetConfig(): void {
  * 4. Legacy top-level server field
  */
 export function resolveServer(flagValue?: string): string {
-  if (flagValue) return flagValue.replace(/\/+$/, "");
+  if (flagValue) return trimTrailingSlashes(flagValue);
 
   const env = process.env["SKYSEND_SERVER"];
-  if (env) return env.replace(/\/+$/, "");
+  if (env) return trimTrailingSlashes(env);
 
   const config = loadConfig();
   if (config.defaultServer) return config.defaultServer;
@@ -90,7 +91,7 @@ export function getServers(): ServerEntry[] {
 export function addServer(name: string, url: string): void {
   const config = loadConfig();
   const servers = config.servers ?? [];
-  const normalized = url.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(url);
   if (servers.some((s) => s.url === normalized)) {
     throw new Error(`Server already exists: ${normalized}`);
   }
@@ -112,7 +113,7 @@ export function removeServer(url: string): void {
 
 export function setDefaultServer(url: string): void {
   const config = loadConfig();
-  saveConfig({ ...config, defaultServer: url.replace(/\/+$/, "") });
+  saveConfig({ ...config, defaultServer: trimTrailingSlashes(url) });
 }
 
 export function getDefaultServer(): string | undefined {
@@ -120,19 +121,27 @@ export function getDefaultServer(): string | undefined {
   return config.defaultServer ?? config.server;
 }
 
-// WebSocket uploads are globally disabled.
-// Large file transfers via WebSocket over HTTPS connections fail mid-transfer
-// due to an unresolved issue. HTTP chunked upload is used instead until a
-// proper fix is in place. Do not re-enable this without resolving the root cause.
-export function getWebSocket(_serverUrl?: string): boolean {
-  return false;
+/**
+ * Whether uploads to a server may take the WebSocket, on unless switched off for that server.
+ * The server still has to offer it (`fileUploadWs`), and a failed handshake falls back to HTTP.
+ */
+export function getWebSocket(serverUrl?: string): boolean {
+  const config = loadConfig();
+  if (serverUrl) {
+    const entry = (config.servers ?? []).find((s) => s.url === serverUrl);
+    if (entry && entry.websocket !== undefined) return entry.websocket;
+  }
+  return true;
 }
 
-// setWebSocket is intentionally a no-op while WebSocket uploads are globally
-// disabled. The per-server preference is not persisted so the stored config
-// cannot accidentally re-enable WebSocket after the lock is lifted.
-export function setWebSocket(_serverUrl: string, _enabled: boolean): void {
-  // no-op - see getWebSocket comment above
+export function setWebSocket(serverUrl: string, enabled: boolean): void {
+  const config = loadConfig();
+  const servers = config.servers ?? [];
+  const entry = servers.find((s) => s.url === serverUrl);
+  if (entry) {
+    entry.websocket = enabled;
+    saveConfig({ ...config, servers });
+  }
 }
 
 // ── OIDC Token Storage ─────────────────────────────────
@@ -162,17 +171,17 @@ function writeTokens(tokens: Record<string, string>): void {
 
 export function getStoredToken(serverUrl: string): string | undefined {
   const tokens = loadTokens();
-  return tokens[serverUrl.replace(/\/+$/, "")];
+  return tokens[trimTrailingSlashes(serverUrl)];
 }
 
 export function saveStoredToken(serverUrl: string, token: string): void {
   const tokens = loadTokens();
-  tokens[serverUrl.replace(/\/+$/, "")] = token;
+  tokens[trimTrailingSlashes(serverUrl)] = token;
   writeTokens(tokens);
 }
 
 export function clearStoredToken(serverUrl: string): void {
   const tokens = loadTokens();
-  delete tokens[serverUrl.replace(/\/+$/, "")];
+  delete tokens[trimTrailingSlashes(serverUrl)];
   writeTokens(tokens);
 }

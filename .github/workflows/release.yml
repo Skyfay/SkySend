@@ -77,6 +77,8 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          # Always pull the base image, so every release ships the latest Node patch release.
+          pull: true
           push: true
           tags: ${{ env.GHCR_IMAGE }}:${{ github.ref_name }}-${{ matrix.suffix }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -273,7 +275,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm --filter @skysend/crypto --filter @skysend/note-format build && pnpm --filter @skysend/client build
+        run: pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer build && pnpm --filter @skysend/client build
 
       - name: Compile binary
         run: pnpm --filter @skysend/client build:${{ matrix.target }}

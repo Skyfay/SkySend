@@ -15,6 +15,26 @@ SkySend images are available for **AMD64** (x86_64) and **ARM64** (aarch64) arch
 Supports: Intel/AMD servers, Raspberry Pi 4+, Apple Silicon (M1/M2/M3), AWS Graviton
 :::
 
+### System Requirements
+
+| Tier | CPU | RAM | Uploads in total | Downloads in total |
+| :--- | :--- | :--- | :--- | :--- |
+| Minimal | 1 core | 1 GB | 120 to 180 MiB/s | 340 to 500 MiB/s |
+| Recommended | 2 cores | 2 GB | 230 to 270 MiB/s, limit of the test | 600 to 900 MiB/s, limit of the test |
+| Enterprise | 4 cores | 4 to 8 GB | 260 to 290 MiB/s, limit of the test | 600 to 1000 MiB/s, limit of the test |
+
+Disk: room for the uploads, or only the database with [S3 storage](/user-guide/configuration/s3).
+
+How many transfers at once make sense follows from these totals and the speed each one should get. At 10 MiB/s per transfer, about a line of 100 Mbit/s, a Minimal server carries 12 to 18 uploads or 30 to 50 downloads at full speed, a Recommended one at least 23 uploads or 60 downloads. More at once still work, each one gets a smaller share. Every tier was tested with 32 transfers at once without an error. An upload holds up to about 20 MB of memory while it runs, a download about 2 MB. The server sizes those buffers from the memory it may use, the limit of its container if it runs in one.
+
+More cores and memory let more transfers run at once at full speed, up to what one instance carries. Its JavaScript runs on one thread, so beyond about four cores more hardware adds headroom for peaks and for other services on the same machine rather than more transfers. Memory alone does not cap the number of transfers: when the buffers are full, uploads share them and slow down instead of failing.
+
+- Measured on x86_64 with the server limited like `docker run --cpus --memory`, filesystem storage and Chromium on the same machine, files of 128 and 256 MiB, up to 32 at once.
+- From two cores on, the browsers of the test were the limit, not the server, so Recommended and Enterprise carry more than the table says.
+- Uploads to S3 reached about the same totals, 183 MiB/s with one core. A download from S3 goes from the bucket straight to the browser and costs the server nothing.
+- With one core, and in some runs with two, downloads got a small share while uploads were running.
+- ARM boards can be slower per core, and the link of the server is often the real limit: 1 Gbit/s is about 118 MiB/s.
+
 ## Docker Installation
 
 ::: code-group

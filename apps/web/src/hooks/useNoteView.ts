@@ -1,16 +1,8 @@
 import { useState, useCallback } from "react";
-import {
-  deriveKeys,
-  computeAuthToken,
-  decryptNoteContent,
-  toBase64url,
-  fromBase64url,
-  applyPasswordProtection,
-  deriveKeyFromPassword,
-  type Argon2idHashFn,
-} from "@skysend/crypto";
-import { readNote, type ReadBlock } from "@skysend/note-format";
+import { openNote } from "@skysend/transfer";
+import type { ReadBlock } from "@skysend/note-format";
 import * as api from "@/lib/api";
+import { hashWasmArgon2 } from "@/lib/argon2";
 
 export type NoteViewPhase =
   | "idle"
@@ -60,89 +52,40 @@ export function useNoteView() {
   }, []);
 
   const view = useCallback(
-    async (
-      id: string,
-      secretB64: string,
-      password?: string,
-      argon2id?: Argon2idHashFn,
-    ) => {
+    async (id: string, secretB64: string, password?: string) => {
       try {
         const info = state.info ?? (await api.fetchNoteInfo(id));
         if (!info) throw new Error("Note not found");
-
-        let secret = fromBase64url(secretB64);
-        const salt = fromBase64url(info.salt);
-
-        // Handle password protection
         if (info.hasPassword && password) {
           setState((s) => ({ ...s, phase: "verifying-password" }));
-          if (!info.passwordSalt) throw new Error("Missing password salt");
-
-          const passwordSalt = fromBase64url(info.passwordSalt);
-          /* v8 ignore next */
-          if (!argon2id) throw new Error("Argon2id is required to decrypt password-protected notes");
-          const { key: passwordKey } = await deriveKeyFromPassword(
-            password,
-            passwordSalt,
-            argon2id,
-          );
-          secret = applyPasswordProtection(secret, passwordKey);
         }
 
-        // Derive keys from (possibly password-recovered) secret
-        const keys = await deriveKeys(secret, salt);
-        const authToken = await computeAuthToken(keys.authKey);
-        const authTokenB64 = toBase64url(authToken);
-
-        // Verify password if protected
-        if (info.hasPassword) {
-          const valid = await api.verifyNotePassword(id, authTokenB64);
-          if (!valid) {
-            setState((s) => ({
-              ...s,
-              phase: "needs-password",
-              error: "wrong-password",
-            }));
-            return;
-          }
-        }
-
-        // View the note (increments view count server-side)
-        const result = await api.viewNote(id, authTokenB64);
-
-        // Decode base64 content and nonce
-        const ciphertext = Uint8Array.from(atob(result.encryptedContent), (c) =>
-          c.charCodeAt(0),
-        );
-        const nonce = Uint8Array.from(atob(result.nonce), (c) =>
-          c.charCodeAt(0),
-        );
-
-        // Decrypt
-        const content = await decryptNoteContent(ciphertext, nonce, keys.metaKey);
-
-        // The view is already used up at this point, and with a limit of one the note is gone.
-        // A note that does not parse is shown as plain text, so its content is never lost.
-        let blocks: ReadBlock[];
-        let unreadable = false;
-        try {
-          blocks = readNote(info.contentType, content);
-        } catch {
-          blocks = [{ type: "text", format: "plain", text: content }];
-          unreadable = true;
+        // The password is checked before the view, which the server counts and which with a
+        // limit of one destroys the note.
+        const note = await openNote({
+          api,
+          id,
+          info,
+          secret: secretB64,
+          password,
+          argon2id: hashWasmArgon2,
+        });
+        if (!note) {
+          setState((s) => ({ ...s, phase: "needs-password", error: "wrong-password" }));
+          return;
         }
 
         // Check if this was the last allowed view (maxViews === 0 means unlimited)
-        const isDestroyed = result.maxViews > 0 && result.viewCount >= result.maxViews;
+        const isDestroyed = note.maxViews > 0 && note.viewCount >= note.maxViews;
 
         setState({
           phase: isDestroyed ? "destroyed" : "viewing",
           error: null,
           info,
-          blocks,
-          unreadable,
-          viewCount: result.viewCount,
-          maxViews: result.maxViews,
+          blocks: note.blocks,
+          unreadable: note.unreadable,
+          viewCount: note.viewCount,
+          maxViews: note.maxViews,
         });
       } catch (err) {
         if (err instanceof api.ApiError && err.status === 429) {

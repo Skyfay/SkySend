@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": ".",
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}

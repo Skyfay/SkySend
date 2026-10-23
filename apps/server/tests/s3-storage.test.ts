@@ -7,6 +7,9 @@ import {
   S3Client,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { S3Storage } from "../src/storage/s3.js";
 
 const MIB = 1024 * 1024;
@@ -16,6 +19,7 @@ const ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 interface PendingPart {
   partNumber: number;
   size: number;
+  body: Uint8Array;
   signal: AbortSignal | undefined;
   finish: () => void;
   fail: (err: Error) => void;
@@ -32,6 +36,7 @@ function fakeBucket() {
   const parts = new Map<number, PendingPart>();
   const partsByKey = new Map<string, PendingPart>();
   const completed: Array<Array<{ PartNumber?: number }>> = [];
+  const putBodies: Uint8Array[] = [];
   let completeError: Error | null = null;
 
   vi.spyOn(S3Client.prototype, "send").mockImplementation((async (
@@ -44,6 +49,7 @@ function fakeBucket() {
     }
     if (command instanceof PutObjectCommand) {
       events.push(`put ${(command.input.Body as Uint8Array).byteLength}`);
+      putBodies.push(command.input.Body as Uint8Array);
       return {};
     }
     if (command instanceof UploadPartCommand) {
@@ -56,6 +62,7 @@ function fakeBucket() {
         const part: PendingPart = {
           partNumber,
           size: (command.input.Body as Uint8Array).byteLength,
+          body: command.input.Body as Uint8Array,
           signal: options?.abortSignal,
           finish: () => {
             settle("stored");
@@ -97,6 +104,7 @@ function fakeBucket() {
     events,
     parts,
     completed,
+    putBodies,
     failCompleteWith(err: Error) {
       completeError = err;
     },
@@ -113,6 +121,9 @@ function fakeBucket() {
   };
 }
 
+/** Where the storages of a test keep the start of their parts. */
+let partDir: string;
+
 function storage(memoryLimit?: number) {
   return new S3Storage({
     bucket: "bucket",
@@ -124,6 +135,7 @@ function storage(memoryLimit?: number) {
     partSize: 5 * MIB,
     concurrency: 4,
     memoryLimit,
+    partDir,
   });
 }
 
@@ -143,10 +155,12 @@ describe("S3Storage multipart uploads", () => {
 
   beforeEach(() => {
     bucket = fakeBucket();
+    partDir = join(mkdtempSync(join(tmpdir(), "skysend-s3-")), "parts");
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    rmSync(join(partDir, ".."), { recursive: true, force: true });
   });
 
   it("completes with the parts in ascending order when they finish out of order", async () => {
@@ -309,4 +323,151 @@ describe("S3Storage multipart uploads", () => {
     // A part still uploading while the abort runs can be stored after it and stay billed.
     expect(bucket.events).toEqual(["create", "part 1 failed", "part 2 failed", "abort upload-1"]);
   });
+  /** A stream of `size` bytes where byte i is (from + i) % 251, in chunks of `chunk` bytes. */
+  function patterned(size: number, chunk: number, from = 0) {
+    let sent = 0;
+    return new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent >= size) return controller.close();
+        const length = Math.min(chunk, size - sent);
+        const data = new Uint8Array(length);
+        for (let i = 0; i < length; i++) data[i] = (from + sent + i) % 251;
+        sent += length;
+        controller.enqueue(data);
+      },
+    });
+  }
+
+  function expectPattern(data: Uint8Array, from: number) {
+    for (let i = 0; i < data.byteLength; i += 4099) expect(data[i]).toBe((from + i) % 251);
+    expect(data[data.byteLength - 1]).toBe((from + data.byteLength - 1) % 251);
+  }
+
+  it("keeps parts that are filling up in memory while there is room for them", async () => {
+    // Half of the limit, 16 MiB, is room for parts that are filling up.
+    const s3 = storage(32 * MIB);
+    for (const id of [ID, ID_B]) {
+      await s3.createEmpty(id);
+      await s3.appendChunk(id, streamOf(5 * MIB - 1));
+    }
+    expect(bucket.parts.size).toBe(0);
+    expect(readdirSync(partDir)).toEqual([]);
+    await s3.abortChunkedUpload(ID);
+    await s3.abortChunkedUpload(ID_B);
+  });
+
+  it("moves a part that is filling up to disk once their room is used up", async () => {
+    // Room for 6 MiB of parts that are filling up. One byte short of a part used to wait in
+    // memory, which no limit counted, and every new session added one.
+    const s3 = storage(12 * MIB);
+    for (const id of [ID, ID_B]) {
+      await s3.createEmpty(id);
+      await s3.appendChunk(id, patterned(5 * MIB - 1, 1_000_003));
+    }
+    expect(existsSync(join(partDir, `${ID}.bin.part`))).toBe(false);
+    expect(statSync(join(partDir, `${ID_B}.bin.part`)).size).toBe(5 * MIB - 1);
+
+    // The first upload gives its room back, the part from disk goes out whole and the next part
+    // of the same upload fills up in memory again.
+    await s3.abortChunkedUpload(ID);
+    await s3.appendChunk(ID_B, patterned(MIB + 1, 300_000, 5 * MIB - 1));
+    const finalized = s3.finalizeChunkedUpload(ID_B);
+    const parts = [await bucket.part(1), await bucket.part(2)];
+    for (const part of parts) part.finish();
+    await finalized;
+    expect(parts.map((p) => p.size)).toEqual([5 * MIB, MIB]);
+    parts.forEach((part, i) => expectPattern(part.body, i * 5 * MIB));
+    expect(readdirSync(partDir)).toEqual([]);
+  });
+
+  it("reads a long stream at most two parts ahead of the parts in flight", async () => {
+    const s3 = storage();
+    await s3.createEmpty(ID);
+    let pulled = 0;
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          if (pulled >= 100 * MIB) return controller.close();
+          pulled += MIB;
+          controller.enqueue(new Uint8Array(MIB));
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const appending = s3.appendChunk(ID, stream);
+    // All four slots taken and none finished: the stream stops two parts after them.
+    await vi.waitFor(() => expect(bucket.open()).toHaveLength(4));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(pulled).toBeLessThanOrEqual((4 + 2) * 5 * MIB + MIB);
+    for (let n = 1; n <= 20; n++) (await bucket.part(n)).finish();
+    expect(await appending).toBe(100 * MIB);
+    await s3.abortChunkedUpload(ID);
+  });
+
+  it("sends every byte in its place when every part fills up on disk", async () => {
+    // A limit of 1 MiB leaves 512 KiB for parts that are filling up, less than any part.
+    const s3 = storage(MIB);
+    await s3.createEmpty(ID);
+    const upload = (async () => {
+      await s3.appendChunk(ID, patterned(7 * MIB + 3, 1_000_003));
+      await s3.appendChunk(ID, patterned(9 * MIB, 65_536, 7 * MIB + 3));
+      await s3.finalizeChunkedUpload(ID);
+    })();
+    // The limit lets one part out at a time.
+    const parts = [];
+    for (let n = 1; n <= 4; n++) {
+      const part = await bucket.part(n);
+      if (n === 1) expect(existsSync(join(partDir, `${ID}.bin.part`))).toBe(true);
+      parts.push(part);
+      part.finish();
+    }
+    await upload;
+    expect(parts.map((p) => p.size)).toEqual([5 * MIB, 5 * MIB, 5 * MIB, MIB + 3]);
+    parts.forEach((part, i) => expectPattern(part.body, i * 5 * MIB));
+    expect(readdirSync(partDir)).toEqual([]);
+  });
+
+  it("sends every byte in its place across chunks and parts", async () => {
+    const s3 = storage();
+    await s3.createEmpty(ID);
+    // Chunks that end neither on a part nor on each other, over three parts and a rest.
+    await s3.appendChunk(ID, patterned(7 * MIB + 3, 1000_003));
+    await s3.appendChunk(ID, patterned(9 * MIB, 65_536, 7 * MIB + 3));
+    const finalized = s3.finalizeChunkedUpload(ID);
+    const parts = [await bucket.part(1), await bucket.part(2), await bucket.part(3), await bucket.part(4)];
+    for (const part of parts) part.finish();
+    await finalized;
+    expect(parts.map((p) => p.size)).toEqual([5 * MIB, 5 * MIB, 5 * MIB, MIB + 3]);
+    parts.forEach((part, i) => expectPattern(part.body, i * 5 * MIB));
+  });
+
+  it("stores a small upload with one PutObject", async () => {
+    const s3 = storage();
+    await s3.createEmpty(ID, 2 * MIB + 5);
+    await s3.appendChunk(ID, patterned(2 * MIB + 5, 300_000));
+    await s3.finalizeChunkedUpload(ID);
+    expect(bucket.events).toEqual([`put ${2 * MIB + 5}`]);
+    expectPattern(bucket.putBodies[0]!, 0);
+    expect(readdirSync(partDir)).toEqual([]);
+  });
+
+  it("saves a single-request upload through the same session as a chunked one", async () => {
+    const s3 = storage();
+    expect(await s3.save(ID, patterned(MIB, 100_000), MIB)).toBe(MIB);
+    expect(bucket.events).toEqual([`put ${MIB}`]);
+
+    const saving = s3.save(ID_B, patterned(6 * MIB, 100_000), 6 * MIB);
+    (await bucket.part(1)).finish();
+    (await bucket.part(2)).finish();
+    expect(await saving).toBe(6 * MIB);
+    expect(bucket.completed).toHaveLength(1);
+  });
+
+  it("empties its part directory when it is created", () => {
+    mkdirSync(partDir, { recursive: true });
+    writeFileSync(join(partDir, "left-over.part"), "x");
+    storage();
+    expect(readdirSync(partDir)).toEqual([]);
+  });
 });
+
