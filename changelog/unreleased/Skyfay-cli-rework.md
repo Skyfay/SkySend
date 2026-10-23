@@ -50,6 +50,8 @@
 - **server**: Tests read the answers of the real routes with the client the web app and the CLI share, so a change the clients would no longer read fails before a release.
 - **infra**: The transfer benchmark measures the CLI as well as the browser, and uploads of several files at once.
 - **infra**: End-to-end tests cover the CLI logging in through OIDC and sending over the WebSocket, folders and zips of several files between the browser and the CLI, file requests from both sides, and run against the Bun binary with `E2E_CLI=binary`.
+- **infra**: The API client the web app and the CLI share has tests of its own for every route, the tokens each one sends and what it makes of errors, older servers and downloads from S3.
+- **infra**: The end-to-end tests give a busy Docker daemon up to 90 seconds to answer before they call it missing, since a runner still clearing its disk took longer than the 10 seconds before.
 
 ### 🔧 CI/CD
 

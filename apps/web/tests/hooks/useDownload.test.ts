@@ -291,6 +291,29 @@ describe("useDownload", () => {
     expect(result.current.error).toBe("wrong-password");
   });
 
+  it("names the missing Argon2id when a password comes without it", async () => {
+    const apiMod = await import("../../src/lib/api.js");
+    const cryptoMod = await import("@skysend/crypto");
+    vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(
+      makeUploadInfo({ hasPassword: true, encryptedMeta: null, nonce: null, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+    // The real derivation hashes with the function it is given, the stand-in of the hook here.
+    vi.mocked(cryptoMod.deriveKeyFromPassword).mockImplementationOnce(async (password, salt, hash) => ({
+      key: await hash(new TextEncoder().encode(password), salt, { hashLength: 32 } as never),
+    }) as never);
+
+    const { useDownload } = await import("../../src/hooks/useDownload.js");
+    const { result } = renderHook(() => useDownload());
+
+    await act(async () => {
+      await result.current.download("f-1", "secret64", "pw");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Argon2id is required to decrypt password-protected uploads");
+    expect(apiMod.verifyPassword).not.toHaveBeenCalled();
+  });
+
   it("download() AbortError → phase='idle'", async () => {
     const apiMod = await import("../../src/lib/api.js");
     vi.mocked(apiMod.fetchInfo).mockResolvedValueOnce(makeUploadInfo());

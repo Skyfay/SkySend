@@ -74,6 +74,8 @@ describe("pastedPaths", () => {
     expect(pastedPaths("/tmp/My\\ File.pdf")).toEqual(["/tmp/My File.pdf"]);
     expect(pastedPaths('"/tmp/a b"\n/tmp/c')).toEqual(["/tmp/a b", "/tmp/c"]);
     expect(pastedPaths("file:///tmp/a%20b.txt")).toEqual(["/tmp/a b.txt"]);
+    // A file URL no path stands for is kept as it came, for the check that follows to refuse.
+    expect(pastedPaths("file:///tmp/a%2Fb")).toEqual(["file:///tmp/a%2Fb"]);
     expect(pastedPaths("  \n ")).toEqual([]);
   });
 });

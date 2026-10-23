@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   calculateEncryptedSize,
   createEncryptStream,
+  createFileRequest,
   decodeUploadFragment,
   decryptRequestBrief,
   deriveKeys,
   deriveLinkKeys,
+  encodeUploadFragment,
   encryptMetadata,
   fromBase64url,
   generateSalt,
@@ -27,7 +29,7 @@ import {
   type OpenedUpload,
 } from "../src/inbox.js";
 import { sanitizeFilename, sanitizeTitle } from "../src/names.js";
-import { newSubmission, openRequestLink, prepareRequest } from "../src/request.js";
+import { briefFits, newSubmission, openRequestLink, prepareRequest } from "../src/request.js";
 
 /** Stands in for Argon2id: deterministic, so the same password always gives the same key. */
 const fakeArgon2: Argon2idHashFn = async (password, salt, params) => {
@@ -168,6 +170,7 @@ describe("note requests", () => {
       { type: "password", entries: [{ label: "PIN\u202Egnp", value: "4711" }] },
       { type: "text", format: "plain", text: "ok", label: "Note\u0007" },
       { type: "code", title: "a\u200Bb", language: "auto", code: "x" },
+      { type: "sshkey", publicKey: "ssh-ed25519 AAAA", privateKey: "", passphrase: "" },
     ];
     const note = await senderNote(prepared.uploadFragment, padNote(serializeNote(blocks)));
     const access = await openInboxLink(prepared.inboxFragment);
@@ -182,6 +185,7 @@ describe("note requests", () => {
       { type: "password", entries: [{ label: "PINgnp", value: "4711" }] },
       { type: "text", format: "plain", text: "ok", label: "Note" },
       { type: "code", title: "ab", language: "auto", code: "x" },
+      { type: "sshkey", publicKey: "ssh-ed25519 AAAA", privateKey: "", passphrase: "" },
     ]);
   });
 
@@ -552,6 +556,20 @@ describe("openRequestLink", () => {
     );
   });
 
+  it("leaves a note written freely when the template does not parse", async () => {
+    // The brief format only checks that a template is an object, the note format reads it.
+    const { local, server } = await createFileRequest({ asks: ["note"], template: { v: 99 } });
+    const brief = {
+      ciphertext: toBase64url(server.brief.ciphertext),
+      nonce: toBase64url(server.brief.nonce),
+    };
+    const api = senderApi(async () => view(brief));
+    const fragment = encodeUploadFragment(local.publicKey, local.linkSecret);
+    const opened = await openRequestLink(api, REQUEST_ID, fragment);
+    if (opened.state !== "ready") throw new Error(opened.state);
+    expect(opened.brief).toEqual({ title: null, asks: ["note"], template: null });
+  });
+
   it("calls a request without its brief, or with the brief of another request, broken", async () => {
     const prepared = await prepareRequest({ title: "Mine" });
     const other = await prepareRequest({ title: "Swapped in" });
@@ -561,6 +579,25 @@ describe("openRequestLink", () => {
         state: "broken",
       });
     }
+  });
+});
+
+describe("briefFits", () => {
+  const field: NoteBlock[] = [{ type: "text", format: "plain", label: "What broke?", text: "" }];
+
+  it("takes a brief within the limit, with or without its template", () => {
+    expect(briefFits("Logs", ["files", "note"], field)).toBe(true);
+    expect(briefFits("", ["files"], [])).toBe(true);
+  });
+
+  it("refuses a title too long for the brief", () => {
+    expect(briefFits("x".repeat(10_000), ["files"], [])).toBe(false);
+  });
+
+  it("refuses a template the note format does not take", () => {
+    // 51 blocks would fit in size, but a template holds at most 50.
+    const tooMany = Array.from({ length: 51 }, () => field[0]!);
+    expect(briefFits("", ["note"], tooMany)).toBe(false);
   });
 });
 
