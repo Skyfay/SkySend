@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileText, KeyRound, Code, Loader2, Clock, Eye, Heading, Layers, Terminal } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { buildShareLink } from "@skysend/transfer";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,7 +36,7 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const shareLink = `${window.location.origin}/note/${note.id}#${note.secret}`;
+  const shareLink = buildShareLink(window.location.origin, "note", note.id, note.secret);
   // One kind shows its name, several show the note with its kinds below.
   const kinds = storedNoteKinds(note);
   const single = kinds.length === 1 ? kinds[0] : undefined;

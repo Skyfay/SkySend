@@ -36,7 +36,7 @@ export function asksForPassword(
 
 /**
  * True for a new file or note password that is long enough, else why not, in the shape the
- * TUI's TextPrompt takes. Only a new password is checked. An older, shorter one still opens.
+ * TUI's password fields take. Only a new password is checked. An older, shorter one still opens.
  */
 export function checkNewPassword(password: string): true | string {
   if (password === "") return "Password cannot be empty";

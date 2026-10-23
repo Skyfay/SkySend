@@ -55,6 +55,10 @@ for (const file of files) {
     intact: d.intact,
     "srv MiB": (p ?? u).cost?.serverPeakRssMiB,
     "srv cpu": (p ?? u).cost?.serverCpuPercent,
+    // The browser or the CLI, whichever ran: its peak memory while sending and while receiving.
+    "client MiB": u.cost?.browserPeakRssMiB,
+    "client down MiB": d.cost?.browserPeakRssMiB,
+    "client cpu": u.cost?.browserCpuPercent,
     left: r.s3Leftovers ? `${r.s3Leftovers.multipartUploads}/${r.s3Leftovers.parts}` : undefined,
   };
   console.log(

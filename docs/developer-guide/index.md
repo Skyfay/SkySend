@@ -13,6 +13,8 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 | `@skysend/client` | `apps/client` | CLI client binary (Bun compile) |
 | `@skysend/cli` | `apps/cli` | Admin CLI tool |
 | `@skysend/crypto` | `packages/crypto` | Shared encryption library |
+| `@skysend/note-format` | `packages/note-format` | What a note holds before it is encrypted |
+| `@skysend/transfer` | `packages/transfer` | API client, zip, upload and download, shared by web and CLI |
 | `@skysend/docs` | `docs` | VitePress documentation |
 
 ## Tech Stack
@@ -29,13 +31,14 @@ SkySend is a monorepo managed with pnpm Workspaces, consisting of:
 | Validation | Zod |
 | i18n | react-i18next |
 | Password KDF | Argon2id (WASM) |
-| Zip | Own streaming writer in the browser, fflate in the CLI |
+| Zip | Own streaming writer in `@skysend/transfer`, for web and CLI |
 | Monorepo | pnpm Workspaces |
 | Tests | Vitest, Playwright |
 
 ## Quick Links
 
 - [Architecture](/developer-guide/architecture) - System architecture and data flow
+- [Transfer Core](/developer-guide/transfer) - The upload, download and API client shared by web and CLI
 - [Download Modes](/developer-guide/download-modes) - Browser-specific download strategies
 - [Toast System](/developer-guide/toast-system) - In-app toast notifications, `showToast()`, and known-error enrichment
 - [Project Setup](/developer-guide/setup) - Set up a local development environment

@@ -202,8 +202,12 @@ const TARGETS: Target[] = [
 const tools = {
   caddy: { ready: existsSync(CADDY), missing: "Caddy is not installed, run pnpm test:e2e:install" },
   // The Nginx image runs on the host network, which Docker Desktop on a Mac has to allow first.
+  // A daemon still pulling an image on a disk under load answers late: on a CI runner whose
+  // browser came from the cache, the tests started while the large job was still removing
+  // toolchains, and 10 s were not enough (2026-10-23). Without Docker, or with its daemon down,
+  // the command fails at once, so the long wait only applies to a daemon that is there.
   docker: {
-    ready: spawnSync("docker", ["info"], { stdio: "ignore", timeout: 10_000 }).status === 0,
+    ready: spawnSync("docker", ["info"], { stdio: "ignore", timeout: 90_000 }).status === 0,
     missing: "Docker is not available, so Nginx and the S3 store cannot run",
   },
 };

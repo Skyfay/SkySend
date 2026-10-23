@@ -164,7 +164,7 @@ grep -rn "LEGACY(notes-v1)" apps packages
 1. `apps/server/src/routes/note.ts`: remove the legacy values from `NOTE_CONTENT_TYPES`. Stored legacy notes keep opening, reading does not depend on this list.
 2. `apps/server/tests/notes.test.ts`: remove the test that accepts every content type from before v3, and add those content types to the rejected ones.
 3. `apps/client/src/lib/note.ts`: remove `toLegacyNote()` and the fallback in `prepareNote()`. The client then refuses a server that does not report `noteBlocks` with a message to update the server.
-4. `apps/client/src/lib/api.ts`: `CreateNoteRequest.contentType` becomes `typeof NOTE_KIND`.
+4. `packages/transfer/src/api.ts`: `CreateNoteRequest.contentType` becomes `typeof NOTE_KIND`.
 5. `apps/client/tests/lib/note.test.ts`: remove the `toLegacyNote` tests, the fallback test and the `false` case of the round trip.
 6. Docs: the content types the [notes API](/developer-guide/api/notes) accepts, the [compatibility table](#compatibility), and the fallback in the [CLI client commands](/user-guide/client-cli/commands#note).
 
@@ -174,9 +174,9 @@ grep -rn "LEGACY(notes-v1)" apps packages
 
 1. `packages/note-format/src/legacy.ts`: delete the file, its exports in `src/index.ts` and the legacy branch in `src/read.ts`.
 2. `packages/note-format/tests/`: delete `legacy.test.ts` and the legacy cases in `read.test.ts`. Remove the fixtures whose `kind` is not `blocks` from `fixtures/encrypted-notes.json` and keep the others. This is the only edit that file may ever get. Adjust the coverage test in `encrypted.test.ts` to the fixtures that are left.
-3. `apps/web/src/lib/api.ts` and `apps/client/src/lib/api.ts`: the `contentType` of the note info becomes `z.string()`. A legacy note that outlived phase 2 then opens as unreadable plain text instead of failing.
+3. `packages/transfer/src/api.ts`: the `contentType` of the note info becomes `z.string()`. A legacy note that outlived phase 2 then opens as unreadable plain text instead of failing.
 4. `apps/web/src/lib/note-editor.ts`: remove the legacy branch of `storedNoteKinds()`, and its test in `apps/web/tests/lib/note-editor.test.ts`. In `apps/web/src/lib/upload-store.ts`, `StoredNote.contentType` becomes `typeof NOTE_KIND`. Old entries in a browser's "My Uploads" only lose their type icon.
-5. `apps/web/tests/hooks/useNoteView.test.ts` and `apps/client/tests/lib/note.test.ts`: remove the cases that read a legacy note.
+5. `packages/transfer/tests/note.test.ts` and `apps/client/tests/lib/note.test.ts`: remove the cases that read a legacy note.
 6. `packages/crypto/src/note.ts` and `src/index.ts`: remove the types `NoteContentType` and `NoteMetadata`. They are not marked, they describe the format before v3 and nothing uses them.
 7. `apps/server/src/db/schema.ts`: the comment on `content_type`.
 8. Docs: the legacy rows of [Content Types](#content-types) on this page and in [Encryption](/user-guide/security/encryption#content-types), the notes API, and this checklist.

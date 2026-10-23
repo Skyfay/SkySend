@@ -13,6 +13,7 @@ import {
   clearLine,
   writeProgress,
   writeLine,
+  writeJsonError,
   promptPassword,
   type ProgressState,
 } from "../../src/lib/progress.js";
@@ -104,23 +105,25 @@ describe("formatDuration", () => {
 
 describe("formatExpiry", () => {
   it("formats seconds under 1 minute", () => {
+    expect(formatExpiry(1)).toBe("1 second");
     expect(formatExpiry(30)).toBe("30 seconds");
     expect(formatExpiry(59)).toBe("59 seconds");
   });
 
-  it("formats minutes for 1 minute - 1 hour", () => {
-    expect(formatExpiry(60)).toBe("1 minutes");
-    expect(formatExpiry(3600 - 1)).toBe("59.983333333333334 minutes");
-  });
-
-  it("formats hours for 1 hour - 1 day", () => {
-    expect(formatExpiry(3600)).toBe("1 hours");
+  it("formats whole minutes, hours and days in one unit, singular for one", () => {
+    expect(formatExpiry(60)).toBe("1 minute");
+    expect(formatExpiry(300)).toBe("5 minutes");
+    expect(formatExpiry(3600)).toBe("1 hour");
     expect(formatExpiry(7200)).toBe("2 hours");
+    expect(formatExpiry(86400)).toBe("1 day");
+    expect(formatExpiry(86400 * 7)).toBe("7 days");
   });
 
-  it("formats days for 1 day and above", () => {
-    expect(formatExpiry(86400)).toBe("1 days");
-    expect(formatExpiry(86400 * 7)).toBe("7 days");
+  it("falls back to a smaller unit when the period is not whole", () => {
+    expect(formatExpiry(90)).toBe("90 seconds");
+    expect(formatExpiry(3600 - 1)).toBe("3599 seconds");
+    expect(formatExpiry(5400)).toBe("90 minutes");
+    expect(formatExpiry(86400 + 3600)).toBe("25 hours");
   });
 });
 
@@ -447,5 +450,16 @@ describe("promptPassword", () => {
       term.type("late\r");
       expect(term.shown).toEqual(["Pass: ", "\n"]);
     });
+  });
+});
+
+describe("writeJsonError", () => {
+  it("writes one line of plain JSON to stderr, also where FORCE_COLOR is set", () => {
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    vi.stubEnv("FORCE_COLOR", "1");
+    writeJsonError({ error: "This request no longer exists.", status: 404 });
+    expect(write).toHaveBeenCalledWith('{"error":"This request no longer exists.","status":404}\n');
+    vi.unstubAllEnvs();
+    write.mockRestore();
   });
 });

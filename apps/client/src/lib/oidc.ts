@@ -1,6 +1,8 @@
 import * as http from "node:http";
 import * as net from "node:net";
+import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import { getStoredToken, saveStoredToken } from "./config.js";
 
 // ── Token helpers ──────────────────────────────────────
@@ -73,14 +75,21 @@ async function getFreePort(): Promise<number> {
 
 export interface LocalCallbackServer {
   port: number;
+  /** The path the login comes back to, unguessable, like `/callback/<32 random bytes>`. */
+  path: string;
   waitForToken: Promise<string>;
   close: () => void;
 }
 
 /**
  * Start a temporary HTTP server on a random localhost port.
- * Resolves `waitForToken` with the JWT once the OIDC callback arrives.
+ * Resolves `waitForToken` with the JWT once the OIDC callback arrives on `path`.
  * Closes itself automatically after receiving one token.
+ *
+ * Only `path` gets an answer. Any program on this computer, and any web page the browser has
+ * open, can reach the port, and without a secret path one of them could hand in a session of
+ * another account or end the login. The server keeps the path of the callback it is given, so
+ * this works with every server version.
  */
 export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
   return new Promise((resolve, reject) => {
@@ -91,10 +100,16 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
       tokenResolve = res;
       tokenReject = rej;
     });
+    const path = `/callback/${randomBytes(32).toString("base64url")}`;
 
     const server = http.createServer((req, res) => {
       /* v8 ignore next */
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
+      if (url.pathname !== path) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Not found");
+        return;
+      }
       const token = url.searchParams.get("token");
 
       // Always respond with a friendly HTML page before resolving.
@@ -123,6 +138,7 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
         server.listen(port, "127.0.0.1", () => {
           resolve({
             port,
+            path,
             waitForToken,
             close: () => server.close(),
           });
@@ -139,17 +155,34 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
 /**
  * Open a URL in the user's default browser.
  * Uses platform-appropriate commands without introducing new dependencies.
+ * On a machine without a desktop, or over SSH, there is no opener: `onFail` is called instead of
+ * the error ending the process, and the caller has printed the address anyway.
+ *
+ * Only http and https addresses open, never a file or a program a link could name. The address
+ * comes from a server, which may be one from the public list, so on Windows it never goes through
+ * cmd.exe: cmd reads & | ^ < > in it as its own syntax and ran whatever followed. rundll32 hands
+ * the address to the default browser as it is.
  */
-export function openBrowser(url: string): void {
-  const platform = process.platform;
-  if (platform === "darwin") {
-    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-  } else if (platform === "win32") {
-    // On Windows, `start` is a shell built-in - must be run via cmd.exe.
-    spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" }).unref();
-  } else {
-    spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
+export function openBrowser(url: string, onFail?: () => void): void {
+  let target: string;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Not a web address");
+    target = parsed.href;
+  } catch {
+    onFail?.();
+    return;
   }
+  const platform = process.platform;
+  const [command, args] =
+    platform === "darwin"
+      ? ["open", [target]]
+      : platform === "win32"
+        ? ["rundll32", ["url.dll,FileProtocolHandler", target]]
+        : ["xdg-open", [target]];
+  const child = spawn(command, args, { detached: true, stdio: "ignore" });
+  child.on("error", () => onFail?.());
+  child.unref();
 }
 
 // ── OIDC Login Flow ────────────────────────────────────
@@ -159,13 +192,18 @@ export function openBrowser(url: string): void {
  * Returns the session JWT after the user completes the login.
  */
 export async function performOidcLogin(serverUrl: string): Promise<string> {
-  const normalized = serverUrl.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(serverUrl);
   const callbackServer = await startLocalCallbackServer();
-  const callbackUrl = `http://127.0.0.1:${callbackServer.port}/callback`;
+  const callbackUrl = `http://127.0.0.1:${callbackServer.port}${callbackServer.path}`;
   const loginUrl = `${normalized}/auth/login?cli_callback=${encodeURIComponent(callbackUrl)}`;
 
-  console.error(`\nOpening browser for login: ${loginUrl}`);
-  console.error("Waiting for authentication...\n");
+  // Straight to stderr: the Bun binary wraps console.error in a color code where FORCE_COLOR
+  // is set, and a script that reads the address would take the code along into the URL.
+  process.stderr.write(
+    `\nOpening browser for login: ${loginUrl}\n` +
+      "If no browser opens, open that address in a browser on this computer.\n" +
+      "Waiting for authentication...\n\n",
+  );
   openBrowser(loginUrl);
 
   let token: string;
@@ -186,7 +224,7 @@ export async function performOidcLogin(serverUrl: string): Promise<string> {
  * Otherwise initiates a new browser-based OIDC login.
  */
 export async function ensureOidcAuth(serverUrl: string): Promise<string> {
-  const normalized = serverUrl.replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(serverUrl);
   const stored = getStoredToken(normalized);
   if (stored && !isTokenExpired(stored)) {
     return stored;

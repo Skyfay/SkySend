@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { trimTrailingSlashes } from "@skysend/transfer";
 import {
   loadConfig,
   saveConfig,
@@ -47,7 +48,7 @@ export function registerConfigCommand(program: Command): void {
     .description("Save the default server URL")
     .argument("<url>", "Server URL (e.g. https://send.example.com)")
     .action((url: string) => {
-      const cleanUrl = url.replace(/\/+$/, "");
+      const cleanUrl = trimTrailingSlashes(url);
       try {
         new URL(cleanUrl);
       } catch {

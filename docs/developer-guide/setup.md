@@ -84,6 +84,7 @@ pnpm test
 
 Tests are written with Vitest. Each package has its own test directory:
 - `packages/crypto/tests/` - Crypto library tests
+- `packages/transfer/tests/` - Zip, upload and download pipeline tests
 - `apps/server/tests/` - Server tests
 - `apps/client/` - CLI client (use `pnpm --filter @skysend/client run` for manual testing)
 

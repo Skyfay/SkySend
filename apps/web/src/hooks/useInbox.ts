@@ -9,13 +9,13 @@ import {
   openInbox,
   openInboxLink,
   readInboxNote,
-  requestOutlived,
   sanitizeFilename,
   NoteTooLargeError,
   type InboxAccess,
   type OpenedInbox,
   type OpenedUpload,
-} from "@/lib/file-request";
+} from "@skysend/transfer";
+import { requestOutlived } from "@/lib/file-request";
 import { getRequest, markUploadsSeen, removeRequest } from "@/lib/upload-store";
 import { setUnseen } from "@/lib/unseen-uploads";
 

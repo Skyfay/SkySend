@@ -1,573 +1,597 @@
-import React, { useState, useCallback } from "react";
-import * as fs from "node:fs";
+import React, { useCallback, useRef, useState } from "react";
 import * as path from "node:path";
-import { Box, Text, useInput } from "ink";
-import {
-  createEncryptStream, calculateEncryptedSize, encryptMetadata,
-  toBase64url, type FileMetadata, type SingleFileMetadata, type ArchiveMetadata,
-} from "@skysend/crypto";
-import { Zip, ZipDeflate } from "fflate";
-import {
-  uploadInit, uploadChunk, uploadFinalize, saveMeta,
-} from "../../lib/api.js";
-import { prepareUpload } from "../../lib/auth.js";
-import { buildShareUrl } from "../../lib/url.js";
-import { addUpload } from "../../lib/history.js";
-import { formatBytes, formatExpiry, formatSpeed } from "../../lib/progress.js";
-import { FileExplorer } from "../components/FileExplorer.js";
-import { SelectList, type SelectItem } from "../components/SelectList.js";
-import { TextPrompt } from "../components/TextPrompt.js";
-import { ProgressBar } from "../components/ProgressBar.js";
-import type { AppState } from "../types.js";
-import { useAccent } from "../theme.js";
-import { QRCodeDisplay } from "../components/QRCodeDisplay.js";
-import { uploadWsTransport } from "../../lib/ws-upload.js";
+import { Box, Text, useAnimation } from "ink";
 import { getWebSocket } from "../../lib/config.js";
+import { addUpload } from "../../lib/history.js";
+import { formatBytes, formatExpiry } from "../../lib/progress.js";
+import {
+  openRequest,
+  runRequestUpload,
+  runUpload,
+  type OpenRequest,
+  type UploadJobResult,
+} from "../../lib/upload-job.js";
 import { ensureOidcAuth } from "../../lib/oidc.js";
-import { createPrivateTempFile } from "../../lib/temp-file.js";
 import { forTerminal } from "../../lib/terminal.js";
 import { checkNewPassword } from "../../lib/input.js";
+import { expandPath, pastedPaths } from "../../lib/paths.js";
+import type { AppState } from "../types.js";
+import { COLORS, useAccent } from "../theme.js";
+import { useFocus, useRoom, type HandedRequest } from "../shell.js";
+import { Faint, Gap, Muted, Panel, T } from "../components/Frame.js";
+import { Form, type FormRow } from "../components/Form.js";
+import { FilePicker, measure, type PickedItem } from "../components/FilePicker.js";
+import { LinkReady } from "../components/LinkReady.js";
+import { SPINNER, TransferProgress, plural, seconds, useRate } from "../components/Progress.js";
 
-type Phase =
-  | "file-select"
-  | "expiry"
-  | "downloads"
-  | "password-ask"
-  | "password-input"
-  | "confirm"
-  | "authenticating"
-  | "packing"
-  | "uploading"
-  | "done"
-  | "error";
+type Phase = "compose" | "pick" | "auth" | "opening" | "uploading" | "done" | "delivered" | "error";
 
 interface UploadViewProps {
   appState: AppState;
   onBack: () => void;
   onError: (msg: string) => void;
+  /** After an upload, so the quota can be read again. */
+  onUploaded: () => void;
+  /** A file request another tab opened, to send into. Each new `n` is taken once. */
+  handOver?: { request: HandedRequest; n: number } | null;
 }
 
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  const total = chunks.reduce((sum, c) => sum + c.byteLength, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength; }
-  return result;
+/** "Deleted after 1 day or 1 download, whichever comes first." */
+function lifetime(expireSec: number, downloads: number): string {
+  return `Deleted after ${formatExpiry(expireSec)} or ${plural(downloads, "download")}, whichever comes first.`;
 }
 
-function createFileStream(filePath: string): ReadableStream<Uint8Array> {
-  const nodeStream = fs.createReadStream(filePath);
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      nodeStream.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      nodeStream.on("end", () => controller.close());
-      nodeStream.on("error", (err) => controller.error(err));
-    },
-    cancel() { nodeStream.destroy(); },
-  });
+/** The next value of a list of options in a direction, staying at the ends. */
+function step<T>(values: readonly T[], current: T, by: number): T {
+  const at = Math.max(0, values.indexOf(current));
+  return values[Math.min(values.length - 1, Math.max(0, at + by))]!;
 }
 
-const PRECOMPRESSED_EXTENSIONS = new Set([
-  // Audio
-  "mp3", "aac", "ogg", "oga", "flac", "m4a", "opus", "wma",
-  // Video
-  "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "3gp",
-  // Images
-  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "avif",
-  // Archives
-  "zip", "gz", "bz2", "xz", "7z", "rar", "zst", "br",
-  // Documents (ZIP-based formats, already compressed)
-  "pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp", "epub",
-]);
-
-function getCompressionLevel(filename: string): 0 | 6 {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-  return PRECOMPRESSED_EXTENSIONS.has(ext) ? 0 : 6;
-}
-
-async function createZipFile(
-  filePaths: string[],
-  onProgress?: (packed: number, total: number) => void,
-): Promise<{ path: string; size: number; cleanup: () => void }> {
-  const totalBytes = filePaths.reduce((sum, f) => {
-    try { return sum + fs.statSync(f).size; } catch { return sum; }
-  }, 0);
-  let packedBytes = 0;
-
-  // Stream ZIP output to a temp file instead of buffering in RAM. The zip is still
-  // plaintext, so only this user may read it, and a failed packing removes it at once.
-  const tmp = createPrivateTempFile("upload.zip");
-  try {
-    const zipper = new Zip((_err, chunk) => {
-      fs.writeSync(tmp.fd, chunk);
-    });
-    for (const filePath of filePaths) {
-      const name = path.basename(filePath);
-      const entry = new ZipDeflate(name, { level: getCompressionLevel(name) });
-      zipper.add(entry);
-      const nodeStream = fs.createReadStream(filePath);
-      for await (const chunk of nodeStream) {
-        const data = new Uint8Array(chunk as Buffer);
-        entry.push(data);
-        packedBytes += data.byteLength;
-        onProgress?.(packedBytes, totalBytes);
-        // Yield to let React re-render
-        await new Promise<void>((r) => setImmediate(r));
-      }
-      entry.push(new Uint8Array(0), true);
-    }
-    zipper.end();
-    tmp.close();
-    return { path: tmp.path, size: fs.statSync(tmp.path).size, cleanup: tmp.cleanup };
-  } catch (err) {
-    tmp.cleanup();
-    throw err;
-  }
-}
-
-export function UploadView({ appState, onBack }: UploadViewProps): React.ReactElement {
+/** The Send tab: a form with the files, the options and the button, then the upload and its link. */
+export function UploadView({ appState, onUploaded, handOver }: UploadViewProps): React.ReactElement {
   const accent = useAccent();
-  const { server, config } = appState;
-  const [phase, setPhase] = useState<Phase>("file-select");
-  const [files, setFiles] = useState<string[]>([]);
+  const { width, height } = useRoom();
+  const { active, toTabs } = useFocus();
+  const { server, config, quota } = appState;
+  const host = new URL(server).host;
+
+  const [phase, setPhase] = useState<Phase>("compose");
+  const [items, setItems] = useState<PickedItem[]>([]);
+  const [pathInput, setPathInput] = useState("");
   const [expireSec, setExpireSec] = useState(config.fileDefaultExpire);
   const [maxDownloads, setMaxDownloads] = useState(config.fileDefaultDownload);
-  const [password, setPassword] = useState<string | undefined>();
-  const [progress, setProgress] = useState({ percent: 0, speed: "", loaded: 0, total: 0 });
-  const [packProgress, setPackProgress] = useState({ percent: 0, packed: 0, total: 0 });
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [avgSpeed, setAvgSpeed] = useState("");
-  const [shareUrl, setShareUrl] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [showQR, setShowQR] = useState(false);
-  const [transport, setTransport] = useState<"WebSocket" | "HTTP chunked">("HTTP chunked");
+  const [password, setPassword] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  // A file request to send into instead of a link of one's own, and its upload link.
+  const [requestInput, setRequestInput] = useState("");
+  const [request, setRequest] = useState<HandedRequest | null>(null);
+  const [handedN, setHandedN] = useState(0);
+  const [focus, setFocus] = useState<{ id: string; n: number }>({ id: "add", n: 0 });
+  const [progress, setProgress] = useState({ loaded: 0, total: 0, finishing: false });
+  const { rate, track, reset } = useRate();
+  const [result, setResult] = useState<(UploadJobResult & { seconds: number }) | null>(null);
+  const [failure, setFailure] = useState("");
+  // Cancelling takes a second enter, so a stray one does not throw the upload away.
+  const [cancelAsked, setCancelAsked] = useState(false);
+  const abort = useRef<AbortController | null>(null);
+  const { frame } = useAnimation({ interval: 90, isActive: phase === "uploading" || phase === "auth" || phase === "opening" });
 
-  const totalSize = files.reduce((sum, f) => {
-    try { return sum + fs.statSync(f).size; } catch { return sum; }
-  }, 0);
+  // A request sets its own limits, which are never above those of the server.
+  const maxSize = request ? request.status.maxUploadSize : config.fileMaxSize;
+  const maxFiles = request ? request.status.maxFilesPerUpload : config.fileMaxFilesPerUpload;
+  const totalSize = items.reduce((sum, item) => sum + item.size, 0);
+  const fileCount = items.reduce((sum, item) => sum + item.count, 0);
+  const tooBig = totalSize > maxSize;
+  const tooMany = fileCount > maxFiles || items.some((i) => i.tooMany);
+  const what = plural(fileCount, "file");
+  const focusOn = (id: string) => setFocus((f) => ({ id, n: f.n + 1 }));
 
-  const doUpload = useCallback(async () => {
-    let zipCleanup: (() => void) | undefined;
-    try {
-      // Authenticate with OIDC before uploading if the server requires it.
-      let oidcToken: string | undefined;
-      if (config.oidcProtectFiles) {
-        setPhase("authenticating");
-        oidcToken = await ensureOidcAuth(server);
-      }
-
-      setPhase("uploading");
-      setIsFinalizing(false);
-      setAvgSpeed("");
-      const isMulti = files.length > 1;
-
-      // The file the upload reads: the packed zip for several files, else the file itself.
-      let sourcePath: string;
-      let plaintextSize: number;
-      if (isMulti) {
-        setPhase("packing");
-        setPackProgress({ percent: 0, packed: 0, total: totalSize });
-        const zip = await createZipFile(files, (packed, total) => {
-          setPackProgress({
-            percent: total > 0 ? (packed / total) * 100 : 0,
-            packed, total,
-          });
-        });
-        sourcePath = zip.path;
-        plaintextSize = zip.size;
-        zipCleanup = zip.cleanup;
-      } else {
-        sourcePath = files[0]!;
-        plaintextSize = fs.statSync(sourcePath).size;
-      }
-      const plaintextStream = createFileStream(sourcePath);
-
-      setPhase("uploading");
-
-      const creds = await prepareUpload(password);
-      const encryptedStream = plaintextStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
-      const encryptedSize = calculateEncryptedSize(plaintextSize);
-
-      const headers: Record<string, string> = {
-        "X-Auth-Token": creds.authTokenB64,
-        "X-Owner-Token": creds.ownerTokenB64,
-        "X-Salt": toBase64url(creds.salt),
-        "X-Max-Downloads": String(maxDownloads),
-        "X-Expire-Sec": String(expireSec),
-        "X-File-Count": String(files.length),
-        "X-Has-Password": String(creds.hasPassword),
-        "X-Content-Length": String(encryptedSize),
-      };
-      if (creds.hasPassword && creds.passwordSalt && creds.passwordAlgo) {
-        headers["X-Password-Salt"] = toBase64url(creds.passwordSalt);
-        headers["X-Password-Algo"] = creds.passwordAlgo;
-      }
-      if (oidcToken) {
-        headers["Authorization"] = `Bearer ${oidcToken}`;
-      }
-
-      // Upload with progress tracking
-      const startTime = Date.now();
-      const onProgress = (loaded: number) => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const speed = elapsed > 0 ? loaded / elapsed : 0;
-        setProgress({
-          percent: encryptedSize > 0 ? (loaded / encryptedSize) * 100 : 0,
-          speed: formatSpeed(speed),
-          loaded, total: encryptedSize,
-        });
-      };
-
-      let uploadId: string;
-      let uploadEndTime = 0;
-
-      const useWs = config.fileUploadWs && getWebSocket(server);
-      if (useWs) {
-        try {
-          setTransport("WebSocket");
-          const result = await uploadWsTransport(
-            server, headers, encryptedStream, encryptedSize,
-            config.fileUploadSpeedLimit ?? 0, onProgress,
-            () => { uploadEndTime = Date.now(); setIsFinalizing(true); },
-          );
-          uploadId = result.id;
-        } catch {
-          // WS failed - read the same file again for the HTTP fallback. A zip stays on
-          // disk until the finally block, so it is not packed a second time.
-          setTransport("HTTP chunked");
-          const retryStream = createFileStream(sourcePath);
-          const retryEncStream = retryStream.pipeThrough(createEncryptStream(creds.keys.fileKey));
-
-          const CHUNK_SIZE = 10 * 1024 * 1024;
-          const { id: httpId } = await uploadInit(server, headers);
-          const reader = retryEncStream.getReader();
-          let loaded = 0;
-          let chunkParts: Uint8Array[] = [];
-          let chunkSize = 0;
-          let chunkIdx = 0;
-
-          const sendChunk = async (data: Uint8Array, index: number) => {
-            await uploadChunk(server, httpId, index, data);
-            loaded += data.byteLength;
-            onProgress(loaded);
-          };
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunkParts.push(value);
-            chunkSize += value.byteLength;
-            if (chunkSize >= CHUNK_SIZE) {
-              await sendChunk(concatChunks(chunkParts), chunkIdx++);
-              chunkParts = [];
-              chunkSize = 0;
-            }
-          }
-          if (chunkSize > 0) {
-            await sendChunk(concatChunks(chunkParts), chunkIdx++);
-          }
-
-          await uploadFinalize(server, httpId, creds.ownerTokenB64);
-          uploadEndTime = Date.now();
-          uploadId = httpId;
-        }
-      } else {
-        setTransport("HTTP chunked");
-        const CHUNK_SIZE = 10 * 1024 * 1024;
-        const { id: httpId } = await uploadInit(server, headers);
-        const reader = encryptedStream.getReader();
-        let loaded = 0;
-        let chunkParts: Uint8Array[] = [];
-        let chunkSize = 0;
-        let chunkIdx = 0;
-
-        const sendChunk = async (data: Uint8Array, index: number) => {
-          await uploadChunk(server, httpId, index, data);
-          loaded += data.byteLength;
-          onProgress(loaded);
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunkParts.push(value);
-          chunkSize += value.byteLength;
-          if (chunkSize >= CHUNK_SIZE) {
-            await sendChunk(concatChunks(chunkParts), chunkIdx++);
-            chunkParts = [];
-            chunkSize = 0;
-          }
-        }
-        if (chunkSize > 0) {
-          await sendChunk(concatChunks(chunkParts), chunkIdx++);
-        }
-
-        await uploadFinalize(server, httpId, creds.ownerTokenB64);
-        uploadEndTime = Date.now();
-        uploadId = httpId;
-      }
-
-      // Save metadata
-      const metadata: FileMetadata = isMulti
-        ? {
-            type: "archive",
-            files: files.map((f) => ({ name: path.basename(f), size: fs.statSync(f).size })),
-            totalSize: files.reduce((sum, f) => sum + fs.statSync(f).size, 0),
-            archiveSize: plaintextSize,
-          } satisfies ArchiveMetadata
-        : {
-            type: "single",
-            name: path.basename(files[0]!),
-            size: plaintextSize,
-            mimeType: "application/octet-stream",
-          } satisfies SingleFileMetadata;
-
-      const encMeta = await encryptMetadata(metadata, creds.keys.metaKey);
-      const encryptedMeta = toBase64url(encMeta.ciphertext);
-      const nonce = toBase64url(encMeta.iv);
-      await saveMeta(server, uploadId, creds.ownerTokenB64, encryptedMeta, nonce);
-
-      const url = buildShareUrl(server, "file", uploadId, creds.effectiveSecretB64);
-      setShareUrl(url);
-
-      const elapsedSec = (uploadEndTime - startTime) / 1000;
-      if (elapsedSec > 0 && encryptedSize > 0) {
-        setAvgSpeed(formatSpeed(encryptedSize / elapsedSec));
-      }
-
-      addUpload({
-        id: uploadId, server, url,
-        ownerToken: creds.ownerTokenB64,
-        fileNames: files.map((f) => path.basename(f)),
-        totalSize, hasPassword: creds.hasPassword,
-        createdAt: new Date().toISOString(), expireSec,
-      });
-
-      setPhase("done");
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setPhase("error");
-    } finally {
-      zipCleanup?.();
+  const add = useCallback((paths: string[]) => {
+    const found: PickedItem[] = [];
+    const missing: string[] = [];
+    for (const p of paths) {
+      const item = measure(p, config.fileMaxFilesPerUpload);
+      if (item) found.push(item);
+      else missing.push(p);
     }
-  }, [files, password, maxDownloads, expireSec, server, totalSize, config.fileUploadSpeedLimit, config.fileUploadWs, config.oidcProtectFiles]);
+    setItems((prev) => [...prev, ...found.filter((f) => !prev.some((p) => p.path === f.path))]);
+    setProblem(missing.length > 0 ? `Nothing found at ${missing.join(", ")}` : null);
+    return found.length;
+  }, [config.fileMaxFilesPerUpload]);
 
-  // Done / Error view - press any key to go back
-  useInput((input, key) => {
-    if (phase === "done" && input === "q") {
-      setShowQR((v) => !v);
+  /**
+   * Opens the upload link of a request, which then takes the place of the options. The cursor
+   * goes on to `next`, the button when files are already picked.
+   */
+  const openRequestLink = async (link: string, next = items.length > 0 ? "send" : "add") => {
+    if (!link.trim()) return;
+    setPhase("opening");
+    try {
+      const opened = await openRequest(link.trim());
+      setRequest({ ...opened, link: link.trim() });
+      setRequestInput("");
+      setProblem(null);
+      setPhase("compose");
+      focusOn(next);
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+      setPhase("compose");
+      focusOn("request");
+    }
+  };
+
+  // A request handed over from another tab is taken in while nothing runs here, else after.
+  if (handOver && handOver.n !== handedN && !["uploading", "auth", "opening", "pick"].includes(phase)) {
+    setHandedN(handOver.n);
+    setRequest(handOver.request);
+    setResult(null);
+    setProblem(null);
+    setPhase("compose");
+    setFocus((f) => ({ id: items.length > 0 ? "send" : "add", n: f.n + 1 }));
+  }
+
+  /** Sends into the open request: no link comes back, only whoever made it opens the files. */
+  const deliver = async (into: OpenRequest) => {
+    const controller = new AbortController();
+    abort.current = controller;
+    setPhase("uploading");
+    setCancelAsked(false);
+    setProgress({ loaded: 0, total: 0, finishing: false });
+    reset();
+    const started = Date.now();
+    let doneAt = 0;
+    try {
+      const delivered = await runRequestUpload(
+        { request: into, paths: items.map((item) => item.path), webSocket: getWebSocket(into.server), signal: controller.signal },
+        {
+          onProgress: (loaded, total) => {
+            setProgress({ loaded, total, finishing: false });
+            track(loaded);
+          },
+          onPhase: (next) => {
+            if (next !== "saving-meta" || doneAt > 0) return;
+            doneAt = Date.now();
+            setProgress((prev) => ({ ...prev, finishing: true }));
+          },
+        },
+      );
+      setResult({ ...delivered, url: "", ownerToken: "", hasPassword: false, seconds: ((doneAt || Date.now()) - started) / 1000 });
+      setPhase("delivered");
+      onUploaded();
+    } catch (err) {
+      if (controller.signal.aborted) {
+        setProblem("The upload was cancelled, nothing was sent.");
+        setPhase("compose");
+        focusOn("send");
+      } else {
+        setFailure(err instanceof Error ? err.message : String(err));
+        setPhase("error");
+      }
+    } finally {
+      abort.current = null;
+    }
+  };
+
+  const send = async () => {
+    if (request) {
+      await deliver(request);
       return;
     }
-    if ((phase === "done" || phase === "error") && (key.return || key.escape)) {
-      onBack();
+    if (password && checkNewPassword(password) !== true) {
+      setProblem(`Password: ${checkNewPassword(password) as string}`);
+      focusOn("password");
+      return;
     }
-  }, { isActive: phase === "done" || phase === "error" });
-
-  // File select
-  if (phase === "file-select") {
-    return (
-      <FileExplorer
-        onConfirm={(selected) => {
-          setFiles(selected);
-          setPhase("expiry");
-        }}
-        onCancel={onBack}
-        maxFiles={config.fileMaxFilesPerUpload}
-        maxSize={config.fileMaxSize}
-      />
-    );
-  }
-
-  // Expiry selection
-  if (phase === "expiry") {
-    const items: Array<SelectItem<number>> = config.fileExpireOptions.map((s) => ({
-      label: formatExpiry(s),
-      value: s,
-    }));
-    return (
-      <SelectList
-        items={items}
-        title={`Expiry time (${files.length} file${files.length !== 1 ? "s" : ""}, ${formatBytes(totalSize)})`}
-        onSelect={(val) => { setExpireSec(val); setPhase("downloads"); }}
-        onCancel={onBack}
-      />
-    );
-  }
-
-  // Download count
-  if (phase === "downloads") {
-    const items: Array<SelectItem<number>> = config.fileDownloadOptions.map((d) => ({
-      label: String(d),
-      value: d,
-    }));
-    return (
-      <SelectList
-        items={items}
-        title="Max downloads"
-        onSelect={(val) => { setMaxDownloads(val); setPhase("password-ask"); }}
-        onCancel={() => setPhase("expiry")}
-      />
-    );
-  }
-
-  // Password ask
-  if (phase === "password-ask") {
-    if (config.forceFilePassword) {
-      // Skip the Yes/No question - password is required
-      return (
-        <TextPrompt
-          label="Password (required by server policy)"
-          mask="*"
-          onSubmit={(val) => { setPassword(val); setPhase("confirm"); }}
-          onCancel={() => setPhase("downloads")}
-          validate={checkNewPassword}
-        />
+    if (config.forceFilePassword && !password) {
+      setProblem("This server wants a password on every upload.");
+      focusOn("password");
+      return;
+    }
+    setProblem(null);
+    const controller = new AbortController();
+    abort.current = controller;
+    try {
+      let oidcToken: string | undefined;
+      if (config.oidcProtectFiles) {
+        setPhase("auth");
+        oidcToken = await ensureOidcAuth(server);
+      }
+      setPhase("uploading");
+      setCancelAsked(false);
+      setProgress({ loaded: 0, total: 0, finishing: false });
+      reset();
+      const started = Date.now();
+      let doneAt = 0;
+      const uploaded = await runUpload(
+        {
+          server,
+          paths: items.map((item) => item.path),
+          config,
+          expireSec,
+          maxDownloads,
+          ...(password ? { password } : {}),
+          ...(oidcToken ? { oidcToken } : {}),
+          webSocket: getWebSocket(server),
+          signal: controller.signal,
+        },
+        {
+          onProgress: (loaded, total) => {
+            setProgress({ loaded, total, finishing: false });
+            track(loaded);
+          },
+          onPhase: (next) => {
+            if (next !== "saving-meta" || doneAt > 0) return;
+            doneAt = Date.now();
+            setProgress((prev) => ({ ...prev, finishing: true }));
+          },
+        },
       );
+      addUpload({
+        id: uploaded.id,
+        server,
+        url: uploaded.url,
+        ownerToken: uploaded.ownerToken,
+        fileNames: uploaded.names,
+        totalSize: uploaded.totalSize,
+        hasPassword: uploaded.hasPassword,
+        createdAt: new Date().toISOString(),
+        expireSec,
+      });
+      setResult({ ...uploaded, seconds: ((doneAt || Date.now()) - started) / 1000 });
+      setPhase("done");
+      onUploaded();
+    } catch (err) {
+      if (controller.signal.aborted) {
+        setProblem("The upload was cancelled, nothing was shared.");
+        setPhase("compose");
+        focusOn("send");
+      } else {
+        setFailure(err instanceof Error ? err.message : String(err));
+        setPhase("error");
+      }
+    } finally {
+      abort.current = null;
     }
+  };
+
+  const startOver = () => {
+    setItems([]);
+    setPassword("");
+    setResult(null);
+    setProblem(null);
+    setRequest(null);
+    setPhase("compose");
+    focusOn("add");
+  };
+
+  /** More files into the same request, which is asked again how much it still takes. */
+  const sendMoreIntoRequest = () => {
+    const link = request?.link;
+    setItems([]);
+    setResult(null);
+    setRequest(null);
+    if (link) void openRequestLink(link, "add");
+  };
+
+  // ── Screens over the form ────────────────────────────
+
+  if (phase === "pick") {
     return (
-      <SelectList
-        items={[
-          { label: "No", value: "no" },
-          { label: "Yes", value: "yes" },
-        ]}
-        title="Password protect?"
-        onSelect={(val) => {
-          if (val === "yes") setPhase("password-input");
-          else { setPassword(undefined); setPhase("confirm"); }
+      <FilePicker
+        maxFiles={maxFiles}
+        onDone={(picked) => {
+          setItems((prev) => [...prev, ...picked.filter((p) => !prev.some((i) => i.path === p.path))]);
+          setProblem(null);
+          setPhase("compose");
+          focusOn("send");
         }}
-        onCancel={() => setPhase("downloads")}
+        onCancel={() => setPhase("compose")}
       />
     );
   }
 
-  // Password input
-  if (phase === "password-input") {
+  if (phase === "auth") {
     return (
-      <TextPrompt
-        label="Password"
-        mask="*"
-        onSubmit={(val) => { setPassword(val); setPhase("confirm"); }}
-        onCancel={() => setPhase("password-ask")}
-        validate={checkNewPassword}
-      />
+      <Panel width={width}>
+        <Gap />
+        <T>  <Text color={accent}>{SPINNER[frame % SPINNER.length]}</Text> <Text bold>Waiting for the login in your browser</Text></T>
+        <Muted>  {forTerminal(host)} wants you to sign in before you send files. A browser window opened for it.</Muted>
+        <Form rows={[]} active={active} height={1} onExit={toTabs} exitHint="tabs" />
+      </Panel>
     );
   }
 
-  // Confirm
-  if (phase === "confirm") {
+  if (phase === "opening") {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>Upload summary</Text>
-        </Box>
-        <Box flexDirection="column" marginLeft={2}>
-          <Text><Text dimColor>Files:     </Text>{files.length} ({formatBytes(totalSize)})</Text>
-          <Text><Text dimColor>Names:     </Text>{files.map((f) => path.basename(f)).join(", ")}</Text>
-          <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
-          <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
-          <Text><Text dimColor>Password:  </Text>{password ? "yes" : "no"}</Text>
-        </Box>
-        <Box marginTop={1}>
-          <SelectList
-            items={[
-              { label: "Start upload", value: "go" },
-              { label: "Cancel", value: "cancel" },
-            ]}
-            onSelect={(val) => {
-              if (val === "go") void doUpload();
-              else onBack();
-            }}
-          />
-        </Box>
-      </Box>
+      <Panel width={width}>
+        <Gap />
+        <T>  <Text color={accent}>{SPINNER[frame % SPINNER.length]}</Text> <Text bold>Opening the request</Text></T>
+        <Gap />
+      </Panel>
     );
   }
 
-  // Authenticating (browser OIDC flow)
-  if (phase === "authenticating") {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>Waiting for browser login...</Text>
-        </Box>
-        <Text dimColor>A browser window has been opened for authentication.</Text>
-        <Text dimColor>Complete the login and return here.</Text>
-      </Box>
-    );
-  }
-
-  // Packing (multi-file ZIP)
-  if (phase === "packing") {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>Packing {files.length} files into archive...</Text>
-        </Box>
-        <ProgressBar
-          percent={packProgress.percent}
-          detail={`${formatBytes(packProgress.packed)} / ${formatBytes(packProgress.total)}`}
-        />
-      </Box>
-    );
-  }
-
-  // Uploading
   if (phase === "uploading") {
+    const ratio = progress.total > 0 ? Math.min(1, progress.loaded / progress.total) : 0;
+    const sentPlain = ratio * totalSize;
+    const spin = SPINNER[frame % SPINNER.length];
+    // Where each item ends in the plaintext, to tell which are through.
+    const ends = items.reduce<number[]>((acc, item) => [...acc, (acc.at(-1) ?? 0) + item.size], []);
+    const listRows = Math.max(2, height - 18);
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold>{isFinalizing ? "Finalizing..." : "Uploading..."}</Text>
+      <Panel width={width} paddingX={2}>
+        <Gap />
+        <T><Text color={accent}>{spin}</Text> <Text bold>{progress.finishing ? "Finishing up" : request ? `Sending ${what} into the request` : `Sending ${what} to ${forTerminal(host)}`}</Text></T>
+        <Gap />
+        <TransferProgress ratio={ratio} done={sentPlain} total={totalSize} rate={rate} width={width - 8} finishing={progress.finishing} />
+        <Gap />
+        <Box backgroundColor={COLORS.well} flexDirection="column" paddingX={1}>
+          {items.slice(0, listRows).map((item, index) => {
+            const from = ends[index]! - item.size;
+            const done = sentPlain >= ends[index]!;
+            const current = !done && sentPlain >= from;
+            return (
+              <Box key={item.path} justifyContent="space-between">
+                <Text wrap="truncate-end">
+                  <Text color={done || current ? accent : COLORS.faint}>{done ? "✓" : current ? spin : "·"}</Text>
+                  <Text color={done ? COLORS.muted : COLORS.text}> {forTerminal(path.basename(item.path))}{item.folder ? "/" : ""}</Text>
+                </Text>
+                <Text color={current ? COLORS.text : COLORS.muted}>
+                  {current ? `${formatBytes(sentPlain - from)} of ${formatBytes(item.size)}` : formatBytes(item.size)}
+                </Text>
+              </Box>
+            );
+          })}
+          {items.length > listRows && <Faint>  and {items.length - listRows} more</Faint>}
         </Box>
-        <ProgressBar
-          percent={progress.percent}
-          detail={isFinalizing
-            ? "Waiting for server confirmation..."
-            : `${formatBytes(progress.loaded)} / ${formatBytes(progress.total)}  ${progress.speed}`}
+        <Gap />
+        <Faint>Encrypted before it leaves this computer. You can use the other tabs meanwhile.</Faint>
+        <Gap />
+        <Form
+          rows={[{
+            kind: "button",
+            id: "cancel",
+            label: cancelAsked ? "Press enter again to cancel the upload" : "Cancel the upload",
+            onPress: () => (cancelAsked ? abort.current?.abort() : setCancelAsked(true)),
+          }]}
+          active={active}
+          height={1}
+          onExit={toTabs}
+          exitHint="tabs"
         />
-      </Box>
+        <Gap />
+      </Panel>
     );
   }
 
-  // Done
-  if (phase === "done") {
+  if (phase === "done" && result) {
+    const speed = result.seconds > 0 ? result.size / result.seconds : 0;
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>
-          <Text bold color="green">Upload complete!</Text>
-        </Box>
-        <Box flexDirection="column" marginLeft={2}>
-          <Text><Text dimColor>Share URL: </Text><Text color={accent}>{shareUrl}</Text></Text>
-          <Text><Text dimColor>Files:     </Text>{files.length} ({formatBytes(totalSize)})</Text>
-          <Text><Text dimColor>Expires:   </Text>{formatExpiry(expireSec)}</Text>
-          <Text><Text dimColor>Downloads: </Text>{maxDownloads}</Text>
-          <Text><Text dimColor>Transport: </Text>{transport}</Text>
-          {avgSpeed !== "" && <Text><Text dimColor>Avg speed: </Text>{avgSpeed}</Text>}
-          {password && <Text><Text dimColor>Password:  </Text>yes</Text>}
-        </Box>
-        {showQR && (
-          <Box marginTop={1}>
-            <QRCodeDisplay url={shareUrl} />
-          </Box>
-        )}
-        <Box marginTop={1}>
-          <Text dimColor>q QR code  Enter/Esc back</Text>
-        </Box>
-      </Box>
+      <LinkReady
+        url={result.url}
+        title="Your link is ready"
+        actions={[{ id: "more", label: "Send more files", onPress: startOver }]}
+        active={active}
+        onExit={toTabs}
+        exitHint="tabs"
+      >
+        <Muted>
+          {plural(result.fileCount, "file")}, {formatBytes(result.size)}, sent in {seconds(result.seconds)}
+          {speed > 0 ? ` (${formatBytes(speed)}/s)` : ""}
+        </Muted>
+        <Muted>{lifetime(expireSec, maxDownloads)}</Muted>
+        <Muted>{result.hasPassword ? "Protected with a password. Tell it on another way than the link." : "No password."}</Muted>
+        <Faint>It is in My links, where you can delete it early.</Faint>
+      </LinkReady>
     );
   }
 
-  // Error
+  if (phase === "delivered" && result) {
+    const speed = result.seconds > 0 ? result.size / result.seconds : 0;
+    const left = (request?.status.uploadsLeft ?? 1) - 1;
+    return (
+      <Panel width={width}>
+        <Gap />
+        <Text color={accent} bold>  ✓ Delivered</Text>
+        <Muted>  {plural(result.fileCount, "file")}, {formatBytes(result.size)}, sent in {seconds(result.seconds)}{speed > 0 ? ` (${formatBytes(speed)}/s)` : ""}</Muted>
+        <Muted>  Only whoever made the request can open it. You keep no link.</Muted>
+        <Gap />
+        <Form
+          rows={[
+            ...(left > 0 ? [{ kind: "button" as const, id: "more", label: "Send more into the request", primary: true, onPress: sendMoreIntoRequest }] : []),
+            { kind: "button", id: "done", label: "Done", primary: left <= 0, onPress: startOver },
+          ]}
+          active={active}
+          height={2}
+          onExit={toTabs}
+          exitHint="tabs"
+        />
+        <Gap />
+      </Panel>
+    );
+  }
+
   if (phase === "error") {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text color="red" bold>Upload failed</Text>
-        <Text color="red">{forTerminal(errorMsg)}</Text>
-        <Box marginTop={1}>
-          <Text dimColor>Press Enter or Esc to go back</Text>
-        </Box>
-      </Box>
+      <Panel width={width}>
+        <Gap />
+        <Text color={COLORS.danger} bold>  The upload failed</Text>
+        <T>  {forTerminal(failure)}</T>
+        <Gap />
+        <Form
+          rows={[{ kind: "button", id: "back", label: "Back to the files", primary: true, onPress: () => { setPhase("compose"); focusOn("send"); } }]}
+          active={active}
+          height={1}
+          onExit={toTabs}
+          exitHint="tabs"
+        />
+        <Gap />
+      </Panel>
     );
   }
 
-  return <Box />;
+  // ── The form ─────────────────────────────────────────
+
+  const ready = items.length > 0 && !tooBig && !tooMany;
+  const optionRows: FormRow[] = [
+    { kind: "section", label: "Options" },
+    {
+      kind: "choice",
+      id: "expires",
+      label: "Expires after",
+      value: formatExpiry(expireSec),
+      onChange: (by) => setExpireSec((v) => step(config.fileExpireOptions, v, by)),
+    },
+    {
+      kind: "choice",
+      id: "downloads",
+      label: "Downloads",
+      value: maxDownloads === 1 ? "1 download" : `${maxDownloads} downloads`,
+      onChange: (by) => setMaxDownloads((v) => step(config.fileDownloadOptions, v, by)),
+    },
+    {
+      kind: "input",
+      id: "password",
+      label: "Password",
+      value: password,
+      onChange: setPassword,
+      mask: true,
+      placeholder: config.forceFilePassword ? "required by this server" : "none, or type one",
+    },
+    {
+      kind: "input",
+      id: "request",
+      label: "Into a request",
+      value: requestInput,
+      onChange: setRequestInput,
+      placeholder: "paste the upload link of a file request",
+      submitHint: "open it",
+      onSubmit: () => void openRequestLink(requestInput),
+    },
+  ];
+  const requestRows: FormRow[] = request
+    ? [
+        { kind: "section", label: "File request" },
+        {
+          kind: "note",
+          lines: 2,
+          content: (
+            <>
+              <T bold>{request.brief.title ? forTerminal(request.brief.title) : `A file request on ${forTerminal(new URL(request.server).host)}`}</T>
+              <Muted>
+                Takes {plural(request.status.uploadsLeft, "more upload")} of up to {formatBytes(request.status.maxUploadSize)}. Only whoever made it opens what you send.
+              </Muted>
+            </>
+          ),
+        },
+        {
+          kind: "button",
+          id: "leave",
+          label: "Make a link of my own instead",
+          onPress: () => {
+            setRequest(null);
+            focusOn("request");
+          },
+        },
+      ]
+    : [];
+  const used = quota?.enabled ? Math.min(10, Math.round((quota.used / Math.max(quota.limit, 1)) * 10)) : 0;
+  const rows: FormRow[] = [
+    { kind: "section", label: items.length ? `Files, ${what}, ${formatBytes(totalSize)}` : "Files" },
+    ...items.map((item): FormRow => ({
+      kind: "item",
+      id: `item:${item.path}`,
+      onRemove: () => setItems((prev) => prev.filter((i) => i.path !== item.path)),
+      removeHint: "take it out",
+      render: (focused) => (
+        <Box justifyContent="space-between" flexGrow={1}>
+          <Text wrap="truncate-end">
+            <Text color={COLORS.text} bold={focused}>{forTerminal(path.basename(item.path))}{item.folder ? "/" : ""}</Text>
+            {item.folder && <Text color={COLORS.muted}>  {plural(item.count, "file")}{item.tooMany ? "+" : ""}</Text>}
+          </Text>
+          <Text color={COLORS.muted}>{formatBytes(item.size)} </Text>
+        </Box>
+      ),
+    })),
+    { kind: "button", id: "add", label: items.length ? "+ Add more files or folders" : "+ Pick files or folders", onPress: () => setPhase("pick") },
+    {
+      kind: "input",
+      id: "path",
+      label: "Or a path",
+      value: pathInput,
+      onChange: setPathInput,
+      placeholder: "type or paste one, or drop files on the window",
+      submitHint: "add it",
+      onSubmit: () => {
+        if (!pathInput.trim()) return focusOn("send");
+        if (add([expandPath(pathInput)]) > 0) {
+          setPathInput("");
+          focusOn("send");
+        }
+      },
+    },
+    ...(request ? requestRows : optionRows),
+    { kind: "section", label: "" },
+    ...(problem || tooBig || tooMany
+      ? [{
+          kind: "note" as const,
+          lines: 1,
+          content: (
+            <Text color={COLORS.danger} wrap="truncate-end">
+              {problem
+                ?? (tooBig
+                  ? `Too large, ${request ? "the request" : forTerminal(host)} takes up to ${formatBytes(maxSize)}.`
+                  : `Too many files, ${request ? "the request" : forTerminal(host)} takes up to ${maxFiles} at once.`)}
+            </Text>
+          ),
+        }]
+      : []),
+    {
+      kind: "button",
+      id: "send",
+      primary: true,
+      disabled: !ready,
+      label: ready ? (request ? `Send ${what} into the request` : `Send ${what}`) : "Send (pick files first)",
+      onPress: () => void send(),
+    },
+    {
+      kind: "note",
+      lines: quota?.enabled ? 2 : 1,
+      content: (
+        <>
+          <Faint>
+            {fileCount > 1 || items.some((i) => i.folder)
+              ? "Several files go up as one zip, with the names you see."
+              : `Up to ${formatBytes(maxSize)} and ${maxFiles} files. Several go up as one zip.`}
+          </Faint>
+          {quota?.enabled && (
+            <Text>
+              <Faint>Your quota today </Faint>
+              <Text color={accent}>{"▰".repeat(used)}</Text>
+              <Text color={COLORS.track}>{"▱".repeat(10 - used)}</Text>
+              <Faint> {formatBytes(quota.used)} of {formatBytes(quota.limit)}</Faint>
+            </Text>
+          )}
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <Panel width={width}>
+      <Gap />
+      <Form
+        rows={rows}
+        active={active}
+        height={Math.max(8, height - 4)}
+        focus={focus}
+        onExit={toTabs}
+        exitHint="tabs"
+        onPaste={(text) => {
+          if (add(pastedPaths(text)) > 0) focusOn("send");
+        }}
+      />
+      <Gap />
+    </Panel>
+  );
 }

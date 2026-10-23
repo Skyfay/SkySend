@@ -71,7 +71,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @skysend/crypto --filter @skysend/note-format build
+      - run: pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer build
       - run: pnpm test:coverage
       - name: Upload coverage - crypto
         uses: codecov/codecov-action@v7
@@ -85,6 +85,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: packages/note-format/coverage/lcov.info
           flags: note-format
+      - name: Upload coverage - transfer
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/transfer/coverage/lcov.info
+          flags: transfer
       - name: Upload coverage - server
         uses: codecov/codecov-action@v7
         with:
@@ -181,7 +187,15 @@ jobs:
       - run: nohup node e2e/scripts/images.mjs ${{ matrix.images }} > "$RUNNER_TEMP/images.log" 2>&1 &
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @skysend/e2e exec playwright install --with-deps ${{ matrix.browser }}
+      # The browser comes from the cache while the Playwright version stays the same. Its system
+      # libraries come from apt every time, retried when the mirror stalls, see the script.
+      - id: playwright
+        run: echo "version=$(pnpm --filter @skysend/e2e exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+      - run: bash e2e/scripts/install-browser.sh ${{ matrix.browser }}
       - run: node e2e/scripts/install-caddy.mjs
       - run: pnpm test:e2e
 
@@ -221,7 +235,14 @@ jobs:
       - run: nohup node e2e/scripts/images.mjs nginx > "$RUNNER_TEMP/images.log" 2>&1 &
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @skysend/e2e exec playwright install --with-deps chromium
+      # Cached and installed like in the E2E job above.
+      - id: playwright
+        run: echo "version=$(pnpm --filter @skysend/e2e exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
+      - run: bash e2e/scripts/install-browser.sh chromium
       - run: df -h /
       - run: pnpm test:e2e:large
 

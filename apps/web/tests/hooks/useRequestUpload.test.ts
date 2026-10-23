@@ -8,19 +8,13 @@ vi.mock("@skysend/crypto", () => ({
   decryptRequestBrief: vi.fn(),
   fromBase64url: (s: string) => new TextEncoder().encode(s),
   toBase64url: () => "upload-token",
+  randomBytes: (n: number) => globalThis.crypto.getRandomValues(new Uint8Array(n)),
 }));
 
-vi.mock("../../src/lib/api.js", () => ({
+// The real ApiError, which the shared core recognises a gone request by.
+vi.mock("../../src/lib/api.js", async () => ({
   fetchRequestForSender: vi.fn(),
-  ApiError: class ApiError extends Error {
-    constructor(
-      public status: number,
-      message: string,
-    ) {
-      super(message);
-      this.name = "ApiError";
-    }
-  },
+  ApiError: (await import("@skysend/transfer")).ApiError,
 }));
 
 const upload = vi.fn().mockResolvedValue({});

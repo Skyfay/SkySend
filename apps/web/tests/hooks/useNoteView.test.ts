@@ -4,14 +4,15 @@ import { renderHook, act } from "@testing-library/react";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
-vi.mock("@skysend/crypto", () => ({
-  deriveKeys: vi.fn(async () => ({ metaKey: {}, authKey: {} })),
-  computeAuthToken: vi.fn(async () => new Uint8Array(32)),
-  decryptNoteContent: vi.fn(async () => "decrypted content"),
-  toBase64url: vi.fn(() => "authtoken"),
-  fromBase64url: vi.fn(() => new Uint8Array(32)),
-  applyPasswordProtection: vi.fn((_s: Uint8Array, _k: Uint8Array) => new Uint8Array(32)),
-  deriveKeyFromPassword: vi.fn(async () => ({ key: new Uint8Array(32) })),
+// Keys, the password check, the view and the reading of the note are the shared core's,
+// tested in packages/transfer.
+vi.mock("@skysend/transfer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@skysend/transfer")>()),
+  openNote: vi.fn(),
+}));
+
+vi.mock("../../src/lib/argon2.js", () => ({
+  hashWasmArgon2: vi.fn(),
 }));
 
 vi.mock("../../src/lib/api.js", () => ({
@@ -45,14 +46,31 @@ function makeNoteInfo(overrides = {}) {
   };
 }
 
-function makeViewResponse(overrides = {}) {
+function makeOpenedNote(overrides = {}) {
   return {
-    encryptedContent: btoa("encrypted"),
-    nonce: btoa("nonce"),
+    blocks: [{ type: "text" as const, format: "plain" as const, text: "decrypted content" }],
+    unreadable: false,
     viewCount: 1,
     maxViews: 3,
     ...overrides,
   };
+}
+
+async function getOpenNote() {
+  const { openNote } = await import("@skysend/transfer");
+  return vi.mocked(openNote);
+}
+
+/** A hook that has loaded the info of the note, like the page does first. */
+async function loaded(info = makeNoteInfo()) {
+  const api = await import("../../src/lib/api.js");
+  vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(info);
+  const { useNoteView } = await import("../../src/hooks/useNoteView.js");
+  const { result } = renderHook(() => useNoteView());
+  await act(async () => {
+    await result.current.loadInfo("n-1");
+  });
+  return result;
 }
 
 afterEach(() => {
@@ -73,41 +91,23 @@ describe("useNoteView", () => {
   });
 
   it("loadInfo() sets phase=idle and stores info when note has no password", async () => {
-    const { fetchNoteInfo } = await import("../../src/lib/api.js");
-    vi.mocked(fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo());
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
+    const result = await loaded();
 
     expect(result.current.phase).toBe("idle");
     expect(result.current.info?.id).toBe("n-1");
   });
 
   it("loadInfo() sets phase=needs-password when note has a password", async () => {
-    const { fetchNoteInfo } = await import("../../src/lib/api.js");
-    vi.mocked(fetchNoteInfo).mockResolvedValueOnce(
+    const result = await loaded(
       makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
     );
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
 
     expect(result.current.phase).toBe("needs-password");
   });
 
   it("loadInfo() sets phase=error on ApiError", async () => {
     const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockRejectedValueOnce(
-      new api.ApiError(404, "Not Found"),
-    );
+    vi.mocked(api.fetchNoteInfo).mockRejectedValueOnce(new api.ApiError(404, "Not Found"));
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
     const { result } = renderHook(() => useNoteView());
@@ -120,137 +120,7 @@ describe("useNoteView", () => {
     expect(result.current.error).toBe("Not Found");
   });
 
-  it("view() decrypts and sets phase=viewing", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo());
-    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    // Pre-load info so view() finds state.info
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64");
-    });
-
-    expect(result.current.phase).toBe("viewing");
-    expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "decrypted content" }]);
-  });
-
-  it("view() sets phase=destroyed when last view consumed", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo({ maxViews: 1 }));
-    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse({ viewCount: 1, maxViews: 1 }));
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    // Load info first so state.info is set before view() is called
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64");
-    });
-
-    expect(result.current.phase).toBe("destroyed");
-  });
-
-  it("view() sets phase=needs-password and error=wrong-password on failed verify", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
-    );
-    vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(false);
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64", "wrongpass", fakeArgon2id);
-    });
-
-    expect(result.current.phase).toBe("needs-password");
-    expect(result.current.error).toBe("wrong-password");
-  });
-
-  it("view() sets phase=needs-password and error=rate-limited on 429", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo());
-    vi.mocked(api.viewNote).mockRejectedValueOnce(new api.ApiError(429, "rate-limited"));
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64");
-    });
-
-    expect(result.current.phase).toBe("needs-password");
-    expect(result.current.error).toBe("rate-limited");
-  });
-
-  it("view() mit hasPassword=true, passwordSalt=undefined \u2192 phase='error'", async () => {
-    const api = await import("../../src/lib/api.js");
-    // passwordSalt intentionally absent so the throw on line 70 fires
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordAlgo: "argon2id-v2" }),
-    );
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64", "anypassword");
-    });
-
-    expect(result.current.phase).toBe("error");
-    expect(result.current.error).toBe("Failed to view note");
-  });
-
-  it("view() mit korrektem Passwort (verifyNotePassword=true) \u2192 phase='viewing'", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
-    );
-    vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
-    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
-
-    await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64", "correctpass", fakeArgon2id);
-    });
-
-    expect(result.current.phase).toBe("viewing");
-    expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "decrypted content" }]);
-  });
-
-  it("loadInfo() setzt error='Failed to load note info' bei generischem Fehler", async () => {
+  it("loadInfo() sets error='Failed to load note info' on another error", async () => {
     const { fetchNoteInfo } = await import("../../src/lib/api.js");
     vi.mocked(fetchNoteInfo).mockRejectedValueOnce(new Error("Network failure"));
 
@@ -265,9 +135,121 @@ describe("useNoteView", () => {
     expect(result.current.error).toBe("Failed to load note info");
   });
 
-  it("view() ohne loadInfo(): fetchNoteInfo gibt null zurueck \u2192 phase='error'", async () => {
+  it("view() shows the blocks the core opened", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(makeOpenedNote());
+    const result = await loaded();
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64");
+    });
+
+    expect(result.current.phase).toBe("viewing");
+    expect(result.current.blocks).toEqual([
+      { type: "text", format: "plain", text: "decrypted content" },
+    ]);
+    expect(result.current.viewCount).toBe(1);
+  });
+
+  it("view() hands the link, the info, the password and the Argon2id of the page to the core", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(makeOpenedNote());
+    const info = makeNoteInfo({
+      hasPassword: true,
+      passwordSalt: "ps64",
+      passwordAlgo: "argon2id-v2",
+    });
+    const result = await loaded(info);
     const api = await import("../../src/lib/api.js");
-    // Return null so the `if (!info) throw` branch fires
+    const { hashWasmArgon2 } = await import("../../src/lib/argon2.js");
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "correctpass");
+    });
+
+    expect(openNote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "n-1",
+        info,
+        secret: "secretb64",
+        password: "correctpass",
+        argon2id: hashWasmArgon2,
+      }),
+    );
+    const { api: given } = openNote.mock.calls[0]![0];
+    expect(given.viewNote).toBe(api.viewNote);
+    expect(given.verifyNotePassword).toBe(api.verifyNotePassword);
+    expect(result.current.phase).toBe("viewing");
+  });
+
+  it("view() sets phase=destroyed when last view consumed", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(makeOpenedNote({ viewCount: 1, maxViews: 1 }));
+    const result = await loaded(makeNoteInfo({ maxViews: 1 }));
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64");
+    });
+
+    expect(result.current.phase).toBe("destroyed");
+  });
+
+  it("view() keeps an unlimited note viewable", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(makeOpenedNote({ viewCount: 7, maxViews: 0 }));
+    const result = await loaded(makeNoteInfo({ maxViews: 0 }));
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64");
+    });
+
+    expect(result.current.phase).toBe("viewing");
+  });
+
+  it("view() sets phase=needs-password and error=wrong-password when the core finds it wrong", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(null);
+    const result = await loaded(
+      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+    );
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "wrongpass");
+    });
+
+    expect(result.current.phase).toBe("needs-password");
+    expect(result.current.error).toBe("wrong-password");
+  });
+
+  it("view() sets phase=needs-password and error=rate-limited on 429", async () => {
+    const api = await import("../../src/lib/api.js");
+    const openNote = await getOpenNote();
+    openNote.mockRejectedValueOnce(new api.ApiError(429, "rate-limited"));
+    const result = await loaded();
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64");
+    });
+
+    expect(result.current.phase).toBe("needs-password");
+    expect(result.current.error).toBe("rate-limited");
+  });
+
+  it("view() sets error='Failed to view note' when the core fails without an ApiError", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockRejectedValueOnce(new Error("Missing password salt"));
+    const result = await loaded(makeNoteInfo({ hasPassword: true, passwordAlgo: "argon2id-v2" }));
+
+    await act(async () => {
+      await result.current.view("n-1", "secretb64", "anypassword");
+    });
+
+    expect(result.current.phase).toBe("error");
+    expect(result.current.error).toBe("Failed to view note");
+  });
+
+  it("view() without loadInfo(): fetchNoteInfo returns null → phase='error'", async () => {
+    const api = await import("../../src/lib/api.js");
     vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(null as never);
 
     const { useNoteView } = await import("../../src/hooks/useNoteView.js");
@@ -281,76 +263,21 @@ describe("useNoteView", () => {
     expect(result.current.phase).toBe("error");
   });
 
-  it("view() mit passwordAlgo='argon2id-v2' und argon2id-Funktion \u2192 phase='viewing'", async () => {
-    const api = await import("../../src/lib/api.js");
-    vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(
-      makeNoteInfo({ hasPassword: true, passwordSalt: "ps64", passwordAlgo: "argon2id-v2" }),
+  it("view() passes on that a note did not read in its format", async () => {
+    const openNote = await getOpenNote();
+    openNote.mockResolvedValueOnce(
+      makeOpenedNote({
+        unreadable: true,
+        blocks: [{ type: "text", format: "plain", text: "not a document" }],
+      }),
     );
-    vi.mocked(api.verifyNotePassword).mockResolvedValueOnce(true);
-    vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
-
-    const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-    const { result } = renderHook(() => useNoteView());
-
-    const fakeArgon2id = vi.fn(async () => new Uint8Array(32));
+    const result = await loaded(makeNoteInfo({ contentType: "blocks" }));
 
     await act(async () => {
-      await result.current.loadInfo("n-1");
-    });
-
-    await act(async () => {
-      await result.current.view("n-1", "secretb64", "correctpass", fakeArgon2id);
+      await result.current.view("n-1", "secretb64");
     });
 
     expect(result.current.phase).toBe("viewing");
-  });
-
-  describe("reading the decrypted note", () => {
-    async function viewWith(contentType: string, plaintext: string) {
-      const crypto = await import("@skysend/crypto");
-      const api = await import("../../src/lib/api.js");
-      vi.mocked(crypto.decryptNoteContent).mockResolvedValueOnce(plaintext);
-      vi.mocked(api.fetchNoteInfo).mockResolvedValueOnce(makeNoteInfo({ contentType }) as never);
-      vi.mocked(api.viewNote).mockResolvedValueOnce(makeViewResponse());
-      const { useNoteView } = await import("../../src/hooks/useNoteView.js");
-      const { result } = renderHook(() => useNoteView());
-      await act(async () => {
-        await result.current.loadInfo("n-1");
-      });
-      await act(async () => {
-        await result.current.view("n-1", "secretb64");
-      });
-      return result;
-    }
-
-    it("turns a note made of blocks into its blocks", async () => {
-      const plaintext = JSON.stringify({
-        v: 1,
-        blocks: [
-          { type: "text", format: "plain", text: "Server access" },
-          { type: "password", entries: [{ label: "root", value: "pw" }] },
-        ],
-      });
-      const result = await viewWith("blocks", plaintext);
-      expect(result.current.phase).toBe("viewing");
-      expect(result.current.unreadable).toBe(false);
-      expect(result.current.blocks).toEqual([
-        { type: "text", format: "plain", text: "Server access" },
-        { type: "password", entries: [{ label: "root", value: "pw" }] },
-      ]);
-    });
-
-    // LEGACY(notes-v1): drop with the legacy readers.
-    it("reads a password note from before v3 through the legacy reader", async () => {
-      const result = await viewWith("password", JSON.stringify([{ label: "", value: "old-pw" }]));
-      expect(result.current.blocks).toEqual([{ type: "password", entries: [{ label: "", value: "old-pw" }] }]);
-    });
-
-    it("shows a note made of blocks that does not parse as it arrived, instead of losing it", async () => {
-      const result = await viewWith("blocks", "not a document");
-      expect(result.current.phase).toBe("viewing");
-      expect(result.current.unreadable).toBe(true);
-      expect(result.current.blocks).toEqual([{ type: "text", format: "plain", text: "not a document" }]);
-    });
+    expect(result.current.unreadable).toBe(true);
   });
 });

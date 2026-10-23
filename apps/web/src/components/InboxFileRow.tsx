@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HistoryStat } from "@/components/HistoryRow";
-import { sanitizeFilename, type OpenedUpload } from "@/lib/file-request";
+import { sanitizeFilename, type OpenedUpload } from "@skysend/transfer";
 import { fileBadge } from "@/lib/file-badge";
 import { cn, formatBytes, formatTimeRemaining } from "@/lib/utils";
 

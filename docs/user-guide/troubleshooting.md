@@ -60,10 +60,24 @@ If you are only testing locally on the same machine, `http://localhost:3000` wor
 **Fix:** Make sure your Nginx config includes all required directives. See the [Reverse Proxy guide](/user-guide/self-hosting/reverse-proxy#nginx) for the full reference config, in particular:
 
 - `proxy_request_buffering off` - required for streaming uploads
-- `proxy_buffering off` - required for streaming downloads
 - `Upgrade` / `Connection` headers and the `$connection_upgrade` map - required for WebSocket uploads
 - `proxy_read_timeout` / `proxy_send_timeout` - must exceed the longest expected upload duration
 - `client_max_body_size` - must be at least as large as your `FILE_MAX_SIZE` setting
+
+## Downloads behind Nginx are sometimes slow
+
+**Symptom:** Most downloads run at full speed, but some crawl at a small part of it for no visible reason, in the browser and in the CLI alike. Uploads are not affected.
+
+**Cause:** The Nginx config has `proxy_buffering off`, which older versions of this guide recommended. Nginx then reads the download from SkySend into a single buffer of a few kilobytes, and on the local connection between the two that can leave the TCP window shut for seconds at a time.
+
+**Fix:** Replace `proxy_buffering off;` with these two lines and reload Nginx:
+
+```nginx
+proxy_buffering on;
+proxy_max_temp_file_size 0;
+```
+
+The second line keeps Nginx from writing downloads to temporary files. See the [Reverse Proxy guide](/user-guide/self-hosting/reverse-proxy#nginx) for the full config.
 
 ## S3 downloads fail with CORS error
 

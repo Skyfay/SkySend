@@ -60,7 +60,7 @@ describe("sanitizeFilename", () => {
 
   it("falls back to a name when nothing usable is left", () => {
     for (const name of ["", ".", "..", "...", "   ", "\x1b\x07", "\u202E"]) {
-      expect(sanitizeFilename(name)).toBe("download");
+      expect(sanitizeFilename(name)).toBe("file");
     }
   });
 
@@ -79,6 +79,13 @@ describe("sanitizeFilename", () => {
   it("drops an extension too long to be one when it has to shorten the name", () => {
     const name = sanitizeFilename(`${"a".repeat(300)}.${"b".repeat(40)}`);
     expect(name).toBe("a".repeat(255));
+  });
+
+  it("cleans a long run of dots inside a name in linear time", () => {
+    // The trim at both ends once tried every dot of such a run, quadratic in its length.
+    const start = Date.now();
+    expect(sanitizeFilename(`a${".".repeat(73_000)}b`).startsWith("a.")).toBe(true);
+    expect(Date.now() - start).toBeLessThan(500);
   });
 
   it("handles a megabyte of name without stalling", () => {

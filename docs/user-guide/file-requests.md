@@ -63,6 +63,8 @@ They drop their files or fill in the note, click **Encrypt and send** and see **
 
 Every upload is limited by the request and by the instance alike: at most the size per upload of the request, at most [`FILE_MAX_SIZE`](/user-guide/configuration/environment-variables#file) and [`FILE_MAX_FILES_PER_UPLOAD`](/user-guide/configuration/environment-variables#file). The upload counts against the sender's own upload quota, if the instance sets one.
 
+A sender on a server without a browser can send files with the [CLI client](/user-guide/client-cli/commands#sending-into-a-file-request): `skysend upload --to <upload link> <files>`, or the Send tab of its interactive mode. The CLI takes requests that ask for files. One that asks for a note is left to the browser.
+
 ## Open the Inbox
 
 Open the inbox link, and enter the password if the request has one. The inbox lists every upload with its name, size, downloads left and when it will be deleted.
@@ -72,6 +74,8 @@ Open the inbox link, and enter the password if the request has one. The inbox li
 - **Delete** removes one upload. Its slot in the request stays used, so a request never takes more uploads than you allowed.
 - **Close request** stops new uploads. Uploads already running still finish.
 - **Delete request** removes the request and every file in it.
+
+The [CLI client](/user-guide/client-cli/commands#inbox) opens the inbox too: `skysend inbox <inbox link>` lists what arrived without downloading it, `--save <folder>` saves everything, and the Receive tab of its interactive mode takes the inbox link like any other.
 
 Every upload is marked **Unverified**. Anyone with the upload link can send files, so open only what you expected. Names are cleaned before they are shown or saved, so a name cannot hide its real extension behind invisible or reordering characters, a trailing dot or sheer length, and every file is saved as plain bytes, whatever type its sender claimed. An upload that cannot be opened is shown as damaged, and the others are not affected. The files and the note of one submission are listed together under **Sent together**. One that arrived since the inbox was last open in this browser is also marked **New**, and a file in a request for notes, or a note in a request for files, is marked **Not asked for**.
 

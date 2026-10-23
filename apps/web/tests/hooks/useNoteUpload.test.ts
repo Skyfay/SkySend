@@ -4,24 +4,10 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
-vi.mock("@skysend/crypto", () => ({
-  generateSecret: vi.fn(() => new Uint8Array(32)),
-  generateSalt: vi.fn(() => new Uint8Array(32)),
-  deriveKeys: vi.fn(async () => ({ metaKey: {}, authKey: {} })),
-  computeAuthToken: vi.fn(async () => new Uint8Array(32)),
-  computeOwnerToken: vi.fn(async () => new Uint8Array(32)),
-  encryptNoteContent: vi.fn(async () => ({
-    ciphertext: new Uint8Array([1, 2, 3]),
-    nonce: new Uint8Array([4, 5, 6]),
-  })),
-  toBase64url: vi.fn(() => "b64url"),
-  applyPasswordProtection: vi.fn((_secret: Uint8Array, _key: Uint8Array) => new Uint8Array(32)),
-  deriveKeyFromPassword: vi.fn(async () => ({
-    key: new Uint8Array(32),
-    algorithm: "pbkdf2" as const,
-  })),
-  randomBytes: vi.fn(() => new Uint8Array(16)),
-  PASSWORD_SALT_LENGTH: 16,
+// The encryption and the request are the shared core's, tested in packages/transfer.
+vi.mock("@skysend/transfer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@skysend/transfer")>()),
+  createEncryptedNote: vi.fn(),
 }));
 
 vi.mock("../../src/lib/argon2.js", () => ({
@@ -38,9 +24,13 @@ vi.mock("../../src/lib/upload-store.js", () => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function getCreateNote() {
-  const { createNote } = await import("../../src/lib/api.js");
-  return vi.mocked(createNote);
+async function getCreateEncryptedNote() {
+  const { createEncryptedNote } = await import("@skysend/transfer");
+  return vi.mocked(createEncryptedNote);
+}
+
+function sharedNote(id: string) {
+  return { id, ownerToken: "owner-token", effectiveSecret: "link-secret", hasPassword: false };
 }
 
 afterEach(() => {
@@ -59,9 +49,9 @@ describe("useNoteUpload", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("transitions idle → encrypting → uploading → done on success", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockResolvedValueOnce({ id: "note-abc", expiresAt: "2099-01-01" });
+  it("transitions idle → encrypting → done on success", async () => {
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockResolvedValueOnce(sharedNote("note-abc"));
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
     const { result } = renderHook(() => useNoteUpload());
@@ -74,16 +64,17 @@ describe("useNoteUpload", () => {
         password: "",
       });
     });
+    expect(result.current.phase).toBe("encrypting");
 
     await waitFor(() => expect(result.current.phase).toBe("done"));
 
-    expect(result.current.shareLink).toContain("/note/note-abc");
+    expect(result.current.shareLink).toBe(`${window.location.origin}/note/note-abc#link-secret`);
     expect(result.current.error).toBeNull();
   });
 
-  it("sets phase=error when createNote rejects", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockRejectedValueOnce(new Error("server error"));
+  it("sets phase=error when the note cannot be created", async () => {
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockRejectedValueOnce(new Error("server error"));
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
     const { result } = renderHook(() => useNoteUpload());
@@ -102,8 +93,8 @@ describe("useNoteUpload", () => {
   });
 
   it("reset() returns to idle state", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockResolvedValueOnce({ id: "note-xyz", expiresAt: "2099-01-01" });
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockResolvedValueOnce(sharedNote("note-xyz"));
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
     const { result } = renderHook(() => useNoteUpload());
@@ -127,11 +118,11 @@ describe("useNoteUpload", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("calls deriveKeyFromPassword when a password is provided", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockResolvedValueOnce({ id: "note-pw", expiresAt: "2099-01-01" });
-
-    const { deriveKeyFromPassword } = await import("@skysend/crypto");
+  it("hands the password, the limits and the Argon2id of the page to the core", async () => {
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockResolvedValueOnce(sharedNote("note-pw"));
+    const { hashWasmArgon2 } = await import("../../src/lib/argon2.js");
+    const { createNote } = await import("../../src/lib/api.js");
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
     const { result } = renderHook(() => useNoteUpload());
@@ -139,19 +130,27 @@ describe("useNoteUpload", () => {
     act(() => {
       result.current.upload({
         blocks: [{ type: "text", format: "plain", text: "secret" }],
-        maxViews: 1,
-        expireSec: 3600,
+        maxViews: 5,
+        expireSec: 86400,
         password: "hunter2",
       });
     });
 
     await waitFor(() => expect(result.current.phase).toBe("done"));
-    expect(vi.mocked(deriveKeyFromPassword)).toHaveBeenCalled();
+    expect(createEncryptedNote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        api: { createNote },
+        maxViews: 5,
+        expireSec: 86400,
+        password: "hunter2",
+        argon2id: hashWasmArgon2,
+      }),
+    );
   });
 
-  it("createNote wirft Non-Error \u2192 error='Note creation failed'", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockRejectedValueOnce("unexpected string throw");
+  it("a non-Error throw sets error='Note creation failed'", async () => {
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockRejectedValueOnce("unexpected string throw");
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
     const { result } = renderHook(() => useNoteUpload());
@@ -170,9 +169,8 @@ describe("useNoteUpload", () => {
   });
 
   it("encrypts the blocks as one document and tells the server only that it is made of blocks", async () => {
-    const createNote = await getCreateNote();
-    createNote.mockResolvedValueOnce({ id: "note-blocks", expiresAt: "2099-01-01" });
-    const crypto = await import("@skysend/crypto");
+    const createEncryptedNote = await getCreateEncryptedNote();
+    createEncryptedNote.mockResolvedValueOnce(sharedNote("note-blocks"));
     const store = await import("../../src/lib/upload-store.js");
 
     const { useNoteUpload } = await import("../../src/hooks/useNoteUpload.js");
@@ -190,17 +188,20 @@ describe("useNoteUpload", () => {
     // The document, padded with spaces to whole blocks so its length hides how long the
     // password is.
     const document = JSON.stringify({ v: 1, blocks });
-    const [plaintext] = vi.mocked(crypto.encryptNoteContent).mock.calls[0]!;
+    const { plaintext, contentType } = createEncryptedNote.mock.calls[0]![0];
     expect(plaintext.length % 1024).toBe(0);
     expect(plaintext.trimEnd()).toBe(document);
-    const request = createNote.mock.calls[0]![0];
-    expect(request.contentType).toBe("blocks");
-    // Nothing about the blocks goes into the request in plaintext.
-    expect(JSON.stringify(request)).not.toMatch(/markdown|password|Access|root/);
+    expect(contentType).toBe("blocks");
 
     // The kinds are kept for "My Uploads", in this browser only.
     expect(vi.mocked(store.saveNote)).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "note-blocks", contentType: "blocks", kinds: ["markdown", "password"] }),
+      expect.objectContaining({
+        id: "note-blocks",
+        ownerToken: "owner-token",
+        secret: "link-secret",
+        contentType: "blocks",
+        kinds: ["markdown", "password"],
+      }),
     );
   });
 });

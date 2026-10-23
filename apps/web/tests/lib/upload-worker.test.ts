@@ -20,6 +20,39 @@ let onmessage: (e: MessageEvent) => Promise<void>;
 const REQUEST_ID = "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
 const UPLOAD_ID = "11111111-2222-4333-8444-555555555555";
 
+/**
+ * What /api/config answers, as a server with default settings sends it. The worker reads it
+ * with the real Zod schema of @skysend/transfer, so a payload that drifts fails here.
+ */
+function serverConfig() {
+  return {
+    enabledServices: ["file", "note"],
+    fileMaxSize: 2147483648,
+    fileMaxFilesPerUpload: 200,
+    fileExpireOptions: [300, 3600, 86400, 604800],
+    fileDefaultExpire: 86400,
+    fileDownloadOptions: [1, 2, 5, 10],
+    fileDefaultDownload: 1,
+    fileUploadQuotaBytes: 0,
+    fileUploadQuotaWindow: 86400,
+    fileUploadConcurrentChunks: 2,
+    fileUploadWs: wsEnabled,
+    noteMaxSize: 1048576,
+    noteExpireOptions: [300, 3600, 86400, 604800],
+    noteDefaultExpire: 86400,
+    noteViewOptions: [1, 2, 5],
+    noteDefaultViews: 1,
+    customTitle: "SkySend",
+    customColor: null,
+    customLogo: null,
+    customPrivacy: null,
+    customLegal: null,
+    customLinkUrl: null,
+    customLinkName: null,
+    customReportUrl: null,
+  };
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -112,7 +145,7 @@ beforeEach(() => {
     vi.fn(async (url: string, init?: RequestInit) => {
       requests.push({ url, init });
       if (url.endsWith("/api/config"))
-        return json({ fileUploadConcurrentChunks: 2, fileUploadWs: wsEnabled });
+        return json(serverConfig());
       if (url.endsWith("/upload/init")) {
         return initStatus === 201
           ? json({ id: initId }, 201)

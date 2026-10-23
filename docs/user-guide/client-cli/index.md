@@ -13,7 +13,7 @@ The CLI client (`skysend`) lets you:
 - **Delete** uploads and notes using the owner token
 - **Authenticate** with OIDC/SSO when required by the server (`auth login`, `auth logout`, `auth status`)
 - **Self-update** to the latest version from GitHub Releases
-- **Interactive mode** with menu-driven TUI - displays server config, limits, and quota
+- **Interactive mode** with tabs for sending, receiving, notes and your links, a file dialog, upload progress with speed, and the link as a QR code
 
 All cryptographic operations use the same `@skysend/crypto` library as the web frontend - AES-256-GCM streaming encryption, HKDF-SHA256 key derivation, and Argon2id password protection.
 
@@ -103,9 +103,9 @@ skysend config
 
 ### WebSocket Transport
 
-The CLI currently always uploads over HTTP chunks, even when the server offers WebSocket uploads. WebSocket uploads are disabled in the CLI until large transfers over HTTPS no longer break off midway.
+The CLI uploads over a WebSocket when the server offers WebSocket uploads (`FILE_UPLOAD_WS`), the same way the web app does. When the WebSocket cannot connect, for example behind a proxy that does not pass it on, the upload falls back to HTTP chunks by itself.
 
-`skysend upload ./file.pdf --no-ws` keeps an upload on HTTP chunks once WebSocket uploads return to the CLI.
+`skysend upload ./file.pdf --no-ws` keeps a single upload on HTTP chunks. To keep every upload to one server on HTTP chunks, switch "WebSocket upload" off under Settings in the interactive mode, which the CLI remembers per server. `skysend config` shows the setting of every server.
 
 ### Reset Config
 
@@ -140,11 +140,13 @@ On Linux/macOS, you may need `sudo` if the binary is installed in `/usr/local/bi
 
 | Command | Description |
 | --- | --- |
-| `skysend` | Interactive menu-driven mode (recommended) |
+| `skysend` | Interactive mode with tabs (recommended) |
 | `skysend upload <files...>` | Upload files with E2E encryption |
+| `skysend upload --to <link> <files...>` | Send files into a file request |
 | `skysend download <url>` | Download and decrypt a file |
 | `skysend note [text]` | Create an encrypted note |
 | `skysend note:view <url>` | View an encrypted note |
+| `skysend inbox <link>` | List the inbox of a file request, `--save <dir>` saves it |
 | `skysend ls` | List upload and note history |
 | `skysend delete <url> <ownerToken>` | Delete an upload or note |
 | `skysend config` | Show current configuration |
