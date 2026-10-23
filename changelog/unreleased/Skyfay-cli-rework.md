@@ -53,4 +53,5 @@
 
 ### 🔧 CI/CD
 
+- **infra**: The end-to-end jobs keep the Playwright browsers in a cache and start the browser install again when the Ubuntu mirror stalls, instead of waiting half an hour on it.
 - **infra**: The web app and the CLI share one package for uploads, downloads, notes, links, file requests and the API of the server, built and tested with the other packages in CI, the Docker image and the release.
