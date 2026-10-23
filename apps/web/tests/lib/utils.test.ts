@@ -230,16 +230,6 @@ describe("isDevToolsOpen", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns true when devtools panel is docked (outer > inner + threshold)", () => {
-    vi.stubGlobal("window", {
-      outerWidth: 1600,
-      innerWidth: 1000,   // 600px gap - devtools docked to side
-      outerHeight: 900,
-      innerHeight: 895,
-    });
-    expect(isDevToolsOpen()).toBe(true);
-  });
-
   it("returns true when devtools panel is docked at bottom", () => {
     vi.stubGlobal("window", {
       outerWidth: 1600,
@@ -248,6 +238,16 @@ describe("isDevToolsOpen", () => {
       innerHeight: 500,   // 400px gap - devtools docked to bottom
     });
     expect(isDevToolsOpen()).toBe(true);
+  });
+
+  it("returns false when a sidebar like the vertical tabs of Firefox narrows the page", () => {
+    vi.stubGlobal("window", {
+      outerWidth: 1600,
+      innerWidth: 1250,   // 350px gap - expanded vertical tabs
+      outerHeight: 900,
+      innerHeight: 820,
+    });
+    expect(isDevToolsOpen()).toBe(false);
   });
 
   it("returns false on a touch screen, whose browser bars alone make the gap", () => {
