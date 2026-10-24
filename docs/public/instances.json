@@ -20,5 +20,16 @@
       "url": "https://adminforge.de/kontakt",
       "abuse": "kontakt@adminforge.de"
     }
+  },
+  {
+    "name": "skysend.cyberjake.xyz",
+    "url": "https://skysend.cyberjake.xyz",
+    "country": "United States",
+    "flag": "🇺🇸",
+    "contact": {
+      "label": "Contact",
+      "url": "https://cyberjake.xyz",
+      "abuse": "skysend@cyberjake.xyz"
+    }
   }
 ]
