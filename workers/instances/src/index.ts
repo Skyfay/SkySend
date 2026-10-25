@@ -16,6 +16,13 @@ const DEFAULT_INSTANCES_URL = 'https://docs.skysend.app/instances.json'
 const FETCH_TIMEOUT_MS = 8000
 
 /**
+ * A Worker's fetch sends no User-Agent of its own, and Cloudflare's Browser Integrity Check blocks
+ * requests without one. An instance behind such a zone then looked offline. The name also lets an
+ * operator recognise the check and allow it through.
+ */
+const USER_AGENT = 'SkySend-Instances/1.0 (+https://docs.skysend.app/instances)'
+
+/**
  * The most bytes read from the health or config answer of one instance. Both are a few hundred
  * bytes. An instance is run by whoever registered it, and one that answered with 30 MiB made the
  * single KV value of all instances too large, so the write failed and no instance was refreshed.
@@ -69,7 +76,10 @@ interface CachedData {
  */
 async function fetchJson(url: string, maxBytes: number): Promise<unknown> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
     if (!res.ok || !res.body) return null
     if (Number(res.headers.get('Content-Length') ?? 0) > maxBytes) {
       await res.body.cancel()
