@@ -14,6 +14,8 @@ import pl from "./pl.json";
 import ptBR from "./pt-BR.json";
 import zh from "./zh.json";
 import ja from "./ja.json";
+import ru from "./ru.json";
+import uk from "./uk.json";
 
 const STORAGE_KEY = "skysend-lang";
 
@@ -54,6 +56,8 @@ i18n
       "pt-BR": { translation: ptBR },
       zh: { translation: zh },
       ja: { translation: ja },
+      ru: { translation: ru },
+      uk: { translation: uk },
     },
     fallbackLng: "en",
     interpolation: {
