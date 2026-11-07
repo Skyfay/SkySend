@@ -3,6 +3,7 @@ import { createMiddleware } from "hono/factory";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import type { Context } from "hono";
 import type { Config } from "../lib/config.js";
+import { DEFAULT_TRUSTED_PROXIES, trustedProxyList } from "../lib/trusted-proxies.js";
 
 interface RateLimitEntry {
   count: number;
@@ -108,44 +109,78 @@ export function toLimitKey(ip: string): string {
   return `${groups.slice(0, 4).map((group) => group.toString(16)).join(":")}::/64`;
 }
 
+let trustedProxies = trustedProxyList(DEFAULT_TRUSTED_PROXIES);
+let warnedUntrustedProxy = false;
+
+/** Replaces the networks whose forwarded headers count, from TRUSTED_PROXIES. */
+export function setTrustedProxies(entries: string[]): void {
+  trustedProxies = trustedProxyList(entries);
+}
+
 /**
  * Extract the client IP from the request, in the form the limits count by (see toLimitKey).
- * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled.
- * Falls back to Node.js socket info via getConnInfo.
+ * Only trusts proxy headers (X-Forwarded-For, X-Real-IP) when TRUST_PROXY is enabled and the
+ * request comes from a trusted proxy. Falls back to Node.js socket info via getConnInfo.
  *
  * S-1 (Security Audit): When TRUST_PROXY is enabled, we take the RIGHTMOST value from
  * X-Forwarded-For, not the leftmost. The rightmost entry is appended by the trusted
  * reverse proxy and reflects the actual client IP as seen by the proxy.
  * The leftmost entries are client-controlled and can be spoofed freely.
  * Example: X-Forwarded-For: <spoofed>, <real-client-ip>  → we use <real-client-ip>.
+ *
+ * The headers count only when the socket comes from a network in TRUSTED_PROXIES. The setup
+ * the docs showed published the server's port on every interface besides the proxy, so anyone
+ * who reached the port directly sent a new X-Forwarded-For with every guess and was never
+ * locked out. A forwarded value that is no address falls back to the socket too, or every
+ * string would have been a client of its own.
  */
 function getClientIp(c: Context, trustProxy = false): string {
   return toLimitKey(rawClientIp(c, trustProxy));
 }
 
 function rawClientIp(c: Context, trustProxy: boolean): string {
+  const socket = socketAddress(c);
   if (trustProxy) {
-    const forwarded = c.req.header("X-Forwarded-For");
-    if (forwarded) {
-      // Rightmost IP is appended by the trusted reverse proxy.
-      // Leftmost IPs can be spoofed by the client.
-      const trusted = forwarded.split(",").at(-1)?.trim();
-      if (trusted) return trusted;
+    const forwarded = forwardedAddress(c);
+    if (forwarded && socket && isTrustedProxy(socket)) return forwarded;
+    if (forwarded && !warnedUntrustedProxy) {
+      warnedUntrustedProxy = true;
+      console.warn(
+        "[skysend] Ignoring X-Forwarded-For and X-Real-IP from a connection outside TRUSTED_PROXIES. " +
+          "If your reverse proxy connects from a public address, add it to TRUSTED_PROXIES.",
+      );
     }
-
-    const realIp = c.req.header("X-Real-IP");
-    if (realIp) return realIp.trim();
   }
+  return socket ?? "unknown";
+}
 
-  // Use Node.js socket info for the actual remote address
+/** The address the socket of the request comes from. */
+function socketAddress(c: Context): string | undefined {
   try {
-    const info = getConnInfo(c);
-    if (info.remote.address) return info.remote.address;
+    return getConnInfo(c).remote.address || undefined;
   } catch {
-    // getConnInfo may fail in test environments
+    // getConnInfo fails without the bindings of @hono/node-server, as in app.request() of tests
+    return undefined;
   }
+}
 
-  return "unknown";
+/**
+ * The client address the proxy forwarded: the rightmost entry of X-Forwarded-For, or X-Real-IP.
+ * A port some proxies append ("203.0.113.7:51234", "[2001:db8::1]:443") is dropped.
+ */
+function forwardedAddress(c: Context): string | undefined {
+  const value = c.req.header("X-Forwarded-For")?.split(",").at(-1)?.trim() || c.req.header("X-Real-IP")?.trim();
+  if (!value) return undefined;
+  const address = /^\[([^\]]+)\](?::\d+)?$/.exec(value)?.[1] ?? value.replace(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/, "$1");
+  return isIP(address) ? address : undefined;
+}
+
+function isTrustedProxy(address: string): boolean {
+  const plain = address.split("%")[0] ?? "";
+  // A dual-stack socket reports an IPv4 peer as ::ffff:a.b.c.d.
+  const v4 = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(plain)?.[1];
+  if (v4) return trustedProxies.check(v4, "ipv4");
+  return trustedProxies.check(plain, isIP(plain) === 6 ? "ipv6" : "ipv4");
 }
 
 export { getClientIp };

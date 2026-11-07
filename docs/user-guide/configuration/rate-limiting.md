@@ -44,11 +44,12 @@ An upload that would not fit into what is left of the quota gets `413 Content To
 
 ### Privacy
 
-Upload quotas use HMAC-SHA256 to hash IP addresses before storing them. The HMAC key rotates daily, which means:
+Upload quotas use HMAC-SHA256 to hash IP addresses before storing them. The HMAC key lives in memory only and rotates daily, which means:
 
-- No plaintext IP addresses are ever stored
+- No plaintext IP addresses are ever stored, and neither is the key, so a copy of the database or a backup cannot turn the hashes back into addresses
 - IP hashes cannot be correlated across days
 - When the key rotates, the entire quota store is cleared
+- A restart starts every quota afresh
 
 ## Daily File Request Limit
 
@@ -74,9 +75,11 @@ Client IP addresses are HMAC-SHA256 hashed with an ephemeral in-memory key befor
 
 SkySend determines the client IP using:
 
-1. The last address in the `X-Forwarded-For` header, the one your reverse proxy added (if `TRUST_PROXY=true`)
-2. `X-Real-IP` header (if `TRUST_PROXY=true`)
-3. Direct socket address (fallback)
+1. The last address in the `X-Forwarded-For` header, the one your reverse proxy added (if `TRUST_PROXY=true` and the connection comes from `TRUSTED_PROXIES`)
+2. `X-Real-IP` header (same conditions)
+3. Direct socket address (fallback, also when the header holds no valid address)
+
+`TRUSTED_PROXIES` defaults to loopback and the private networks, so a client that reaches the server port directly from the internet cannot pick its own address. See [Reverse Proxy](/user-guide/self-hosting/reverse-proxy#trust-proxy).
 
 The addresses before the last one come from the client and are never trusted. Behind two proxies, like a CDN in front of your reverse proxy, the last address is the one of the CDN, so every visitor shares its count. Have your reverse proxy put the client address the CDN reports into `X-Forwarded-For` instead.
 

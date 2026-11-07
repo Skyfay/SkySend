@@ -133,8 +133,16 @@ When running behind a reverse proxy, set `TRUST_PROXY=true` so that SkySend corr
 TRUST_PROXY=true
 ```
 
+SkySend reads these headers only on a connection from your proxy. By default that is any connection from loopback or a private network (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, link-local, `fc00::/7`), which covers a proxy on the same host, in the same Docker network, in Kubernetes or in a private cloud network. A client that reaches port 3000 directly from the internet is counted by its own address, whatever headers it sends.
+
+If your proxy connects from a public address, for example a CDN that talks to port 3000 directly, list it in `TRUSTED_PROXIES`, or every visitor counts as the proxy:
+
+```bash
+TRUSTED_PROXIES=203.0.113.7,2001:db8:1234::/48
+```
+
 ::: danger Security Warning
-Only enable `TRUST_PROXY` when SkySend is behind a trusted reverse proxy. If exposed directly to the internet with this setting enabled, clients can spoof their IP address.
+Only enable `TRUST_PROXY` when SkySend is behind a trusted reverse proxy. Keep port 3000 reachable for the proxy only. With a proxy on the same host, publish the port as `127.0.0.1:3000:3000` instead of `3000:3000`. A published Docker port bypasses `ufw` and `firewalld`, and Docker hands an IPv6 connection to an IPv4-only container through its own proxy, so that client arrives with the private address of the Docker network.
 :::
 
 ## BASE_URL

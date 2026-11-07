@@ -15,6 +15,12 @@ import { registerAuthCommand } from "./commands/auth.js";
 import { forTerminal } from "./lib/terminal.js";
 import { APP_VERSION } from "./version.js";
 
+// Windows looks for a program named without a path in the current folder first, where downloads
+// land under the sender's name. Our own programs go by their full path (lib/windows-tool.ts), and
+// this keeps the current folder out of the search for those a dependency starts, like the `tput`
+// Ink runs without a console. Bun reads the variable on every spawn, and child processes inherit it.
+if (process.platform === "win32") process.env["NoDefaultCurrentDirectoryInExePath"] = "1";
+
 const program = new Command()
   .name("skysend")
   .description("")

@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createUploadQuota, type QuotaReservation } from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
-import { initDatabase, closeDatabase } from "../src/db/index.js";
+import { initDatabase, closeDatabase, getDb } from "../src/db/index.js";
+import { quotaState, quotaUsage } from "../src/db/schema.js";
 
 let tempDir: string;
 
@@ -310,24 +311,27 @@ describe("upload quota", () => {
     expect(body.resetsAt).toBeNull();
   });
 
-  it("should restore HMAC key and usage entries from database on re-init", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
+  it("never writes its HMAC key to the database", () => {
     const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 1000 });
-    // First instance: fresh key, persisted to DB
+    const quota = createUploadQuota(config);
+    seed(quota, "192.168.1.1", 600);
+
+    // A copy of the database holds the hashes, and with the key next to them every IPv4
+    // address in it came back by trying all 2^32.
+    expect(getDb().select().from(quotaState).all()).toEqual([]);
+    expect(getDb().select().from(quotaUsage).all()).toHaveLength(1);
+  });
+
+  it("starts every budget afresh after a restart and drops a key an older release stored", () => {
+    getDb().insert(quotaState).values({ key: "hmac_key", value: "00".repeat(32) }).run();
+    const config = makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 1000 });
     const quota1 = createUploadQuota(config);
     seed(quota1, "192.168.1.1", 600);
 
-    // Second instance with the same open DB: should restore the key and log
     const quota2 = createUploadQuota(config);
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("[quota] Restored"));
-
-    // Because the HMAC key is the same, the same IP maps to the same hashedIp
-    // and quota2 sees the 600 bytes recorded by quota1
-    const r2 = quota2.reserve("192.168.1.1", 500); // 600 + 500 = 1100 > 1000
-    expect(r2.ok).toBe(false);
-
-    consoleSpy.mockRestore();
+    expect(getDb().select().from(quotaState).all()).toEqual([]);
+    expect(getDb().select().from(quotaUsage).all()).toEqual([]);
+    expect(quota2.reserve("192.168.1.1", 900).ok).toBe(true);
   });
 });
 

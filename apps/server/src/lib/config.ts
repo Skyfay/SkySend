@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { totalmem } from "node:os";
 import { z } from "zod";
 import { isPreviewImage } from "./index-html.js";
+import { trustedProxyList } from "./trusted-proxies.js";
 
 /**
  * Parse a human-readable byte size string (e.g., "2GB", "500MB") into bytes.
@@ -329,6 +330,21 @@ const configSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true"),
+
+  // Who may set the client address through X-Forwarded-For and X-Real-IP. Unset means the
+  // private networks of DEFAULT_TRUSTED_PROXIES. Checked here so a typo stops the start.
+  TRUSTED_PROXIES: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+    .superRefine((list, ctx) => {
+      if (!list) return;
+      try {
+        trustedProxyList(list);
+      } catch (err) {
+        ctx.addIssue({ code: "custom", message: err instanceof Error ? err.message : String(err) });
+      }
+    }),
 
   CUSTOM_COLOR: z
     .string()

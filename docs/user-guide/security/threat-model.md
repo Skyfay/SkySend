@@ -45,7 +45,7 @@ An attacker who gains access to the server's filesystem or database.
 ### Brute-Force Password Guessing
 **Threat**: An attacker tries to brute-force the password on a password-protected upload.
 
-**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). The server releases the encrypted metadata of a password-protected upload only after a correct password, so someone with the link has nothing to test guesses against offline. Every guess has to pass the password check or the download, which share one lockout per IP and upload. New passwords need at least 8 characters.
+**Mitigation**: Password-derived keys use Argon2id (64 MiB memory, GPU-resistant). The server releases the encrypted metadata of a password-protected upload only after a correct password, so someone with the link has nothing to test guesses against offline. Every guess has to pass the password check or the download, which share one lockout per IP and upload. Behind a reverse proxy, the client address comes from its headers only on a connection from `TRUSTED_PROXIES`, so a guesser who reaches the server port directly cannot pick a new address for every guess. New passwords need at least 8 characters.
 
 **Result**: Online brute-force is impractical due to the lockout and rate limiting. Offline brute-force needs the link and the server's database together, and even then costs one Argon2id run per guess, which puts 8 random characters out of reach for years.
 
@@ -59,7 +59,7 @@ An attacker who gains access to the server's filesystem or database.
 ### IP Tracking via Quotas
 **Threat**: The quota system could be used to track users by IP.
 
-**Mitigation**: IPs are hashed with HMAC-SHA256 using a key that rotates daily. When the key rotates, the entire quota store is cleared. No plaintext IPs are ever stored.
+**Mitigation**: IPs are hashed with HMAC-SHA256 using a key that lives in memory only and rotates daily. When the key rotates or the server restarts, the entire quota store is cleared. No plaintext IPs are ever stored, and neither is the key, so the hashes in a copy of the database cannot be turned back into addresses.
 
 **Result**: IP addresses cannot be recovered from quota records, and tracking across days is impossible.
 

@@ -720,4 +720,24 @@ describe("config", () => {
       expect(config.FILE_REQUEST_DAILY_LIMIT).toBe(0);
     });
   });
+  describe("TRUSTED_PROXIES", () => {
+    it("is unset by default, which keeps the private networks", async () => {
+      const config = await loadFreshConfig();
+      expect(config.TRUSTED_PROXIES).toBeUndefined();
+    });
+
+    it("reads a list of addresses and networks", async () => {
+      process.env.TRUSTED_PROXIES = "203.0.113.7, 198.51.100.0/24,2001:db8::/32";
+      const config = await loadFreshConfig();
+      expect(config.TRUSTED_PROXIES).toEqual(["203.0.113.7", "198.51.100.0/24", "2001:db8::/32"]);
+    });
+
+    it.each(["proxy.example.com", "10.0.0.0/33", "10.0.0.0/", "10.0.0.0/8/1", "::1/129"])(
+      "refuses %s",
+      async (value) => {
+        process.env.TRUSTED_PROXIES = value;
+        await expect(loadFreshConfig()).rejects.toThrow();
+      },
+    );
+  });
 });
