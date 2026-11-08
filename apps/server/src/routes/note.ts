@@ -14,6 +14,7 @@ import {
   TOKEN_LENGTH,
 } from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
+import { requireJson } from "../middleware/require-json.js";
 import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 
 export function createNoteRoute(lockout: PasswordLockout) {
@@ -72,6 +73,7 @@ function isNoteAvailable(note: Note): { available: boolean; error?: string } {
 
 noteRoute.post(
   "/",
+  requireJson,
   bodyLimit({
     maxSize: 2 * 1024 * 1024, // 2 MB hard limit on body (encrypted content + overhead)
     onError: (c) => c.json({ error: "Request body too large" }, 413),
@@ -241,6 +243,7 @@ noteRoute.get("/:id", async (c) => {
 
 noteRoute.post(
   "/:id/view",
+  requireJson,
   bodyLimit({
     maxSize: 16 * 1024,
     onError: (c) => c.json({ error: "Request body too large" }, 413),
@@ -330,6 +333,7 @@ noteRoute.post(
 
 noteRoute.post(
   "/:id/password",
+  requireJson,
   bodyLimit({
     maxSize: 16 * 1024,
     onError: (c) => c.json({ error: "Request body too large" }, 413),

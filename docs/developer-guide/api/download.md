@@ -60,6 +60,8 @@ A sent but wrong `X-Auth-Token` counts against the same lockout as [`POST /api/p
 - The file is streamed directly from disk - no buffering in memory
 - `Cache-Control: no-store` prevents caching of encrypted content
 - The `X-File-Count` header tells the client whether the payload is a single file or archive
+- `HEAD` answers `405` with `Allow: GET`. It would count a download otherwise, since the framework answers `HEAD` with the `GET` handler
+- An upgrade request (`Upgrade` header) is accepted only on the two WebSocket upload routes. Anywhere else the server answers `400` before any route runs
 
 ### Example
 

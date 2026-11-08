@@ -657,6 +657,31 @@ describe("note routes", () => {
       expect(lockedRes.headers.get("Retry-After")).toBeTruthy();
     });
 
+    it("refuses a body that is not JSON before it counts as a failed attempt", async () => {
+      const authToken = fakeBase64urlToken();
+      insertTestNote(dbCtx.db, { id: TEST_UUID, authToken });
+      const app = new Hono();
+      app.route("/api/note", createNoteRoute(createPasswordLockout(3, 60_000)));
+
+      // A page on another site can send text/plain without a CORS preflight.
+      for (const path of ["view", "password"]) {
+        for (let i = 0; i < 3; i++) {
+          const res = await app.request(`/api/note/${TEST_UUID}/${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=UTF-8" },
+            body: JSON.stringify({ authToken: fakeBase64urlToken() }),
+          });
+          expect(res.status).toBe(415);
+        }
+      }
+      const res = await app.request(`/api/note/${TEST_UUID}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authToken }),
+      });
+      expect(res.status).toBe(200);
+    });
+
     it("evaluates no more guesses than the lockout allows when view bodies are held back", async () => {
       insertTestNote(dbCtx.db, { id: TEST_UUID, hasPassword: true, maxViews: 0 });
       const app = new Hono();

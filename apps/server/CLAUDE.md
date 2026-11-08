@@ -68,6 +68,12 @@ src/auth/             OIDC adapters, discovery, PKCE, JWT sessions
 
 Service gating: `/info`, `/exists`, `/password`, `/meta`, `/download`, `/upload`, `/quota` are behind a `file` guard and `/note/*` behind a `note` guard, both driven by `ENABLED_SERVICES`. A new route in either family needs the matching guard registered in `src/index.ts`. The two file request routes are the exception: `createRequestRoute` and `createInboxRoute` register the `request` guard themselves and take the OIDC guard and the quota as options, so the tests mount exactly what production runs. Keep it that way for routes added to that family.
 
+Three guards that close holes found in the audit of 2026-11-07, keep them on every new route of their kind:
+
+- A POST that reads a JSON body gets `requireJson` (`middleware/require-json.ts`) first. `c.req.json()` parses any Content-Type, so without it another site can send the body as a `text/plain` simple request, no preflight, and a wrong token counts against the visitor's lockout.
+- A GET that counts a download or returns a file stream gets `rejectHead` (`middleware/reject-head.ts`). Hono answers HEAD with the GET handler and drops the body, which counted a download and leaked the file descriptor.
+- The upgrade listener of `@hono/node-ws` is attached only through `guardUpgrades` (`lib/upgrade-guard.ts`), never with `injectWebSocket(server)`. Unguarded, one upgrade request with target `//` or a TCP reset crashed the process, and an upgrade to a download route leaked a stream. A new WebSocket route needs its path in `WEBSOCKET_PATHS` there.
+
 `/api/config` lists `file` and `note` in `enabledServices` and reports file requests as `fileRequestsEnabled`. Released CLI clients refuse a config whose `enabledServices` holds anything else, so a new service gets a field of its own there too.
 
 ## Authentication and tokens
