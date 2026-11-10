@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { totalmem } from "node:os";
 import { z } from "zod";
 import { isPreviewImage } from "./index-html.js";
+import { trustedProxyList } from "./trusted-proxies.js";
 
 /**
  * Parse a human-readable byte size string (e.g., "2GB", "500MB") into bytes.
@@ -330,6 +331,21 @@ const configSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // Who may set the client address through X-Forwarded-For and X-Real-IP. Unset means the
+  // private networks of DEFAULT_TRUSTED_PROXIES. Checked here so a typo stops the start.
+  TRUSTED_PROXIES: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined))
+    .superRefine((list, ctx) => {
+      if (!list) return;
+      try {
+        trustedProxyList(list);
+      } catch (err) {
+        ctx.addIssue({ code: "custom", message: err instanceof Error ? err.message : String(err) });
+      }
+    }),
+
   CUSTOM_COLOR: z
     .string()
     .regex(/^#?[0-9a-fA-F]{6}$/, "Must be a 6-digit hex color, e.g. 46c89d or #46c89d")
@@ -427,11 +443,15 @@ const configSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  /**
+   * Seconds a presigned download URL stays valid. The URL works any number of times within this
+   * window, so it stays short and has a ceiling (GHSA-ghcm-gq78-wggw).
+   */
   S3_PRESIGNED_EXPIRY: z
     .string()
-    .default("300")
+    .default("60")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().min(1).max(900, "S3_PRESIGNED_EXPIRY must be between 1 and 900 seconds")),
 
   S3_PART_SIZE: z
     .string()

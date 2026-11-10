@@ -150,6 +150,30 @@ export function highlightCode(
 }
 
 /**
+ * Splits the markup of highlightCode into lines that each stand on their own. A token that
+ * spans lines, like a block comment, is closed at the end of each line and opened again on the
+ * next, so the lines after the first keep its color. Only the spans the sanitizer left are
+ * moved around, the text between them stays escaped.
+ */
+export function highlightedLines(html: string): string[] {
+  const lines: string[] = [];
+  const open: string[] = [];
+  let line = "";
+  for (const part of html.split(/(<span[^>]*>|<\/span>|\n)/)) {
+    if (part === "\n") {
+      lines.push(line + "</span>".repeat(open.length));
+      line = open.join("");
+      continue;
+    }
+    if (part.startsWith("<span")) open.push(part);
+    else if (part === "</span>") open.pop();
+    line += part;
+  }
+  lines.push(line);
+  return lines;
+}
+
+/**
  * Which blocks of a note are rendered as Markdown. A Markdown block above MAX_MARKDOWN_LENGTH
  * shows as plain text, and so does every Markdown block once the note has used up
  * MARKDOWN_BUDGET.

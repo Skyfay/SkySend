@@ -87,7 +87,7 @@ pnpm client:compile      # single binary for the current platform
 pnpm --filter @skysend/client build:all   # all five release targets
 ```
 
-Targets: linux-x64, linux-arm64, macos-x64, macos-arm64, windows-x64. Anything that only works under Node and not under Bun breaks the shipped binary, so prefer Web APIs (`fetch`, `WebSocket`, Web Streams) over Node-specific ones where both exist.
+Targets: linux-x64, linux-arm64, macos-x64, macos-arm64, windows-x64. Every `bun build --compile` carries `--no-compile-autoload-bunfig --no-compile-autoload-dotenv`, which `tests/build-scripts.test.ts` checks: without them the binary reads `bunfig.toml` and `.env` from the folder it runs in, a `bunfig.toml` can preload a script, and downloads land in that folder under the sender's name. Anything that only works under Node and not under Bun breaks the shipped binary, so prefer Web APIs (`fetch`, `WebSocket`, Web Streams) over Node-specific ones where both exist.
 
 `src/version.ts` is rewritten by `pnpm version:bump` and is what `--version` and the `update` command compare against.
 
@@ -101,6 +101,7 @@ Targets: linux-x64, linux-arm64, macos-x64, macos-arm64, windows-x64. Anything t
 ## Files on disk
 
 - A file name from a sender goes through `sanitizeFilename()` from `lib/filename.ts` before it becomes a path, and `availablePath()` picks a name that does not replace an existing file. Only a path the user typed may overwrite.
+- A program the CLI starts on Windows goes by its full path through `systemTool()` from `lib/windows-tool.ts`, never by a bare name. Windows searches the current folder first, and downloads land there under the sender's name, so a received `clip.exe` would run. `src/index.ts` also sets `NoDefaultCurrentDirectoryInExePath` for the programs a dependency starts, like Ink's `tput`.
 - Plaintext never touches the disk on the way up. `upload-job.ts` reads each file through `fs.openAsBlob`, and several files go into the stored zip of `@skysend/transfer` while the upload reads them, so the memory stays flat whatever the size.
 - A download writes into a hidden `.skysend-<uuid>.part` file next to its target and renames it at the end, so a cut download never looks complete. It waits for `drain`, so a slow disk does not fill the memory.
 

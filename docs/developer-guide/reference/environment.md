@@ -584,8 +584,10 @@ All file-related variables have been renamed with a `FILE_` prefix (e.g. `MAX_FI
 | --- | --- |
 | Required | No |
 | Type | Integer (seconds) |
-| Default | `300` |
-| Description | TTL for presigned download URLs. S3 validates the signature only at the start of the download - a download that starts within the TTL will complete even if it takes longer. |
+| Default | `60` |
+| Minimum | `1` |
+| Maximum | `900` |
+| Description | TTL for presigned download URLs. S3 validates the signature only at the start of the download - a download that starts within the TTL will complete even if it takes longer. A URL can be fetched any number of times within its TTL, so the download limit of an upload holds only up to that window. The TTL is cut to the remaining lifetime of the upload, so a URL never outlives it. |
 
 ### S3_PART_SIZE
 

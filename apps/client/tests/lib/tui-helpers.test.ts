@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clipboardTools, copyToClipboard } from "../../src/lib/clipboard.js";
 import { fetchPublicInstances, INSTANCES_URL } from "../../src/lib/instances.js";
 import { expandPath, pastedPaths } from "../../src/lib/paths.js";
@@ -84,9 +84,12 @@ describe("pastedPaths", () => {
 
 describe("copyToClipboard", () => {
   it("names a tool for each platform", () => {
+    vi.stubEnv("SystemRoot", "C:\\Windows");
     expect(clipboardTools("darwin")[0]![0]).toBe("pbcopy");
-    expect(clipboardTools("win32")[0]![0]).toBe("clip");
+    // By full path: a bare "clip" ran a clip.exe received into the current folder.
+    expect(clipboardTools("win32")[0]![0]).toBe("C:\\Windows\\System32\\clip.exe");
     expect(clipboardTools("linux").map(([c]) => c)).toEqual(["wl-copy", "xclip", "xsel"]);
+    vi.unstubAllEnvs();
   });
 
   it("sends OSC 52 to the terminal when no tool works", () => {

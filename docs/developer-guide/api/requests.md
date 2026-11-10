@@ -197,7 +197,7 @@ Needs `X-Inbox-Token`. Never counts as a download.
 
 ## GET /api/inbox/:id/file/:uid
 
-Needs `X-Inbox-Token`. Counts one download atomically and streams the ciphertext, or answers `{ "url", "size", "fileCount" }` with a presigned URL on S3, like [`GET /api/download/:id`](/developer-guide/api/download). An upload that expired or used up its downloads answers `410`. A file of a request is only ever reachable here, never through `/api/download`, `/api/info` or `/api/exists`.
+Needs `X-Inbox-Token`. Counts one download atomically and streams the ciphertext, or answers `{ "url", "size", "fileCount" }` with a presigned URL on S3, like [`GET /api/download/:id`](/developer-guide/api/download). An upload that expired or used up its downloads answers `410`, and `HEAD` answers `405` like on the download route. A file of a request is only ever reachable here, never through `/api/download`, `/api/info` or `/api/exists`.
 
 ## Managing a Request
 

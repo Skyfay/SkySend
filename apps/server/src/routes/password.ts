@@ -5,6 +5,7 @@ import { getDb } from "../db/index.js";
 import { uploads } from "../db/schema.js";
 import { constantTimeEqual, fromBase64url } from "@skysend/crypto";
 import { getClientIp } from "../middleware/rate-limit.js";
+import { requireJson } from "../middleware/require-json.js";
 import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getConfig } from "../lib/config.js";
 
@@ -22,7 +23,7 @@ export function createPasswordRoute(lockout: PasswordLockout) {
    * On success it returns the encrypted metadata, which GET /api/info holds back for a
    * password-protected upload, so a guess can only be tested here, against the lockout.
    */
-  passwordRoute.post("/:id", bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ error: "Request body too large" }, 413) }), async (c) => {
+  passwordRoute.post("/:id", requireJson, bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ error: "Request body too large" }, 413) }), async (c) => {
     const id = c.req.param("id");
     const config = getConfig();
     const ip = getClientIp(c, config.TRUST_PROXY);

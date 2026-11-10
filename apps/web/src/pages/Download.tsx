@@ -12,6 +12,7 @@ import { FirefoxDevToolsWarning } from "@/components/FirefoxDevToolsWarning";
 import { DebugPanel } from "@/components/DebugPanel";
 import { useDownload } from "@/hooks/useDownload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
+import { useLinkSecret } from "@/hooks/useLinkSecret";
 import { hashWasmArgon2 } from "@/lib/argon2";
 import { showKnownErrorToast, showRewrittenLinkWarning } from "@/lib/toast";
 import { wasShareLinkRewritten } from "@/lib/rewritten-link";
@@ -23,9 +24,7 @@ export function DownloadPage() {
   useFaviconProgress(downloadHook.phase === "downloading" ? downloadHook.progress : null);
   const [passwordInput, setPasswordInput] = useState<string | undefined>();
 
-  // Get secret from URL fragment - captured once at mount so that history.replaceState
-  // clearing the hash does not reset secret to "" on the next re-render.
-  const [secret] = useState<string>(() => window.location.hash.slice(1));
+  const secret = useLinkSecret();
 
   useEffect(() => {
     if (id && secret) {
@@ -40,14 +39,6 @@ export function DownloadPage() {
       showRewrittenLinkWarning();
     }
   }, []);
-
-  // Remove the key from the URL fragment once decryption starts.
-  // The key is now held in memory; removing it prevents browser-history leakage.
-  useEffect(() => {
-    if (downloadHook.phase === "downloading") {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    }
-  }, [downloadHook.phase]);
 
   // Show an enriched toast for download errors (e.g. S3 CORS).
   // Only fires for errors that occur after the file info was loaded

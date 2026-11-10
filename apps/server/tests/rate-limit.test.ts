@@ -1,12 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import {
   createRateLimiter,
   getClientIp,
+  setTrustedProxies,
   skipsRateLimit,
   toLimitKey,
 } from "../src/middleware/rate-limit.js";
 import type { Config } from "../src/lib/config.js";
+import { DEFAULT_TRUSTED_PROXIES } from "../src/lib/trusted-proxies.js";
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
   return {
@@ -40,6 +42,9 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
 function socketEnv(remoteAddress: string) {
   return { incoming: { socket: { remoteAddress } } };
 }
+
+/** A reverse proxy on the same host, whose forwarded headers count. */
+const PROXY = socketEnv("127.0.0.1");
 
 describe("rate limiter", () => {
   it("should allow requests under the limit", async () => {
@@ -93,20 +98,20 @@ describe("rate limiter", () => {
     for (let i = 0; i < 2; i++) {
       const res = await app.request("/test", {
         headers: { "X-Forwarded-For": "1.2.3.4" },
-      });
+      }, PROXY);
       expect(res.status).toBe(200);
     }
 
     // IP A: blocked
     const blockedA = await app.request("/test", {
       headers: { "X-Forwarded-For": "1.2.3.4" },
-    });
+    }, PROXY);
     expect(blockedA.status).toBe(429);
 
     // IP B: still allowed
     const resB = await app.request("/test", {
       headers: { "X-Forwarded-For": "5.6.7.8" },
-    });
+    }, PROXY);
     expect(resB.status).toBe(200);
   });
 });
@@ -140,7 +145,7 @@ describe("getClientIp", () => {
     const app = createApp(true);
     const res = await app.request("/", {
       headers: { "X-Forwarded-For": "1.2.3.4, 10.0.0.1" },
-    });
+    }, PROXY);
     // S-1 fix: rightmost value is set by the trusted reverse proxy;
     // leftmost (1.2.3.4) is client-controlled and must NOT be trusted.
     expect(await res.text()).toBe("10.0.0.1");
@@ -150,7 +155,7 @@ describe("getClientIp", () => {
     const app = createApp(true);
     const res = await app.request("/", {
       headers: { "X-Real-IP": "5.6.7.8" },
-    });
+    }, PROXY);
     expect(await res.text()).toBe("5.6.7.8");
   });
 
@@ -161,7 +166,7 @@ describe("getClientIp", () => {
         "X-Forwarded-For": "1.2.3.4",
         "X-Real-IP": "5.6.7.8",
       },
-    });
+    }, PROXY);
     expect(await res.text()).toBe("1.2.3.4");
   });
 
@@ -184,10 +189,10 @@ describe("getClientIp", () => {
     const app = createApp(true);
     const withRealIp = await app.request("/", {
       headers: { "X-Forwarded-For": "1.2.3.4, ", "X-Real-IP": "5.6.7.8" },
-    });
+    }, PROXY);
     expect(await withRealIp.text()).toBe("5.6.7.8");
-    const alone = await app.request("/", { headers: { "X-Forwarded-For": "1.2.3.4," } });
-    expect(await alone.text()).toBe("unknown");
+    const alone = await app.request("/", { headers: { "X-Forwarded-For": "1.2.3.4," } }, PROXY);
+    expect(await alone.text()).toBe("127.0.0.1");
   });
 
   it("should use the socket address when proxy headers are not trusted", async () => {
@@ -235,7 +240,7 @@ describe("limits over IPv6", () => {
     app.get("/", (c) => c.text(getClientIp(c, true)));
     const res = await app.request("/", {
       headers: { "X-Forwarded-For": "2001:db8:abcd:12:aaaa:bbbb:cccc:dddd" },
-    });
+    }, PROXY);
     expect(await res.text()).toBe("2001:db8:abcd:12::/64");
   });
 
@@ -245,7 +250,7 @@ describe("limits over IPv6", () => {
     app.use("*", createRateLimiter(config));
     app.get("/test", (c) => c.json({ ok: true }));
     const from = (address: string) =>
-      app.request("/test", { headers: { "X-Forwarded-For": address } });
+      app.request("/test", { headers: { "X-Forwarded-For": address } }, PROXY);
 
     for (let i = 1; i <= 3; i++) expect((await from(`2001:db8:1:2::${i}`)).status).toBe(200);
     expect((await from("2001:db8:1:2::99")).status).toBe(429);
@@ -278,17 +283,17 @@ describe("rate limiter cleanup interval", () => {
 
     // Exhaust the limit for 1.2.3.4
     for (let i = 0; i < 2; i++) {
-      const res = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+      const res = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } }, PROXY);
       expect(res.status).toBe(200);
     }
-    const blocked = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+    const blocked = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } }, PROXY);
     expect(blocked.status).toBe(429);
 
     // Advance past the cleanup interval (RATE_LIMIT_WINDOW * 2 = 2000 ms)
     vi.advanceTimersByTime(2001);
 
     // Cleanup removed the stale entry - next request creates a fresh window
-    const fresh = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } });
+    const fresh = await app.request("/test", { headers: { "X-Forwarded-For": "1.2.3.4" } }, PROXY);
     expect(fresh.status).toBe(200);
 
     vi.useRealTimers();
@@ -303,7 +308,7 @@ describe("rate limiter cleanup interval", () => {
       app.use("*", createRateLimiter(config));
       app.get("/test", (c) => c.json({ ok: true }));
       const from = (address: string) =>
-        app.request("/test", { headers: { "X-Forwarded-For": address } });
+        app.request("/test", { headers: { "X-Forwarded-For": address } }, PROXY);
 
       // 1.1.1.1 opens a window that ends at 1000 ms, 2.2.2.2 one that ends at 2500 ms.
       expect((await from("1.1.1.1")).status).toBe(200);
@@ -317,5 +322,68 @@ describe("rate limiter cleanup interval", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("trusted proxies", () => {
+  function createApp() {
+    const app = new Hono();
+    app.get("/", (c) => c.text(getClientIp(c, true)));
+    return app;
+  }
+  const forwardedFor = (address: string) => ({ headers: { "X-Forwarded-For": address } });
+
+  afterEach(() => {
+    setTrustedProxies(DEFAULT_TRUSTED_PROXIES);
+  });
+
+  it("ignores forwarded headers from a public address, which reached the port directly", async () => {
+    const app = createApp();
+    const res = await app.request("/", forwardedFor("1.2.3.4"), socketEnv("198.51.100.20"));
+    expect(await res.text()).toBe("198.51.100.20");
+    const realIp = await app.request("/", { headers: { "X-Real-IP": "1.2.3.4" } }, socketEnv("2001:db8::20"));
+    expect(await realIp.text()).toBe("2001:db8:0:0::/64");
+  });
+
+  it("locks out a guesser who sends a new X-Forwarded-For with every request", async () => {
+    const config = makeConfig({ RATE_LIMIT_MAX: 3, TRUST_PROXY: true });
+    const app = new Hono();
+    app.use("*", createRateLimiter(config));
+    app.get("/test", (c) => c.json({ ok: true }));
+    const statuses: number[] = [];
+    for (let i = 1; i <= 5; i++) {
+      const res = await app.request("/test", forwardedFor(`10.9.8.${i}`), socketEnv("198.51.100.20"));
+      statuses.push(res.status);
+    }
+    expect(statuses).toEqual([200, 200, 200, 429, 429]);
+  });
+
+  it.each(["127.0.0.1", "::1", "172.17.0.1", "::ffff:172.18.0.5", "10.42.0.12", "192.168.1.2", "100.100.30.5", "fd12:3456::1"])(
+    "takes the forwarded address from a proxy at %s",
+    async (proxy) => {
+      const res = await createApp().request("/", forwardedFor("203.0.113.9"), socketEnv(proxy));
+      expect(await res.text()).toBe("203.0.113.9");
+    },
+  );
+
+  it("uses the socket address when the forwarded value is no address", async () => {
+    const app = createApp();
+    for (const value of ["junk-1", "unknown", "1.2.3.4.5", ""]) {
+      const res = await app.request("/", { headers: { "X-Forwarded-For": value, "X-Real-IP": value } }, PROXY);
+      expect(await res.text()).toBe("127.0.0.1");
+    }
+  });
+
+  it("drops a port the proxy appended", async () => {
+    const app = createApp();
+    expect(await (await app.request("/", forwardedFor("203.0.113.9:51234"), PROXY)).text()).toBe("203.0.113.9");
+    expect(await (await app.request("/", forwardedFor("[2001:db8:1:2::9]:443"), PROXY)).text()).toBe("2001:db8:1:2::/64");
+  });
+
+  it("trusts only the networks of TRUSTED_PROXIES once it is set", async () => {
+    setTrustedProxies(["198.51.100.0/24"]);
+    const app = createApp();
+    expect(await (await app.request("/", forwardedFor("203.0.113.9"), socketEnv("198.51.100.20"))).text()).toBe("203.0.113.9");
+    expect(await (await app.request("/", forwardedFor("203.0.113.9"), PROXY)).text()).toBe("127.0.0.1");
   });
 });

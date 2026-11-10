@@ -13,6 +13,7 @@ Complete reference of all environment variables supported by SkySend.
 | `UPLOADS_DIR` | ❌ | `{DATA_DIR}/uploads` | Directory for encrypted upload files. In Docker, defaults to `/uploads`. |
 | `BRANDING_DIR` | ❌ | `{DATA_DIR}/branding` | Directory for your own branding assets. Its contents are served under `/branding/`. Created automatically on startup. |
 | `TRUST_PROXY` | ❌ | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
+| `TRUSTED_PROXIES` | ❌ | _(private networks)_ | Addresses and networks your reverse proxy connects from, comma-separated, like `203.0.113.7,2001:db8::/32`. The headers of `TRUST_PROXY` count only on a connection from one of them. Unset, these are loopback, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, link-local and `fc00::/7`, which covers a proxy on the same host, in Docker, in Kubernetes or in a private network. Set it only when your proxy connects from a public address. A list replaces the default. |
 | `CORS_ORIGINS` | ❌ | _(empty)_ | Additional CORS origins, comma-separated. |
 
 ## File
@@ -40,7 +41,7 @@ The default expiry options translate to:
 - 7 days (`604800`)
 
 ::: info Privacy-Preserving Quotas
-Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key that lives in memory only. No plaintext IP addresses are stored, and neither is the key. The hash key rotates every 24 hours, making it impossible to correlate users across days. A restart starts every quota afresh.
 :::
 
 ## Notes
@@ -106,7 +107,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | `S3_ACCESS_KEY` | ⚠️ | - | S3 access key ID. Required when `STORAGE_BACKEND=s3`. |
 | `S3_SECRET_KEY` | ⚠️ | - | S3 secret access key. Required when `STORAGE_BACKEND=s3`. |
 | `S3_FORCE_PATH_STYLE` | ❌ | `false` | Use path-style URLs instead of virtual-hosted-style. Required for MinIO, Garage, and some self-hosted providers. |
-| `S3_PRESIGNED_EXPIRY` | ❌ | `300` | Presigned download URL expiry in seconds. |
+| `S3_PRESIGNED_EXPIRY` | ❌ | `60` | Presigned download URL expiry in seconds, at most `900`. A download only has to start within this time. The URL can be fetched again until it expires, so a short value keeps the download limit tight. |
 | `S3_PART_SIZE` | ❌ | `8MB` | Size of each S3 multipart upload part. Smaller parts keep uploads steadier and use less memory, larger ones take fewer requests. An upload that would need more than 10,000 parts uses larger ones on its own. Minimum is `5MB` (S3 requirement). |
 | `S3_CONCURRENCY` | ❌ | `8` | Number of S3 parts uploaded in parallel per upload. Higher values improve throughput but use more memory and bandwidth. Range: 1-16. |
 | `S3_MEMORY_LIMIT` | ❌ | a quarter of the memory, at most `256MB` | Most memory all uploads to S3 together hold in parts on their way to the bucket. When it is reached, the next part waits and the senders slow down, instead of the server running out of memory. Parts that are still filling up may hold half of it again, beyond that they wait on disk in `DATA_DIR`. For many uploads at once on a server with one core, see [Many Simultaneous Uploads](/user-guide/configuration/s3#many-simultaneous-uploads). The default is a quarter of the memory the server may use, the limit of its container if it runs in one, and at most `256MB`. Minimum is `5MB`. |

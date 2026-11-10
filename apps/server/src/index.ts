@@ -9,12 +9,12 @@ import { readFile } from "node:fs/promises";
 
 import { loadConfig } from "./lib/config.js";
 import { renderIndexHtml } from "./lib/index-html.js";
-import { createAssetHandler } from "./lib/static-assets.js";
+import { createAssetHandler, hasFileExtension } from "./lib/static-assets.js";
 import { initDatabase, closeDatabase } from "./db/index.js";
 import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRequestLogger } from "./middleware/request-logger.js";
-import { createRateLimiter, skipsRateLimit } from "./middleware/rate-limit.js";
+import { createRateLimiter, setTrustedProxies, skipsRateLimit } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
 import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
 import { createPasswordLockout } from "./lib/password-lockout.js";
@@ -25,6 +25,7 @@ import { configRoute } from "./routes/config.js";
 import { createUploadRoute } from "./routes/upload.js";
 import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { WS_MAX_PAYLOAD, WsBufferMemory } from "./lib/ws-upload.js";
+import { guardUpgrades } from "./lib/upgrade-guard.js";
 import { bucketConnectSources } from "./lib/bucket-csp.js";
 import { metaRoute } from "./routes/meta.js";
 import { infoRoute } from "./routes/info.js";
@@ -230,6 +231,7 @@ api.use("*", async (c, next) => {
 // upload when the upload starts, and chunks run on that reservation.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
+if (config.TRUSTED_PROXIES) setTrustedProxies(config.TRUSTED_PROXIES);
 const rateLimiter = createRateLimiter(config);
 const passwordLockout = createPasswordLockout(config.PASSWORD_MAX_ATTEMPTS, config.PASSWORD_LOCKOUT_MS);
 const passwordRoute = createPasswordRoute(passwordLockout);
@@ -388,8 +390,7 @@ const indexHtmlPath = resolve(webDistPath, "index.html");
 let cachedIndexHtml: string | null = null;
 
 app.get("*", async (c, next) => {
-  const reqPath = c.req.path;
-  if (reqPath !== "/" && /\.[^/]+$/.test(reqPath)) {
+  if (hasFileExtension(c.req.path)) {
     return next();
   }
   // The config never changes at runtime, so the rendered page is cached as a whole.
@@ -469,12 +470,12 @@ nodeServer.requestTimeout = 0;
 nodeServer.keepAliveTimeout = 120_000;
 
 // Attach the WebSocket adapter so /api/upload/ws and /api/request/:id/upload/ws can accept
-// upgrade requests.
+// upgrade requests. Always through the guard, never on the server directly, see upgrade-guard.ts.
 if (
   config.FILE_UPLOAD_WS &&
   (config.ENABLED_SERVICES.includes("file") || config.ENABLED_SERVICES.includes("request"))
 ) {
-  injectWebSocket(nodeServer);
+  guardUpgrades(nodeServer, injectWebSocket);
 }
 nodeServer.timeout = 0;
 

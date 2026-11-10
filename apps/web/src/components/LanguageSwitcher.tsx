@@ -27,6 +27,8 @@ const languages = [
   { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
   { code: "zh", name: "简体中文", flag: "cn" },
   { code: "ja", name: "日本語", flag: "jp" },
+  { code: "ru", name: "Русский", flag: "ru" },
+  { code: "uk", name: "Українська", flag: "ua" },
 ] as const;
 
 function detectBrowserLanguage(): string {

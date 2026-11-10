@@ -423,6 +423,9 @@ export class S3Storage implements StorageBackend {
    * for it first.
    */
   private async takePart(session: MultipartSession, size: number): Promise<Uint8Array> {
+    // The caller waited for room, and an abort in the meantime already gave back what the
+    // session held. Taking the part now would give its FillMemory back a second time.
+    if (session.abort.signal.aborted) throw new Error("Upload was aborted");
     if (session.onDisk) {
       const data = Buffer.allocUnsafe(size);
       let read = 0;
@@ -459,6 +462,7 @@ export class S3Storage implements StorageBackend {
   private async discardPart(id: string, session: MultipartSession): Promise<void> {
     this.fillMemory.give(session.chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
     session.chunks = [];
+    session.bufferSize = 0;
     const file = session.partFile;
     if (!file) return;
     session.partFile = null;
@@ -718,22 +722,26 @@ export class S3Storage implements StorageBackend {
   /**
    * S3 storage always uses presigned download URLs.
    *
-   * Presigned URLs have a short TTL (configurable, default 300s) and expire automatically,
-   * enforcing download limits and expiry even if a URL is recorded by a client.
+   * A presigned URL is a bearer credential: it works any number of times until it expires, and
+   * the bucket never asks the server again. The download count therefore counts the URLs handed
+   * out, not the fetches. The short TTL keeps that window small, and the URL never outlives the
+   * upload itself (GHSA-ghcm-gq78-wggw).
    */
   supportsPresignedUrls(): boolean {
     return true;
   }
 
-  /** Generate a presigned GET URL for direct client download. */
-  async getPresignedDownloadUrl(id: string, expiresInSec?: number): Promise<string> {
+  /** Generate a presigned GET URL for direct client download, valid until `notAfter` at most. */
+  async getPresignedDownloadUrl(id: string, notAfter: Date): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: this.key(id),
     });
 
+    // S3 needs at least one second. The routes refuse an expired upload before they get here.
+    const remaining = Math.floor((notAfter.getTime() - Date.now()) / 1000);
     return getSignedUrl(this.client, command, {
-      expiresIn: expiresInSec ?? this.presignedExpiry,
+      expiresIn: Math.max(1, Math.min(this.presignedExpiry, remaining)),
     });
   }
 

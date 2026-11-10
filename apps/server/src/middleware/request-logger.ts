@@ -17,9 +17,13 @@ import { logger } from "hono/logger";
  * so any other appended value is cut too. API paths never carry a key and keep their full
  * path. `\S*` stops at whitespace, which keeps the status code and the elapsed time on the
  * outgoing line intact.
+ *
+ * The OIDC callback is the one route that carries a credential in its query string, the
+ * authorization code the identity provider sends back. Hono's logger keeps the query, so the
+ * line is cut after the first segment of every "/auth/" path as well.
  */
 const SENSITIVE_PATH =
-  /((?<!\/api)\/(?:file|note|d|request|inbox)\/[0-9a-fA-F-]{36}|(?<=\s)\/templates(?![\w.-]))\S*/g;
+  /((?<!\/api)\/(?:file|note|d|request|inbox)\/[0-9a-fA-F-]{36}|(?<=\s)\/templates(?![\w.-])|(?<=\s)\/auth\/[\w-]+)\S*/g;
 
 /**
  * Remove anything a share-link path carries beyond its resource ID.

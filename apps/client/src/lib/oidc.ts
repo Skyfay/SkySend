@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { trimTrailingSlashes } from "@skysend/transfer";
 import { getStoredToken, saveStoredToken } from "./config.js";
+import { systemTool } from "./windows-tool.js";
 
 // ── Token helpers ──────────────────────────────────────
 
@@ -161,7 +162,7 @@ export function startLocalCallbackServer(): Promise<LocalCallbackServer> {
  * Only http and https addresses open, never a file or a program a link could name. The address
  * comes from a server, which may be one from the public list, so on Windows it never goes through
  * cmd.exe: cmd reads & | ^ < > in it as its own syntax and ran whatever followed. rundll32 hands
- * the address to the default browser as it is.
+ * the address to the default browser as it is, started by its full path like every program here.
  */
 export function openBrowser(url: string, onFail?: () => void): void {
   let target: string;
@@ -178,7 +179,7 @@ export function openBrowser(url: string, onFail?: () => void): void {
     platform === "darwin"
       ? ["open", [target]]
       : platform === "win32"
-        ? ["rundll32", ["url.dll,FileProtocolHandler", target]]
+        ? [systemTool("rundll32.exe"), ["url.dll,FileProtocolHandler", target]]
         : ["xdg-open", [target]];
   const child = spawn(command, args, { detached: true, stdio: "ignore" });
   child.on("error", () => onFail?.());

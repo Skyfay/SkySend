@@ -10,6 +10,7 @@ import type { StorageBackend } from "../storage/types.js";
 import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getConfig } from "../lib/config.js";
 import { getClientIp } from "../middleware/rate-limit.js";
+import { rejectHead } from "../middleware/reject-head.js";
 
 export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLockout) {
   const route = new Hono<{
@@ -66,7 +67,7 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
    * Streams the encrypted file to the client.
    * Requires valid auth token. Increments download count atomically.
    */
-  route.get("/:id", guessLimitedAuth, async (c) => {
+  route.get("/:id", rejectHead, guessLimitedAuth, async (c) => {
     const upload = c.get("upload");
 
     // Check if expired
@@ -103,7 +104,7 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
 
     // S3 backend: generate presigned URL for direct client download
     if (storage.supportsPresignedUrls()) {
-      const url = await storage.getPresignedDownloadUrl(upload.id);
+      const url = await storage.getPresignedDownloadUrl(upload.id, upload.expiresAt);
       return c.json({
         url,
         size: upload.size,

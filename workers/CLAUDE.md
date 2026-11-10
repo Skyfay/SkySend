@@ -38,5 +38,6 @@ Rules specific to this Worker:
 - `ALLOWED_ORIGINS` is an explicit allowlist plus localhost for development. Keep it narrow.
 - Turnstile is verified **before** any other work. That check is the only thing between this endpoint and a spam relay.
 - The recipient always comes from the registry lookup by hostname, never from the request body. A user-supplied destination address would turn this into an open relay, and the lookup doubles as the check that the reported instance is a known one.
-- Every user-supplied value that reaches the email body goes through `escapeHtml()`. Adding a field to `buildHtmlEmail` without it is an HTML injection into someone's inbox.
+- Every user-supplied value that reaches the email body goes through `escapeHtml()`. Adding a field to `buildHtmlEmail` without it is an HTML injection into someone's inbox. `escapeHtml()` covers HTML only: a value inside a URL, like the reply address in the `mailto:` link, also needs the characters that URL rejected (`MAILTO_UNSAFE`), since `?` and `&` in there preload the operator's reply.
+- The body is bounded before it is parsed (`MAX_BODY_BYTES`), and reasons, comment, URL and address each have a length cap. One captcha token is one email, so the caps keep that email small.
 - Field and reason changes have to stay in sync with `website/src/lib/report.ts`.

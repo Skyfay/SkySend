@@ -150,8 +150,7 @@ describe("FileStorage", () => {
   describe("getPresignedDownloadUrl", () => {
     it("returns null - not supported by filesystem backend", async () => {
       await storage.save(TEST_UUID, createStream(new Uint8Array([1])));
-      expect(await storage.getPresignedDownloadUrl(TEST_UUID)).toBeNull();
-      expect(await storage.getPresignedDownloadUrl(TEST_UUID, 300)).toBeNull();
+      expect(await storage.getPresignedDownloadUrl(TEST_UUID, new Date(Date.now() + 60_000))).toBeNull();
     });
   });
 });

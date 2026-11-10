@@ -30,6 +30,7 @@ import { PasswordPrompt } from "@/components/PasswordPrompt";
 import { NoteBlocks } from "@/components/NoteBlocks";
 import { copyText } from "@/lib/clipboard";
 import { useNoteView } from "@/hooks/useNoteView";
+import { useLinkSecret } from "@/hooks/useLinkSecret";
 import { formatTimeRemaining } from "@/lib/utils";
 
 const CONTENT_TYPE_ICONS = {
@@ -122,14 +123,9 @@ export function NoteViewPage() {
   const noteHook = useNoteView();
   const [passwordInput, setPasswordInput] = useState<string | undefined>();
 
-  // T-2: Capture the secret from the URL fragment once at mount so that clearing
-  // the hash via history.replaceState does not reset the value on the next re-render.
-  const [secret] = useState<string>(() => window.location.hash.slice(1));
+  const secret = useLinkSecret();
 
   useEffect(() => {
-    // Remove the key fragment from the URL immediately to reduce exposure in
-    // browser history, screenshots, and browser extensions.
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
     if (id && secret) {
       noteHook.loadInfo(id);
     }

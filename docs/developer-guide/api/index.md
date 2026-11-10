@@ -1,6 +1,6 @@
 # API Overview
 
-SkySend exposes a REST API under the `/api` prefix. All endpoints accept and return JSON unless otherwise noted.
+SkySend exposes a REST API under the `/api` prefix. All endpoints accept and return JSON unless otherwise noted. A route that reads a JSON body needs `Content-Type: application/json` and answers `415` to any other type, so another site cannot send it as a simple request without a CORS preflight.
 
 ## Base URL
 
@@ -92,7 +92,9 @@ Both tokens are provided as base64url-encoded strings in request headers.
 | `401` | Invalid or missing auth token |
 | `404` | Upload not found, or an unknown path under `/api` (`{"error": "Not found"}`) |
 | `409` | Conflict (e.g., metadata already set) |
+| `405` | `HEAD` on a route that counts a download |
 | `410` | Upload expired or download limit reached |
+| `415` | A JSON body sent without `Content-Type: application/json` |
 | `429` | Rate limit or quota exceeded |
 | `500` | Internal server error |
 

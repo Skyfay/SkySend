@@ -32,6 +32,10 @@ export function initDatabase(dataDir: string): ReturnType<typeof drizzle<typeof 
   sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("foreign_keys = ON");
+  // A deleted row stays readable in the freed pages of the file otherwise, and a backup or
+  // snapshot taken later still held the ciphertext of a burned note and the hashed IPs of the
+  // quota. With secure_delete SQLite overwrites what a delete frees.
+  sqlite.pragma("secure_delete = ON");
 
   _sqlite = sqlite;
   _db = drizzle(sqlite, { schema });

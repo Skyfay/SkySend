@@ -24,7 +24,7 @@ SkySend follows a simple client-server architecture with end-to-end encryption.
 
 The browser and CLI client both handle all cryptographic operations. The server stores encrypted blobs and metadata without any knowledge of the plaintext content.
 
-When using S3 storage, downloads bypass the server via presigned URLs - the client fetches the encrypted blob directly from S3 after the server has verified auth and counted the download.
+When using S3 storage, downloads bypass the server via presigned URLs - the client fetches the encrypted blob directly from S3 after the server has verified auth and counted the download. A presigned URL works any number of times until it expires, so on S3 the download count counts the URLs the server hands out, not the fetches from the bucket. The URL lives for `S3_PRESIGNED_EXPIRY` seconds (default 60, at most 900) and never past the expiry of the upload, which keeps that window small. Whoever holds such a URL still gets only ciphertext, since the key stays in the link fragment.
 
 ## Upload Flow
 
@@ -343,6 +343,8 @@ apps/web/src/
     pt-BR.json          # Brazilian Portuguese translations
     zh.json             # Chinese translations
     ja.json             # Japanese translations
+    ru.json             # Russian translations
+    uk.json             # Ukrainian translations
 ```
 
 The Service Worker for streaming ECE decryption, `download-sw.js`, lives in `apps/web/public/`.

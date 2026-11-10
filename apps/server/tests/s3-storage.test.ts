@@ -301,6 +301,29 @@ describe("S3Storage multipart uploads", () => {
     await s3.abortChunkedUpload(ID_B);
   });
 
+  it("gives the memory of a part filling up back once when the upload is aborted while it waits", async () => {
+    // 10 MiB for parts on their way, 5 MiB for parts that are filling up.
+    const s3 = storage(10 * MIB);
+    const fill = (s3 as unknown as { fillMemory: { used: number } }).fillMemory;
+    await s3.createEmpty(ID);
+    await s3.appendChunk(ID, streamOf(10 * MIB));
+    expect(bucket.open()).toHaveLength(2);
+
+    // An upload that fits into one part waits at finalize for room for its PutObject.
+    await s3.createEmpty(ID_B, 3 * MIB);
+    await s3.appendChunk(ID_B, streamOf(3 * MIB));
+    expect(fill.used).toBe(3 * MIB);
+    const finalized = s3.finalizeChunkedUpload(ID_B);
+    await s3.abortChunkedUpload(ID_B);
+    expect(fill.used).toBe(0);
+
+    bucket.partsByKey.get(`${ID}.bin:1`)!.finish();
+    await expect(finalized).rejects.toThrow("aborted");
+    expect(fill.used).toBe(0);
+    expect(bucket.events.some((e) => e.startsWith("put"))).toBe(false);
+    await s3.abortChunkedUpload(ID);
+  });
+
   it("lets a part larger than the whole limit go once nothing else is on its way", async () => {
     const s3 = storage(MIB);
     await s3.createEmpty(ID);
@@ -471,3 +494,22 @@ describe("S3Storage multipart uploads", () => {
   });
 });
 
+describe("S3Storage presigned download URLs", () => {
+  /** The X-Amz-Expires of a presigned URL, the seconds it stays valid. */
+  async function expiresIn(notAfter: Date) {
+    const url = await storage().getPresignedDownloadUrl(ID, notAfter);
+    return Number(new URL(url).searchParams.get("X-Amz-Expires"));
+  }
+
+  it("uses the configured TTL when the upload lives longer", async () => {
+    expect(await expiresIn(new Date(Date.now() + 3600_000))).toBe(300);
+  });
+
+  it("never outlives the upload it points at", async () => {
+    expect(await expiresIn(new Date(Date.now() + 42_500))).toBe(42);
+  });
+
+  it("keeps at least one second for an upload about to expire", async () => {
+    expect(await expiresIn(new Date(Date.now() + 200))).toBe(1);
+  });
+});
