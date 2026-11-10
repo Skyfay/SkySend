@@ -167,7 +167,7 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
     }
 
     if (storage.supportsPresignedUrls()) {
-      const url = await storage.getPresignedDownloadUrl(upload.id);
+      const url = await storage.getPresignedDownloadUrl(upload.id, upload.expiresAt);
       return c.json({ url, size: upload.size, fileCount: upload.fileCount });
     }
     const stream = Readable.toWeb(storage.createReadStream(upload.id)) as ReadableStream;

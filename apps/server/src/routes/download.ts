@@ -104,7 +104,7 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
 
     // S3 backend: generate presigned URL for direct client download
     if (storage.supportsPresignedUrls()) {
-      const url = await storage.getPresignedDownloadUrl(upload.id);
+      const url = await storage.getPresignedDownloadUrl(upload.id, upload.expiresAt);
       return c.json({
         url,
         size: upload.size,

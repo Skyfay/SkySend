@@ -1519,7 +1519,7 @@ describe("file requests", () => {
       });
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ url, size: 10, fileCount: 1 });
-      expect(presign).toHaveBeenCalledWith(uid);
+      expect(presign).toHaveBeenCalledWith(uid, expect.any(Date));
       expect(downloadCount(uid)).toBe(1);
     });
 

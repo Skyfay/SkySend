@@ -134,7 +134,7 @@ export class FileStorage implements StorageBackend {
   }
 
   /** Not supported - returns null. */
-  async getPresignedDownloadUrl(_id: string, _expiresInSec?: number): Promise<string | null> {
+  async getPresignedDownloadUrl(_id: string, _notAfter: Date): Promise<string | null> {
     return null;
   }
 

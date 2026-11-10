@@ -722,22 +722,26 @@ export class S3Storage implements StorageBackend {
   /**
    * S3 storage always uses presigned download URLs.
    *
-   * Presigned URLs have a short TTL (configurable, default 300s) and expire automatically,
-   * enforcing download limits and expiry even if a URL is recorded by a client.
+   * A presigned URL is a bearer credential: it works any number of times until it expires, and
+   * the bucket never asks the server again. The download count therefore counts the URLs handed
+   * out, not the fetches. The short TTL keeps that window small, and the URL never outlives the
+   * upload itself (GHSA-ghcm-gq78-wggw).
    */
   supportsPresignedUrls(): boolean {
     return true;
   }
 
-  /** Generate a presigned GET URL for direct client download. */
-  async getPresignedDownloadUrl(id: string, expiresInSec?: number): Promise<string> {
+  /** Generate a presigned GET URL for direct client download, valid until `notAfter` at most. */
+  async getPresignedDownloadUrl(id: string, notAfter: Date): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: this.key(id),
     });
 
+    // S3 needs at least one second. The routes refuse an expired upload before they get here.
+    const remaining = Math.floor((notAfter.getTime() - Date.now()) / 1000);
     return getSignedUrl(this.client, command, {
-      expiresIn: expiresInSec ?? this.presignedExpiry,
+      expiresIn: Math.max(1, Math.min(this.presignedExpiry, remaining)),
     });
   }
 

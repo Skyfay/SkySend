@@ -2528,7 +2528,9 @@ describe("download route edge cases", () => {
 
   it("returns a presigned URL JSON response when the storage backend supports it", async () => {
     const authToken = fakeBase64urlToken();
-    insertTestUpload(dbCtx.db, { authToken, size: 100, fileCount: 2 });
+    // A whole second, since the database keeps timestamps in seconds.
+    const expiresAt = new Date(Math.floor(Date.now() / 1000) * 1000 + 3600_000);
+    insertTestUpload(dbCtx.db, { authToken, size: 100, fileCount: 2, expiresAt });
 
     const presignedUrl = "https://s3.example.com/bucket/file?sig=abc123";
     const mockStorage: StorageBackend = {
@@ -2538,7 +2540,7 @@ describe("download route edge cases", () => {
       createReadStream: storageCtx.storage.createReadStream.bind(storageCtx.storage),
       delete: async () => {},
       supportsPresignedUrls: () => true,
-      getPresignedDownloadUrl: async () => presignedUrl,
+      getPresignedDownloadUrl: vi.fn(async () => presignedUrl),
     };
 
     // The DB update needs to succeed (changes=1) so the route proceeds to presign
@@ -2562,6 +2564,8 @@ describe("download route edge cases", () => {
     expect(body.url).toBe(presignedUrl);
     expect(body.size).toBe(100);
     expect(body.fileCount).toBe(2);
+    // The URL may never outlive the upload, so the route hands the storage its expiry.
+    expect(mockStorage.getPresignedDownloadUrl).toHaveBeenCalledWith(TEST_UUID, expiresAt);
     updateSpy.mockRestore();
   });
 });

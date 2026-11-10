@@ -128,6 +128,29 @@ describe("config", () => {
     });
   });
 
+  describe("S3_PRESIGNED_EXPIRY", () => {
+    it("defaults to 60 seconds", async () => {
+      const config = await loadFreshConfig();
+      expect(config.S3_PRESIGNED_EXPIRY).toBe(60);
+    });
+
+    it("accepts the ceiling of 900 seconds", async () => {
+      process.env.S3_PRESIGNED_EXPIRY = "900";
+      const config = await loadFreshConfig();
+      expect(config.S3_PRESIGNED_EXPIRY).toBe(900);
+    });
+
+    it("rejects a value above 900 seconds", async () => {
+      process.env.S3_PRESIGNED_EXPIRY = "901";
+      await expect(loadFreshConfig()).rejects.toThrow("between 1 and 900");
+    });
+
+    it("rejects zero", async () => {
+      process.env.S3_PRESIGNED_EXPIRY = "0";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+  });
+
   describe("validation errors", () => {
     it("should reject invalid PORT", async () => {
       process.env.PORT = "99999";

@@ -494,3 +494,22 @@ describe("S3Storage multipart uploads", () => {
   });
 });
 
+describe("S3Storage presigned download URLs", () => {
+  /** The X-Amz-Expires of a presigned URL, the seconds it stays valid. */
+  async function expiresIn(notAfter: Date) {
+    const url = await storage().getPresignedDownloadUrl(ID, notAfter);
+    return Number(new URL(url).searchParams.get("X-Amz-Expires"));
+  }
+
+  it("uses the configured TTL when the upload lives longer", async () => {
+    expect(await expiresIn(new Date(Date.now() + 3600_000))).toBe(300);
+  });
+
+  it("never outlives the upload it points at", async () => {
+    expect(await expiresIn(new Date(Date.now() + 42_500))).toBe(42);
+  });
+
+  it("keeps at least one second for an upload about to expire", async () => {
+    expect(await expiresIn(new Date(Date.now() + 200))).toBe(1);
+  });
+});

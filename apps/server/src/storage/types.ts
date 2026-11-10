@@ -56,10 +56,10 @@ export interface StorageBackend {
   supportsPresignedUrls(): boolean;
 
   /**
-   * Generate a presigned download URL for direct client access.
-   * Returns null if not supported.
+   * Generate a presigned download URL for direct client access, valid until `notAfter` at the
+   * latest. Returns null if not supported.
    */
-  getPresignedDownloadUrl(id: string, expiresInSec?: number): Promise<string | null>;
+  getPresignedDownloadUrl(id: string, notAfter: Date): Promise<string | null>;
 
   /**
    * Abort a chunked upload that is in progress.

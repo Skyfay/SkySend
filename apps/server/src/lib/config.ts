@@ -443,11 +443,15 @@ const configSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  /**
+   * Seconds a presigned download URL stays valid. The URL works any number of times within this
+   * window, so it stays short and has a ceiling (GHSA-ghcm-gq78-wggw).
+   */
   S3_PRESIGNED_EXPIRY: z
     .string()
-    .default("300")
+    .default("60")
     .transform((v) => parseInt(v, 10))
-    .pipe(z.number().int().positive()),
+    .pipe(z.number().int().min(1).max(900, "S3_PRESIGNED_EXPIRY must be between 1 and 900 seconds")),
 
   S3_PART_SIZE: z
     .string()
