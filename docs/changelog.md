@@ -2,6 +2,64 @@
 
 All notable changes to SkySend are documented here.
 
+## v3.3.0 - Trusted Proxies, Russian and Ukrainian, Reloadable Links and Security Hardening
+
+*Released: November 10, 2026*
+
+> ⚠️ **Before updating:** With `TRUST_PROXY=true`, SkySend now reads `X-Forwarded-For` and `X-Real-IP` only on a connection from loopback or a private network. If your reverse proxy or CDN connects from a public address, list it in the new `TRUSTED_PROXIES`, or every visitor counts as the proxy.
+
+> ⚠️ **Before updating:** `S3_PRESIGNED_EXPIRY` now accepts at most `900` seconds. A server with a higher value refuses to start until it is lowered.
+
+### ✨ Features
+
+- **server**: New option `TRUSTED_PROXIES` names the addresses and networks a reverse proxy connects from. Unset, these are loopback and the private networks.
+- **web**: Added Russian and Ukrainian translations. Thanks @rus1709 ([#104](https://github.com/Skyfay/SkySend/pull/104))
+
+### 🐛 Bug Fixes
+
+- **web**: A code block in a note showed its lines without the leading spaces and tabs, so indented code lost its shape. The indentation now shows as it was written, while the copy button already gave the right text before. ([#103](https://github.com/Skyfay/SkySend/issues/103))
+- **web**: A comment or string that spans several lines in a code block lost its color after the first line. Every line of it is highlighted now.
+- **infra**: The instances worker sends its own User-Agent, so a public instance behind Cloudflare's Browser Integrity Check no longer shows as offline.
+
+### 🔒 Security
+
+- **server**: A single unauthenticated upgrade request with a malformed target, or one whose connection the client reset, no longer crashes the server, and upgrade requests outside the two WebSocket upload routes are refused with 400.
+- **server**: A HEAD request to a download route is refused with 405 instead of counting a download and leaving the file open until the next restart.
+- **server**: Routes that read a JSON body refuse any other content type with 415, so another website can no longer lock a visitor out of a share or use up their daily file request limit.
+- **server**: Deleted rows are overwritten in the database file, so a later backup or snapshot no longer holds burned notes or hashed IP addresses.
+- **server**: Aborting an upload to S3 while it waits for memory no longer weakens the memory limit of the uploads that are still filling a part.
+- **server**: The request log cuts the query string of the OIDC callback, which carried the authorization code of every login.
+- **server**: With `TRUST_PROXY=true`, forwarded client addresses count only on a connection from `TRUSTED_PROXIES`. Anyone who reached the server port directly could send a new address with every password guess and was never locked out.
+- **server**: The key that hashes client IPs for upload quotas stays in memory and is no longer stored in the database. With a copy of the database or a backup, the hashes could be turned back into IPv4 addresses, so upload quotas now start afresh on a restart.
+- **server**: Presigned S3 download URLs now live for 60 seconds by default instead of 300 and never past the expiry of the upload, which narrows the window in which a captured URL can be fetched beyond the download limit. Thanks @tasa1 ([GHSA-ghcm-gq78-wggw](https://github.com/Skyfay/SkySend/security/advisories/GHSA-ghcm-gq78-wggw))
+- **server**: `S3_PRESIGNED_EXPIRY` accepts at most 900 seconds. Thanks @tasa1 ([GHSA-ghcm-gq78-wggw](https://github.com/Skyfay/SkySend/security/advisories/GHSA-ghcm-gq78-wggw))
+- **client**: The CLI binary no longer reads `bunfig.toml` or `.env` from the folder it starts in. Two received files saved there, a `bunfig.toml` and a script, could run code on the next start of `skysend` in that folder.
+- **client**: On Windows the CLI no longer runs a program from the current folder when it means a system tool. A received file named clip.exe, rundll32.exe, cmd.exe or tput.exe there used to run instead on copy, browser opening, login, update or the start of the interactive mode.
+- **docker**: The entrypoint no longer follows a symlink when it sets the owner of the uploads directory.
+- **infra**: The report Worker refuses a reply address with characters that would turn the mailto link of the report into a prefilled reply with other recipients, subject or body.
+- **infra**: The report Worker bounds the request body, the reasons, the comment and the URL before parsing, and only an exact localhost origin counts as a development origin.
+
+### 🔄 Changed
+
+- **web**: Note and file pages keep the key in the address bar, so a reload, a restored tab or a copied address opens the link again, and a key added to the address bar by hand opens it right away. ([#102](https://github.com/Skyfay/SkySend/issues/102))
+
+### 📝 Documentation
+
+- **docs**: The API reference lists the 405 answer to HEAD on download routes and the 415 answer to a JSON body without its content type.
+- **docs**: The reverse proxy guide explains `TRUSTED_PROXIES` and tells to publish the server port on `127.0.0.1` when the proxy runs on the same host.
+- **docs**: The list of public instances includes skysend.cyberjake.xyz in the United States.
+- **docs**: The architecture page and the environment variable reference explain that a presigned S3 URL works until it expires, so the download limit on S3 holds only up to that window.
+
+### 🧪 Tests
+
+- **infra**: End-to-end tests reload a note and a file link and add the key to an open page by hand.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v3.3.0`
+- **Also tagged as**: `latest`, `v3`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v3.2.0 - Rebuilt CLI with a Full-Screen App, File Requests and Security Fixes
 
 *Released: October 23, 2026*
