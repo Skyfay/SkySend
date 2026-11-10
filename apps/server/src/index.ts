@@ -14,7 +14,7 @@ import { initDatabase, closeDatabase } from "./db/index.js";
 import { createStorage } from "./storage/index.js";
 import { startCleanupJob, runCleanup } from "./lib/cleanup.js";
 import { createRequestLogger } from "./middleware/request-logger.js";
-import { createRateLimiter, skipsRateLimit } from "./middleware/rate-limit.js";
+import { createRateLimiter, setTrustedProxies, skipsRateLimit } from "./middleware/rate-limit.js";
 import { createUploadQuota } from "./middleware/quota.js";
 import { BRANDING_PREFIX, createBrandingStatic } from "./middleware/branding.js";
 import { createPasswordLockout } from "./lib/password-lockout.js";
@@ -230,6 +230,7 @@ api.use("*", async (c, next) => {
 // upload when the upload starts, and chunks run on that reservation.
 // If dedicated chunk-level throttling is needed, implement it as a separate
 // bytes-per-second limit in the upload session layer, not via the global counter.
+if (config.TRUSTED_PROXIES) setTrustedProxies(config.TRUSTED_PROXIES);
 const rateLimiter = createRateLimiter(config);
 const passwordLockout = createPasswordLockout(config.PASSWORD_MAX_ATTEMPTS, config.PASSWORD_LOCKOUT_MS);
 const passwordRoute = createPasswordRoute(passwordLockout);

@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import type { Command } from "commander";
 import { findChecksum } from "../lib/checksum.js";
 import { writeLine } from "../lib/progress.js";
+import { systemTool } from "../lib/windows-tool.js";
 import { APP_VERSION } from "../version.js";
 
 function getCurrentVersion(): string {
@@ -156,17 +157,20 @@ export function registerUpdateCommand(program: Command): void {
         if (process.platform === "win32") {
           // On Windows a running .exe is locked - it cannot be replaced directly,
           // even as Administrator. Spawn a detached cmd script that waits for this
-          // process to exit, then moves the new binary into place.
+          // process to exit, then moves the new binary into place. cmd.exe and timeout.exe go by
+          // their full path, and the script runs in the temp folder, so a program of the same
+          // name in the folder the user started from never runs instead.
           const batPath = `${os.tmpdir()}\\skysend-update.bat`;
           const bat = [
             "@echo off",
-            "timeout /t 2 /nobreak >nul",
+            `"${systemTool("timeout.exe")}" /t 2 /nobreak >nul`,
             `move /y "${tmpPath}" "${execPath}"`,
             `del "%~f0"`,
             "",
           ].join("\r\n");
           fs.writeFileSync(batPath, bat, "ascii");
-          const child = spawn("cmd.exe", ["/c", batPath], {
+          const child = spawn(systemTool("cmd.exe"), ["/c", batPath], {
+            cwd: os.tmpdir(),
             detached: true,
             stdio: "ignore",
             windowsHide: true,

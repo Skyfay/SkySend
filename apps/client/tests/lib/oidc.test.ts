@@ -15,6 +15,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env["XDG_CONFIG_HOME"];
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   vi.resetModules();
   rmSync(tempDir, { recursive: true, force: true });
@@ -156,6 +157,7 @@ describe("openBrowser", () => {
 
   it("hands the address to rundll32 on Windows, never to cmd.exe", async () => {
     vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    vi.stubEnv("SystemRoot", "C:\\Windows");
     const spawnMock = vi.fn().mockReturnValue({ unref: vi.fn(), on: vi.fn() });
     vi.doMock("node:child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
@@ -165,7 +167,7 @@ describe("openBrowser", () => {
     openBrowser("https://evil.example/&calc.exe");
 
     expect(spawnMock).toHaveBeenCalledWith(
-      "rundll32",
+      "C:\\Windows\\System32\\rundll32.exe",
       ["url.dll,FileProtocolHandler", "https://evil.example/&calc.exe"],
       { detached: true, stdio: "ignore" },
     );

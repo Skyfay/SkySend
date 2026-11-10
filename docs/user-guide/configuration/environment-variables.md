@@ -13,6 +13,7 @@ Complete reference of all environment variables supported by SkySend.
 | `UPLOADS_DIR` | ❌ | `{DATA_DIR}/uploads` | Directory for encrypted upload files. In Docker, defaults to `/uploads`. |
 | `BRANDING_DIR` | ❌ | `{DATA_DIR}/branding` | Directory for your own branding assets. Its contents are served under `/branding/`. Created automatically on startup. |
 | `TRUST_PROXY` | ❌ | `false` | Trust `X-Forwarded-For` and `X-Real-IP` headers. Enable when behind a reverse proxy. |
+| `TRUSTED_PROXIES` | ❌ | _(private networks)_ | Addresses and networks your reverse proxy connects from, comma-separated, like `203.0.113.7,2001:db8::/32`. The headers of `TRUST_PROXY` count only on a connection from one of them. Unset, these are loopback, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, link-local and `fc00::/7`, which covers a proxy on the same host, in Docker, in Kubernetes or in a private network. Set it only when your proxy connects from a public address. A list replaces the default. |
 | `CORS_ORIGINS` | ❌ | _(empty)_ | Additional CORS origins, comma-separated. |
 
 ## File
@@ -40,7 +41,7 @@ The default expiry options translate to:
 - 7 days (`604800`)
 
 ::: info Privacy-Preserving Quotas
-Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key. No plaintext IP addresses are stored. The hash key rotates every 24 hours, making it impossible to correlate users across days.
+Upload quotas use HMAC-SHA256 hashed IPs with a daily rotating key that lives in memory only. No plaintext IP addresses are stored, and neither is the key. The hash key rotates every 24 hours, making it impossible to correlate users across days. A restart starts every quota afresh.
 :::
 
 ## Notes

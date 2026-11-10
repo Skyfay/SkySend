@@ -35,57 +35,21 @@ export type QuotaDecision =
 /**
  * Privacy-preserving upload quota using HMAC-hashed IPs.
  * The daily rotating key ensures that IPs cannot be correlated across days.
- * State is persisted in SQLite so quotas survive server restarts.
+ * Usage is kept in SQLite, the key only in memory, so a restart starts every budget afresh.
  *
  * If FILE_UPLOAD_QUOTA_BYTES is 0, the middleware is a no-op.
  */
 export function createUploadQuota(config: Config) {
   const keyRotationMs = 24 * 60 * 60 * 1000;
 
-  let hmacKey: Buffer;
-  let keyCreatedAt: number;
-
-  // Try to restore HMAC key from DB
+  // The key never touches the disk. Releases up to 3.2.0 kept it in quota_state next to the
+  // hashes, so anyone with a copy of the database or a backup recovered every IPv4 address
+  // in it by trying all 2^32, and matched them to uploads by their size. Without the key the
+  // stored hashes are worthless, so they go too, and so does a key an older release left.
+  let hmacKey = randomBytes(32);
   const db = getDb();
-  const storedKey = db.select().from(quotaState).where(eq(quotaState.key, "hmac_key")).get();
-  const storedKeyTime = db.select().from(quotaState).where(eq(quotaState.key, "key_created_at")).get();
-  const now = Date.now();
-
-  if (storedKey && storedKeyTime && (now - Number(storedKeyTime.value)) < keyRotationMs) {
-    hmacKey = Buffer.from(storedKey.value, "hex");
-    keyCreatedAt = Number(storedKeyTime.value);
-    // Clean up expired entries
-    db.delete(quotaUsage).where(lt(quotaUsage.resetAt, now)).run();
-    const remaining = db.select().from(quotaUsage).all().length;
-    console.log(`[quota] Restored ${remaining} entries from database`);
-  } else {
-    // Fresh key - clear all usage entries
-    hmacKey = randomBytes(32);
-    keyCreatedAt = now;
-    db.delete(quotaUsage).run();
-    persistKey();
-  }
-
-  function persistKey(): void {
-    // L-2 (Security Audit): The HMAC key is persisted to SQLite so that quota
-    // entries survive server restarts. This is an intentional trade-off.
-    // In SkySend's threat model, the server owner is a TRUSTED PARTY:
-    // anyone who can read the SQLite DB already has full access to all upload
-    // metadata and could observe connections via the reverse proxy anyway.
-    // Storing the key in RAM-only would provide no meaningful privacy improvement
-    // against the realistic threat of a DB-file leak to a third party, because
-    // the HMAC key rotates daily and historical data is purged on rotation.
-    // The daily key rotation already prevents cross-day IP correlation,
-    // which is the primary privacy goal.
-    db.insert(quotaState)
-      .values({ key: "hmac_key", value: hmacKey.toString("hex") })
-      .onConflictDoUpdate({ target: quotaState.key, set: { value: hmacKey.toString("hex") } })
-      .run();
-    db.insert(quotaState)
-      .values({ key: "key_created_at", value: String(keyCreatedAt) })
-      .onConflictDoUpdate({ target: quotaState.key, set: { value: String(keyCreatedAt) } })
-      .run();
-  }
+  db.delete(quotaUsage).run();
+  db.delete(quotaState).run();
 
   /**
    * Bytes granted to uploads that are still running. An upload reserves its declared size
@@ -109,10 +73,8 @@ export function createUploadQuota(config: Config) {
   // Rotate HMAC key daily for privacy
   const rotateInterval = setInterval(() => {
     hmacKey = randomBytes(32);
-    keyCreatedAt = Date.now();
     db.delete(quotaUsage).run();
     held.clear();
-    persistKey();
   }, keyRotationMs);
   rotateInterval.unref();
 

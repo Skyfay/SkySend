@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { systemTool } from "./windows-tool.js";
 
 /** The clipboard tools to try per platform, each reading the text from stdin. */
 export function clipboardTools(platform: NodeJS.Platform = process.platform): Array<[string, string[]]> {
   if (platform === "darwin") return [["pbcopy", []]];
-  if (platform === "win32") return [["clip", []]];
+  if (platform === "win32") return [[systemTool("clip.exe"), []]];
   return [
     ["wl-copy", []],
     ["xclip", ["-selection", "clipboard"]],
