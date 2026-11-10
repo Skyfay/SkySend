@@ -34,7 +34,7 @@ src/components/     Feature components (PascalCase)
 src/components/ui/  Radix + cva primitives, 21 of them
 src/hooks/          One hook per flow: useUpload, useDownload, useNoteUpload, useNoteView, ...
 src/lib/            api client, crypto glue, workers, toast helpers, utils
-src/i18n/           i18next setup + 13 locale JSON files
+src/i18n/           i18next setup + 15 locale JSON files
 ```
 
 Routes: `/` upload, `/file/:id` download, `/note/:id` note, `/uploads` My Links, the local history with a Shared and a Requests tab (`?tab=requests`), `/settings` the settings of this browser with a Defaults and a Templates tab (`?tab=templates`), `/requests` the form for a new file request (`?template=<id>` starts from a template, `?edit=<id>` edits one), `/templates#<export>` a templates link that goes on to the import, `/inbox/:id` the inbox of a request, `/request/:id` the upload page for a sender, `/how` the How it works page, `/d/:id` legacy redirect that manually forwards the hash because `<Navigate>` drops it.
@@ -121,7 +121,7 @@ showKnownErrorToast(hook.error);   // string, not an Error object
 
 It matches the message against the known patterns and enriches those with a docs link and a copy button, falling back to `toast.error()` otherwise. Currently recognised: insecure context (`crypto.subtle` missing over HTTP), `Origin not allowed` from the WebSocket upload, and S3 CORS failures.
 
-Adding a pattern means five edits, in this order: a troubleshooting section in `docs/user-guide/troubleshooting.md`, an `errors.*` key in `en.json` and `de.json` plus the 11 AI locales, a detector and a branch in `showKnownErrorToast()`, a row in the table in `docs/developer-guide/toast-system.md`, and a changelog entry. The `/add-known-error-toast` skill walks through it.
+Adding a pattern means five edits, in this order: a troubleshooting section in `docs/user-guide/troubleshooting.md`, an `errors.*` key in `en.json` and `de.json` plus the 13 AI locales, a detector and a branch in `showKnownErrorToast()`, a row in the table in `docs/developer-guide/toast-system.md`, and a changelog entry. The `/add-known-error-toast` skill walks through it.
 
 Architecturally, `showToast()` always goes through Sonner's own `toast.error()` / `toast.warning()` / etc. When `copyText` or `docsUrl` is set it passes a `ToastActionButtons` node as the `description`, so Sonner keeps its close button, animation, and layout. There is no `toast.custom()` call.
 
@@ -129,7 +129,7 @@ The look lives in `components/ui/sonner.tsx`: Sonner's own styling is off (`unst
 
 ## i18n
 
-Files in `src/i18n/`. `en.json` and `de.json` are the source of truth - add every new key to both by hand. The other 11 locales (`es`, `fr`, `fi`, `it`, `ja`, `nb`, `nl`, `pl`, `pt-BR`, `sv`, `zh`) are AI-translated.
+Files in `src/i18n/`. `en.json` and `de.json` are the source of truth - add every new key to both by hand. The other 13 locales (`es`, `fr`, `fi`, `it`, `ja`, `nb`, `nl`, `pl`, `pt-BR`, `ru`, `sv`, `uk`, `zh`) are AI-translated.
 
 JSON has no comments, so each non-EN/DE file carries a top-level `__meta` block:
 
