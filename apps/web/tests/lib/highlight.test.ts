@@ -81,11 +81,18 @@ describe("highlightCode", () => {
   });
 });
 
+/** The text a line of markup shows, read through the DOM the way the code cell reads it. */
+function textOf(html: string): string {
+  const cell = document.createElement("td");
+  cell.innerHTML = html;
+  return cell.textContent ?? "";
+}
+
 describe("highlightedLines", () => {
   it("keeps the indentation of every line", () => {
     const code = "def f():\n    if x:\n\t\treturn 1\n";
     const lines = highlightedLines(highlightCode(code, "python").html);
-    expect(lines.map((line) => line.replace(/<[^>]+>/g, ""))).toEqual([
+    expect(lines.map(textOf)).toEqual([
       "def f():",
       "    if x:",
       "\t\treturn 1",
