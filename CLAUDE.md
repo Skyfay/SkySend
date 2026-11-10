@@ -174,5 +174,5 @@ Entry format, scopes, and the remaining rules live in [docs/CLAUDE.md](docs/CLAU
 1. `pnpm validate` passes (lint, typecheck, tests).
 2. The fragment of the branch under `changelog/unreleased/` has an entry, unless the change is AI tooling only.
 3. A new or changed env var exists in `apps/server/src/lib/config.ts`, `.env.example`, `.env.dev.example`, and the published env var reference.
-4. New user-facing strings exist in `en.json` and `de.json`, plus the 11 AI-translated locales.
+4. New user-facing strings exist in `en.json` and `de.json`, plus the 13 AI-translated locales.
 5. Nothing new is logged that identifies a user or reveals plaintext.

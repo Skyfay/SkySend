@@ -343,6 +343,8 @@ apps/web/src/
     pt-BR.json          # Brazilian Portuguese translations
     zh.json             # Chinese translations
     ja.json             # Japanese translations
+    ru.json             # Russian translations
+    uk.json             # Ukrainian translations
 ```
 
 The Service Worker for streaming ECE decryption, `download-sw.js`, lives in `apps/web/public/`.

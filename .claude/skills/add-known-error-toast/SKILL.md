@@ -37,7 +37,7 @@ Add the key inside the `"errors"` object of `apps/web/src/i18n/en.json` and `de.
 }
 ```
 
-Then add an AI translation to the other 11 locales: `es`, `fi`, `fr`, `it`, `ja`, `nb`, `nl`, `pl`, `pt-BR`, `sv`, `zh`.
+Then add an AI translation to the other 13 locales: `es`, `fi`, `fr`, `it`, `ja`, `nb`, `nl`, `pl`, `pt-BR`, `ru`, `sv`, `uk`, `zh`.
 
 Check each file's `__meta` block. A file with `"aiGenerated": true` needs no extra bookkeeping. A file with `"aiGeneratedKeys": [...]` needs the new dot-notation key appended to that array.
 
