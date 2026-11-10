@@ -41,6 +41,23 @@ const INBOX_PATH = /\/inbox\//i;
 /** The longest address SMTP allows (RFC 5321). */
 const MAX_EMAIL_LENGTH = 254;
 /**
+ * The address goes into a mailto link. There, "?" starts header fields and "&" separates
+ * them, so an address carrying these would preload recipients, subject or body of the
+ * operator's reply. The website's own check (z.email) never lets them through, this keeps a
+ * direct call to the Worker on the same rule.
+ */
+const MAILTO_UNSAFE = /[?#&%/]/;
+/**
+ * Bounds on the body, so one captcha token cannot send an operator a multi-megabyte email
+ * and a body is only parsed when it can be a report. The website sends at most the seven
+ * reasons of `website/src/lib/report.ts` and a comment of a few paragraphs.
+ */
+const MAX_BODY_BYTES = 16 * 1024;
+const MAX_REASONS = 7;
+const MAX_REASON_LENGTH = 100;
+const MAX_COMMENT_LENGTH = 5000;
+const MAX_URL_LENGTH = 2048;
+/**
  * A local part, then a domain of dot-separated labels. No label may contain a
  * dot, so the regex never has two ways to split the same input and runs in
  * linear time. The previous pattern backtracked quadratically on a long crafted
@@ -52,7 +69,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const reqUrl = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
-    const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.startsWith("http://localhost");
+    const isAllowed =
+      ALLOWED_ORIGINS.includes(origin) || /^http:\/\/localhost(?::\d+)?$/.test(origin);
     const allowedOrigin = isAllowed ? origin : "https://skysend.app";
 
     if (request.method === "OPTIONS") {
@@ -65,7 +83,8 @@ export default {
         const res = await fetch(INSTANCES_API, {
           cf: { cacheTtl: 300, cacheEverything: true },
         });
-        if (!res.ok) return corsResponse({ error: "Failed to fetch instances" }, 502, allowedOrigin);
+        if (!res.ok)
+          return corsResponse({ error: "Failed to fetch instances" }, 502, allowedOrigin);
         const data = await res.json();
         return corsResponse(data, 200, allowedOrigin);
       } catch {
@@ -77,9 +96,17 @@ export default {
       return corsResponse({ error: "Not found" }, 404, allowedOrigin);
     }
 
+    if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) {
+      return corsResponse({ error: "Request body too large" }, 413, allowedOrigin);
+    }
+
     let body: ReportBody;
     try {
-      body = await request.json();
+      const text = await request.text();
+      if (text.length > MAX_BODY_BYTES) {
+        return corsResponse({ error: "Request body too large" }, 413, allowedOrigin);
+      }
+      body = JSON.parse(text);
     } catch {
       return corsResponse({ error: "Invalid JSON" }, 400, allowedOrigin);
     }
@@ -91,13 +118,17 @@ export default {
       return corsResponse({ error: "Missing captcha token" }, 400, allowedOrigin);
     }
 
-    const tsValid = await verifyTurnstile(token, request.headers.get("CF-Connecting-IP"), env.TURNSTILE_SECRET);
+    const tsValid = await verifyTurnstile(
+      token,
+      request.headers.get("CF-Connecting-IP"),
+      env.TURNSTILE_SECRET,
+    );
     if (!tsValid) {
       return corsResponse({ error: "Captcha verification failed" }, 403, allowedOrigin);
     }
 
     // --- Input validation ---
-    if (!url || typeof url !== "string") {
+    if (!url || typeof url !== "string" || url.length > MAX_URL_LENGTH) {
       return corsResponse({ error: "Missing URL" }, 400, allowedOrigin);
     }
 
@@ -120,19 +151,28 @@ export default {
       );
     }
 
-    if (!Array.isArray(reason) || reason.length === 0) {
+    if (
+      !Array.isArray(reason) ||
+      reason.length === 0 ||
+      reason.length > MAX_REASONS ||
+      !reason.every((r) => typeof r === "string" && r.length > 0 && r.length <= MAX_REASON_LENGTH)
+    ) {
       return corsResponse({ error: "At least one reason required" }, 400, allowedOrigin);
     }
 
     if (!comment || typeof comment !== "string" || comment.trim().length < 5) {
       return corsResponse({ error: "Comment too short" }, 400, allowedOrigin);
     }
+    if (comment.length > MAX_COMMENT_LENGTH) {
+      return corsResponse({ error: "Comment too long" }, 400, allowedOrigin);
+    }
 
     if (
       replyEmail &&
       (typeof replyEmail !== "string" ||
         replyEmail.length > MAX_EMAIL_LENGTH ||
-        !EMAIL_PATTERN.test(replyEmail))
+        !EMAIL_PATTERN.test(replyEmail) ||
+        MAILTO_UNSAFE.test(replyEmail))
     ) {
       return corsResponse({ error: "Invalid reply email" }, 400, allowedOrigin);
     }
@@ -143,7 +183,11 @@ export default {
     const adminEmail = await lookupInstanceEmail(instanceHost);
 
     if (!adminEmail) {
-      return corsResponse({ error: "No contact email found for this instance" }, 404, allowedOrigin);
+      return corsResponse(
+        { error: "No contact email found for this instance" },
+        404,
+        allowedOrigin,
+      );
     }
 
     // --- Build and send email ---

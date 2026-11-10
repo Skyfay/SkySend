@@ -423,6 +423,9 @@ export class S3Storage implements StorageBackend {
    * for it first.
    */
   private async takePart(session: MultipartSession, size: number): Promise<Uint8Array> {
+    // The caller waited for room, and an abort in the meantime already gave back what the
+    // session held. Taking the part now would give its FillMemory back a second time.
+    if (session.abort.signal.aborted) throw new Error("Upload was aborted");
     if (session.onDisk) {
       const data = Buffer.allocUnsafe(size);
       let read = 0;
@@ -459,6 +462,7 @@ export class S3Storage implements StorageBackend {
   private async discardPart(id: string, session: MultipartSession): Promise<void> {
     this.fillMemory.give(session.chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
     session.chunks = [];
+    session.bufferSize = 0;
     const file = session.partFile;
     if (!file) return;
     session.partFile = null;

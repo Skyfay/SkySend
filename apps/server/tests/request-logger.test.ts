@@ -31,7 +31,9 @@ describe("redactSensitivePath", () => {
   });
 
   it("covers request and inbox links", () => {
-    expect(redactSensitivePath(`<-- GET /request/${ID}%23${SECRET}`)).toBe(`<-- GET /request/${ID}`);
+    expect(redactSensitivePath(`<-- GET /request/${ID}%23${SECRET}`)).toBe(
+      `<-- GET /request/${ID}`,
+    );
     expect(redactSensitivePath(`<-- GET /inbox/${ID}%23${SECRET}`)).toBe(`<-- GET /inbox/${ID}`);
   });
 
@@ -52,6 +54,19 @@ describe("redactSensitivePath", () => {
     expect(redactSensitivePath(`<-- GET /file/${ID}%23${SECRET}?utm_source=mail`)).toBe(
       `<-- GET /file/${ID}`,
     );
+  });
+
+  it("drops the query string of the OIDC callback, which carries the authorization code", () => {
+    expect(
+      redactSensitivePath("<-- GET /auth/callback?code=SplxlOBeZQQYbYS6WxSbIA&state=af0ifjsldkj"),
+    ).toBe("<-- GET /auth/callback");
+    expect(redactSensitivePath("--> GET /auth/callback?code=x&state=y 302 12ms")).toBe(
+      "--> GET /auth/callback 302 12ms",
+    );
+    expect(
+      redactSensitivePath("--> GET /auth/login?cli_callback=http://127.0.0.1:1234 302 1ms"),
+    ).toBe("--> GET /auth/login 302 1ms");
+    expect(redactSensitivePath("--> GET /auth/me 200 1ms")).toBe("--> GET /auth/me 200 1ms");
   });
 
   it("leaves an intact share link untouched", () => {
@@ -86,10 +101,13 @@ describe("createRequestLogger", () => {
 
     await app.request(`http://localhost/file/${ID}%23${SECRET}`);
     await app.request("http://localhost/api/config");
+    await app.request("http://localhost/auth/callback?code=AUTHCODE123&state=STATE456");
 
     spy.mockRestore();
 
     expect(lines.some((line) => line.includes(SECRET))).toBe(false);
+    expect(lines.some((line) => line.includes("AUTHCODE123"))).toBe(false);
+    expect(lines.some((line) => line.includes("/auth/callback"))).toBe(true);
     expect(lines.some((line) => line.includes(`/file/${ID}`))).toBe(true);
     expect(lines.some((line) => line.includes("/api/config"))).toBe(true);
   });

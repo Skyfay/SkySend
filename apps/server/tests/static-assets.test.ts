@@ -3,7 +3,24 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
-import { createAssetHandler } from "../src/lib/static-assets.js";
+import { createAssetHandler, hasFileExtension } from "../src/lib/static-assets.js";
+
+describe("hasFileExtension", () => {
+  it("decides like the regex /\\.[^/]+$/ it replaced", () => {
+    const paths = [
+      "/", "/file/abc", "/logo.svg", "/robots.txt", "/.well-known/security.txt", "/a.b/c",
+      "/a/b.", "/a.b.", "/.", "/..", "/.x", "/note/abc-def", "/download-sw.js", "/dir/",
+    ];
+    for (const path of paths) expect(hasFileExtension(path)).toBe(/\.[^/]+$/.test(path));
+  });
+
+  it("stays fast on a long path of dots", () => {
+    const path = "/" + ".".repeat(16_000) + "/";
+    const start = performance.now();
+    expect(hasFileExtension(path)).toBe(false);
+    expect(performance.now() - start).toBeLessThan(5);
+  });
+});
 
 describe("createAssetHandler", () => {
   let dist: string;

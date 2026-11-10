@@ -33,6 +33,7 @@ import { getClientIp } from "../middleware/rate-limit.js";
 import type { OidcGuardVariables } from "../middleware/oidc-guard.js";
 import type { createUploadQuota, QuotaReservation } from "../middleware/quota.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
+import { requireJson } from "../middleware/require-json.js";
 import {
   createWsUploadHandler,
   type WsBufferMemory,
@@ -371,6 +372,7 @@ export function createRequestRoute({
    */
   route.post(
     "/",
+    requireJson,
     // Only creating a request needs the login. A sender never does, the upload link is enough.
     createGuard ?? ((_c, next) => next()),
     // The largest brief is about 11 KiB of base64url, the rest of the body well under 1 KiB.
@@ -565,6 +567,7 @@ export function createRequestRoute({
    */
   route.post(
     "/:id/upload/:uid/finalize",
+    requireJson,
     bodyLimit({
       maxSize: 128 * 1024,
       onError: (c) => c.json({ error: "Request body too large" }, 413),

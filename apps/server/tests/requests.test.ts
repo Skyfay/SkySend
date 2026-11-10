@@ -432,6 +432,20 @@ describe("file requests", () => {
       expect((await app.request("/api/request", json(createBody(request)))).status).toBe(429);
     });
 
+    it("refuses a body that is not JSON before it counts against the daily limit", async () => {
+      limiter = createRequestLimiter(1);
+      const app = createApp();
+      const request = await createFileRequest();
+      // The simple request another site can send without a CORS preflight.
+      const plain = await app.request("/api/request", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: JSON.stringify(createBody(request)),
+      });
+      expect(plain.status).toBe(415);
+      expect((await app.request("/api/request", json(createBody(request)))).status).toBe(201);
+    });
+
     it("tells the caller how many new requests are left today", async () => {
       vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, FILE_REQUEST_DAILY_LIMIT: 2 });
       limiter = createRequestLimiter(2);
@@ -672,6 +686,9 @@ describe("file requests", () => {
         await app.request(`/api/inbox/${created.id}`, { headers: created.headers.inbox });
       }
       const file = `/api/inbox/${created.id}/file/${uid}`;
+      // Hono runs the GET handler for HEAD, which would count the download.
+      const head = await app.request(file, { method: "HEAD", headers: created.headers.inbox });
+      expect(head.status).toBe(405);
       expect((await app.request(file, { headers: created.headers.inbox })).status).toBe(200);
       expect((await app.request(file, { headers: created.headers.inbox })).status).toBe(410);
       const inbox = (await (

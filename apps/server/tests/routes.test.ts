@@ -1034,6 +1034,30 @@ describe("routes", () => {
       expect(res.status).toBe(401);
     });
 
+    it("answers HEAD with 405 and neither counts a download nor opens the file", async () => {
+      const authToken = fakeBase64urlToken();
+      insertTestUpload(dbCtx.db, { authToken, size: 3 });
+      await storage.save(TEST_UUID, new ReadableStream({
+        start(c) { c.enqueue(new Uint8Array([1, 2, 3])); c.close(); },
+      }));
+      const opened = vi.spyOn(storage, "createReadStream");
+
+      const app = new Hono();
+      app.route("/api/download", createDownloadRoute(storage, createPasswordLockout(10, 60_000)));
+
+      const res = await app.request(`/api/download/${TEST_UUID}`, {
+        method: "HEAD",
+        headers: { "X-Auth-Token": authToken },
+      });
+      expect(res.status).toBe(405);
+      expect(res.headers.get("Allow")).toBe("GET");
+      expect(opened).not.toHaveBeenCalled();
+      const upload = await dbCtx.db.query.uploads.findFirst({
+        where: eq(uploads.id, TEST_UUID),
+      });
+      expect(upload!.downloadCount).toBe(0);
+    });
+
     it("should reject expired upload", async () => {
       const authToken = fakeBase64urlToken();
       insertTestUpload(dbCtx.db, {

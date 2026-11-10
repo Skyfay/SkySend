@@ -14,6 +14,7 @@ import {
 } from "../lib/request-validation.js";
 import { lockedResponse, type PasswordLockout } from "../lib/password-lockout.js";
 import { getClientIp } from "../middleware/rate-limit.js";
+import { rejectHead } from "../middleware/reject-head.js";
 import { requestServiceGuard } from "../middleware/request-service.js";
 import type { StorageBackend } from "../storage/types.js";
 
@@ -135,7 +136,7 @@ export function createInboxRoute({ storage, lockout }: InboxRouteOptions) {
    * GET /api/inbox/:id/file/:uid
    * Streams one upload, or hands out a presigned S3 URL, and counts the download.
    */
-  route.get("/:id/file/:uid", async (c) => {
+  route.get("/:id/file/:uid", rejectHead, async (c) => {
     const auth = await authorize(c, "X-Inbox-Token");
     if ("response" in auth) return auth.response;
     const uid = c.req.param("uid");

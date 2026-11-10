@@ -4,6 +4,19 @@ import type { MiddlewareHandler } from "hono";
 import { getMimeType } from "hono/utils/mime";
 
 /**
+ * Whether the last segment of a path has a dot with something after it, like logo.svg or
+ * robots.txt. Such a path goes to the static files, every other one gets the SPA.
+ *
+ * Linear on purpose. The regex /\.[^/]+$/ it replaces backtracked quadratically on a path of
+ * many dots, and one unauthenticated request of 16 KB held the event loop for 60 ms.
+ */
+export function hasFileExtension(path: string): boolean {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const dot = name.indexOf(".");
+  return dot !== -1 && dot < name.length - 1;
+}
+
+/**
  * Serves the files of the Vite build under /assets/ from memory, each response one buffer.
  *
  * Streamed the way serveStatic does it, a response went out as its headers on their own and
