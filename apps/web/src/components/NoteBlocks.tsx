@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { copyText } from "@/lib/clipboard";
 import { languageLabel } from "@/lib/code-languages";
-import { highlightAs, highlightCode, highlightedBlocks, markdownBlocks } from "@/lib/highlight";
+import { highlightAs, highlightCode, highlightedBlocks, highlightedLines, markdownBlocks } from "@/lib/highlight";
 import { markdownComponents as taskListComponents } from "@/lib/markdownComponents";
 import { entryFallback, passwordBlockTitle } from "@/lib/note-editor";
 import { cn } from "@/lib/utils";
@@ -214,7 +214,7 @@ function CodeBlockView({ block, number, highlight }: { block: CodeBlock; number:
     [block.code, block.language, highlight],
   );
   const label = languageLabel(highlighted.language);
-  const lines = highlighted.html.split("\n");
+  const lines = useMemo(() => highlightedLines(highlighted.html), [highlighted.html]);
   const numberWidth = String(lines.length).length;
 
   return (
@@ -245,8 +245,9 @@ function CodeBlockView({ block, number, highlight }: { block: CodeBlock; number:
                   >
                     {index + 1}
                   </td>
-                  {/* Sanitized by highlightCode: only span elements with a class are left. */}
-                  <td className="px-4 py-0.5">
+                  {/* Sanitized by highlightCode: only span elements with a class are left.
+                      whitespace-pre keeps the indentation, which a table cell collapses otherwise. */}
+                  <td className="whitespace-pre px-4 py-0.5">
                     <span dangerouslySetInnerHTML={{ __html: line || " " }} />
                   </td>
                 </tr>

@@ -5,7 +5,7 @@ test("a note of several blocks reads the same", async ({ page, openRecipient, gu
   const text = randomText("Meeting notes");
   const secret = randomPassword();
   const marker = randomText("deploy").replace(" ", "-");
-  const code = `const target = "${marker}";\nconsole.log(target);`;
+  const code = `const target = "${marker}";\nif (target) {\n    console.log(target);\n}`;
   guard.text(text, secret, marker);
 
   const link = await shareNote(page, [
@@ -22,6 +22,10 @@ test("a note of several blocks reads the same", async ({ page, openRecipient, gu
   await expect(recipient.getByText(text)).toBeVisible();
   await expect(recipient.locator("body")).toContainText(marker);
   await expect(recipient.locator("body")).toContainText("console.log(target);");
+  // The indentation of code survives the table the lines are shown in.
+  await expect(
+    recipient.locator("tr").filter({ hasText: "console.log(target);" }).locator("td").last(),
+  ).toHaveJSProperty("innerText", "    console.log(target);");
   // A password stays hidden until it is revealed.
   await expect(recipient.getByText(secret)).toHaveCount(0);
   await recipient.getByRole("button", { name: "Reveal" }).click();
