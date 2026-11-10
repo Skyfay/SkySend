@@ -9,6 +9,7 @@ import {
   highlightAs,
   highlightCode,
   highlightedBlocks,
+  highlightedLines,
   markdownBlocks,
 } from "../../src/lib/highlight";
 
@@ -77,6 +78,40 @@ describe("highlightCode", () => {
     for (const name of ["__proto__", "constructor"]) {
       expect(highlightCode("echo hi", name).html).toContain("echo");
     }
+  });
+});
+
+describe("highlightedLines", () => {
+  it("keeps the indentation of every line", () => {
+    const code = "def f():\n    if x:\n\t\treturn 1\n";
+    const lines = highlightedLines(highlightCode(code, "python").html);
+    expect(lines.map((line) => line.replace(/<[^>]+>/g, ""))).toEqual([
+      "def f():",
+      "    if x:",
+      "\t\treturn 1",
+      "",
+    ]);
+  });
+
+  it("carries a token that spans lines into each of its lines", () => {
+    const lines = highlightedLines(highlightCode("/* one\n   two */\nlet a = 1;", "javascript").html);
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toBe('<span class="hljs-comment">/* one</span>');
+    expect(lines[1]).toBe('<span class="hljs-comment">   two */</span>');
+  });
+
+  it("leaves nested spans balanced on every line", () => {
+    const lines = highlightedLines('<span class="a">x<span class="b">y\nz</span>\nw</span>');
+    expect(lines).toEqual([
+      '<span class="a">x<span class="b">y</span></span>',
+      '<span class="a"><span class="b">z</span></span>',
+      '<span class="a">w</span>',
+    ]);
+  });
+
+  it("keeps escaped markup from a note escaped", () => {
+    const lines = highlightedLines(highlightCode("<script>\n</script>", "auto", false).html);
+    expect(lines).toEqual(["&lt;script&gt;", "&lt;/script&gt;"]);
   });
 });
 
