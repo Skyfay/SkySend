@@ -13,18 +13,22 @@ import { cn } from "@/lib/utils";
 import { getSavedLanguage, saveLanguage } from "@/i18n";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Sorted by display name so the menu is predictable and easy to scan.
+// `en` is passed explicitly so the order does not depend on the visitor's browser locale.
 const languages = [
-  { code: "en", name: "English", flag: "us" },
   { code: "de", name: "Deutsch", flag: "de" },
+  { code: "en", name: "English", flag: "us" },
   { code: "es", name: "Español", flag: "es" },
   { code: "fr", name: "Français", flag: "fr" },
   { code: "it", name: "Italiano", flag: "it" },
   { code: "nl", name: "Nederlands", flag: "nl" },
+  { code: "nb", name: "Norsk Bokmål", flag: "no" },
   { code: "pl", name: "Polski", flag: "pl" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
+  { code: "ru", name: "Русский", flag: "ru" },
   { code: "fi", name: "Suomi", flag: "fi" },
   { code: "sv", name: "Svenska", flag: "se" },
-  { code: "nb", name: "Norsk Bokmål", flag: "no" },
-  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
+  { code: "uk", name: "Українська", flag: "ua" },
   { code: "zh", name: "简体中文", flag: "cn" },
   { code: "ja", name: "日本語", flag: "jp" },
   { code: "ru", name: "Русский", flag: "ru" },
