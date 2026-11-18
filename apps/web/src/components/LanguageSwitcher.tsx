@@ -13,8 +13,7 @@ import { cn } from "@/lib/utils";
 import { getSavedLanguage, saveLanguage } from "@/i18n";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Sorted by display name so the menu is predictable and easy to scan.
-// `en` is passed explicitly so the order does not depend on the visitor's browser locale.
+// English first as the fallback language, the rest sorted by native name.
 const languages = [
   { code: "en", name: "English", flag: "us" },
   { code: "de", name: "Deutsch", flag: "de" },
