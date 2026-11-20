@@ -11,10 +11,10 @@
     "bench": "node bench/transfer.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.65.1",
     "@skysend/crypto": "workspace:*",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.6",
     "fflate": "^0.8.3",
-    "oidc-provider": "^9.12.2"
+    "oidc-provider": "^9.15.1"
   }
 }
