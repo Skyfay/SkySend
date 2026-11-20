@@ -17,10 +17,10 @@
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
   },
   "dependencies": {
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@skysend/crypto": "workspace:*",
-    "hash-wasm": "^4.12.0"
+    "hash-wasm": "^4.13.0"
   }
 }
