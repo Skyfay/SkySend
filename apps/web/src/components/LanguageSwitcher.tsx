@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { getSavedLanguage, saveLanguage } from "@/i18n";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// English first as the fallback language, the rest sorted by native name.
 const languages = [
   { code: "en", name: "English", flag: "us" },
   { code: "de", name: "Deutsch", flag: "de" },
@@ -20,15 +21,15 @@ const languages = [
   { code: "fr", name: "Français", flag: "fr" },
   { code: "it", name: "Italiano", flag: "it" },
   { code: "nl", name: "Nederlands", flag: "nl" },
+  { code: "nb", name: "Norsk Bokmål", flag: "no" },
   { code: "pl", name: "Polski", flag: "pl" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
+  { code: "ru", name: "Русский", flag: "ru" },
   { code: "fi", name: "Suomi", flag: "fi" },
   { code: "sv", name: "Svenska", flag: "se" },
-  { code: "nb", name: "Norsk Bokmål", flag: "no" },
-  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
+  { code: "uk", name: "Українська", flag: "ua" },
   { code: "zh", name: "简体中文", flag: "cn" },
   { code: "ja", name: "日本語", flag: "jp" },
-  { code: "ru", name: "Русский", flag: "ru" },
-  { code: "uk", name: "Українська", flag: "ua" },
 ] as const;
 
 function detectBrowserLanguage(): string {
