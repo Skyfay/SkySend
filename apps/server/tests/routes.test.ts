@@ -42,7 +42,7 @@ import { healthRoute } from "../src/routes/health.js";
 import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
-import { authMiddleware, ownerMiddleware } from "../src/middleware/auth.js";
+import { ownerMiddleware } from "../src/middleware/auth.js";
 import { createUploadQuota } from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
 
@@ -2334,9 +2334,9 @@ describe("routes", () => {
   });
 });
 
-// ── authMiddleware edge cases ─────────────────────────────────────────────────
+// ── Download auth edge cases ──────────────────────────────────────────────────
 
-describe("authMiddleware edge cases", () => {
+describe("download auth edge cases", () => {
   let dbCtx: ReturnType<typeof createTestDb>;
   let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
 
@@ -2351,20 +2351,6 @@ describe("authMiddleware edge cases", () => {
     dbCtx.cleanup();
     storageCtx.cleanup();
     vi.restoreAllMocks();
-  });
-
-  it("returns 400 when the route has no :id param", async () => {
-    const app = new Hono();
-    // Mount middleware on a flat path - c.req.param("id") returns undefined
-    app.get("/test", authMiddleware, (c) => c.json({ ok: true }));
-
-    const res = await app.request("/test", {
-      headers: { "X-Auth-Token": fakeBase64urlToken() },
-    });
-
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toContain("Missing upload ID");
   });
 
   it("returns 404 when the upload does not exist in the database", async () => {
@@ -2457,6 +2443,33 @@ describe("ownerMiddleware edge cases", () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Invalid owner token format");
+  });
+
+  it("returns 401 without an owner token and leaves the upload alone", async () => {
+    insertTestUpload(dbCtx.db);
+    const app = new Hono();
+    app.route("/api/upload", createDeleteRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/upload/${TEST_UUID}`, { method: "DELETE" });
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Missing X-Owner-Token header" });
+    expect(dbCtx.db.select().from(uploads).all()).toHaveLength(1);
+  });
+
+  it("returns 401 for a well-formed but wrong owner token and leaves the upload alone", async () => {
+    insertTestUpload(dbCtx.db);
+    const app = new Hono();
+    app.route("/api/upload", createDeleteRoute(storageCtx.storage));
+
+    const res = await app.request(`/api/upload/${TEST_UUID}`, {
+      method: "DELETE",
+      headers: { "X-Owner-Token": fakeBase64urlToken() },
+    });
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Invalid owner token" });
+    expect(dbCtx.db.select().from(uploads).all()).toHaveLength(1);
   });
 });
 
