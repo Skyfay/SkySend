@@ -31,6 +31,7 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:mutation": "stryker run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

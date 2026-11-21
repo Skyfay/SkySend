@@ -1,0 +1,75 @@
+# ─── Mutation Tests ──────────────────────────────────────────
+# Stryker changes the code of a package in small ways and checks that a unit test fails for
+# each change. A pull request runs the crypto package, and only when it touches it. It fails
+# below the break score in packages/crypto/stryker.config.mjs.
+#
+# The other packages take minutes each, the whole monorepo about 20 on a fast machine, so they
+# run only on request: here by hand with the package to test, or locally with
+# `pnpm test:mutation:all`. See docs/developer-guide/reference/testing.md.
+
+name: Mutation Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "packages/crypto/**"
+      - "stryker.config.base.mjs"
+      - ".github/workflows/mutation.yml"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to mutate
+        type: choice
+        default: crypto
+        options:
+          - crypto
+          - note-format
+          - transfer
+          - client
+          - server
+          - web
+
+concurrency:
+  group: mutation-${{ github.ref }}-${{ inputs.package || 'crypto' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation Tests (${{ inputs.package || 'crypto' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PACKAGE: ${{ inputs.package || 'crypto' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      # Every package but crypto imports the built shared packages.
+      - if: env.PACKAGE != 'crypto'
+        run: pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer build
+      - run: pnpm --filter "@skysend/$PACKAGE" test:mutation
+
+      # The HTML report shows every surviving mutant in the code.
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report-${{ env.PACKAGE }}
+          path: |
+            packages/*/reports/mutation/
+            apps/*/reports/mutation/
+          if-no-files-found: ignore
+          retention-days: 14

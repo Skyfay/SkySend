@@ -50,6 +50,9 @@ test-results/
 playwright-report/
 e2e/.tools/
 e2e/.large-files/
+# Mutation tests (Stryker): its sandbox, the reports and the incremental state
+.stryker-tmp/
+**/reports/mutation/
 
 # OS
 Thumbs.db
