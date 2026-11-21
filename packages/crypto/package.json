@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:mutation": "stryker run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
   },
   "devDependencies": {

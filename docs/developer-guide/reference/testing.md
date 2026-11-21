@@ -88,6 +88,39 @@ The server tests use a shared `helpers.ts` file that provides:
 - Pre-configured Hono app instances
 - Helper functions for creating test uploads
 
+## Mutation Tests
+
+Coverage says which lines a test runs, not whether a test would notice if they broke. [Stryker](https://stryker-mutator.io/) checks that: it changes the code in small ways, one at a time, like `<` into `<=`, a condition into `true` or a call removed, and runs the tests that reach the change. A test that fails kills the mutant. A mutant that survives marks code whose tests would let it break.
+
+```bash
+# The crypto package, about a minute
+pnpm test:mutation
+
+# One package. All but crypto need the shared packages built first.
+pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer build
+pnpm --filter @skysend/server test:mutation
+
+# Every package one after the other, building the shared packages first
+pnpm test:mutation:all
+```
+
+Each run writes a report to `reports/mutation/index.html` in its package, with every surviving mutant shown in the code.
+
+| Package | Mutants | Time on 12 cores | Score when set up |
+| --- | --- | --- | --- |
+| `crypto` | about 1200 | 1 min | 92 % |
+| `note-format` | about 400 | 30 s | 93 % |
+| `client` | about 1000 | 1 min | 83 % |
+| `transfer` | about 1500 | 3 min | 61 % |
+| `web` | about 3400 | 6 min | 77 % |
+| `server` | about 4600 | 7 min | 75 % |
+
+`.github/workflows/mutation.yml` runs the crypto package on every pull request that changes it and fails below the `break` score in `packages/crypto/stryker.config.mjs`. The other packages run only on request, locally or by hand in that workflow, which takes the package to test.
+
+Not every survivor is a gap. Some cannot be tested, like wiping a key from memory or the limit of 2^32 records of a stream. Others are equivalent: the change gives the same result, like a check that a later check repeats. A survivor in a check that guards something, like a token comparison, an origin or a length limit, gets a test that fails without the check.
+
+`stryker.config.base.mjs` at the root holds the shared settings, `stryker.config.mjs` in each package what to mutate.
+
 ## End-to-End Tests
 
 The end-to-end tests in `e2e/` drive the real app in Chromium, Firefox and WebKit, the way a person would: share a file or a note, open the link in a second browser that knows nothing of the sender, download or read it and compare it with what was shared.

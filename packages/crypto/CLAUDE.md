@@ -117,6 +117,8 @@ Build with `pnpm --filter @skysend/crypto build`. Consumers import from `dist/`,
 
 `packages/crypto/tests/`, run with `pnpm --filter @skysend/crypto test`. Around 210 cases across 10 files - the most thoroughly tested package in the repo, and it should stay that way. `tests/helpers.ts` holds the hex and point helpers of the HPKE and request tests. The house naming style here is `it("should ...")`, unlike the rest of the monorepo. `tsconfig.test.json` typechecks the tests with the same strict settings as the code, as part of `pnpm typecheck`. A direct `crypto.subtle` call in a test wraps its bytes in `asBytes` from `src/util.ts`, and a byte is flipped with `flipped` from `tests/helpers.ts`.
 
+`pnpm test:mutation` runs Stryker over `src/`, in about a minute, and a pull request that touches this package runs it too. It fails below the `break` score in `stryker.config.mjs`. A mutant that survives in a check, like a length, a token or a UUID, gets a test that fails without the check. Wiping secrets with `fill(0)` and the record limit of the stream cannot be tested, and a few mutants are equivalent.
+
 Every change needs:
 
 - a round-trip test (encrypt then decrypt returns the input),

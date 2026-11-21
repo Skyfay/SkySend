@@ -19,6 +19,7 @@
     "dev": "tsc --watch",
     "run": "tsx src/index.ts",
     "test": "vitest run --passWithNoTests",
+    "test:mutation": "stryker run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text --passWithNoTests"
   },
   "dependencies": {

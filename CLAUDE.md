@@ -85,6 +85,7 @@ pnpm lint                 # eslint . (lint:fix to autofix)
 pnpm typecheck            # Builds crypto + server first, then tsc across the tree
 pnpm test                 # Recursive vitest run
 pnpm test:coverage        # Coverage for server, web, crypto, client
+pnpm test:mutation        # Mutation tests (Stryker) of the crypto package, test:mutation:all for every package, see docs/developer-guide/reference/testing.md
 pnpm test:e2e             # Build, then the Playwright tests in Chromium, Firefox and WebKit (test:e2e:install first)
 pnpm test:e2e:ui          # Build, then the Playwright UI at http://localhost:9323
 pnpm test:e2e:large       # Build, then a file of 5 GiB up and down behind Nginx (about 11 GB of disk)
