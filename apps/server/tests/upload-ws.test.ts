@@ -744,4 +744,77 @@ describe("upload-ws route", () => {
     expect(reservation.release).toHaveBeenCalled();
     expect(reservation.commit).not.toHaveBeenCalled();
   });
+
+  // The CORS middleware cannot stop a WebSocket upgrade, so the route checks the Origin itself.
+  // Without the check another site could open uploads from its visitors' browsers and spend
+  // their quota.
+  describe("origin check", () => {
+    async function bootstrapWithOrigin(origin: string | null, corsOrigins: string[] = []) {
+      vi.mocked(getConfig).mockReturnValue({
+        ...DEFAULT_CONFIG,
+        UPLOADS_DIR: storageCtx.tempDir,
+        CORS_ORIGINS: corsOrigins,
+      } as unknown as ReturnType<typeof getConfig>);
+      const mock = createMockUpgrade();
+      const reserve = vi.fn(() => ({ ok: true as const, reservation: null }));
+      const route = createUploadWsRoute({
+        storage,
+        upgradeWebSocket: mock.upgrade,
+        memory: new WsBufferMemory(DEFAULT_CONFIG.FILE_UPLOAD_WS_MEMORY_LIMIT),
+        quota: { reserve },
+      });
+      await route.request("/", {
+        method: "GET",
+        headers: origin === null ? {} : { Origin: origin },
+      });
+      return { events: mock.getEvents(), reserve };
+    }
+
+    async function openAndInit(events: WSEvents) {
+      const fake = createFakeWs();
+      await events.onOpen?.(new Event("open"), fake.ws);
+      await events.onMessage!(
+        msgEvent(JSON.stringify({ type: "init", headers: buildHeaders() })),
+        fake.ws,
+      );
+      return fake;
+    }
+
+    it("closes a connection from a foreign origin before it can start an upload", async () => {
+      const { events, reserve } = await bootstrapWithOrigin("https://evil.example");
+      const fake = await openAndInit(events);
+
+      expect(fake.closed).toEqual({ code: 1008, reason: "Origin not allowed" });
+      expect(fake.allJson()).toEqual([{ type: "error", message: "Origin not allowed" }]);
+      expect(reserve).not.toHaveBeenCalled();
+      expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+    });
+
+    it("accepts the origin of BASE_URL", async () => {
+      const { events, reserve } = await bootstrapWithOrigin(DEFAULT_CONFIG.BASE_URL);
+      const fake = await openAndInit(events);
+
+      expect(fake.closed).toBeNull();
+      expect(fake.allJson()).toContainEqual(expect.objectContaining({ type: "ready" }));
+      expect(reserve).toHaveBeenCalledOnce();
+    });
+
+    it("accepts an origin listed in CORS_ORIGINS", async () => {
+      const { events } = await bootstrapWithOrigin("https://send.example.com", [
+        "https://send.example.com",
+      ]);
+      const fake = await openAndInit(events);
+
+      expect(fake.closed).toBeNull();
+      expect(fake.allJson()).toContainEqual(expect.objectContaining({ type: "ready" }));
+    });
+
+    it("accepts a client that sends no origin, like the CLI", async () => {
+      const { events } = await bootstrapWithOrigin(null);
+      const fake = await openAndInit(events);
+
+      expect(fake.closed).toBeNull();
+      expect(fake.allJson()).toContainEqual(expect.objectContaining({ type: "ready" }));
+    });
+  });
 });

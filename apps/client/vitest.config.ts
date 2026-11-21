@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Keeps every test away from the real home folder, see the file.
+    setupFiles: ["tests/setup.ts"],
     coverage: {
       include: ["src/lib/**/*.ts"],
       exclude: [

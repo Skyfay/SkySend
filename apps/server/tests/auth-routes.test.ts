@@ -158,22 +158,57 @@ describe("GET /auth/login", () => {
     expect(setCookie).toContain("Max-Age=300");
   });
 
-  it("rejects an invalid cli_callback (non-localhost URL)", async () => {
-    const app = buildApp();
-    const res = await app.request("/auth/login?cli_callback=https://evil.example/steal");
-    expect(res.status).toBe(400);
+  // The CLI receives the session at cli_callback, so a callback on another host would hand the
+  // session to that host. Each case breaks exactly one rule of the check, so every rule has a
+  // test that fails without it.
+  const ONLY_LOCALHOST = "Invalid cli_callback: only http://localhost or http://127.0.0.1 is allowed";
+
+  async function loginWithCallback(callback: string) {
+    const res = await buildApp().request(
+      `/auth/login?cli_callback=${encodeURIComponent(callback)}`,
+    );
+    return { status: res.status, body: res.status === 302 ? null : await res.json() };
+  }
+
+  it("rejects an invalid cli_callback (another host over http)", async () => {
+    expect(await loginWithCallback("http://evil.example:1234/steal")).toEqual({
+      status: 400,
+      body: { error: ONLY_LOCALHOST },
+    });
+  });
+
+  it("rejects an invalid cli_callback (https, even on localhost)", async () => {
+    expect(await loginWithCallback("https://localhost:54321/callback")).toEqual({
+      status: 400,
+      body: { error: ONLY_LOCALHOST },
+    });
+  });
+
+  it("rejects an invalid cli_callback (no port)", async () => {
+    expect(await loginWithCallback("http://localhost/callback")).toEqual({
+      status: 400,
+      body: { error: ONLY_LOCALHOST },
+    });
   });
 
   it("rejects an invalid cli_callback (port 0)", async () => {
-    const app = buildApp();
-    const res = await app.request("/auth/login?cli_callback=http://127.0.0.1:0/callback");
-    expect(res.status).toBe(400);
+    expect(await loginWithCallback("http://127.0.0.1:0/callback")).toEqual({
+      status: 400,
+      body: { error: ONLY_LOCALHOST },
+    });
   });
 
   it("rejects an invalid cli_callback (port out of range)", async () => {
-    const app = buildApp();
-    const res = await app.request("/auth/login?cli_callback=http://127.0.0.1:99999/callback");
-    expect(res.status).toBe(400);
+    // The URL parser already refuses a port above 65535.
+    expect(await loginWithCallback("http://127.0.0.1:99999/callback")).toEqual({
+      status: 400,
+      body: { error: "Invalid cli_callback: not a valid URL" },
+    });
+  });
+
+  it("accepts a cli_callback on the lowest and the highest port", async () => {
+    expect((await loginWithCallback("http://127.0.0.1:1/callback")).status).toBe(302);
+    expect((await loginWithCallback("http://127.0.0.1:65535/callback")).status).toBe(302);
   });
 
   it("accepts a valid cli_callback on localhost", async () => {
