@@ -60,7 +60,7 @@ interface TemplateListProps {
  */
 export function TemplateList({ linkImport, onLinkImportDone }: TemplateListProps) {
   const { t, i18n } = useTranslation();
-  const translate = (key: string, options?: Record<string, unknown>) => t(key, options);
+  const translate = (key: string, options?: Record<string, unknown>) => t(key, options ?? {});
   const kept = useRequestTemplates();
   const fileInput = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState<string[] | null>(null);
