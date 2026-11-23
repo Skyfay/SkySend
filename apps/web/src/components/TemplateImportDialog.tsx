@@ -217,7 +217,7 @@ function ReviewStep({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const translate = (key: string, options?: Record<string, unknown>) => t(key, options);
+  const translate = (key: string, options?: Record<string, unknown>) => t(key, options ?? {});
   const [items] = useState(() => planImport(found, templates));
   // Nothing kept is replaced unless chosen: an import may come from someone else's link.
   const [choices, setChoices] = useState<ImportChoice[]>(() => items.map(() => "keep"));
