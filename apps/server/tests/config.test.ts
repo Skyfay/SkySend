@@ -42,6 +42,7 @@ describe("config", () => {
       expect(config.RATE_LIMIT_MAX).toBe(60);
       expect(config.FILE_UPLOAD_QUOTA_BYTES).toBe(0);
       expect(config.FILE_UPLOAD_QUOTA_WINDOW).toBe(86400);
+      expect(config.STORAGE_MAX_SIZE).toBe(0);
       expect(config.FILE_MAX_FILES_PER_UPLOAD).toBe(200);
       expect(config.NOTE_MAX_SIZE).toBe(1024 ** 2);
       expect(config.NOTE_EXPIRE_OPTIONS_SEC).toEqual([300, 3600, 86400, 604800]);
@@ -101,6 +102,47 @@ describe("config", () => {
       process.env.FILE_UPLOAD_QUOTA_BYTES = "5GB";
       const config = await loadFreshConfig();
       expect(config.FILE_UPLOAD_QUOTA_BYTES).toBe(5 * 1024 ** 3);
+    });
+
+    it("parses STORAGE_MAX_SIZE as bytes or with a unit", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.STORAGE_MAX_SIZE = "250GB";
+      expect((await loadFreshConfig()).STORAGE_MAX_SIZE).toBe(250 * 1024 ** 3);
+      vi.resetModules();
+      process.env.STORAGE_MAX_SIZE = "1048576";
+      expect((await loadFreshConfig()).STORAGE_MAX_SIZE).toBe(1024 ** 2);
+      warn.mockRestore();
+    });
+
+    it("warns when STORAGE_MAX_SIZE is set without an upload quota", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.STORAGE_MAX_SIZE = "250GB";
+      process.env.FILE_UPLOAD_QUOTA_BYTES = "0";
+      await loadFreshConfig();
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain("FILE_UPLOAD_QUOTA_BYTES is 0");
+      warn.mockRestore();
+    });
+
+    it("warns when STORAGE_MAX_SIZE is below FILE_MAX_SIZE", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.STORAGE_MAX_SIZE = "1GB";
+      process.env.FILE_MAX_SIZE = "2GB";
+      process.env.FILE_UPLOAD_QUOTA_BYTES = "5GB";
+      await loadFreshConfig();
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain("STORAGE_MAX_SIZE is below FILE_MAX_SIZE");
+      warn.mockRestore();
+    });
+
+    it("does not warn about a storage limit with a quota that takes the largest upload", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      process.env.STORAGE_MAX_SIZE = "2GB";
+      process.env.FILE_MAX_SIZE = "2GB";
+      process.env.FILE_UPLOAD_QUOTA_BYTES = "5GB";
+      await loadFreshConfig();
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
     });
 
     it("should parse CUSTOM_TITLE", async () => {
@@ -179,6 +221,11 @@ describe("config", () => {
 
     it("should reject invalid FILE_MAX_SIZE unit", async () => {
       process.env.FILE_MAX_SIZE = "500TB";
+      await expect(loadFreshConfig()).rejects.toThrow();
+    });
+
+    it("rejects a STORAGE_MAX_SIZE that is no size", async () => {
+      process.env.STORAGE_MAX_SIZE = "-1GB";
       await expect(loadFreshConfig()).rejects.toThrow();
     });
 

@@ -430,6 +430,16 @@ const configSchema = z.object({
     .enum(["filesystem", "s3"])
     .default("filesystem"),
 
+  /**
+   * Most bytes the files of this instance may take together, normal uploads and uploads into
+   * a file request alike. 0 turns the limit off. It caps SkySend only and reserves nothing.
+   */
+  STORAGE_MAX_SIZE: z
+    .string()
+    .default("0")
+    .transform((v) => (/^\d+$/.test(v.trim()) ? parseInt(v, 10) : parseByteSize(v)))
+    .pipe(z.number().int().min(0)),
+
   // --- S3 configuration (only when STORAGE_BACKEND=s3) ---
 
   S3_BUCKET: z.string().optional(),
@@ -651,6 +661,21 @@ export function loadConfig(): Config {
     console.warn(
       "[config] FILE_UPLOAD_WS_MEMORY_LIMIT is below FILE_UPLOAD_WS_MAX_BUFFER, so a single upload over WebSocket gets less than its buffer",
     );
+  }
+
+  // Cross-field validation - Storage limit. Both are workable, so they warn instead of throwing.
+  if (_config.STORAGE_MAX_SIZE > 0) {
+    // The limit is one for all senders, and nothing else caps what one of them may take.
+    if (_config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
+      console.warn(
+        "[config] STORAGE_MAX_SIZE is set while FILE_UPLOAD_QUOTA_BYTES is 0, so one sender can take the whole storage limit and every other upload is refused until space is freed. Set FILE_UPLOAD_QUOTA_BYTES to cap what each sender may upload.",
+      );
+    }
+    if (_config.STORAGE_MAX_SIZE < _config.FILE_MAX_SIZE) {
+      console.warn(
+        "[config] STORAGE_MAX_SIZE is below FILE_MAX_SIZE, so an upload of the largest allowed size never fits and the upload pages always show that storage is low",
+      );
+    }
   }
 
   // Cross-field validation - OIDC

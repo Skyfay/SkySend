@@ -29,15 +29,15 @@ export const SESSION_MAX_LIFETIME_MS = SESSION_TTL_MS + SWEEP_INTERVAL_MS;
 
 /**
  * A session has to receive MIN_PROGRESS_BYTES, or the rest of its upload, in every window of
- * this length, over HTTP chunks as over the WebSocket. A sender that trickles a byte now and
- * then, or a client that went away, would otherwise hold its claim until the session times
- * out: a slot of a request and the bytes it reserved in the quota among them. All bytes in
- * and no finalize counts as no progress.
+ * this length, over HTTP chunks, over the WebSocket and in the body of a single-request upload.
+ * A sender that trickles a byte now and then, or a client that went away, would otherwise hold
+ * its claim until the session times out: a slot of a request and the bytes it reserved in the
+ * quota and the storage limit among them. All bytes in and no finalize counts as no progress.
  */
 export const PROGRESS_WINDOW_MS = 10 * 60 * 1000;
 export const MIN_PROGRESS_BYTES = 1024 * 1024;
 /** How often sessions are checked for progress. */
-const PROGRESS_CHECK_MS = 60 * 1000;
+export const PROGRESS_CHECK_MS = 60 * 1000;
 
 export interface ChunkedUploadOptions<M> {
   /**

@@ -132,6 +132,7 @@ Returns server limits and options for the client UI. Each field comes from the [
   "fileUploadConcurrentChunks": 3,
   "fileUploadSpeedLimit": 0,
   "fileUploadWs": true,
+  "storageLow": false,
   "fileRequestsEnabled": true,
   "fileRequestExpireOptions": [86400, 259200, 604800],
   "fileRequestDefaultExpire": 259200,
@@ -169,6 +170,8 @@ Returns server limits and options for the client UI. Each field comes from the [
 ```
 
 `noteBlocks` is `true` on servers that accept notes made of blocks, which is every server since v3. A client checks it before it creates such a note and falls back to a legacy content type on an older server, where the field is missing.
+
+`storageLow` is `true` while [`STORAGE_MAX_SIZE`](/user-guide/configuration/environment-variables#storage-backend) has less room left than `fileMaxSize`, counting the stored files and the uploads still running. An upload of the advertised size may then be refused with `507`, and the web app shows a notice on the upload page and on the page for sending files into a file request. The field is the only thing the server says about its storage. It never reports the used or free space, and it is always `false` without a storage limit or on a server that predates it.
 
 ## Health Check
 

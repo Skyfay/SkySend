@@ -30,7 +30,7 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { configRoute } from "../src/routes/config.js";
+import { createConfigRoute } from "../src/routes/config.js";
 import { createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
@@ -43,7 +43,7 @@ import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
 import { ownerMiddleware } from "../src/middleware/auth.js";
-import { createUploadQuota } from "../src/middleware/quota.js";
+import { createUploadQuota, STORAGE_FULL_MESSAGE } from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
@@ -128,7 +128,7 @@ describe("routes", () => {
   describe("GET /api/config", () => {
     it("should return server configuration", async () => {
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -147,7 +147,7 @@ describe("routes", () => {
     it("should keep request out of enabledServices for older CLI clients", async () => {
       vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file", "note", "request"] });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
       const body = await (await app.request("/api/config")).json();
       expect(body.enabledServices).toEqual(["file", "note"]);
       expect(body.fileRequestsEnabled).toBe(true);
@@ -171,7 +171,7 @@ describe("routes", () => {
         FORCE_REQUEST_PASSWORD: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
       const body = await (await app.request("/api/config")).json();
       expect(body).toMatchObject({
         fileRequestExpireOptions: [86400, 259200],
@@ -195,7 +195,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -214,7 +214,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -231,7 +231,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: false,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const body = await (await app.request("/api/config")).json();
       expect(body.oidcProtectFiles).toBe(true);
@@ -246,10 +246,48 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const body = await (await app.request("/api/config")).json();
       expect(body.oidcProtectRequests).toBe(false);
+    });
+
+    it("should report storageLow=false without a storage limit, however much is stored", async () => {
+      insertTestUpload(dbCtx.db, { id: crypto.randomUUID(), size: 10 * 1024 ** 3 });
+      const app = new Hono();
+      const config = { ...DEFAULT_CONFIG, STORAGE_MAX_SIZE: 0 } as unknown as Config;
+      app.route("/api/config", createConfigRoute({ quota: createUploadQuota(config) }));
+      const body = await (await app.request("/api/config")).json();
+      expect(body.storageLow).toBe(false);
+    });
+
+    it("should report storageLow while the storage limit has less room than fileMaxSize, and nothing more", async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        FILE_MAX_SIZE: 1000,
+        STORAGE_MAX_SIZE: 5000,
+      } as unknown as Config;
+      vi.mocked(getConfig).mockReturnValue(config);
+      const quota = createUploadQuota(config);
+      const app = new Hono();
+      app.route("/api/config", createConfigRoute({ quota }));
+      const read = async () => (await app.request("/api/config")).json();
+
+      insertTestUpload(dbCtx.db, { id: crypto.randomUUID(), size: 3500 });
+      expect((await read()).storageLow).toBe(false);
+
+      // A running upload holds its size, so 900 bytes are left beside it.
+      const running = quota.reserve("10.0.0.1", 600);
+      if (!running.ok || !running.reservation) throw new Error("expected a reservation");
+      const body = await read();
+      expect(body.storageLow).toBe(true);
+      // One bit: no field of the config holds the used or free space.
+      for (const value of Object.values(body)) {
+        expect([900, 3500, 4100, 5000]).not.toContain(value);
+      }
+
+      running.reservation.release();
+      expect((await read()).storageLow).toBe(false);
     });
   });
 
@@ -1980,8 +2018,12 @@ describe("routes", () => {
     });
 
     /** The upload routes with a real quota, mounted the way src/index.ts mounts them. */
-    function appWithQuota(limit: number) {
-      const config = { ...DEFAULT_CONFIG, FILE_UPLOAD_QUOTA_BYTES: limit } as unknown as Config;
+    function appWithQuota(limit: number, overrides: Partial<Config> = {}) {
+      const config = {
+        ...DEFAULT_CONFIG,
+        FILE_UPLOAD_QUOTA_BYTES: limit,
+        ...overrides,
+      } as unknown as Config;
       vi.mocked(getConfig).mockReturnValue(config);
       const app = new Hono();
       app.route(
@@ -2056,6 +2098,39 @@ describe("routes", () => {
       expect(again.status).toBe(429);
     });
 
+    it("refuses an upload the storage limit has no room for before any data is sent", async () => {
+      const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
+      const { status, id } = await init(app, 10);
+      expect(status).toBe(201);
+
+      // The running upload holds its 10 bytes, so neither transport can start another one.
+      const refused = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: headersFor(1),
+      });
+      expect(refused.status).toBe(507);
+      expect(await refused.json()).toEqual({ error: STORAGE_FULL_MESSAGE });
+      const single = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(1),
+        body: new Uint8Array(1),
+      });
+      expect(single.status).toBe(507);
+
+      // Stored, the upload counts through its row instead.
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(200);
+      expect((await init(app, 1)).status).toBe(507);
+    });
+
+    it("gives the storage of an upload that ends without being stored back", async () => {
+      const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 5)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
+    });
+
     it("guards both ways to start an upload, and only those", async () => {
       const guard: MiddlewareHandler = async (c) => c.json({ error: "Login required" }, 401);
       const app = new Hono();
@@ -2098,6 +2173,250 @@ describe("routes", () => {
         expect((await chunk(app, id, 10)).status).toBe(200);
         await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
         expect((await finalize(app, id)).status).toBe(200);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    const MiB = 1024 * 1024;
+    const SECOND = 1000;
+    const MINUTE = 60 * SECOND;
+
+    /**
+     * The body of a single-request upload, fed by hand, one feed at a time. `waiting()` settles
+     * once the server took everything fed so far and asks for more, so the test knows the clock
+     * of the progress rule runs from there, whatever the real I/O in between took.
+     */
+    function handFedBody() {
+      let controller!: ReadableStreamDefaultController<Uint8Array>;
+      let fed = 0;
+      let asks = 0;
+      let cancelled = false;
+      const waiters: Array<() => void> = [];
+      const body = new ReadableStream<Uint8Array>(
+        {
+          start(c) {
+            controller = c;
+          },
+          // With no queue, the stream asks only when the server waits for the next part.
+          pull() {
+            asks++;
+            if (asks >= fed) waiters.splice(0).forEach((resolve) => resolve());
+          },
+          cancel() {
+            cancelled = true;
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      return {
+        body,
+        feed: (size: number) => {
+          fed++;
+          controller.enqueue(new Uint8Array(size));
+        },
+        end: () => controller.close(),
+        breakOff: (err: Error) => controller.error(err),
+        waiting: () =>
+          new Promise<void>((resolve) => (asks >= fed ? resolve() : waiters.push(resolve))),
+        cancelled: () => cancelled,
+      };
+    }
+
+    /**
+     * Storage that reads a body only while the test lets it, like an S3 part that waits for
+     * memory. `hold()` takes effect after the read running now, `held()` settles once storage
+     * holds, and `release()` lets it read on. Nothing is written, the route stores the row.
+     */
+    function holdingStorage() {
+      let gate: Promise<void> | null = null;
+      let open = () => {};
+      let holding = false;
+      const waiters: Array<() => void> = [];
+      vi.spyOn(storage, "save").mockImplementationOnce(async (_id, stream) => {
+        const reader = stream.getReader();
+        let bytes = 0;
+        for (;;) {
+          if (gate) {
+            holding = true;
+            waiters.splice(0).forEach((resolve) => resolve());
+            await gate;
+            holding = false;
+          }
+          const { done, value } = await reader.read();
+          if (done) return bytes;
+          bytes += value.byteLength;
+        }
+      });
+      return {
+        hold: () => {
+          gate = new Promise((resolve) => (open = resolve));
+        },
+        held: () => new Promise<void>((resolve) => (holding ? resolve() : waiters.push(resolve))),
+        release: () => {
+          gate = null;
+          open();
+        },
+      };
+    }
+
+    const singleUpload = (app: Hono, size: number, body: ReadableStream<Uint8Array>) =>
+      app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(size),
+        body,
+        duplex: "half",
+      } as RequestInit);
+
+    it("ends a single-request upload whose body stops coming, and gives its reservation back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        // The headers of a 10 byte upload, 4 bytes of its body, then nothing.
+        const sender = handFedBody();
+        sender.feed(4);
+        const pending = singleUpload(app, 10, sender.body);
+        await sender.waiting();
+
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
+        // Still running, so it holds its 10 bytes in the quota and the storage limit.
+        expect((await init(app, 1)).status).toBe(429);
+
+        await vi.advanceTimersByTimeAsync(6 * MINUTE);
+        const res = await pending;
+        expect(res.status).toBe(408);
+        expect(await res.json()).toEqual({ error: "Upload timed out" });
+        expect(res.headers.get("Connection")).toBe("close");
+        expect(storedBlobs()).toEqual([]);
+        expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps a single-request upload whose body brings 1 MiB in every 10 minutes", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await sender.waiting();
+
+        // The first window ends at 10 minutes with 2 MiB in, so a new one starts there, and
+        // the last MiB comes 8 minutes into it.
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
+        sender.feed(MiB);
+        await sender.waiting();
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
+        sender.feed(MiB);
+        sender.end();
+        expect((await pending).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("ends a single-request upload that stalls after it made progress", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await sender.waiting();
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
+        sender.feed(MiB);
+        await sender.waiting();
+
+        // 2 MiB in the first window count for nothing in the second, which brings none.
+        await vi.advanceTimersByTimeAsync(11 * MINUTE);
+        expect((await pending).status).toBe(408);
+        expect(storedBlobs()).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not count the time storage holds a single-request body back, also across a window", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const store = holdingStorage();
+        store.hold();
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await store.held();
+
+        // Held back for 30 seconds, then storage waits for the sender until 10:45. The 10
+        // minutes of waiting are full in between two checks, and when the window ends at
+        // 11:00 storage holds the second MiB back and waits for nothing.
+        await vi.advanceTimersByTimeAsync(30 * SECOND);
+        store.release();
+        await sender.waiting();
+        store.hold();
+        await vi.advanceTimersByTimeAsync(10 * MINUTE + 15 * SECOND);
+        sender.feed(MiB);
+        await store.held();
+        await vi.advanceTimersByTimeAsync(15 * SECOND);
+
+        // Held back for 11 minutes more, which says nothing about the sender.
+        await vi.advanceTimersByTimeAsync(11 * MINUTE);
+        store.release();
+        await sender.waiting();
+        sender.feed(MiB);
+        sender.end();
+        expect((await pending).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("lets go of a single-request upload whose sender breaks off, and stops watching it", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        const timers = vi.getTimerCount();
+        const sender = handFedBody();
+        sender.feed(4);
+        const pending = singleUpload(app, 10, sender.body);
+        await sender.waiting();
+        expect(vi.getTimerCount()).toBe(timers + 1);
+
+        sender.breakOff(new Error("connection reset"));
+        expect((await pending).status).toBe(500);
+        expect(vi.getTimerCount()).toBe(timers);
+        expect(storedBlobs()).toEqual([]);
+        expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("lets go of the sender's body when storage gives up on a single-request upload", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        const timers = vi.getTimerCount();
+        vi.spyOn(storage, "save").mockImplementationOnce(async (_id, stream) => {
+          const reader = stream.getReader();
+          await reader.read();
+          const full = new Error("ENOSPC: no space left on device");
+          await reader.cancel(full);
+          throw full;
+        });
+        const sender = handFedBody();
+        sender.feed(4);
+
+        expect((await singleUpload(app, 10, sender.body)).status).toBe(500);
+        expect(sender.cancelled()).toBe(true);
+        expect(vi.getTimerCount()).toBe(timers);
+        expect((await init(app, 10)).status).toBe(201);
       } finally {
         vi.useRealTimers();
       }

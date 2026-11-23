@@ -1,10 +1,10 @@
 import { createMiddleware } from "hono/factory";
 import { createHmac, randomBytes } from "node:crypto";
 import type { Context } from "hono";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, sum } from "drizzle-orm";
 import type { Config } from "../lib/config.js";
 import { getDb } from "../db/index.js";
-import { quotaUsage, quotaState } from "../db/schema.js";
+import { quotaUsage, quotaState, uploads, requestUploads } from "../db/schema.js";
 import { getClientIp } from "./rate-limit.js";
 import type { QuotaVariables } from "../types.js";
 
@@ -18,8 +18,18 @@ export interface QuotaStatus {
 }
 
 /**
- * The bytes an upload was granted when it started. Every transport ends it exactly one way:
- * commit once the upload is stored, release when it ends without being stored.
+ * The answer to an upload that STORAGE_MAX_SIZE has no room for. It names neither the used nor
+ * the free space, so a refusal tells a client no more than that this one upload does not fit.
+ * It says so apart from the size errors, since the upload may be far below FILE_MAX_SIZE.
+ * The web app recognises the text, keep it when the code around it moves.
+ */
+export const STORAGE_FULL_MESSAGE =
+  "This instance does not have enough free storage for this upload right now. Try again later.";
+
+/**
+ * The bytes an upload was granted when it started, against the upload quota of its sender and
+ * the storage limit of the instance. Every transport ends it exactly one way: commit once the
+ * upload is stored, release when it ends without being stored.
  */
 export interface QuotaReservation {
   /** Records the bytes the stored upload takes and ends the reservation. */
@@ -30,14 +40,17 @@ export interface QuotaReservation {
 
 export type QuotaDecision =
   | { ok: true; reservation: QuotaReservation | null }
-  | { ok: false; status: 413 | 429; reason: string };
+  | { ok: false; status: 413 | 429 | 507; reason: string };
 
 /**
  * Privacy-preserving upload quota using HMAC-hashed IPs.
  * The daily rotating key ensures that IPs cannot be correlated across days.
  * Usage is kept in SQLite, the key only in memory, so a restart starts every budget afresh.
  *
- * If FILE_UPLOAD_QUOTA_BYTES is 0, the middleware is a no-op.
+ * It also holds the storage limit of the instance (STORAGE_MAX_SIZE), since an upload has to fit
+ * both and reserves both in one step.
+ *
+ * If FILE_UPLOAD_QUOTA_BYTES and STORAGE_MAX_SIZE are both 0, the middleware is a no-op.
  */
 export function createUploadQuota(config: Config) {
   const keyRotationMs = 24 * 60 * 60 * 1000;
@@ -59,6 +72,36 @@ export function createUploadQuota(config: Config) {
    * block its owner for longer than the usage it stands for would have.
    */
   const held = new Set<{ hashedIp: string; bytes: number; expiresAt: number }>();
+
+  /**
+   * Bytes granted to running uploads against STORAGE_MAX_SIZE. Like `held` it lives in memory
+   * only, but it never lapses: an upload may run for hours, and a lapsed hold would let parallel
+   * uploads overshoot the limit together. Every transport ends its reservation exactly once.
+   */
+  let storageHeld = 0;
+
+  /**
+   * What the stored files take: the sizes of all uploads and uploads into a request, read
+   * instead of kept in a counter, so deleting and cleaning up never have to keep one in step.
+   * Notes live in the database, not in the storage backend, so they do not count. An expired
+   * upload counts until the cleanup removes it.
+   */
+  function storedBytes(): number {
+    const files = db.select({ bytes: sum(uploads.size) }).from(uploads).get();
+    const received = db.select({ bytes: sum(requestUploads.size) }).from(requestUploads).get();
+    return Number(files?.bytes ?? 0) + Number(received?.bytes ?? 0);
+  }
+
+  /**
+   * Whether STORAGE_MAX_SIZE has less room left than FILE_MAX_SIZE beside the stored files and
+   * the running uploads, so an upload of the size the instance advertises may be refused.
+   * /api/config reports it as this one bit and never as a number: whoever polls the bit sees
+   * only when it flips, and a refused start tells about as much.
+   */
+  function storageLow(): boolean {
+    if (config.STORAGE_MAX_SIZE <= 0) return false;
+    return config.STORAGE_MAX_SIZE - storedBytes() - storageHeld < config.FILE_MAX_SIZE;
+  }
 
   function heldBytes(hashedIp: string): number {
     const now = Date.now();
@@ -118,39 +161,56 @@ export function createUploadQuota(config: Config) {
 
   /**
    * Checks an upload of `contentLength` bytes against what the IP stored and what its running
-   * uploads hold, and reserves the bytes when it fits. Check and reservation run without an
-   * await in between, so no other upload can pass the check in the gap. When the quota is
-   * disabled, every upload may proceed and there is nothing to reserve.
+   * uploads hold, then against the storage limit of the instance, and reserves the bytes in
+   * both when it fits. Checks and reservation run without an await in between, so no other
+   * upload can pass a check in the gap. The quota of the sender comes first, so a sender over
+   * it learns nothing about the space of the instance. When both are disabled, every upload may
+   * proceed and there is nothing to reserve.
    */
   function reserve(ip: string, contentLength: number): QuotaDecision {
-    if (config.FILE_UPLOAD_QUOTA_BYTES <= 0) return { ok: true, reservation: null };
-    const hashedIp = hashIp(ip);
-    const entry = getOrCreateEntry(hashedIp);
-    const used = entry.bytesUsed + heldBytes(hashedIp);
-    if (used >= config.FILE_UPLOAD_QUOTA_BYTES) {
-      return { ok: false, status: 429, reason: "Upload quota exceeded. Try again later." };
-    }
+    const quotaOn = config.FILE_UPLOAD_QUOTA_BYTES > 0;
+    const limitOn = config.STORAGE_MAX_SIZE > 0;
+    if (!quotaOn && !limitOn) return { ok: true, reservation: null };
     const bytes = Number.isFinite(contentLength) && contentLength > 0 ? contentLength : 0;
-    if (used + bytes > config.FILE_UPLOAD_QUOTA_BYTES) {
-      return { ok: false, status: 413, reason: "File size exceeds remaining quota." };
+
+    let hold: { hashedIp: string; bytes: number; expiresAt: number } | null = null;
+    if (quotaOn) {
+      const hashedIp = hashIp(ip);
+      const entry = getOrCreateEntry(hashedIp);
+      const used = entry.bytesUsed + heldBytes(hashedIp);
+      if (used >= config.FILE_UPLOAD_QUOTA_BYTES) {
+        return { ok: false, status: 429, reason: "Upload quota exceeded. Try again later." };
+      }
+      if (used + bytes > config.FILE_UPLOAD_QUOTA_BYTES) {
+        return { ok: false, status: 413, reason: "File size exceeds remaining quota." };
+      }
+      hold = { hashedIp, bytes, expiresAt: entry.resetAt };
+    }
+    if (limitOn && storedBytes() + storageHeld + bytes > config.STORAGE_MAX_SIZE) {
+      return { ok: false, status: 507, reason: STORAGE_FULL_MESSAGE };
     }
 
-    const hold = { hashedIp, bytes, expiresAt: entry.resetAt };
-    held.add(hold);
+    if (hold) held.add(hold);
+    const storageBytes = limitOn ? bytes : 0;
+    storageHeld += storageBytes;
     let open = true;
+    /** Ends both holds. A stored upload counts through its row from here on. */
+    const end = () => {
+      open = false;
+      if (hold) held.delete(hold);
+      storageHeld -= storageBytes;
+    };
     return {
       ok: true,
       reservation: {
         commit(stored: number) {
           if (!open) return;
-          open = false;
-          held.delete(hold);
-          recordUsage(hashedIp, stored);
+          end();
+          if (hold) recordUsage(hold.hashedIp, stored);
         },
         release() {
           if (!open) return;
-          open = false;
-          held.delete(hold);
+          end();
         },
       },
     };
@@ -197,5 +257,5 @@ export function createUploadQuota(config: Config) {
     };
   }
 
-  return { middleware, getStatus, reserve };
+  return { middleware, getStatus, reserve, storageLow };
 }

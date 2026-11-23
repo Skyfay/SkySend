@@ -23,6 +23,7 @@ import { getConfig } from "../src/lib/config.js";
 import { createUploadWsRoute, type UploadWsRouteDeps } from "../src/routes/upload-ws.js";
 import { FRAME_STALL_MS, WS_MAX_PAYLOAD, WsBufferMemory } from "../src/lib/ws-upload.js";
 import { PROGRESS_WINDOW_MS } from "../src/lib/chunked-upload.js";
+import { createUploadQuota, STORAGE_FULL_MESSAGE } from "../src/middleware/quota.js";
 
 const DEFAULT_CONFIG = {
   PORT: 3000,
@@ -448,6 +449,53 @@ describe("upload-ws route", () => {
   });
 
   // ── Init frame checks ───────────────────────────────
+
+  it("refuses an init the storage limit has no room for and frees the space of a closed socket", async () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      UPLOADS_DIR: storageCtx.tempDir,
+      STORAGE_MAX_SIZE: 20,
+    } as unknown as ReturnType<typeof getConfig>;
+    vi.mocked(getConfig).mockReturnValue(config);
+    const mock = createMockUpgrade();
+    const route = createUploadWsRoute({
+      storage,
+      upgradeWebSocket: mock.upgrade,
+      memory: new WsBufferMemory(DEFAULT_CONFIG.FILE_UPLOAD_WS_MEMORY_LIMIT),
+      quota: createUploadQuota(config),
+    });
+    await route.request("/", { method: "GET" });
+    const events = mock.getEvents();
+    const init = async (size: number) => {
+      const fake = createFakeWs();
+      const headers = buildHeaders({ contentLength: String(size) });
+      await events.onMessage!(msgEvent(JSON.stringify({ type: "init", headers })), fake.ws);
+      return fake;
+    };
+    const frame = (fake: ReturnType<typeof createFakeWs>, type: string) =>
+      fake.allJson().find((m) => m.type === type);
+
+    const running = await init(16);
+    expect(frame(running, "ready")).toBeTruthy();
+    const refused = await init(16);
+    expect(frame(refused, "error")).toEqual({
+      type: "error",
+      message: STORAGE_FULL_MESSAGE,
+      status: 507,
+    });
+    expect(frame(refused, "ready")).toBeUndefined();
+
+    await events.onClose!(new CloseEvent("close"), running.ws);
+    const stored = await init(16);
+    expect(frame(stored, "ready")).toBeTruthy();
+    await events.onMessage!(msgEvent(new Uint8Array(16).buffer), stored.ws);
+    await events.onMessage!(msgEvent(JSON.stringify({ type: "finalize" })), stored.ws);
+    expect(stored.lastJson()).toMatchObject({ type: "done" });
+
+    // The stored upload takes 16 of the 20 bytes.
+    expect(frame(await init(5), "error")).toMatchObject({ status: 507 });
+    expect(frame(await init(4), "ready")).toBeTruthy();
+  });
 
   /** The route with a quota whose reservations the test can count. */
   async function bootstrapCountingReserve() {

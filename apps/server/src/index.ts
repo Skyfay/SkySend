@@ -21,7 +21,7 @@ import { createPasswordLockout } from "./lib/password-lockout.js";
 import { createRequestLimiter } from "./lib/request-limit.js";
 
 // Routes
-import { configRoute } from "./routes/config.js";
+import { createConfigRoute } from "./routes/config.js";
 import { createUploadRoute } from "./routes/upload.js";
 import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { WS_MAX_PAYLOAD, WsBufferMemory } from "./lib/ws-upload.js";
@@ -241,7 +241,7 @@ api.use("*", async (c, next) => {
   return rateLimiter(c, next);
 });
 
-api.route("/config", configRoute);
+api.route("/config", createConfigRoute({ quota }));
 api.route("/health", healthRoute);
 
 // File service routes - guarded by ENABLED_SERVICES
@@ -440,6 +440,9 @@ const server = serve(
     if (config.FILE_UPLOAD_QUOTA_BYTES > 0) {
       console.log(`[skysend] Upload quota: ${(config.FILE_UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.FILE_UPLOAD_QUOTA_WINDOW}s`);
     }
+    if (config.STORAGE_MAX_SIZE > 0) {
+      console.log(`[skysend] Storage limit: ${(config.STORAGE_MAX_SIZE / (1024 ** 2)).toFixed(0)} MB`);
+    }
   },
 );
 
@@ -449,10 +452,14 @@ const server = serve(
 //   HTTP headers extremely slowly - headersTimeout terminates such connections.
 //   Setting it to 0 would be dangerous; 60s is appropriate for normal clients.
 // - requestTimeout: 0 (disabled by design).
-//   S-7: NOT a Slowloris risk because headersTimeout already covers that attack.
-//   requestTimeout covers the body-transfer phase only. Disabling it is intentional:
-//   large file uploads over slow connections can legitimately take many hours.
-//   The reverse proxy (Nginx/Caddy/Traefik) should handle overall connection timeouts.
+//   S-7: headersTimeout covers the classic Slowloris that sends its headers slowly.
+//   requestTimeout would cover the body-transfer phase only. Disabling it is intentional:
+//   large file uploads over slow connections can legitimately take many hours. A body
+//   that stalls is ended by the progress rule of every upload transport instead
+//   (PROGRESS_WINDOW_MS in lib/chunked-upload.ts). The single-request upload lacked it
+//   until 2026-11, so a client that sent its headers and then nothing held its
+//   reservation, the storage limit's included, for as long as the connection stayed open.
+//   The reverse proxy (Nginx/Caddy/Traefik) should still handle overall connection timeouts.
 // - timeout: 0 (disabled) - socket inactivity handled by Node.js keep-alive defaults.
 // - keepAliveTimeout: 120s. Node's default is only 5s, which is shorter than the
 //   backend idle-connection timeout of every common reverse proxy (Traefik defaults
