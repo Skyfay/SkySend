@@ -73,13 +73,9 @@
       "brace-expansion": "^5.0.12",
       "minimatch@3>brace-expansion": "^1.1.21",
       "@tailwindcss/typography>postcss-selector-parser": "^7.1.6",
-      "js-yaml@3>argparse": "^2.0.1"
-    },
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg",
-        "GHSA-vfj7-8cjw-p6xm"
-      ]
+      "js-yaml@3>argparse": "^2.0.1",
+      "@stryker-mutator/core>minimatch": "^11.0.1",
+      "typed-rest-client>qs": "^6.16.1"
     }
   },
   "devDependencies": {
