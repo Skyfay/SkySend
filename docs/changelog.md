@@ -2,6 +2,48 @@
 
 All notable changes to SkySend are documented here.
 
+## v3.3.1 - Security Updates and Mutation Testing
+
+*Released: November 23, 2026*
+
+### 🔒 Security
+
+- **server**: Updated `@hono/node-ws` to 1.3.2, which hardens its WebSocket upgrade listener against malformed requests on top of the guard SkySend already has.
+- **server**: Updated `@hono/node-server` to 2.1.11 to patch an unauthenticated crash when a connection resets during a WebSocket upgrade, and a path-based access control bypass at a reverse proxy through backslashes in the request path (GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w).
+- **server**: Updated hono to 4.13.20 to patch wildcard middleware that the RegExpRouter skipped for some routes, and further advisories in `mount()`, `csrf()`, `validator('form')` and the `css` helper that SkySend does not use (GHSA-h7mg-cq63-vhpq, GHSA-4m76-xfj5-7975, GHSA-46wx-v44x-9hh2, GHSA-4h7h-rv7c-7m2v, GHSA-3gg2-335m-rxc6).
+- **server**: Updated zod to 4.6.7 to patch memory exhaustion while validating oversized collections with size limits (GHSA-mrhx-c7xc-m3w5).
+- **web**: Updated zod to 4.6.7 to patch memory exhaustion while validating oversized collections with size limits (GHSA-mrhx-c7xc-m3w5).
+- **web**: Updated dompurify to 3.5.0 to fix sanitizer bypasses in XHTML parsing, template-safe output and in-place sanitizing (GHSA-c6gr-qvv4-5v3f, GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr).
+- **client**: Updated zod to 4.6.7 to patch memory exhaustion while validating oversized collections with size limits (GHSA-mrhx-c7xc-m3w5).
+- **website**: Updated next and eslint-config-next to 16.4.6 to patch two remote code execution vulnerabilities and further cache and denial of service advisories. The site is a static export and never ran the affected server features (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr, GHSA-p3m5-59mp-jv5r, GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8, GHSA-7qx7-33qx-rqx2, GHSA-f3mh-rxg3-f5g2, GHSA-pc58-hwjq-p385, GHSA-rhh4-g77r-r9qj, GHSA-vvgp-ww4w-46vf).
+- **infra**: Refreshed the lockfile and raised the `vitepress>vite` override to `>=6.4.5 <7`, so undici in jsdom and the local worker runtime, vite in the docs build and minimatch in ESLint resolve to patched versions (GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472, GHSA-xjj6-f33q-929c, GHSA-4w7w-5xrc-9h26, GHSA-2m5v-pch6-74hx, GHSA-qrxm-fqhp-jwvm, GHSA-9fm3-97px-rjf6, GHSA-55wc-3pg8-jfw6, GHSA-8g5g-mxqh-grgj, GHSA-g3hv-75wg-m249).
+
+### 🎨 Improvements
+
+- **web**: The language menu lists English first and the other languages by their native name. Thanks @rus1709 ([#105](https://github.com/Skyfay/SkySend/pull/105))
+
+### 📝 Documentation
+
+- **docs**: The AI transparency section of the README is now called "Development, Testing & Security".
+
+### 🧪 Tests
+
+- **server**: Tests now cover the origin check of WebSocket uploads, every rule of the `cli_callback` check of the CLI login and the owner token check of a deletion. Mutation testing showed that each of them could break without a failing test.
+- **client**: The tests now run with a temporary home folder, so a test that falls back to the home folder can no longer write into the real `~/.config/skysend` of whoever runs them.
+- **crypto**: Tests now cover the length limits of an encrypted request brief, a brief that fills the largest size exactly and an ID with a prefix before the UUID. Mutation testing showed that these checks could break without a failing test.
+
+### 🔧 CI/CD
+
+- **infra**: `pnpm audit` no longer ignores any advisory, since the two ignored ones no longer applied. ([#115](https://github.com/Skyfay/SkySend/issues/115))
+- **infra**: Updated i18next to 27, react-i18next to 18 and jsdom to 31, and the minor and patch releases across the monorepo, among them the AWS SDK, better-sqlite3, jose, openid-client, drizzle-orm, react 19.3.1, the Radix components, lucide-react, react-router 8.5, vite 8.3.8, tailwindcss, vitest 5.1, eslint, prettier, Playwright 1.65 and wrangler.
+- **infra**: Added mutation testing with Stryker. A pull request that changes the crypto package runs it and fails below a score of 85 %, and `pnpm test:mutation:all` or a manual run of the workflow tests the other packages.
+
+### 🐳 Docker
+
+- **Image**: `skyfay/skysend:v3.3.1`
+- **Also tagged as**: `latest`, `v3`
+- **Platforms**: linux/amd64, linux/arm64
+
 ## v3.3.0 - Trusted Proxies, Russian and Ukrainian, Reloadable Links and Security Hardening
 
 *Released: November 10, 2026*
