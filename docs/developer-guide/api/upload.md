@@ -6,6 +6,8 @@ Upload an encrypted file stream to the server.
 
 When `OIDC_PROTECT_FILES` is on, the request needs the session cookie or a bearer token, like the chunked init and the WebSocket. With an upload quota or a storage limit (`STORAGE_MAX_SIZE`), the upload reserves `Content-Length` bytes when it starts and gives them back if it fails.
 
+The body has to keep coming: if it brings less than 1 MiB, or the rest of the upload, in 10 minutes, the upload is ended with `408`, nothing of it is stored and its reservation is given back. That is the rule of the chunked upload and the WebSocket. Only time in which the server waits for the sender counts.
+
 ### Request
 
 The request body is the raw encrypted stream (binary). All metadata is passed via headers.
@@ -61,6 +63,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 | Status | Error | Cause |
 | --- | --- | --- |
 | `401` | `Authentication required` | `OIDC_PROTECT_FILES` is on and the request carries no valid session |
+| `408` | `Upload timed out` | The body brought less than 1 MiB, or the rest of the upload, in 10 minutes. The server closes the connection |
 | `413` | `Body size does not match declared content length` | The body grew past `Content-Length` |
 | `413` | `File size exceeds remaining quota.` | `Content-Length` does not fit into what is left of the upload quota |
 | `429` | `Upload quota exceeded. Try again later.` | The upload quota is used up |

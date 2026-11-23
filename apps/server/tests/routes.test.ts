@@ -2178,6 +2178,115 @@ describe("routes", () => {
       }
     });
 
+    /**
+     * The body of a single-request upload, fed by hand. `reading` settles once the server
+     * waits for more of it, so the test knows the clock of the progress rule is running.
+     */
+    function handFedBody() {
+      let controller!: ReadableStreamDefaultController<Uint8Array>;
+      let waiting!: () => void;
+      const reading = new Promise<void>((resolve) => (waiting = resolve));
+      const body = new ReadableStream<Uint8Array>(
+        {
+          start(c) {
+            controller = c;
+          },
+          pull() {
+            waiting();
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      return {
+        body,
+        feed: (size: number) => controller.enqueue(new Uint8Array(size)),
+        end: () => controller.close(),
+        reading,
+      };
+    }
+
+    const singleUpload = (app: Hono, size: number, body: ReadableStream<Uint8Array>) =>
+      app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(size),
+        body,
+        duplex: "half",
+      } as RequestInit);
+
+    it("ends a single-request upload whose body stops coming, and gives its reservation back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        // The headers of a 10 byte upload, 4 bytes of its body, then nothing.
+        const sender = handFedBody();
+        sender.feed(4);
+        const pending = singleUpload(app, 10, sender.body);
+        await sender.reading;
+
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+        // Still running, so it holds its 10 bytes in the quota and the storage limit.
+        expect((await init(app, 1)).status).toBe(429);
+
+        await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+        const res = await pending;
+        expect(res.status).toBe(408);
+        expect(await res.json()).toEqual({ error: "Upload timed out" });
+        expect(res.headers.get("Connection")).toBe("close");
+        expect(storedBlobs()).toEqual([]);
+        expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps a single-request upload that makes progress", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const MiB = 1024 * 1024;
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await sender.reading;
+
+        // 1 MiB in every 10 minutes is enough, the whole upload takes 18.
+        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        sender.feed(MiB);
+        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        sender.feed(MiB);
+        sender.end();
+        expect((await pending).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not count the time storage holds a single-request body back", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
+        let release!: () => void;
+        const held = new Promise<void>((resolve) => (release = resolve));
+        const save = storage.save.bind(storage);
+        vi.spyOn(storage, "save").mockImplementationOnce(async (id, stream, size) => {
+          await held;
+          return save(id, stream, size);
+        });
+        const sender = handFedBody();
+        sender.feed(10);
+        sender.end();
+        const pending = singleUpload(app, 10, sender.body);
+
+        // Storage reads nothing for 11 minutes, which says nothing about the sender.
+        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        release();
+        expect((await pending).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("gives the reservation back and keeps no partial file when storage fails to save a single-request upload", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const app = appWithQuota(5);
