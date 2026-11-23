@@ -50,8 +50,9 @@ function guardedBody(body: ReadableStream<Uint8Array>, max: number) {
     ended = true;
     clearInterval(timer);
   };
+  // Runs only while the check is on: from the timer, which stop() clears, and from pull() after
+  // its check of `ended`.
   const fail = (err: Error) => {
-    if (ended) return;
     stop();
     output.error(err);
     reader.cancel(err).catch(() => {});
@@ -77,17 +78,13 @@ function guardedBody(body: ReadableStream<Uint8Array>, max: number) {
         let result: Awaited<ReturnType<typeof reader.read>>;
         try {
           result = await reader.read();
-        } catch (err) {
-          stop();
-          throw err;
         } finally {
           waited += Date.now() - waitingSince;
           waitingSince = 0;
         }
-        // A stall or a body that grew too large failed the stream while the read waited.
+        // A stall failed the stream while the read waited.
         if (ended) return;
         if (result.done) {
-          stop();
           controller.close();
           return;
         }
@@ -95,8 +92,8 @@ function guardedBody(body: ReadableStream<Uint8Array>, max: number) {
         if (seen > max) fail(new BodyTooLargeError());
         else controller.enqueue(result.value);
       },
+      // Storage gave up, so the sender's body is let go of too.
       cancel(reason) {
-        stop();
         return reader.cancel(reason);
       },
     },

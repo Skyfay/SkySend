@@ -2178,30 +2178,85 @@ describe("routes", () => {
       }
     });
 
+    const MiB = 1024 * 1024;
+    const SECOND = 1000;
+    const MINUTE = 60 * SECOND;
+
     /**
-     * The body of a single-request upload, fed by hand. `reading` settles once the server
-     * waits for more of it, so the test knows the clock of the progress rule is running.
+     * The body of a single-request upload, fed by hand, one feed at a time. `waiting()` settles
+     * once the server took everything fed so far and asks for more, so the test knows the clock
+     * of the progress rule runs from there, whatever the real I/O in between took.
      */
     function handFedBody() {
       let controller!: ReadableStreamDefaultController<Uint8Array>;
-      let waiting!: () => void;
-      const reading = new Promise<void>((resolve) => (waiting = resolve));
+      let fed = 0;
+      let asks = 0;
+      let cancelled = false;
+      const waiters: Array<() => void> = [];
       const body = new ReadableStream<Uint8Array>(
         {
           start(c) {
             controller = c;
           },
+          // With no queue, the stream asks only when the server waits for the next part.
           pull() {
-            waiting();
+            asks++;
+            if (asks >= fed) waiters.splice(0).forEach((resolve) => resolve());
+          },
+          cancel() {
+            cancelled = true;
           },
         },
         { highWaterMark: 0 },
       );
       return {
         body,
-        feed: (size: number) => controller.enqueue(new Uint8Array(size)),
+        feed: (size: number) => {
+          fed++;
+          controller.enqueue(new Uint8Array(size));
+        },
         end: () => controller.close(),
-        reading,
+        breakOff: (err: Error) => controller.error(err),
+        waiting: () =>
+          new Promise<void>((resolve) => (asks >= fed ? resolve() : waiters.push(resolve))),
+        cancelled: () => cancelled,
+      };
+    }
+
+    /**
+     * Storage that reads a body only while the test lets it, like an S3 part that waits for
+     * memory. `hold()` takes effect after the read running now, `held()` settles once storage
+     * holds, and `release()` lets it read on. Nothing is written, the route stores the row.
+     */
+    function holdingStorage() {
+      let gate: Promise<void> | null = null;
+      let open = () => {};
+      let holding = false;
+      const waiters: Array<() => void> = [];
+      vi.spyOn(storage, "save").mockImplementationOnce(async (_id, stream) => {
+        const reader = stream.getReader();
+        let bytes = 0;
+        for (;;) {
+          if (gate) {
+            holding = true;
+            waiters.splice(0).forEach((resolve) => resolve());
+            await gate;
+            holding = false;
+          }
+          const { done, value } = await reader.read();
+          if (done) return bytes;
+          bytes += value.byteLength;
+        }
+      });
+      return {
+        hold: () => {
+          gate = new Promise((resolve) => (open = resolve));
+        },
+        held: () => new Promise<void>((resolve) => (holding ? resolve() : waiters.push(resolve))),
+        release: () => {
+          gate = null;
+          open();
+        },
       };
     }
 
@@ -2221,13 +2276,13 @@ describe("routes", () => {
         const sender = handFedBody();
         sender.feed(4);
         const pending = singleUpload(app, 10, sender.body);
-        await sender.reading;
+        await sender.waiting();
 
-        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
         // Still running, so it holds its 10 bytes in the quota and the storage limit.
         expect((await init(app, 1)).status).toBe(429);
 
-        await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+        await vi.advanceTimersByTimeAsync(6 * MINUTE);
         const res = await pending;
         expect(res.status).toBe(408);
         expect(await res.json()).toEqual({ error: "Upload timed out" });
@@ -2240,20 +2295,21 @@ describe("routes", () => {
       }
     });
 
-    it("keeps a single-request upload that makes progress", async () => {
+    it("keeps a single-request upload whose body brings 1 MiB in every 10 minutes", async () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
       try {
-        const MiB = 1024 * 1024;
         const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
         const sender = handFedBody();
         sender.feed(MiB);
         const pending = singleUpload(app, 3 * MiB, sender.body);
-        await sender.reading;
+        await sender.waiting();
 
-        // 1 MiB in every 10 minutes is enough, the whole upload takes 18.
-        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        // The first window ends at 10 minutes with 2 MiB in, so a new one starts there, and
+        // the last MiB comes 8 minutes into it.
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
         sender.feed(MiB);
-        await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+        await sender.waiting();
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
         sender.feed(MiB);
         sender.end();
         expect((await pending).status).toBe(201);
@@ -2262,26 +2318,105 @@ describe("routes", () => {
       }
     });
 
-    it("does not count the time storage holds a single-request body back", async () => {
+    it("ends a single-request upload that stalls after it made progress", async () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
       try {
-        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
-        let release!: () => void;
-        const held = new Promise<void>((resolve) => (release = resolve));
-        const save = storage.save.bind(storage);
-        vi.spyOn(storage, "save").mockImplementationOnce(async (id, stream, size) => {
-          await held;
-          return save(id, stream, size);
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await sender.waiting();
+        await vi.advanceTimersByTimeAsync(9 * MINUTE);
+        sender.feed(MiB);
+        await sender.waiting();
+
+        // 2 MiB in the first window count for nothing in the second, which brings none.
+        await vi.advanceTimersByTimeAsync(11 * MINUTE);
+        expect((await pending).status).toBe(408);
+        expect(storedBlobs()).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not count the time storage holds a single-request body back, also across a window", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        const app = appWithQuota(0, { STORAGE_MAX_SIZE: 3 * MiB });
+        const store = holdingStorage();
+        store.hold();
+        const sender = handFedBody();
+        sender.feed(MiB);
+        const pending = singleUpload(app, 3 * MiB, sender.body);
+        await store.held();
+
+        // Held back for 30 seconds, then storage waits for the sender until 10:45. The 10
+        // minutes of waiting are full in between two checks, and when the window ends at
+        // 11:00 storage holds the second MiB back and waits for nothing.
+        await vi.advanceTimersByTimeAsync(30 * SECOND);
+        store.release();
+        await sender.waiting();
+        store.hold();
+        await vi.advanceTimersByTimeAsync(10 * MINUTE + 15 * SECOND);
+        sender.feed(MiB);
+        await store.held();
+        await vi.advanceTimersByTimeAsync(15 * SECOND);
+
+        // Held back for 11 minutes more, which says nothing about the sender.
+        await vi.advanceTimersByTimeAsync(11 * MINUTE);
+        store.release();
+        await sender.waiting();
+        sender.feed(MiB);
+        sender.end();
+        expect((await pending).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("lets go of a single-request upload whose sender breaks off, and stops watching it", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        const timers = vi.getTimerCount();
+        const sender = handFedBody();
+        sender.feed(4);
+        const pending = singleUpload(app, 10, sender.body);
+        await sender.waiting();
+        expect(vi.getTimerCount()).toBe(timers + 1);
+
+        sender.breakOff(new Error("connection reset"));
+        expect((await pending).status).toBe(500);
+        expect(vi.getTimerCount()).toBe(timers);
+        expect(storedBlobs()).toEqual([]);
+        expect(dbCtx.db.select().from(uploads).all()).toHaveLength(0);
+        expect((await init(app, 10)).status).toBe(201);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("lets go of the sender's body when storage gives up on a single-request upload", async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+      try {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const app = appWithQuota(10, { STORAGE_MAX_SIZE: 10 });
+        const timers = vi.getTimerCount();
+        vi.spyOn(storage, "save").mockImplementationOnce(async (_id, stream) => {
+          const reader = stream.getReader();
+          await reader.read();
+          const full = new Error("ENOSPC: no space left on device");
+          await reader.cancel(full);
+          throw full;
         });
         const sender = handFedBody();
-        sender.feed(10);
-        sender.end();
-        const pending = singleUpload(app, 10, sender.body);
+        sender.feed(4);
 
-        // Storage reads nothing for 11 minutes, which says nothing about the sender.
-        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
-        release();
-        expect((await pending).status).toBe(201);
+        expect((await singleUpload(app, 10, sender.body)).status).toBe(500);
+        expect(sender.cancelled()).toBe(true);
+        expect(vi.getTimerCount()).toBe(timers);
+        expect((await init(app, 10)).status).toBe(201);
       } finally {
         vi.useRealTimers();
       }
