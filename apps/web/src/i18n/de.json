@@ -94,7 +94,8 @@
     "fileTooLarge": "Datei überschreitet maximale Größe von {{size}}",
     "tooManyFiles": "Maximal {{count}} Dateien pro Upload",
     "fileListTooLong": "Die Namen dieser Dateien sind zusammen zu lang für einen Upload. Bitte wählen Sie weniger Dateien oder kürzere Namen.",
-    "fileNotReadable": "Die ausgewählte Datei konnte nicht gelesen werden. Bitte wählen Sie sie erneut aus und versuchen Sie es noch einmal."
+    "fileNotReadable": "Die ausgewählte Datei konnte nicht gelesen werden. Bitte wählen Sie sie erneut aus und versuchen Sie es noch einmal.",
+    "storageLow": "Auf diesem Server wird der Speicherplatz knapp. Ein großer Upload kann gerade abgelehnt werden, auch unter {{size}}."
   },
   "download": {
     "title": "Datei herunterladen",
@@ -306,7 +307,7 @@
     "insecureContext": "HTTPS erforderlich",
     "originNotAllowed": "Server hat diesen Ursprung blockiert",
     "s3CorsError": "S3 CORS nicht konfiguriert",
-    "storageFull": "Auf diesem Server ist kein Speicherplatz mehr frei. Versuchen Sie es später wieder.",
+    "storageFull": "Auf diesem Server ist gerade nicht genug Speicherplatz für diesen Upload frei. Versuchen Sie es später wieder.",
     "linkRewritten": "Link wurde unterwegs verändert",
     "linkRewrittenDesc": "Ein Mail-Security-Filter hat diesen Link umgeschrieben, dadurch war der Schlüssel für den Server sichtbar. Lass den Inhalt bei vertraulichen Daten vom Absender löschen, sobald du ihn hast.",
     "linkRewrittenInboxDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb war der Schlüssel zu dieser Inbox für den Server sichtbar. Laden Sie herunter, was Sie brauchen, und löschen Sie danach die Anfrage.",

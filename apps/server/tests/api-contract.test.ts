@@ -18,7 +18,8 @@ vi.mock("../src/lib/config.js", async (importActual) => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig, loadConfig } from "../src/lib/config.js";
-import { configRoute } from "../src/routes/config.js";
+import { createConfigRoute } from "../src/routes/config.js";
+import { createUploadQuota } from "../src/middleware/quota.js";
 import { createUploadRoute } from "../src/routes/upload.js";
 import { createDeleteRoute } from "../src/routes/delete.js";
 import { metaRoute } from "../src/routes/meta.js";
@@ -49,7 +50,7 @@ describe("the API as the shared client reads it", () => {
     const lockout = createPasswordLockout(10, 60_000);
     const storage = storageCtx.storage;
     const app = new Hono();
-    app.route("/api/config", configRoute);
+    app.route("/api/config", createConfigRoute({ quota: createUploadQuota(getConfig()) }));
     app.route(
       "/api/upload",
       createUploadRoute(storage, { chunkDir: join(storageCtx.tempDir, "chunks") }),
@@ -77,6 +78,7 @@ describe("the API as the shared client reads it", () => {
     const config = await api.fetchConfig();
     expect(config.enabledServices).toEqual(["file", "note"]);
     expect(config.noteBlocks).toBe(true);
+    expect(config.storageLow).toBe(false);
   });
 
   it("reads every step of a chunked upload, its info and its download", async () => {

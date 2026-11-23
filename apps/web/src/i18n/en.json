@@ -94,7 +94,8 @@
     "fileTooLarge": "File exceeds maximum size of {{size}}",
     "tooManyFiles": "Maximum {{count}} files per upload",
     "fileListTooLong": "The names of these files are too long together for one upload. Please choose fewer files or shorter names.",
-    "fileNotReadable": "The selected file could not be read. Please re-select it and try again."
+    "fileNotReadable": "The selected file could not be read. Please re-select it and try again.",
+    "storageLow": "This server is running low on storage. A large upload may be refused right now, even below {{size}}."
   },
   "download": {
     "title": "Download File",
@@ -306,7 +307,7 @@
     "insecureContext": "HTTPS required",
     "originNotAllowed": "Server blocked this origin",
     "s3CorsError": "S3 CORS not configured",
-    "storageFull": "This server is out of storage space. Try again later.",
+    "storageFull": "This server does not have enough free storage for this upload right now. Try again later.",
     "linkRewritten": "Link was modified in transit",
     "linkRewrittenDesc": "A mail security filter rewrote this link, so the decryption key was visible to the server. If the content is confidential, ask the sender to delete it once you have it.",
     "linkRewrittenInboxDesc": "A mail security filter rewrote this link, so the key to this inbox was visible to the server. Download what you need, then delete the request.",

@@ -21,7 +21,7 @@ import { createPasswordLockout } from "./lib/password-lockout.js";
 import { createRequestLimiter } from "./lib/request-limit.js";
 
 // Routes
-import { configRoute } from "./routes/config.js";
+import { createConfigRoute } from "./routes/config.js";
 import { createUploadRoute } from "./routes/upload.js";
 import { createUploadWsRoute } from "./routes/upload-ws.js";
 import { WS_MAX_PAYLOAD, WsBufferMemory } from "./lib/ws-upload.js";
@@ -241,7 +241,7 @@ api.use("*", async (c, next) => {
   return rateLimiter(c, next);
 });
 
-api.route("/config", configRoute);
+api.route("/config", createConfigRoute({ quota }));
 api.route("/health", healthRoute);
 
 // File service routes - guarded by ENABLED_SERVICES

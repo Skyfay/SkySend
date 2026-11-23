@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugPanel } from "@/components/DebugPanel";
 import { RequestNoteForm } from "@/components/RequestNoteForm";
+import { StorageLowNotice } from "@/components/StorageLowNotice";
 import { Glow } from "@/components/Glow";
 import { LinkGone } from "@/components/LinkGone";
 import { UploadZone } from "@/components/UploadZone";
@@ -208,6 +209,7 @@ export function RequestUploadPage() {
       </p>
     ) : (
       <div className="space-y-4">
+        {config?.storageLow && <StorageLowNotice maxSize={status.maxUploadSize} />}
         <UploadZone
           files={files}
           onFilesChange={setFiles}

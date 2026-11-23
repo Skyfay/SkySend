@@ -64,7 +64,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 | `413` | `Body size does not match declared content length` | The body grew past `Content-Length` |
 | `413` | `File size exceeds remaining quota.` | `Content-Length` does not fit into what is left of the upload quota |
 | `429` | `Upload quota exceeded. Try again later.` | The upload quota is used up |
-| `507` | `This instance is out of storage space. Try again later.` | `Content-Length` does not fit into what `STORAGE_MAX_SIZE` leaves beside the stored and running uploads |
+| `507` | `This instance does not have enough free storage for this upload right now. Try again later.` | `Content-Length` does not fit into what `STORAGE_MAX_SIZE` leaves beside the stored and running uploads |
 
 ### Example
 

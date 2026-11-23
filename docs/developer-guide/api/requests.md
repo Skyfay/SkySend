@@ -128,7 +128,7 @@ Init reserves a slot in one statement, which also checks the declared size again
 | `410` | The request is closed or expired |
 | `413` | Larger than `FILE_MAX_SIZE`, than the `maxSize` of the request, or than the sender's remaining upload quota |
 | `429` | The sender's upload quota or the rate limit is used up |
-| `507` | The upload does not fit into what `STORAGE_MAX_SIZE` leaves, `This instance is out of storage space. Try again later.` |
+| `507` | The upload does not fit into what `STORAGE_MAX_SIZE` leaves, `This instance does not have enough free storage for this upload right now. Try again later.` |
 
 ### POST /api/request/:id/upload/:uid/chunk?index=N
 

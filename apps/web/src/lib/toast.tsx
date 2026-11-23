@@ -55,7 +55,7 @@ export function isS3CorsError(message: string): boolean {
  * (STORAGE_MAX_SIZE) has no room for it. Matches the server's STORAGE_FULL_MESSAGE.
  */
 export function isStorageFullError(message: string): boolean {
-  return message.includes("out of storage space");
+  return message.includes("not have enough free storage");
 }
 
 /**

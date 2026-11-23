@@ -28,6 +28,9 @@ const configResponseSchema = z.object({
   fileUploadConcurrentChunks: z.number(),
   fileUploadSpeedLimit: z.number().optional().default(0),
   fileUploadWs: z.boolean().optional().default(false),
+  // True while the storage limit of the instance has no room left for an upload of fileMaxSize.
+  // Missing on an older server, which has no storage limit.
+  storageLow: z.boolean().optional().default(false),
   // File requests. A server from before v3 sends none of these and offers no requests.
   fileRequestsEnabled: z.boolean().optional().default(false),
   fileRequestExpireOptions: z.array(z.number()).optional().default([]),

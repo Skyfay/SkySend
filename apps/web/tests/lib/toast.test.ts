@@ -8,7 +8,8 @@ vi.mock("i18next", () => ({ default: { t: (key: string) => key } }));
 import { isStorageFullError, showKnownErrorToast } from "../../src/lib/toast.js";
 
 /** What the server answers when STORAGE_MAX_SIZE has no room, its STORAGE_FULL_MESSAGE. */
-const STORAGE_FULL = "This instance is out of storage space. Try again later.";
+const STORAGE_FULL =
+  "This instance does not have enough free storage for this upload right now. Try again later.";
 
 describe("storage full error", () => {
   beforeEach(() => {
@@ -18,6 +19,9 @@ describe("storage full error", () => {
   it("recognises the message the server refuses a full instance with", () => {
     expect(isStorageFullError(STORAGE_FULL)).toBe(true);
     expect(isStorageFullError("Upload quota exceeded. Try again later.")).toBe(false);
+    // The size errors stay apart, the upload may be far below the largest one allowed.
+    expect(isStorageFullError("File size exceeds remaining quota.")).toBe(false);
+    expect(isStorageFullError("Upload exceeds the size this file request allows")).toBe(false);
   });
 
   it("shows the translated sentence instead of the server's English", () => {

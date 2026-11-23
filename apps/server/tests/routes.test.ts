@@ -30,7 +30,7 @@ vi.mock("../src/lib/config.js", () => ({
 
 import { getDb } from "../src/db/index.js";
 import { getConfig } from "../src/lib/config.js";
-import { configRoute } from "../src/routes/config.js";
+import { createConfigRoute } from "../src/routes/config.js";
 import { createUploadRoute } from "../src/routes/upload.js";
 import { metaRoute } from "../src/routes/meta.js";
 import { infoRoute } from "../src/routes/info.js";
@@ -128,7 +128,7 @@ describe("routes", () => {
   describe("GET /api/config", () => {
     it("should return server configuration", async () => {
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -147,7 +147,7 @@ describe("routes", () => {
     it("should keep request out of enabledServices for older CLI clients", async () => {
       vi.mocked(getConfig).mockReturnValue({ ...DEFAULT_CONFIG, ENABLED_SERVICES: ["file", "note", "request"] });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
       const body = await (await app.request("/api/config")).json();
       expect(body.enabledServices).toEqual(["file", "note"]);
       expect(body.fileRequestsEnabled).toBe(true);
@@ -171,7 +171,7 @@ describe("routes", () => {
         FORCE_REQUEST_PASSWORD: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
       const body = await (await app.request("/api/config")).json();
       expect(body).toMatchObject({
         fileRequestExpireOptions: [86400, 259200],
@@ -195,7 +195,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -214,7 +214,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const res = await app.request("/api/config");
       expect(res.status).toBe(200);
@@ -231,7 +231,7 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: false,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const body = await (await app.request("/api/config")).json();
       expect(body.oidcProtectFiles).toBe(true);
@@ -246,10 +246,48 @@ describe("routes", () => {
         OIDC_PROTECT_REQUESTS: true,
       });
       const app = new Hono();
-      app.route("/api/config", configRoute);
+      app.route("/api/config", createConfigRoute());
 
       const body = await (await app.request("/api/config")).json();
       expect(body.oidcProtectRequests).toBe(false);
+    });
+
+    it("should report storageLow=false without a storage limit, however much is stored", async () => {
+      insertTestUpload(dbCtx.db, { id: crypto.randomUUID(), size: 10 * 1024 ** 3 });
+      const app = new Hono();
+      const config = { ...DEFAULT_CONFIG, STORAGE_MAX_SIZE: 0 } as unknown as Config;
+      app.route("/api/config", createConfigRoute({ quota: createUploadQuota(config) }));
+      const body = await (await app.request("/api/config")).json();
+      expect(body.storageLow).toBe(false);
+    });
+
+    it("should report storageLow while the storage limit has less room than fileMaxSize, and nothing more", async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        FILE_MAX_SIZE: 1000,
+        STORAGE_MAX_SIZE: 5000,
+      } as unknown as Config;
+      vi.mocked(getConfig).mockReturnValue(config);
+      const quota = createUploadQuota(config);
+      const app = new Hono();
+      app.route("/api/config", createConfigRoute({ quota }));
+      const read = async () => (await app.request("/api/config")).json();
+
+      insertTestUpload(dbCtx.db, { id: crypto.randomUUID(), size: 3500 });
+      expect((await read()).storageLow).toBe(false);
+
+      // A running upload holds its size, so 900 bytes are left beside it.
+      const running = quota.reserve("10.0.0.1", 600);
+      if (!running.ok || !running.reservation) throw new Error("expected a reservation");
+      const body = await read();
+      expect(body.storageLow).toBe(true);
+      // One bit: no field of the config holds the used or free space.
+      for (const value of Object.values(body)) {
+        expect([900, 3500, 4100, 5000]).not.toContain(value);
+      }
+
+      running.reservation.release();
+      expect((await read()).storageLow).toBe(false);
     });
   });
 

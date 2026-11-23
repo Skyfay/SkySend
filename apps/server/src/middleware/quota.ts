@@ -20,9 +20,11 @@ export interface QuotaStatus {
 /**
  * The answer to an upload that STORAGE_MAX_SIZE has no room for. It names neither the used nor
  * the free space, so a refusal tells a client no more than that this one upload does not fit.
+ * It says so apart from the size errors, since the upload may be far below FILE_MAX_SIZE.
  * The web app recognises the text, keep it when the code around it moves.
  */
-export const STORAGE_FULL_MESSAGE = "This instance is out of storage space. Try again later.";
+export const STORAGE_FULL_MESSAGE =
+  "This instance does not have enough free storage for this upload right now. Try again later.";
 
 /**
  * The bytes an upload was granted when it started, against the upload quota of its sender and
@@ -88,6 +90,17 @@ export function createUploadQuota(config: Config) {
     const files = db.select({ bytes: sum(uploads.size) }).from(uploads).get();
     const received = db.select({ bytes: sum(requestUploads.size) }).from(requestUploads).get();
     return Number(files?.bytes ?? 0) + Number(received?.bytes ?? 0);
+  }
+
+  /**
+   * Whether STORAGE_MAX_SIZE has less room left than FILE_MAX_SIZE beside the stored files and
+   * the running uploads, so an upload of the size the instance advertises may be refused.
+   * /api/config reports it as this one bit and never as a number: whoever polls the bit sees
+   * only when it flips, and a refused start tells about as much.
+   */
+  function storageLow(): boolean {
+    if (config.STORAGE_MAX_SIZE <= 0) return false;
+    return config.STORAGE_MAX_SIZE - storedBytes() - storageHeld < config.FILE_MAX_SIZE;
   }
 
   function heldBytes(hashedIp: string): number {
@@ -244,5 +257,5 @@ export function createUploadQuota(config: Config) {
     };
   }
 
-  return { middleware, getStatus, reserve };
+  return { middleware, getStatus, reserve, storageLow };
 }

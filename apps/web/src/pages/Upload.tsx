@@ -25,6 +25,7 @@ import { ShareFooter } from "@/components/ShareFooter";
 import { SignInRequired } from "@/components/SignInRequired";
 import { DebugPanel } from "@/components/DebugPanel";
 import { QuotaBar } from "@/components/QuotaBar";
+import { StorageLowNotice } from "@/components/StorageLowNotice";
 import { NoteComposer } from "@/components/NoteComposer";
 import { useUpload } from "@/hooks/useUpload";
 import { useFaviconProgress } from "@/hooks/useFaviconProgress";
@@ -267,6 +268,7 @@ export function UploadPage() {
           ) : (
             <>
               <QuotaBar quota={quota} />
+              {config.storageLow && <StorageLowNotice maxSize={config.fileMaxSize} />}
               <UploadZone
                 files={files}
                 onFilesChange={setFiles}

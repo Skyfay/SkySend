@@ -119,7 +119,7 @@ import { showKnownErrorToast } from "@/lib/toast";
 showKnownErrorToast(hook.error);   // string, not an Error object
 ```
 
-It matches the message against the known patterns and enriches those with a docs link and a copy button, falling back to `toast.error()` otherwise. Currently recognised: insecure context (`crypto.subtle` missing over HTTP), `Origin not allowed` from the WebSocket upload, and S3 CORS failures.
+It matches the message against the known patterns and enriches those with a docs link and a copy button, falling back to `toast.error()` otherwise. Currently recognised: insecure context (`crypto.subtle` missing over HTTP), `Origin not allowed` from the WebSocket upload, S3 CORS failures, and the refusal of `STORAGE_MAX_SIZE` (a translated sentence without a docs link, since only the operator can make room).
 
 Adding a pattern means five edits, in this order: a troubleshooting section in `docs/user-guide/troubleshooting.md`, an `errors.*` key in `en.json` and `de.json` plus the 13 AI locales, a detector and a branch in `showKnownErrorToast()`, a row in the table in `docs/developer-guide/toast-system.md`, and a changelog entry. The `/add-known-error-toast` skill walks through it.
 

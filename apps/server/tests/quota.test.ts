@@ -529,6 +529,39 @@ describe("storage limit", () => {
       window: 0,
     });
   });
+
+  describe("storageLow", () => {
+    it("is never set without a storage limit", () => {
+      storeUpload(10 * 1024 ** 3);
+      expect(limitOf(0, { FILE_MAX_SIZE: 1000 }).storageLow()).toBe(false);
+    });
+
+    it("is set once less than FILE_MAX_SIZE is left beside the stored files", () => {
+      storeUpload(600);
+      storeRequestUpload(400);
+      const quota = limitOf(2000, { FILE_MAX_SIZE: 1000 });
+      // 1000 left: an upload of FILE_MAX_SIZE still fits.
+      expect(quota.storageLow()).toBe(false);
+      expect(statusOf(quota.reserve("10.1.7.1", 1000))).toBe("ok");
+
+      const tight = limitOf(1999, { FILE_MAX_SIZE: 1000 });
+      expect(tight.storageLow()).toBe(true);
+    });
+
+    it("counts the running uploads and clears again when one ends without being stored", () => {
+      const quota = limitOf(2000, { FILE_MAX_SIZE: 1000 });
+      const running = quota.reserve("10.1.7.2", 1001);
+      if (!running.ok || !running.reservation) throw new Error("expected a reservation");
+      expect(quota.storageLow()).toBe(true);
+
+      running.reservation.release();
+      expect(quota.storageLow()).toBe(false);
+    });
+
+    it("is set from the start when the limit is smaller than FILE_MAX_SIZE", () => {
+      expect(limitOf(500, { FILE_MAX_SIZE: 1000 }).storageLow()).toBe(true);
+    });
+  });
 });
 
 describe("upload quota - interval behavior", () => {
