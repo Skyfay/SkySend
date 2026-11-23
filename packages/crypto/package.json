@@ -1,6 +1,6 @@
 {
   "name": "@skysend/crypto",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": true,
   "type": "module",
   "exports": {
@@ -14,9 +14,10 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:mutation": "stryker run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
   },
   "devDependencies": {
-    "hash-wasm": "^4.12.0"
+    "hash-wasm": "^4.13.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "skysend",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": true,
   "type": "module",
   "description": "Minimalist, end-to-end encrypted, self-hostable file sharing service",
@@ -11,6 +11,8 @@
     "test": "pnpm --recursive test && pnpm test:scripts",
     "test:coverage": "pnpm --recursive --filter=@skysend/server --filter=@skysend/web --filter=@skysend/crypto --filter=@skysend/note-format --filter=@skysend/transfer --filter=@skysend/client test:coverage && pnpm test:scripts",
     "test:scripts": "vitest run --root scripts",
+    "test:mutation": "pnpm --filter @skysend/crypto test:mutation",
+    "test:mutation:all": "pnpm --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer build && pnpm --workspace-concurrency=1 --filter @skysend/crypto --filter @skysend/note-format --filter @skysend/transfer --filter @skysend/client --filter @skysend/server --filter @skysend/web test:mutation",
     "test:e2e": "pnpm test:e2e:build && pnpm --filter @skysend/e2e test:e2e",
     "test:e2e:ui": "pnpm test:e2e:build && pnpm --filter @skysend/e2e test:e2e --ui --ui-host=127.0.0.1 --ui-port=9323",
     "test:e2e:large": "pnpm test:e2e:build && pnpm --filter @skysend/e2e test:e2e:large",
@@ -62,7 +64,7 @@
       "fast-xml-parser": ">=5.7.2",
       "postcss": ">=8.5.25",
       "@esbuild-kit/core-utils>esbuild": ">=0.25.0",
-      "vitepress>vite": ">=6.4.3 <7",
+      "vitepress>vite": ">=6.4.5 <7",
       "ws": ">=8.21.0",
       "tsx>esbuild": ">=0.28.1",
       "wrangler>esbuild": ">=0.28.1",
@@ -71,26 +73,24 @@
       "brace-expansion": "^5.0.12",
       "minimatch@3>brace-expansion": "^1.1.21",
       "@tailwindcss/typography>postcss-selector-parser": "^7.1.6",
-      "js-yaml@3>argparse": "^2.0.1"
-    },
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-mh99-v99m-4gvg",
-        "GHSA-vfj7-8cjw-p6xm"
-      ]
+      "js-yaml@3>argparse": "^2.0.1",
+      "@stryker-mutator/core>minimatch": "^11.0.1",
+      "typed-rest-client>qs": "^6.16.1"
     }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^5.0.3",
-    "eslint": "^10.12.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
+    "@vitest/coverage-v8": "^5.1.1",
+    "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.13.0",
-    "prettier": "^3.9.9",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
   }
 }

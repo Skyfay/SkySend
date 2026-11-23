@@ -22,7 +22,7 @@ export function createDownloadRoute(storage: StorageBackend, lockout: PasswordLo
    * a wrong guess. It counts against the same lockout as POST /api/password/:id, under the same
    * key, so a guesser cannot switch to the download to get around it (GHSA-rxxj-c5wr-phqp).
    *
-   * This is authMiddleware with the lockout inside it: the lockout is checked again after the
+   * The token check has the lockout inside it: the lockout is checked again after the
    * lookup, right before the comparison, and the failure is recorded right after it, with no
    * await in between. A check that ran before the lookup let pipelined guesses all pass it.
    */

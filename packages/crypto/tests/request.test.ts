@@ -30,6 +30,7 @@ import {
   INBOX_PASSWORD_ARGON2,
   REQUEST_BRIEF_BLOCK,
   REQUEST_BRIEF_MAX_BYTES,
+  REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH,
   REQUEST_SUITE,
   REQUEST_TITLE_MAX_BYTES,
   REQUEST_VAULT_LENGTH,
@@ -441,6 +442,9 @@ describe("wrapFileSecret and unwrapFileSecret", () => {
     await expect(wrapFileSecret(pk, requestId, `${uploadId}0`, generateSecret())).rejects.toThrow(
       "ID must be a UUID",
     );
+    await expect(wrapFileSecret(pk, requestId, `0${uploadId}`, generateSecret())).rejects.toThrow(
+      "ID must be a UUID",
+    );
   });
 });
 
@@ -569,6 +573,24 @@ describe("request briefs", () => {
     ).rejects.toThrow(`at most ${REQUEST_BRIEF_MAX_BYTES} bytes`);
   });
 
+  it("should take a brief that fills the largest size exactly", async () => {
+    const key = await briefKey();
+    const asBrief = (text: string): RequestBrief => ({
+      title: null,
+      asks: ["note"],
+      template: { text },
+    });
+    // The JSON a brief is written as, with an empty text, then a text that fills the rest.
+    const overhead = JSON.stringify({ v: 1, ...asBrief("") }).length;
+    const full = asBrief("x".repeat(REQUEST_BRIEF_MAX_BYTES - overhead));
+    const brief = await encryptRequestBrief(full, key);
+    expect(brief.ciphertext.length).toBe(REQUEST_BRIEF_MAX_CIPHERTEXT_LENGTH);
+    expect(await decryptRequestBrief(brief, key)).toEqual(full);
+    await expect(
+      encryptRequestBrief(asBrief("x".repeat(REQUEST_BRIEF_MAX_BYTES - overhead + 1)), key),
+    ).rejects.toThrow(`at most ${REQUEST_BRIEF_MAX_BYTES} bytes`);
+  });
+
   it("should leave out a template when no note is asked for", async () => {
     const key = await briefKey();
     const brief = await encryptRequestBrief(
@@ -593,6 +615,9 @@ describe("request briefs", () => {
       REQUEST_BRIEF_BLOCK + 15,
       REQUEST_BRIEF_BLOCK + 17,
       REQUEST_BRIEF_MAX_BYTES + 17,
+      // Whole blocks, but none at all or one more than a brief may have.
+      16,
+      REQUEST_BRIEF_MAX_BYTES + REQUEST_BRIEF_BLOCK + 16,
     ]) {
       await expect(
         decryptRequestBrief({ ciphertext: randomBytes(length), nonce: brief.nonce }, key),
