@@ -663,6 +663,21 @@ export function loadConfig(): Config {
     );
   }
 
+  // Cross-field validation - Storage limit. Both are workable, so they warn instead of throwing.
+  if (_config.STORAGE_MAX_SIZE > 0) {
+    // The limit is one for all senders, and nothing else caps what one of them may take.
+    if (_config.FILE_UPLOAD_QUOTA_BYTES <= 0) {
+      console.warn(
+        "[config] STORAGE_MAX_SIZE is set while FILE_UPLOAD_QUOTA_BYTES is 0, so one sender can take the whole storage limit and every other upload is refused until space is freed. Set FILE_UPLOAD_QUOTA_BYTES to cap what each sender may upload.",
+      );
+    }
+    if (_config.STORAGE_MAX_SIZE < _config.FILE_MAX_SIZE) {
+      console.warn(
+        "[config] STORAGE_MAX_SIZE is below FILE_MAX_SIZE, so an upload of the largest allowed size never fits and the upload pages always show that storage is low",
+      );
+    }
+  }
+
   // Cross-field validation - OIDC
   const oidcPartiallyConfigured =
     _config.OIDC_ISSUER ||

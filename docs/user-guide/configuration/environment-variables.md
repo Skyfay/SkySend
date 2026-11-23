@@ -119,6 +119,10 @@ A file request is a link you send to someone so they can upload files to you, en
 The limit only keeps SkySend from taking more than its share. When another service fills the same disk, uploads can still fail. On the filesystem backend a dedicated volume, or a dataset with a quota or reservation, protects the host best. On S3 the limit is the way to cap a bucket that has no size limit of its own.
 :::
 
+::: warning Set an upload quota together with STORAGE_MAX_SIZE
+The storage limit is one for everyone who uploads. Without `FILE_UPLOAD_QUOTA_BYTES` a single sender can fill it, and every other upload is refused until space is freed. The server warns about this at startup. It also warns when `STORAGE_MAX_SIZE` is below `FILE_MAX_SIZE`, since an upload of the largest allowed size could then never fit and the upload pages always show that storage is low.
+:::
+
 ## Branding & Customization
 
 | Variable | Required | Default | Description |
