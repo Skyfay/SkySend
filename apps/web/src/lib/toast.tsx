@@ -51,6 +51,14 @@ export function isS3CorsError(message: string): boolean {
 }
 
 /**
+ * Returns true when the server refused an upload because its storage limit
+ * (STORAGE_MAX_SIZE) has no room for it. Matches the server's STORAGE_FULL_MESSAGE.
+ */
+export function isStorageFullError(message: string): boolean {
+  return message.includes("out of storage space");
+}
+
+/**
  * Show a toast for an error, enriching known error types with a docs link
  * and a copy button. Falls back to a plain toast.error() for unrecognised
  * messages.
@@ -87,6 +95,12 @@ export function showKnownErrorToast(message: string): void {
       copyText: message,
       docsUrl: S3_CORS_DOCS_URL,
     });
+    return;
+  }
+  // Only the operator can make room, so the sender gets the sentence in their language and
+  // no docs link.
+  if (isStorageFullError(message)) {
+    toast.error(i18n.t("errors.storageFull"));
     return;
   }
   toast.error(message);

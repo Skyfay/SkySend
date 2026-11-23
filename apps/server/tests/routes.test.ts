@@ -43,7 +43,7 @@ import { createNoteRoute } from "../src/routes/note.js";
 import { createPasswordLockout } from "../src/lib/password-lockout.js";
 import { validateUploadHeaders, type UploadHeaders } from "../src/lib/upload-validation.js";
 import { ownerMiddleware } from "../src/middleware/auth.js";
-import { createUploadQuota } from "../src/middleware/quota.js";
+import { createUploadQuota, STORAGE_FULL_MESSAGE } from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
 
 const mockLockout = createPasswordLockout(10, 60_000);
@@ -1980,8 +1980,12 @@ describe("routes", () => {
     });
 
     /** The upload routes with a real quota, mounted the way src/index.ts mounts them. */
-    function appWithQuota(limit: number) {
-      const config = { ...DEFAULT_CONFIG, FILE_UPLOAD_QUOTA_BYTES: limit } as unknown as Config;
+    function appWithQuota(limit: number, overrides: Partial<Config> = {}) {
+      const config = {
+        ...DEFAULT_CONFIG,
+        FILE_UPLOAD_QUOTA_BYTES: limit,
+        ...overrides,
+      } as unknown as Config;
       vi.mocked(getConfig).mockReturnValue(config);
       const app = new Hono();
       app.route(
@@ -2054,6 +2058,39 @@ describe("routes", () => {
         body: new Uint8Array(1),
       });
       expect(again.status).toBe(429);
+    });
+
+    it("refuses an upload the storage limit has no room for before any data is sent", async () => {
+      const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
+      const { status, id } = await init(app, 10);
+      expect(status).toBe(201);
+
+      // The running upload holds its 10 bytes, so neither transport can start another one.
+      const refused = await app.request("/api/upload/init", {
+        method: "POST",
+        headers: headersFor(1),
+      });
+      expect(refused.status).toBe(507);
+      expect(await refused.json()).toEqual({ error: STORAGE_FULL_MESSAGE });
+      const single = await app.request("/api/upload", {
+        method: "POST",
+        headers: headersFor(1),
+        body: new Uint8Array(1),
+      });
+      expect(single.status).toBe(507);
+
+      // Stored, the upload counts through its row instead.
+      expect((await chunk(app, id, 10)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(200);
+      expect((await init(app, 1)).status).toBe(507);
+    });
+
+    it("gives the storage of an upload that ends without being stored back", async () => {
+      const app = appWithQuota(0, { STORAGE_MAX_SIZE: 10 });
+      const { id } = await init(app, 10);
+      expect((await chunk(app, id, 5)).status).toBe(200);
+      expect((await finalize(app, id)).status).toBe(400);
+      expect((await init(app, 10)).status).toBe(201);
     });
 
     it("guards both ways to start an upload, and only those", async () => {

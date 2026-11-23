@@ -4,7 +4,7 @@
 
 Upload an encrypted file stream to the server.
 
-When `OIDC_PROTECT_FILES` is on, the request needs the session cookie or a bearer token, like the chunked init and the WebSocket. With an upload quota, the upload reserves `Content-Length` bytes when it starts and gives them back if it fails.
+When `OIDC_PROTECT_FILES` is on, the request needs the session cookie or a bearer token, like the chunked init and the WebSocket. With an upload quota or a storage limit (`STORAGE_MAX_SIZE`), the upload reserves `Content-Length` bytes when it starts and gives them back if it fails.
 
 ### Request
 
@@ -64,6 +64,7 @@ The request body is the raw encrypted stream (binary). All metadata is passed vi
 | `413` | `Body size does not match declared content length` | The body grew past `Content-Length` |
 | `413` | `File size exceeds remaining quota.` | `Content-Length` does not fit into what is left of the upload quota |
 | `429` | `Upload quota exceeded. Try again later.` | The upload quota is used up |
+| `507` | `This instance is out of storage space. Try again later.` | `Content-Length` does not fit into what `STORAGE_MAX_SIZE` leaves beside the stored and running uploads |
 
 ### Example
 
@@ -88,7 +89,7 @@ For large files, the web client uses a three-step chunked upload flow. Chunks ar
 
 Initialize a chunked upload session. Validates headers and creates an empty storage entry.
 
-With an upload quota, the init reserves `X-Content-Length` bytes until finalize, or until the session ends without one. A session that receives less than 1 MiB, or the rest of its upload, in 10 minutes is ended, the same rule the WebSocket applies.
+With an upload quota or a storage limit, the init reserves `X-Content-Length` bytes until finalize, or until the session ends without one. It answers `429` and `413` for the quota and `507` for the storage limit, like `POST /api/upload`. A session that receives less than 1 MiB, or the rest of its upload, in 10 minutes is ended, the same rule the WebSocket applies.
 
 #### Request
 
@@ -227,13 +228,13 @@ The upgrade request counts against the global rate limit like `POST /api/upload/
 5. **Client → Server** (text, JSON): `{"type":"finalize"}`.
 6. **Server → Client** (text, JSON): `{"type":"done","id":"<uuid>"}`, followed by close code `1000`.
 
-Errors are reported as `{"type":"error","message":"…"}` followed by a non-1000 close code:
+Errors are reported as `{"type":"error","message":"…"}` followed by a non-1000 close code. A refusal at `init` that has an HTTP equivalent also carries its `status`, like `507` for the storage limit:
 
 | Close code | Cause |
 | --- | --- |
 | `1002` | Protocol violation (e.g. binary frame after finalize) |
 | `1003` | Unsupported data type (e.g. non-JSON control frame) |
-| `1008` | Header validation, size mismatch, quota violation, no `init` within 30 seconds, less than 1 MiB in 10 minutes, or no complete message for 150 seconds while the server is not holding the session back |
+| `1008` | Header validation, size mismatch, quota or storage limit violation, no `init` within 30 seconds, less than 1 MiB in 10 minutes, or no complete message for 150 seconds while the server is not holding the session back |
 | `1009` | Server receive buffer exceeded `FILE_UPLOAD_WS_MAX_BUFFER`, or a single message is larger than 320 KiB |
 | `1011` | Internal server error |
 

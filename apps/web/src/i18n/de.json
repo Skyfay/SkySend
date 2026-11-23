@@ -306,6 +306,7 @@
     "insecureContext": "HTTPS erforderlich",
     "originNotAllowed": "Server hat diesen Ursprung blockiert",
     "s3CorsError": "S3 CORS nicht konfiguriert",
+    "storageFull": "Auf diesem Server ist kein Speicherplatz mehr frei. Versuchen Sie es später wieder.",
     "linkRewritten": "Link wurde unterwegs verändert",
     "linkRewrittenDesc": "Ein Mail-Security-Filter hat diesen Link umgeschrieben, dadurch war der Schlüssel für den Server sichtbar. Lass den Inhalt bei vertraulichen Daten vom Absender löschen, sobald du ihn hast.",
     "linkRewrittenInboxDesc": "Ein Mail-Sicherheitsfilter hat diesen Link umgeschrieben, deshalb war der Schlüssel zu dieser Inbox für den Server sichtbar. Laden Sie herunter, was Sie brauchen, und löschen Sie danach die Anfrage.",

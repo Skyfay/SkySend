@@ -101,6 +101,7 @@ A file request is a link you send to someone so they can upload files to you, en
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
 | `STORAGE_BACKEND` | ❌ | `filesystem` | Storage backend to use. `filesystem` stores files locally, `s3` uses S3-compatible object storage. |
+| `STORAGE_MAX_SIZE` | ❌ | `0` (unlimited) | Most space all stored files may take together, for both backends. Counts the encrypted size of shared files and of uploads into file requests, not notes, which live in the database. An upload that does not fit is refused before any data is sent, with a message that it is out of storage space, and running uploads hold their size so parallel ones cannot overshoot together. Space comes back when an upload is deleted or the cleanup removes it. `0` disables the limit. Supports units: `B`, `KB`, `MB`, `GB`. |
 | `S3_BUCKET` | ⚠️ | - | S3 bucket name. Required when `STORAGE_BACKEND=s3`. |
 | `S3_REGION` | ⚠️ | - | S3 region (e.g. `eu-central-1`). Required when `STORAGE_BACKEND=s3`. |
 | `S3_ENDPOINT` | ❌ | _(none)_ | Custom S3 endpoint URL. Required for non-AWS providers (R2, Hetzner, MinIO, etc.). Leave empty for AWS S3. |
@@ -113,6 +114,10 @@ A file request is a link you send to someone so they can upload files to you, en
 | `S3_MEMORY_LIMIT` | ❌ | a quarter of the memory, at most `256MB` | Most memory all uploads to S3 together hold in parts on their way to the bucket. When it is reached, the next part waits and the senders slow down, instead of the server running out of memory. Parts that are still filling up may hold half of it again, beyond that they wait on disk in `DATA_DIR`. For many uploads at once on a server with one core, see [Many Simultaneous Uploads](/user-guide/configuration/s3#many-simultaneous-uploads). The default is a quarter of the memory the server may use, the limit of its container if it runs in one, and at most `256MB`. Minimum is `5MB`. |
 
 → See [S3 Storage](/user-guide/configuration/s3) for provider examples and CORS configuration.
+
+::: tip STORAGE_MAX_SIZE caps SkySend, it reserves nothing
+The limit only keeps SkySend from taking more than its share. When another service fills the same disk, uploads can still fail. On the filesystem backend a dedicated volume, or a dataset with a quota or reservation, protects the host best. On S3 the limit is the way to cap a bucket that has no size limit of its own.
+:::
 
 ## Branding & Customization
 

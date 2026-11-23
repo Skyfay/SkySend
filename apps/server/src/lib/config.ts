@@ -430,6 +430,16 @@ const configSchema = z.object({
     .enum(["filesystem", "s3"])
     .default("filesystem"),
 
+  /**
+   * Most bytes the files of this instance may take together, normal uploads and uploads into
+   * a file request alike. 0 turns the limit off. It caps SkySend only and reserves nothing.
+   */
+  STORAGE_MAX_SIZE: z
+    .string()
+    .default("0")
+    .transform((v) => (/^\d+$/.test(v.trim()) ? parseInt(v, 10) : parseByteSize(v)))
+    .pipe(z.number().int().min(0)),
+
   // --- S3 configuration (only when STORAGE_BACKEND=s3) ---
 
   S3_BUCKET: z.string().optional(),

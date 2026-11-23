@@ -440,6 +440,9 @@ const server = serve(
     if (config.FILE_UPLOAD_QUOTA_BYTES > 0) {
       console.log(`[skysend] Upload quota: ${(config.FILE_UPLOAD_QUOTA_BYTES / (1024 ** 2)).toFixed(0)} MB / ${config.FILE_UPLOAD_QUOTA_WINDOW}s`);
     }
+    if (config.STORAGE_MAX_SIZE > 0) {
+      console.log(`[skysend] Storage limit: ${(config.STORAGE_MAX_SIZE / (1024 ** 2)).toFixed(0)} MB`);
+    }
   },
 );
 

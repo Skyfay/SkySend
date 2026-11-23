@@ -3,10 +3,23 @@ import { Hono, type Context } from "hono";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createUploadQuota, type QuotaReservation } from "../src/middleware/quota.js";
+import {
+  createUploadQuota,
+  STORAGE_FULL_MESSAGE,
+  type QuotaReservation,
+} from "../src/middleware/quota.js";
 import type { Config } from "../src/lib/config.js";
 import { initDatabase, closeDatabase, getDb } from "../src/db/index.js";
-import { quotaState, quotaUsage } from "../src/db/schema.js";
+import {
+  fileRequests,
+  quotaState,
+  quotaUsage,
+  requestUploads,
+  uploads,
+} from "../src/db/schema.js";
+import { runCleanup } from "../src/lib/cleanup.js";
+import { eq } from "drizzle-orm";
+import { createTestStorage, insertTestNote, insertTestUpload } from "./helpers.js";
 
 let tempDir: string;
 
@@ -36,6 +49,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     FILE_MAX_FILES_PER_UPLOAD: 32,
     FILE_UPLOAD_QUOTA_BYTES: 1024, // 1 KB quota
     FILE_UPLOAD_QUOTA_WINDOW: 86400,
+    STORAGE_MAX_SIZE: 0,
     NOTE_MAX_SIZE: 1024 ** 2,
     NOTE_EXPIRE_OPTIONS_SEC: [300, 3600, 86400, 604800],
     NOTE_DEFAULT_EXPIRE_SEC: 86400,
@@ -332,6 +346,188 @@ describe("upload quota", () => {
     expect(getDb().select().from(quotaState).all()).toEqual([]);
     expect(getDb().select().from(quotaUsage).all()).toEqual([]);
     expect(quota2.reserve("192.168.1.1", 900).ok).toBe(true);
+  });
+});
+
+describe("storage limit", () => {
+  let storageCtx: Awaited<ReturnType<typeof createTestStorage>>;
+
+  beforeEach(async () => {
+    tempDir = mkdtempSync(join(tmpdir(), "skysend-storage-limit-test-"));
+    initDatabase(tempDir);
+    storageCtx = await createTestStorage();
+  });
+
+  afterEach(() => {
+    closeDatabase();
+    rmSync(tempDir, { recursive: true, force: true });
+    storageCtx.cleanup();
+  });
+
+  /** A quota with the storage limit only, the upload quota of the sender turned off. */
+  const limitOf = (bytes: number, overrides: Partial<Config> = {}) =>
+    createUploadQuota(
+      makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 0, STORAGE_MAX_SIZE: bytes, ...overrides }),
+    );
+
+  /** A stored share of `size` bytes. */
+  const storeUpload = (size: number, overrides: Parameters<typeof insertTestUpload>[1] = {}) =>
+    insertTestUpload(getDb(), { id: crypto.randomUUID(), size, ...overrides });
+
+  /** A stored upload of `size` bytes into a new file request. */
+  function storeRequestUpload(size: number): void {
+    const requestId = crypto.randomUUID();
+    const bytes = (n: number) => Buffer.alloc(n, 1);
+    getDb()
+      .insert(fileRequests)
+      .values({
+        id: requestId,
+        vault: bytes(80),
+        vaultNonce: bytes(12),
+        inboxAuthToken: "inbox-auth",
+        inboxOwnerToken: "inbox-owner",
+        uploadToken: "upload",
+        maxUploads: 5,
+        maxSize: size,
+        closesAt: new Date(Date.now() + 86400 * 1000),
+      })
+      .run();
+    const id = crypto.randomUUID();
+    getDb()
+      .insert(requestUploads)
+      .values({
+        id,
+        requestId,
+        size,
+        salt: bytes(32),
+        wrapEnc: bytes(32),
+        wrapCiphertext: bytes(48),
+        encryptedMeta: bytes(32),
+        metaNonce: bytes(12),
+        maxDownloads: 5,
+        expiresAt: new Date(Date.now() + 86400 * 1000),
+        storagePath: `${id}.bin`,
+      })
+      .run();
+  }
+
+  const statusOf = (decision: ReturnType<ReturnType<typeof createUploadQuota>["reserve"]>) =>
+    decision.ok ? "ok" : decision.status;
+
+  it("changes nothing when it is 0, however much is stored", () => {
+    storeUpload(10 * 1024 ** 3);
+    const quota = createUploadQuota(makeConfig({ FILE_UPLOAD_QUOTA_BYTES: 0, STORAGE_MAX_SIZE: 0 }));
+    expect(quota.reserve("10.1.0.1", 5 * 1024 ** 3)).toEqual({ ok: true, reservation: null });
+  });
+
+  it("counts shares and uploads into a request, and refuses what does not fit before it starts", () => {
+    storeUpload(600);
+    storeRequestUpload(300);
+    const quota = limitOf(1000);
+
+    const refused = quota.reserve("10.1.0.2", 101);
+    expect(refused).toEqual({ ok: false, status: 507, reason: STORAGE_FULL_MESSAGE });
+    expect(statusOf(quota.reserve("10.1.0.2", 100))).toBe("ok");
+  });
+
+  it("does not count notes, which live in the database", () => {
+    insertTestNote(getDb(), { encryptedContent: Buffer.alloc(500) });
+    const quota = limitOf(100);
+    expect(statusOf(quota.reserve("10.1.0.3", 100))).toBe("ok");
+  });
+
+  // The limit is one for the whole instance, so senders from different addresses share it.
+  it("holds the declared size, so parallel uploads cannot overshoot the limit together", () => {
+    const quota = limitOf(1000);
+    const decisions = ["10.1.1.1", "10.1.1.2", "10.1.1.3", "10.1.1.4"].map((ip) =>
+      statusOf(quota.reserve(ip, 400)),
+    );
+    expect(decisions).toEqual(["ok", "ok", 507, 507]);
+    expect(statusOf(quota.reserve("10.1.1.5", 200))).toBe("ok");
+    expect(statusOf(quota.reserve("10.1.1.6", 1))).toBe(507);
+  });
+
+  it("gives the space of an upload that ends without being stored back", () => {
+    const quota = limitOf(1000);
+    const first = quota.reserve("10.1.2.1", 800);
+    if (!first.ok || !first.reservation) throw new Error("expected a reservation");
+    expect(statusOf(quota.reserve("10.1.2.2", 800))).toBe(507);
+
+    first.reservation.release();
+    first.reservation.release();
+    expect(statusOf(quota.reserve("10.1.2.2", 800))).toBe("ok");
+    // A second release gave nothing back twice.
+    expect(statusOf(quota.reserve("10.1.2.3", 201))).toBe(507);
+  });
+
+  it("counts a stored upload through its row once its reservation is committed", () => {
+    const quota = limitOf(1000);
+    const decision = quota.reserve("10.1.3.1", 600);
+    if (!decision.ok || !decision.reservation) throw new Error("expected a reservation");
+    storeUpload(600);
+    decision.reservation.commit(600);
+    decision.reservation.release();
+
+    // 600 stored and nothing held: 400 fit, 401 do not.
+    expect(statusOf(quota.reserve("10.1.3.2", 401))).toBe(507);
+    expect(statusOf(quota.reserve("10.1.3.2", 400))).toBe("ok");
+  });
+
+  it("frees the space of an expired upload once the cleanup removed it", async () => {
+    const { id } = storeUpload(1000, { expiresAt: new Date(Date.now() - 1000) });
+    await storageCtx.storage.save(id, new Blob([new Uint8Array(1000)]).stream());
+    const quota = limitOf(1000);
+    expect(statusOf(quota.reserve("10.1.4.1", 1))).toBe(507);
+
+    expect(await runCleanup(storageCtx.storage)).toBe(1);
+    expect(statusOf(quota.reserve("10.1.4.1", 1000))).toBe("ok");
+  });
+
+  it("checks the quota of the sender first, so a sender over it learns nothing about the space", () => {
+    storeUpload(1000);
+    const quota = limitOf(1000, { FILE_UPLOAD_QUOTA_BYTES: 500 });
+    seed(quota, "10.1.5.1", 500);
+    expect(statusOf(quota.reserve("10.1.5.1", 1))).toBe(429);
+    expect(statusOf(quota.reserve("10.1.5.2", 1))).toBe(507);
+  });
+
+  it("takes nothing of the sender's quota when the storage limit refuses", () => {
+    const { id } = storeUpload(900);
+    const quota = limitOf(1000, { FILE_UPLOAD_QUOTA_BYTES: 1000 });
+    expect(statusOf(quota.reserve("10.1.6.1", 200))).toBe(507);
+
+    getDb().delete(uploads).where(eq(uploads.id, id)).run();
+    expect(statusOf(quota.reserve("10.1.6.1", 1000))).toBe("ok");
+  });
+
+  it("answers a refused start with 507 and the generic message through the middleware", async () => {
+    storeUpload(1000);
+    const quota = limitOf(1000);
+    const app = new Hono();
+    app.post("/start", quota.middleware, (c) => c.json({ id: "session" }, 201));
+
+    const res = await app.request("/start", {
+      method: "POST",
+      headers: { "X-Content-Length": "1" },
+    });
+    expect(res.status).toBe(507);
+    expect(await res.json()).toEqual({ error: STORAGE_FULL_MESSAGE });
+  });
+
+  it("never shows the storage of the instance in the quota status", async () => {
+    storeUpload(900);
+    const quota = limitOf(1000);
+    const app = new Hono();
+    app.get("/status", (c) => c.json(quota.getStatus(c)));
+    const body = await (await app.request("/status")).json();
+    expect(body).toEqual({
+      enabled: false,
+      limit: 0,
+      used: 0,
+      remaining: 0,
+      resetsAt: null,
+      window: 0,
+    });
   });
 });
 

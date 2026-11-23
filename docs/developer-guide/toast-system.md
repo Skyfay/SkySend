@@ -60,6 +60,7 @@ For unknown errors it falls back to `toast.error(message)`.
 | `importKey` / `crypto.subtle` / `subtle is undefined` | `errors.insecureContext` | [Troubleshooting - HTTPS required](https://docs.skysend.app/user-guide/troubleshooting#crypto-subtle-is-undefined-cannot-read-properties-of-undefined-reading-importkey) |
 | `Origin not allowed` | `errors.originNotAllowed` | [Troubleshooting - Origin not allowed](https://docs.skysend.app/user-guide/troubleshooting#upload-fails-with-origin-not-allowed) |
 | `S3 CORS` / `S3 unreachable` | `errors.s3CorsError` | [Troubleshooting - S3 CORS](https://docs.skysend.app/user-guide/troubleshooting#s3-downloads-fail-with-cors-error) |
+| `out of storage space` | `errors.storageFull` | None, only the operator can make room (`STORAGE_MAX_SIZE`) |
 
 ### Adding a new known error
 
